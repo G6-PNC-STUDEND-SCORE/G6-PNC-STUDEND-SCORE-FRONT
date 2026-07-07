@@ -13,8 +13,13 @@
       <p class="login-card__subtitle">Sign in to your account to continue</p>
 
       <div v-if="auth.error" class="login-card__error">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <i class="bi bi-exclamation-triangle-fill"></i>
         {{ auth.error }}
+      </div>
+
+      <div v-if="loginSuccess" class="login-card__success">
+        <i class="bi bi-check-circle-fill"></i>
+        Login successful! Welcome back.
       </div>
 
       <form @submit.prevent="onSubmit">
@@ -66,7 +71,7 @@
         <button
           type="submit"
           class="login-form__submit"
-          :disabled="auth.loading"
+          :disabled="auth.loading || loginSuccess"
         >
           <template v-if="auth.loading">
             <span class="spinner"></span>
@@ -98,10 +103,15 @@ const auth = useAuthStore()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const loginSuccess = ref(false)
+
 async function onSubmit() {
   const success = await auth.login(email.value, password.value)
   if (success) {
+    loginSuccess.value = true
+    await new Promise(resolve => setTimeout(resolve, 2000))
     await router.push('/dashboard')
+    loginSuccess.value = false
   }
 }
 </script>

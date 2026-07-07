@@ -6,4 +6,16 @@ const router = createRouter({
   routes,
 })
 
+router.beforeEach((to, _from, next) => {
+  const token = localStorage.getItem('token')
+  const publicPages = ['/login']
+  const authRequired = !publicPages.includes(to.path)
+
+  if (authRequired && !token) {
+    next({ path: '/login' })
+  } else {
+    next()
+  }
+})
+
 export default router
