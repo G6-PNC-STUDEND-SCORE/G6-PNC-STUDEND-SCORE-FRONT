@@ -100,7 +100,10 @@ function toggleSettings() {
     border-right: 1px solid #e9ecef;
     display: flex;
     flex-direction: column;
-    
+    flex-shrink: 0;
+    position: fixed;
+    left: 0;
+    top: 0;
 }
 
 .logo-icon {
