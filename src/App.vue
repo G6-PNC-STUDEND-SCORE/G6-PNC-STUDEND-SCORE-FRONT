@@ -1,10 +1,5 @@
 <template>
-  <div class="app-layout">
-    <Navigation />
-
-    
-  </div>
-  
+  <Navigation />
 </template>
 
 <script setup lang="ts">

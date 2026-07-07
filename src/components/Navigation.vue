@@ -10,32 +10,32 @@
             </div>
         </div>
         <nav class="px-2 py-2 flex-grow-1">
-            <RouterLink to="/" class="sidebar-link">
+            <RouterLink to="/dashboard" class="sidebar-link">
                 <i class="bi bi-grid-fill me-2"></i>
                 Dashboard
             </RouterLink>
 
-            <RouterLink to="/class" class="sidebar-link">
+            <RouterLink to="/classes" class="sidebar-link">
                 <i class="bi bi-people-fill me-2"></i>
                 Classes
             </RouterLink>
 
-            <RouterLink to="/subject" class="sidebar-link">
+            <RouterLink to="/subjects" class="sidebar-link">
                 <i class="bi bi-book-fill me-2"></i>
                 Subjects
             </RouterLink>
 
-            <RouterLink to="/student" class="sidebar-link">
+            <RouterLink to="/students" class="sidebar-link">
                 <i class="bi bi-person-badge-fill me-2"></i>
                 Students
             </RouterLink>
 
-            <RouterLink to="/score" class="sidebar-link">
+            <RouterLink to="/scores" class="sidebar-link">
                 <i class="bi bi-clipboard-data-fill me-2"></i>
                 Scores
             </RouterLink>
 
-            <RouterLink to="/report" class="sidebar-link">
+            <RouterLink to="/reports" class="sidebar-link">
                 <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>
                 Reports
             </RouterLink>
