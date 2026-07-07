@@ -68,27 +68,83 @@
             </Transition>
 
         </nav>
-        <div class="user d-flex align-items-center border-top px-3 py-2">
-            <div class="avatar">
-                SV
+
+        <!-- User Section & Logout -->
+        <div class="border-top">
+            <div class="user d-flex align-items-center px-3 py-2">
+                <div class="avatar">
+                    {{ getUserInitials() }}
+                </div>
+                <div class="ms-2 flex-grow-1">
+                    <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name || 'User' }}</h6>
+                    <small class="text-secondary">{{ auth.user?.role || 'Admin' }}</small>
+                </div>
             </div>
-            <div class="ms-2">
-                <h6 class="mb-0 fw-bold">Sreyvik Von</h6>
-                <small class="text-secondary">Admin</small>
-            </div>
+            <button class="logout-btn w-100 d-flex align-items-center px-3 py-2" @click="showLogoutModal = true">
+                <i class="bi bi-box-arrow-right me-2"></i>
+                <span>Logout</span>
+            </button>
         </div>
 
     </aside>
+
+    <!-- Logout Confirmation Modal -->
+    <Teleport to="body">
+        <Transition name="modal">
+            <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+                <div class="modal-dialog-custom">
+                    <div class="modal-header-custom">
+                        <div class="modal-icon">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </div>
+                        <h5 class="mb-1">Confirm Logout</h5>
+                        <p class="mb-0 text-secondary">Are you sure you want to log out?</p>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-cancel" @click="showLogoutModal = false">
+                            <i class="bi bi-x-lg me-1"></i>
+                            Cancel
+                        </button>
+                        <button class="btn-logout" @click="handleLogout">
+                            <i class="bi bi-box-arrow-right me-1"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <script setup lang="ts">
-
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const auth = useAuthStore()
 
 const settingsOpen = ref(false)
+const showLogoutModal = ref(false)
 
 function toggleSettings() {
     settingsOpen.value = !settingsOpen.value
+}
+
+function getUserInitials(): string {
+    const name = auth.user?.name || ''
+    if (!name) return 'U'
+    const parts = name.split(' ').filter(Boolean)
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+}
+
+ function handleLogout() {
+    showLogoutModal.value = false
+     auth.logout()
+    router.push('/login')
 }
 </script>
 
@@ -267,6 +323,154 @@ function toggleSettings() {
 
 .user small {
     font-size: 0.65rem;
+}
+
+.logout-btn {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 2px;
+    font-family: "Inter", "Noto Sans Khmer", sans-serif;
+    text-decoration: none;
+}
+
+.logout-btn:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.logout-btn i {
+    font-size: 1.05rem;
+    width: 20px;
+    text-align: center;
+}
+
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+}
+
+.modal-dialog-custom {
+    background: #fff;
+    border-radius: 16px;
+    width: 360px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    animation: modalBounce 0.3s ease-out;
+}
+
+@keyframes modalBounce {
+    0% {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-header-custom {
+    padding: 28px 28px 16px;
+    text-align: center;
+}
+
+.modal-header-custom h5 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.modal-header-custom p {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.modal-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin: 0 auto 12px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 28px 28px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    font-family: "Inter", "Noto Sans Khmer", sans-serif;
+}
+
+.btn-cancel {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.btn-cancel:hover {
+    background: #e5e7eb;
+}
+
+.btn-logout {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-logout:hover {
+    background: #dc2626;
+}
+
+
+.modal-enter-active {
+    transition: all 0.2s ease-out;
+}
+
+.modal-leave-active {
+    transition: all 0.15s ease-in;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+    opacity: 0;
+}
+
+.modal-enter-from .modal-dialog-custom,
+.modal-leave-to .modal-dialog-custom {
+    transform: scale(0.9);
 }
 
 
