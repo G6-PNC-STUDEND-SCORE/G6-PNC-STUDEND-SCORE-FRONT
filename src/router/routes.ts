@@ -1,7 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-const LoginPage = () => import('@/page/login/LoginPage.vue')
-const DashboardPage = () => import('@/page/dashboard/DashboardPage.vue')
+const LoginPage = () => import('@/views/auth/LoginPage.vue')
+const DashboardPage = () => import('@/views/DashboardPage.vue')
 
 export const routes: RouteRecordRaw[] = [
   {
@@ -19,4 +19,3 @@ export const routes: RouteRecordRaw[] = [
     component: DashboardPage,
   },
 ]
-
