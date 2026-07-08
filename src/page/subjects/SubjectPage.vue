@@ -13,7 +13,7 @@
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h1 class="h3 fw-semibold mb-0">Subject Management</h1>
+        <h1 class="h3 fw-medium mb-0">Subject Management</h1>
         <p class="text-muted small mb-0 mt-1">Manage your subjects efficiently</p>
       </div>
       <button class="btn btn-primary btn-sm shadow-sm" @click="openAddModal">
@@ -81,11 +81,11 @@
       </div>
     </div>
 
-    <!-- Subjects Table -->
-    <div v-else class="card">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0">
+     <!-- Subjects Table -->
+     <div v-else class="card" style="border-radius: 12px; overflow: hidden;">
+       <div class="card-body p-0">
+         <div class="table-responsive">
+           <table class="table table-hover mb-0" style="border-radius: 12px;">
             <thead class="table-light">
               <tr>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">SUBJECT</th>
@@ -99,38 +99,38 @@
               <tr v-for="subject in filteredSubjects" :key="subject.id">
                 <td class="py-2 px-3">
                   <div class="d-flex align-items-center">
-                    <div class="subject-icon me-2" :style="{ backgroundColor: getSubjectColor(subject.name) }">
+                    <div class="subject-icon me-2 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :style="{ backgroundColor: getSubjectColor(subject.name), width: '24px', height: '24px', fontSize: '0.75rem' }">
                       <i class="bi bi-book text-white"></i>
                     </div>
-                    <span class="fw-semibold">{{ subject.name }}</span>
+                    <span class="fw-medium">{{ subject.name }}</span>
                   </div>
                 </td>
                 <td class="small py-2 px-3">{{ subject.teacher }}</td>
                 <td class="small py-2 px-3">{{ subject.class }}</td>
                 <td class="py-2 px-3">
-                  <span
-                    class="badge"
-                    :class="subject.status === 'Active' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary'"
-                  >
+<span
+  class="badge"
+  :class="subject.status === 'Active' ? 'bg-success' : 'bg-secondary'"
+>
                     {{ subject.status }}
                   </span>
                 </td>
                 <td class="text-center py-2 px-3">
                   <div class="btn-group" role="group">
-                    <button
-                      class="btn btn-sm btn-icon-warning"
-                      @click="openEditModal(subject)"
-                      title="Edit"
-                    >
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      class="btn btn-sm btn-icon-danger"
-                      @click="confirmDelete(subject)"
-                      title="Delete"
-                    >
-                      <i class="bi bi-trash"></i>
-                    </button>
+<button
+  class="btn btn-sm btn-outline-warning"
+  @click="openEditModal(subject)"
+  title="Edit"
+>
+  <i class="bi bi-pencil"></i>
+</button>
+<button
+  class="btn btn-sm btn-outline-danger"
+  @click="confirmDelete(subject)"
+  title="Delete"
+>
+  <i class="bi bi-trash"></i>
+</button>
                   </div>
                 </td>
               </tr>
@@ -147,152 +147,137 @@
     </div>
 
     <!-- Add/Edit Subject Modal -->
-    <div
-      class="modal fade"
-      id="subjectModal"
-      tabindex="-1"
-      :class="{ show: showModal }"
-      :style="{ display: showModal ? 'block' : 'none' }"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header border-0 pb-3">
-            <div class="d-flex align-items-center">
-              <div class="subject-icon me-3" :style="{ backgroundColor: getSubjectColor(formData.name) }">
-                <i class="bi bi-book text-white"></i>
+    <Transition name="modal">
+      <div v-if="showModal" class="modal fade show" style="display: block;" @click.self="closeModal">
+        <div class="modal-dialog modal-dialog-centered" @click.stop>
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-3">
+              <div class="d-flex align-items-center">
+                <div class="subject-icon me-3 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :style="{ backgroundColor: getSubjectColor(formData.name), width: '24px', height: '24px', fontSize: '0.75rem' }">
+                  <i class="bi bi-book text-white"></i>
+                </div>
+                <h5 class="modal-title fw-medium mb-0">{{ isEditMode ? 'Edit Subject' : 'Add Subject' }}</h5>
               </div>
-              <h5 class="modal-title fw-semibold mb-0">{{ isEditMode ? 'Edit Subject' : 'Add Subject' }}</h5>
+              <button
+                type="button"
+                class="btn-close"
+                @click="closeModal"
+              ></button>
             </div>
-            <button
-              type="button"
-              class="btn-close"
-              @click="closeModal"
-            ></button>
-          </div>
-          <div class="modal-body pt-0">
-            <form @submit.prevent="handleSubmit">
-              <div class="row g-3">
-                <div class="col-12">
-                  <label for="name" class="form-label text-muted small">Subject Name <span class="text-danger">*</span></label>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    id="name"
-                    v-model="formData.name"
-                    :class="{ 'is-invalid': errors.name }"
-                    placeholder="Enter subject name"
-                    required
-                  />
-                  <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
-                </div>
+            <div class="modal-body pt-0">
+              <form @submit.prevent="handleSubmit">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label for="name" class="form-label text-muted small">Subject Name <span class="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="name"
+                      v-model="formData.name"
+                      :class="{ 'is-invalid': errors.name }"
+                      placeholder="Enter subject name"
+                      required
+                    />
+                    <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
+                  </div>
 
-                <div class="col-12">
-                  <label for="teacher" class="form-label text-muted small">Teacher <span class="text-muted">(Optional)</span></label>
-                  <select
-                    class="form-select form-select-sm"
-                    id="teacher"
-                    v-model="formData.teacher"
-                    :class="{ 'is-invalid': errors.teacher }"
-                  >
-                    <option value="">Select a teacher</option>
-                    <option v-for="teacher in teachers" :key="teacher" :value="teacher">
-                      {{ teacher }}
-                    </option>
-                  </select>
-                  <div v-if="errors.teacher" class="invalid-feedback">{{ errors.teacher }}</div>
-                </div>
+                  <div class="col-12">
+                    <label for="teacher" class="form-label text-muted small">Teacher <span class="text-muted">(Optional)</span></label>
+                    <select
+                      class="form-select form-select-sm"
+                      id="teacher"
+                      v-model="formData.teacher"
+                      :class="{ 'is-invalid': errors.teacher }"
+                    >
+                      <option value="">Select a teacher</option>
+                      <option v-for="teacher in teachers" :key="teacher" :value="teacher">
+                        {{ teacher }}
+                      </option>
+                    </select>
+                    <div v-if="errors.teacher" class="invalid-feedback">{{ errors.teacher }}</div>
+                  </div>
 
-                <div class="col-12">
-                  <label for="class" class="form-label text-muted small">Class <span class="text-danger">*</span></label>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    id="class"
-                    v-model="formData.class"
-                    :class="{ 'is-invalid': errors.class }"
-                    placeholder="Enter class name"
-                    required
-                  />
-                  <div v-if="errors.class" class="invalid-feedback">{{ errors.class }}</div>
-                </div>
+                  <div class="col-12">
+                    <label for="class" class="form-label text-muted small">Class <span class="text-danger">*</span></label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
+                      id="class"
+                      v-model="formData.class"
+                      :class="{ 'is-invalid': errors.class }"
+                      placeholder="Enter class name"
+                      required
+                    />
+                    <div v-if="errors.class" class="invalid-feedback">{{ errors.class }}</div>
+                  </div>
 
-                <div class="col-12">
-                  <label for="status" class="form-label text-muted small">Status <span class="text-danger">*</span></label>
-                  <select
-                    class="form-select form-select-sm"
-                    id="status"
-                    v-model="formData.status"
-                    :class="{ 'is-invalid': errors.status }"
-                    required
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                  <div v-if="errors.status" class="invalid-feedback">{{ errors.status }}</div>
+                  <div class="col-12">
+                    <label for="status" class="form-label text-muted small">Status <span class="text-danger">*</span></label>
+                    <select
+                      class="form-select form-select-sm"
+                      id="status"
+                      v-model="formData.status"
+                      :class="{ 'is-invalid': errors.status }"
+                      required
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                    <div v-if="errors.status" class="invalid-feedback">{{ errors.status }}</div>
+                  </div>
                 </div>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer border-0 pt-3">
-            <button type="button" class="btn btn-light" @click="closeModal">Cancel</button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              @click="handleSubmit"
-              :disabled="store.loading"
-            >
-              <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
-              {{ isEditMode ? 'Update' : 'Create' }} Subject
-            </button>
+              </form>
+            </div>
+            <div class="modal-footer border-0 pt-3">
+              <button type="button" class="btn btn-light" @click="closeModal">Cancel</button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                @click="handleSubmit"
+                :disabled="store.loading"
+              >
+                <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
+                {{ isEditMode ? 'Update' : 'Create' }} Subject
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- Delete Confirmation Modal -->
-    <div
-      class="modal fade"
-      id="deleteModal"
-      tabindex="-1"
-      :class="{ show: showDeleteModal }"
-      :style="{ display: showDeleteModal ? 'block' : 'none' }"
-    >
-      <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content">
-          <div class="modal-header border-0 pb-2">
-            <h5 class="modal-title fw-semibold">Delete Subject</h5>
-            <button
-              type="button"
-              class="btn-close"
-              @click="closeDeleteModal"
-            ></button>
-          </div>
-          <div class="modal-body pt-2">
-            <p class="mb-2">Are you sure you want to delete <strong>{{ subjectToDelete?.name }}</strong>?</p>
-            <p class="text-danger small mb-0">This action cannot be undone.</p>
-          </div>
-          <div class="modal-footer border-0 pt-2">
-            <button type="button" class="btn btn-light btn-sm" @click="closeDeleteModal">Cancel</button>
-            <button
-              type="button"
-              class="btn btn-danger btn-sm"
-              @click="handleDelete"
-              :disabled="store.loading"
-            >
-              <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
-              Delete
-            </button>
+    <Transition name="modal">
+      <div v-if="showDeleteModal" class="modal fade show" style="display: block;" @click.self="closeDeleteModal">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-2">
+              <h5 class="modal-title fw-medium">Delete Subject</h5>
+              <button
+                type="button"
+                class="btn-close"
+                @click="closeDeleteModal"
+              ></button>
+            </div>
+            <div class="modal-body pt-2">
+              <p class="mb-2">Are you sure you want to delete <strong>{{ subjectToDelete?.name }}</strong>?</p>
+              <p class="text-danger small mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0 pt-2">
+              <button type="button" class="btn btn-light btn-sm" @click="closeDeleteModal">Cancel</button>
+              <button
+                type="button"
+                class="btn btn-danger btn-sm"
+                @click="handleDelete"
+                :disabled="store.loading"
+              >
+                <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Backdrop -->
-    <div
-      v-if="showModal || showDeleteModal"
-      class="modal-backdrop fade show"
-      @click="closeAllModals"
-    ></div>
+    </Transition>
   </div>
 </template>
 
@@ -308,6 +293,7 @@ const store = useSubjectStore()
 // Search and Filter
 const searchQuery = ref('')
 const statusFilter = ref('')
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Teachers list
 const teachers = ref<string[]>([])
@@ -336,34 +322,27 @@ const errors = reactive({
 
 // Computed
 const filteredSubjects = computed(() => {
-  let result = store.subjects
-
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase()
-    result = result.filter(
-      s =>
-        s.name.toLowerCase().includes(query) ||
-        (s.code && s.code.toLowerCase().includes(query)) ||
-        s.teacher.toLowerCase().includes(query) ||
-        s.class.toLowerCase().includes(query)
-    )
-  }
-
-  if (statusFilter.value) {
-    result = result.filter(s => s.status === statusFilter.value)
-  }
-
-  return result
+  // When using server-side search/filter, just return store.subjects
+  // The API already handles the filtering
+  return store.subjects
 })
 
 // Methods
 
 function handleSearch() {
-  // Search is handled by computed property
+  // Clear previous timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+
+  // Debounce search to avoid too many API calls
+  searchTimeout = setTimeout(() => {
+    store.fetchSubjects(searchQuery.value, statusFilter.value)
+  }, 300)
 }
 
 function handleFilter() {
-  // Filter is handled by computed property
+  store.fetchSubjects(searchQuery.value, statusFilter.value)
 }
 
 function openAddModal() {
@@ -448,11 +427,21 @@ async function handleSubmit() {
     const success = await store.updateSubject(store.currentSubject.id, subjectData)
     if (success) {
       closeModal()
+      // Refresh the subjects list to show updated data
+      await store.fetchSubjects(searchQuery.value, statusFilter.value)
+    } else if (store.error) {
+      // Error is already set in the store, it will be displayed
+      console.error('Failed to update subject:', store.error)
     }
   } else {
     const success = await store.createSubject(subjectData)
     if (success) {
       closeModal()
+      // Refresh the subjects list to show new data
+      await store.fetchSubjects(searchQuery.value, statusFilter.value)
+    } else if (store.error) {
+      // Error is already set in the store, it will be displayed
+      console.error('Failed to create subject:', store.error)
     }
   }
 }
@@ -476,11 +465,6 @@ async function handleDelete() {
   }
 }
 
-function closeAllModals() {
-  closeModal()
-  closeDeleteModal()
-}
-
 // Lifecycle
 onMounted(() => {
   store.fetchSubjects()
@@ -491,11 +475,16 @@ async function fetchTeachers() {
   loadingTeachers.value = true
   try {
     const response = await subjectService.getTeachers()
+    console.log('Teachers response:', response)
     if (response.success) {
-      teachers.value = response.data
+      teachers.value = response.data || []
+      console.log('Teachers loaded:', teachers.value)
+    } else {
+      console.error('Failed to fetch teachers')
     }
   } catch (error) {
     console.error('Error fetching teachers:', error)
+    teachers.value = []
   } finally {
     loadingTeachers.value = false
   }
@@ -505,58 +494,5 @@ async function fetchTeachers() {
 <style scoped>
 .subject-management {
   padding: 2rem;
-  max-width: 1400px;
-}
-
-.subject-icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  flex-shrink: 0;
-}
-
-.badge {
-  font-weight: 500;
-}
-
-.btn-icon-warning {
-  color: #ffc107;
-  background: transparent;
-  transition: all 0.2s ease;
-}
-
-.btn-icon-warning:hover {
-  color: #ffc107;
-  background: rgba(255, 193, 7, 0.15);
-  transform: scale(1.1);
-}
-
-.btn-icon-danger {
-  color: #dc3545;
-  background: transparent;
-  transition: all 0.2s ease;
-}
-
-.btn-icon-danger:hover {
-  color: #dc3545;
-  background: rgba(220, 53, 69, 0.15);
-  transform: scale(1.1);
-}
-
-.modal-backdrop {
-  z-index: 1040;
-}
-
-#subjectModal,
-#deleteModal {
-  z-index: 1050;
-}
-
-.ls-tight {
-  letter-spacing: 0.3px;
 }
 </style>
