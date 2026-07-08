@@ -18,44 +18,5 @@ export const routes: RouteRecordRaw[] = [
     name: 'dashboard',
     component: DashboardPage,
   },
-  {
-    path: '/classes',
-    name: 'class',
-    component: ClassPage,
-  },
-  {
-    path: '/subjects',
-    name: 'subject',
-    component: SubjectPage,
-  },
-  {
-    path: '/students',
-    name: 'student',
-    component: StudentPage,
-  },
-  {
-    path: '/scores',
-    name: 'score',
-    component: ScorePage,
-  },
-  {
-    path: '/reports',
-    name: 'report',
-    component: ReportPage,
-  },
-  {
-    path: '/profile',
-    name: 'profile',
-    component: ProfilePage,
-  },
-  {
-    path: '/users',
-    name: 'users',
-    component: UserPage,
-  },
-  {
-    path: '/roles',
-    name: 'roles',
-    component: RolePage,
-  },
+ 
 ]
