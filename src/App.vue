@@ -15,7 +15,7 @@ import Navigation from './components/Navigation.vue'
 const route = useRoute()
 
 const publicPages = ['login']
-const showSidebar = computed(() => !publicPages.includes(String(route)))
+const showSidebar = computed(() => !publicPages.includes(String(route.name)))
 </script>
 
 <style>

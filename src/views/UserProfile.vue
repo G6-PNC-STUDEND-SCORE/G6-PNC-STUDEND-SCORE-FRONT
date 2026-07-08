@@ -7,123 +7,168 @@
       </div>
     </header>
 
-    <!-- Profile Card -->
-    <div class="profile-card">
-      <div class="profile-body">
-        <div class="avatar-wrap" @click="triggerUpload">
-          <div class="avatar">
-            <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="avatar" />
-            <div v-else class="avatar-fallback">LF</div>
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p>Loading profile...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="fetchError" class="error-state">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <p>{{ fetchError }}</p>
+      <button class="btn btn-primary" @click="loadProfile">Retry</button>
+    </div>
+
+    <template v-else>
+      <!-- Success Message -->
+      <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill"></i>
+        {{ successMessage }}
+        <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
+      </div>
+
+      <!-- Error Message -->
+      <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        {{ saveError }}
+        <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
+      </div>
+
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="profile-body">
+          <div class="avatar-wrap" @click="triggerUpload" role="button" tabindex="0" @keydown.enter.prevent="triggerUpload" :title="avatarUploading ? 'Uploading...' : 'Click to change photo'">
+            <div class="avatar">
+              <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="avatar" />
+              <div v-else class="avatar-fallback">{{ initials }}</div>
+            </div>
+            <span class="avatar-hint">
+              <template v-if="avatarUploading">
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                Uploading...
+              </template>
+              <template v-else>
+                <i class="bi bi-camera-fill me-1"></i> Change photo
+              </template>
+            </span>
           </div>
-          <span class="avatar-hint">Click to change photo</span>
+
+          <div class="profile-meta">
+            <h2 class="profile-name">{{ form.name || 'User' }}</h2>
+            <p class="profile-role">{{ form.role || 'N/A' }}</p>
+
+
+          </div>
         </div>
 
-        <div class="profile-meta">
-          <h2 class="profile-name">{{ user.name }}</h2>
-          <p class="profile-role">{{ user.role }}</p>
-
-          <div class="rating-line">
-            <span class="stars">★★★★★</span>
-            <span class="star-text">4.5 Rating</span>
+        <div class="profile-stats">
+          <div class="stat">
+            <span class="stat-label">Department</span>
+            <span class="stat-value">{{ form.department || '—' }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">School</span>
+            <span class="stat-value">{{ form.school || '—' }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Joined</span>
+            <span class="stat-value">{{ formattedDate || '—' }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Role</span>
+            <span class="stat-value">{{ form.role || '—' }}</span>
           </div>
         </div>
       </div>
 
-      <div class="profile-stats">
-        <div class="stat">
-          <span class="stat-label">Department</span>
-          <span class="stat-value">{{ user.department }}</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">School</span>
-          <span class="stat-value">{{ user.school }}</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Joined</span>
-          <span class="stat-value">{{ user.joined }}</span>
-        </div>
-        <div class="stat">
-          <span class="stat-label">Employee ID</span>
-          <span class="stat-value">{{ user.employeeId }}</span>
-        </div>
+      <!-- Bottom Section -->
+      <div class="content-grid">
+        <!-- Personal Information -->
+        <section class="card">
+          <header class="card-header">
+            <h3>Personal Information</h3>
+            <span class="chip">Primary Contact</span>
+          </header>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Full Name</label>
+              <input type="text" v-model="form.name" placeholder="Your full name" />
+            </div>
+            <div class="field">
+              <label>Email Address</label>
+              <input type="email" v-model="form.email" placeholder="you@example.com" />
+            </div>
+            <div class="field">
+              <label>Phone</label>
+              <input type="text" v-model="form.phone" placeholder="+1 555-0001" />
+            </div>
+            <div class="field">
+              <label>Department</label>
+              <input type="text" v-model="form.department" placeholder="e.g. Information Technology" />
+            </div>
+            <div class="field">
+              <label>School</label>
+              <input type="text" v-model="form.school" placeholder="e.g. PNC" />
+            </div>
+            <div class="field">
+              <label>Role</label>
+              <input type="text" :value="form.role" disabled class="disabled-input" />
+            </div>
+          </div>
+
+
+
+          <div class="card-actions">
+            <button class="btn btn-ghost" @click="resetForm" :disabled="saving">Reset</button>
+            <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
+              <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <i v-else class="bi bi-check-lg me-1"></i>
+              {{ saving ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </section>
+
+        <!-- Change Password -->
+        <section class="card">
+          <h3 class="card-title">Change Password</h3>
+
+          <div class="stacked-form">
+            <div class="field">
+              <label>Current Password</label>
+              <input type="password" v-model="password.current" placeholder="Enter current password" />
+            </div>
+            <div class="field">
+              <label>New Password</label>
+              <input type="password" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
+            </div>
+            <div class="field">
+              <label>Confirm Password</label>
+              <input type="password" v-model="password.confirm" placeholder="Confirm new password" />
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-ghost" @click="resetPassword">Clear</button>
+            <button class="btn btn-primary" @click="updatePassword" :disabled="passwordSaving">
+              <span v-if="passwordSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <i v-else class="bi bi-lock me-1"></i>
+              {{ passwordSaving ? 'Updating...' : 'Update Password' }}
+            </button>
+          </div>
+
+          <p v-if="passwordMessage" class="hint" :class="passwordStatus">{{ passwordMessage }}</p>
+        </section>
       </div>
-    </div>
-
-    <!-- Bottom Section -->
-    <div class="content-grid">
-      <!-- Personal Information -->
-      <section class="card">
-        <header class="card-header">
-          <h3>Personal Information</h3>
-          <button class="chip">Primary Contact</button>
-        </header>
-
-        <div class="form-grid">
-          <div class="field">
-            <label>Full Name</label>
-            <input type="text" v-model="user.name" />
-          </div>
-          <div class="field">
-            <label>Email Address</label>
-            <input type="email" v-model="user.email" />
-          </div>
-          <div class="field">
-            <label>Phone</label>
-            <input type="text" v-model="user.phone" />
-          </div>
-          <div class="field">
-            <label>Role</label>
-            <select v-model="user.role">
-              <option>Administrator</option>
-              <option>Teacher</option>
-              <option>Student</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="field full">
-          <label>Bio</label>
-          <textarea v-model="user.bio"></textarea>
-        </div>
-
-        <div class="card-actions">
-          <button class="btn btn-ghost" @click="resetProfile">Cancel</button>
-          <button class="btn btn-primary" @click="saveProfile">Save Changes</button>
-        </div>
-      </section>
-
-      <!-- Change Password -->
-      <section class="card">
-        <h3 class="card-title">Change Password</h3>
-
-        <div class="stacked-form">
-          <div class="field">
-            <label>Current Password</label>
-            <input type="password" v-model="password.current" />
-          </div>
-          <div class="field">
-            <label>New Password</label>
-            <input type="password" v-model="password.new" />
-          </div>
-          <div class="field">
-            <label>Confirm Password</label>
-            <input type="password" v-model="password.confirm" />
-          </div>
-        </div>
-
-        <div class="card-actions">
-          <button class="btn btn-ghost" @click="resetPassword">Clear</button>
-          <button class="btn btn-primary" @click="updatePassword">Update Password</button>
-        </div>
-
-        <p v-if="passwordMessage" class="hint" :class="passwordStatus">{{ passwordMessage }}</p>
-      </section>
-    </div>
+    </template>
 
     <input
       ref="fileInput"
       type="file"
-      accept="image/*"
+      accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
       class="sr-only"
       @change="onFileChange"
     />
@@ -131,41 +176,205 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onUnmounted } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
+import { http } from '@/services/apiHttp'
 
+const auth = useAuthStore()
 let objectUrl: string | null = null
 
-const user = reactive({
-  name: 'Dr. Linda Foster',
-  role: 'Administrator',
-  department: 'Administration',
-  school: 'Springfield Academy',
-  joined: 'September 2013',
-  employeeId: 'EMP-001',
-  email: 'linda@school.edu',
-  phone: '+1 555-0001',
-  bio: 'School Administrator with 12 years of experience in educational management.'
+const loading = ref(true)
+const saving = ref(false)
+const fetchError = ref('')
+const saveError = ref('')
+const successMessage = ref('')
+const avatarUploading = ref(false)
+
+const form = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  department: '',
+  school: '',
+  role: '',
+  joined: '',
+})
+
+const originalForm = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  department: '',
+  school: '',
+  role: '',
+  joined: '',
 })
 
 const password = reactive({
   current: '',
   new: '',
-  confirm: ''
+  confirm: '',
 })
 
 const passwordMessage = ref('')
 const passwordStatus = ref('')
+const passwordSaving = ref(false)
 const avatarUrl = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 
-function saveProfile() {
-  passwordMessage.value = ''
-  passwordStatus.value = ''
+const initials = computed(() => {
+  if (!form.name) return 'U'
+  return form.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+})
+
+const formattedDate = computed(() => {
+  if (!form.joined) return ''
+  const d = new Date(form.joined)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+})
+
+
+
+async function loadProfile() {
+  loading.value = true
+  fetchError.value = ''
+  try {
+    const profile = await getProfile()
+    form.name = profile.name || ''
+    form.email = profile.email || ''
+    form.phone = profile.phone || ''
+    form.department = profile.department || ''
+    form.school = profile.school || ''
+    form.role = profile.role || ''
+    Object.assign(originalForm, {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      department: form.department,
+      school: form.school,
+      role: form.role,
+    })
+
+    form.joined = profile.created_at || ''
+
+    if (profile.avatar) {
+      avatarUrl.value = http.defaults.baseURL?.replace('/api', '') + '/storage/' + profile.avatar
+    }
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
+  } finally {
+    loading.value = false
+  }
 }
 
-function resetProfile() {
-  passwordMessage.value = ''
-  passwordStatus.value = ''
+async function saveProfile() {
+  saving.value = true
+  saveError.value = ''
+  successMessage.value = ''
+
+  try {
+    const updated = await updateProfile({
+      name: form.name,
+      email: form.email,
+      phone: form.phone || undefined,
+      department: form.department || undefined,
+      school: form.school || undefined,
+    })
+
+    form.name = updated.name || ''
+    form.email = updated.email || ''
+    form.phone = updated.phone || ''
+    form.department = updated.department || ''
+    form.school = updated.school || ''
+    Object.assign(originalForm, {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      department: form.department,
+      school: form.school,
+      role: form.role,
+    })
+
+    successMessage.value = 'Profile updated successfully!'
+    setTimeout(() => { successMessage.value = '' }, 4000)
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
+    saveError.value = err.response?.data?.message || err.message || 'Failed to save profile'
+    if (err.response?.data?.errors) {
+      const errorMessages = Object.values(err.response.data.errors).flat()
+      saveError.value = errorMessages.join(', ')
+    }
+  } finally {
+    saving.value = false
+  }
+}
+
+function resetForm() {
+  form.name = originalForm.name
+  form.email = originalForm.email
+  form.phone = originalForm.phone
+  form.department = originalForm.department
+  form.school = originalForm.school
+  saveError.value = ''
+  successMessage.value = ''
+}
+
+async function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  // Validate file size (2MB max)
+  if (file.size > 2 * 1024 * 1024) {
+    saveError.value = 'Image must be less than 2MB'
+    return
+  }
+
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    saveError.value = 'Only JPEG, PNG, GIF, and WebP images are allowed'
+    return
+  }
+
+  avatarUploading.value = true
+  saveError.value = ''
+
+  try {
+    const result = await uploadAvatar(file)
+    // Build full URL for the uploaded avatar
+    const baseUrl = http.defaults.baseURL?.replace('/api', '') || ''
+    avatarUrl.value = baseUrl + '/storage/' + result.avatar
+    successMessage.value = 'Avatar uploaded successfully!'
+    setTimeout(() => { successMessage.value = '' }, 4000)
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
+    saveError.value = err.response?.data?.message || err.message || 'Failed to upload avatar'
+    if (err.response?.data?.errors) {
+      const errorMessages = Object.values(err.response.data.errors).flat()
+      saveError.value = errorMessages.join(', ')
+    }
+  } finally {
+    avatarUploading.value = false
+    // Reset file input so the same file can be re-selected
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
+
+function triggerUpload() {
+  if (!avatarUploading.value) {
+    fileInput.value?.click()
+  }
 }
 
 function updatePassword() {
@@ -178,17 +387,29 @@ function updatePassword() {
     return
   }
 
-  if (password.new !== password.confirm) {
-    passwordMessage.value = 'Password does not match'
+  if (password.new.length < 8) {
+    passwordMessage.value = 'New password must be at least 8 characters'
     passwordStatus.value = 'error'
     return
   }
 
-  passwordMessage.value = 'Password changed successfully'
-  passwordStatus.value = 'success'
-  password.current = ''
-  password.new = ''
-  password.confirm = ''
+  if (password.new !== password.confirm) {
+    passwordMessage.value = 'Passwords do not match'
+    passwordStatus.value = 'error'
+    return
+  }
+
+  passwordSaving.value = true
+
+  // Simulate password update for now (backend endpoint to be added)
+  setTimeout(() => {
+    passwordMessage.value = 'Password changed successfully'
+    passwordStatus.value = 'success'
+    password.current = ''
+    password.new = ''
+    password.confirm = ''
+    passwordSaving.value = false
+  }, 1000)
 }
 
 function resetPassword() {
@@ -199,22 +420,9 @@ function resetPassword() {
   passwordStatus.value = ''
 }
 
-function triggerUpload() {
-  fileInput.value?.click()
-}
-
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  if (objectUrl) {
-    URL.revokeObjectURL(objectUrl)
-  }
-
-  objectUrl = URL.createObjectURL(file)
-  avatarUrl.value = objectUrl
-}
+onMounted(() => {
+  loadProfile()
+})
 
 onUnmounted(() => {
   if (objectUrl) {
@@ -232,16 +440,16 @@ onUnmounted(() => {
 .admin-profile-page {
   background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   min-height: 100vh;
-  padding: 28px;
+  padding: 36px;
 }
 
 .page-header {
   max-width: 1200px;
-  margin: 0 auto 22px;
+  margin: 0 auto 32px;
 }
 
 .page-header h1 {
-  font-size: 26px;
+  font-size: 28px;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
@@ -253,34 +461,61 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
+.loading-state,
+.error-state {
+  max-width: 1200px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 40px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.error-state i {
+  font-size: 2rem;
+  color: #dc2626;
+  margin-bottom: 12px;
+}
+
+.error-state p {
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
 /* Profile Card */
 .profile-card {
   max-width: 1200px;
-  margin: 0 auto 20px;
+  margin: 0 auto 28px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 24px;
+  padding: 28px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .profile-body {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .avatar-wrap {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
+  outline: none;
+}
+
+.avatar-wrap:focus-visible .avatar {
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.4);
 }
 
 .avatar {
-  width: 84px;
-  height: 84px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
   background: linear-gradient(135deg, #1565d8, #1e40af);
   color: white;
@@ -289,6 +524,12 @@ onUnmounted(() => {
   justify-content: center;
   box-shadow: 0 10px 26px rgba(21, 101, 216, 0.25);
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avatar-wrap:hover .avatar {
+  transform: scale(1.05);
+  box-shadow: 0 12px 30px rgba(21, 101, 216, 0.35);
 }
 
 .avatar-img {
@@ -305,8 +546,13 @@ onUnmounted(() => {
 }
 
 .avatar-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: #64748b;
+  transition: color 0.2s ease;
+}
+
+.avatar-wrap:hover .avatar-hint {
+  color: #1565d8;
 }
 
 .profile-meta {
@@ -315,48 +561,25 @@ onUnmounted(() => {
 }
 
 .profile-name {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
 
 .profile-role {
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   color: #64748b;
   font-size: 13px;
-}
-
-.rating-line {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 5px 10px;
-  background: #fff7ed;
-  border: 1px solid #ffedd5;
-  border-radius: 20px;
-  font-size: 12px;
-  color: #b45309;
-  font-weight: 600;
-}
-
-.stars {
-  color: #f59e0b;
-  letter-spacing: 1px;
-}
-
-.star-text {
-  color: #92400e;
-  font-weight: 700;
+  text-transform: capitalize;
 }
 
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 18px;
+  gap: 20px;
+  margin-top: 24px;
+  padding-top: 24px;
   border-top: 1px solid #f1f5f9;
 }
 
@@ -386,14 +609,14 @@ onUnmounted(() => {
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 28px;
 }
 
 .card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 20px;
+  padding: 28px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
@@ -401,14 +624,14 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .card-title {
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 16px;
+  margin: 0 0 24px;
 }
 
 .chip {
@@ -419,23 +642,18 @@ onUnmounted(() => {
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
-}
-
-.chip:hover {
-  background: #dbeafe;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 20px;
 }
 
 .stacked-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 .field {
@@ -443,13 +661,9 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
-.field.full {
-  margin-top: 14px;
-}
-
 .field label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: #475569;
   font-size: 12px;
   font-weight: 600;
@@ -458,9 +672,8 @@ onUnmounted(() => {
 }
 
 input,
-select,
-textarea {
-  padding: 10px 12px;
+select {
+  padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
   font-size: 14px;
@@ -471,40 +684,45 @@ textarea {
 }
 
 input:hover,
-select:hover,
-textarea:hover {
+select:hover {
   border-color: #cbd5e1;
   background: #ffffff;
 }
 
 input:focus,
-select:focus,
-textarea:focus {
+select:focus {
   border-color: #1565d8;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.1);
 }
 
-textarea {
-  height: 110px;
-  resize: vertical;
+.disabled-input {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .card-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 28px;
 }
 
 .btn {
   border: none;
-  padding: 10px 18px;
+  padding: 12px 22px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-ghost {
@@ -513,7 +731,7 @@ textarea {
   color: #475569;
 }
 
-.btn-ghost:hover {
+.btn-ghost:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #cbd5e1;
 }
@@ -524,7 +742,7 @@ textarea {
   box-shadow: 0 6px 16px rgba(21, 101, 216, 0.25);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: #104dae;
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(21, 101, 216, 0.3);
@@ -557,6 +775,13 @@ textarea {
   border-width: 0;
 }
 
+.alert {
+  max-width: 1200px;
+  margin: 0 auto 16px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
 @media (max-width: 900px) {
   .admin-profile-page {
     padding: 20px;
@@ -572,5 +797,6 @@ textarea {
     flex-direction: column;
     text-align: center;
   }
+
 }
 </style>

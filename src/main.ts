@@ -11,9 +11,17 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 // Bootstrap Icons
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
-const app = createApp(App)
+// Auth store for initializing auth state from localStorage before mounting
+import { useAuthStore } from '@/stores/auth'
 
-app.use(createPinia())
+const app = createApp(App)
+const pinia = createPinia()
+
+app.use(pinia)
 app.use(router)
+
+// Initialize auth state from localStorage BEFORE mounting so Axios has the token
+const auth = useAuthStore()
+await auth.init()
 
 app.mount('#app')
