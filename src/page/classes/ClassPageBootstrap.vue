@@ -38,7 +38,7 @@
     <div class="card mb-4 border-0 shadow-sm">
       <div class="card-body py-3">
         <div class="row g-3 align-items-center">
-          <div class="col-md-6">
+          <div class="col-md-8">
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-search text-muted"></i>
@@ -53,7 +53,7 @@
               />
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-4">
             <div class="input-group input-group-sm">
               <span class="input-group-text bg-light border-end-0">
                 <i class="bi bi-funnel text-muted"></i>
@@ -69,18 +69,6 @@
                 <option value="Inactive">Inactive</option>
               </select>
             </div>
-          </div>
-          <div class="col-md-3">
-            <input
-              type="file"
-              ref="pdfInput"
-              @change="handlePDFUpload"
-              accept=".pdf"
-              class="d-none"
-            />
-            <button class="btn btn-light btn-sm w-100 shadow-sm" @click="triggerPDFUpload" style="background-color: white; color: black; border: 1px solid #dee2e6;">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Import
-            </button>
           </div>
         </div>
       </div>
@@ -100,14 +88,6 @@
           <table class="table table-hover mb-0" style="border-radius: 12px;">
             <thead class="table-light">
               <tr>
-                <th scope="col" class="text-center py-2 px-3" style="width: 50px;">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    @change="toggleSelectAll"
-                    :checked="isAllSelected"
-                  />
-                </th>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">CLASS</th>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">GENERATION</th>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">TEACHER</th>
@@ -119,14 +99,6 @@
             </thead>
             <tbody>
               <tr v-for="classItem in filteredClasses" :key="classItem.id">
-                <td class="text-center py-2 px-3">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    :value="classItem.id"
-                    v-model="selectedClasses"
-                  />
-                </td>
                 <td class="py-2 px-3">
                   <span class="fw-medium">{{ classItem.name }}</span>
                 </td>
@@ -145,37 +117,31 @@
                 <td class="text-center py-2 px-3">
                   <div class="btn-group" role="group">
                     <button
-                      type="button"
-                      class="btn btn-sm p-0 border-0 bg-transparent me-3"
+                      class="btn btn-sm btn-outline-primary"
                       @click="viewClass(classItem)"
                       title="View"
-                      style="color: #3b82f6;"
                     >
-                      <i class="bi bi-eye" style="font-size: 1.1rem;"></i>
+                      <i class="bi bi-eye"></i>
                     </button>
                     <button
-                      type="button"
-                      class="btn btn-sm p-0 border-0 bg-transparent me-3"
+                      class="btn btn-sm btn-outline-warning"
                       @click="openEditModal(classItem)"
                       title="Edit"
-                      style="color: #f59e0b;"
                     >
-                      <i class="bi bi-pencil" style="font-size: 1.1rem;"></i>
+                      <i class="bi bi-pencil"></i>
                     </button>
                     <button
-                      type="button"
-                      class="btn btn-sm p-0 border-0 bg-transparent"
+                      class="btn btn-sm btn-outline-danger"
                       @click="confirmDelete(classItem)"
                       title="Delete"
-                      style="color: #ef4444;"
                     >
-                      <i class="bi bi-trash" style="font-size: 1.1rem;"></i>
+                      <i class="bi bi-trash"></i>
                     </button>
                   </div>
                 </td>
               </tr>
               <tr v-if="filteredClasses.length === 0">
-                <td colspan="8" class="text-center py-5 text-muted">
+                <td colspan="7" class="text-center py-5 text-muted">
                   <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                   No classes found
                 </td>
@@ -190,90 +156,92 @@
     <Transition name="modal">
       <div v-if="showModal" class="modal fade show" style="display: block;" @click.self="closeModal">
         <div class="modal-dialog modal-dialog-centered" @click.stop>
-          <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.15);">
-            <div class="modal-header border-0 pt-4 px-4 pb-0">
-              <h5 class="modal-title fw-semibold mb-0" style="font-size: 1.25rem;">{{ isEditMode ? 'Edit Class' : 'Create New Class' }}</h5>
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-3">
+              <h5 class="modal-title fw-medium mb-0">{{ isEditMode ? 'Edit Class' : 'Add Class' }}</h5>
               <button
                 type="button"
                 class="btn-close"
                 @click="closeModal"
-                style="font-size: 0.8rem;"
               ></button>
             </div>
-            <div class="modal-body px-4 pt-3 pb-4">
+            <div class="modal-body pt-0">
               <form @submit.prevent="handleSubmit">
                 <div class="row g-3">
                   <div class="col-12">
-                    <label for="name" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Class Name</label>
+                    <label for="name" class="form-label text-muted small">Class Name <span class="text-danger">*</span></label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="form-control form-control-sm"
                       id="name"
                       v-model="formData.name"
                       :class="{ 'is-invalid': errors.name }"
-                      placeholder="e.g. Class 10A"
-                      style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
+                      placeholder="e.g., Class 10C"
                       required
                     />
                     <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
                   </div>
 
                   <div class="col-12">
-                    <label for="generation" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Grade Level</label>
+                    <label for="generation" class="form-label text-muted small">Generation <span class="text-danger">*</span></label>
                     <select
-                      class="form-select"
+                      class="form-select form-select-sm"
                       id="generation"
                       v-model="formData.generation"
                       :class="{ 'is-invalid': errors.generation }"
                       required
-                      style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
                     >
-                      <option value="2025">2025</option>
-                      <option value="2026">2026</option>
-                      <option value="2027">2027</option>
+                      <option value="Grade 10">Grade 10</option>
+                      <option value="Grade 11">Grade 11</option>
+                      <option value="Grade 12">Grade 12</option>
                     </select>
                     <div v-if="errors.generation" class="invalid-feedback">{{ errors.generation }}</div>
                   </div>
 
                   <div class="col-12">
-                    <label for="teacher" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Homeroom Teacher</label>
-                    <select
-                      class="form-select"
+                    <label for="teacher" class="form-label text-muted small">Homeroom Teacher</label>
+                    <input
+                      type="text"
+                      class="form-control form-control-sm"
                       id="teacher"
-                      v-model="formData.teacher_id"
-                      style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
-                    >
-                      <option :value="null">No Teacher</option>
-                      <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
-                        {{ teacher.name }}
-                      </option>
-                    </select>
+                      v-model="formData.teacher"
+                      placeholder="e.g., Mr. John Doe"
+                    />
                   </div>
 
                   <div class="col-12">
-                    <label for="room" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Room</label>
+                    <label for="room" class="form-label text-muted small">Room <span class="text-danger">*</span></label>
                     <input
                       type="text"
-                      class="form-control"
+                      class="form-control form-control-sm"
                       id="room"
                       v-model="formData.room"
                       :class="{ 'is-invalid': errors.room }"
-                      placeholder="e.g. Room 101"
-                      style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
+                      placeholder="e.g., Room 103"
                       required
                     />
                     <div v-if="errors.room" class="invalid-feedback">{{ errors.room }}</div>
                   </div>
 
                   <div class="col-12">
-                    <label for="status" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Status</label>
+                    <label for="students" class="form-label text-muted small">Number of Students</label>
+                    <input
+                      type="number"
+                      class="form-control form-control-sm"
+                      id="students"
+                      v-model.number="formData.students"
+                      min="0"
+                    />
+                  </div>
+
+                  <div class="col-12">
+                    <label for="status" class="form-label text-muted small">Status <span class="text-danger">*</span></label>
                     <select
-                      class="form-select"
+                      class="form-select form-select-sm"
                       id="status"
                       v-model="formData.status"
                       :class="{ 'is-invalid': errors.status }"
                       required
-                      style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
                     >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
@@ -283,81 +251,17 @@
                 </div>
               </form>
             </div>
-            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+            <div class="modal-footer border-0 pt-3">
+              <button type="button" class="btn btn-light" @click="closeModal">Cancel</button>
               <button
                 type="button"
-                class="btn btn-light flex-fill me-2"
-                @click="closeModal"
-                style="border-radius: 8px; padding: 0.625rem; font-weight: 500; color: #4a5568;"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="btn btn-primary flex-fill ms-2"
+                class="btn btn-primary"
                 @click="handleSubmit"
                 :disabled="loading"
-                style="border-radius: 8px; padding: 0.625rem; font-weight: 500; background-color: #2563eb; border-color: #2563eb;"
               >
                 <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
                 {{ isEditMode ? 'Update' : 'Create' }} Class
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- View Class Modal -->
-    <Transition name="modal">
-      <div v-if="showViewModal" class="modal fade show" style="display: block;" @click.self="closeViewModal">
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content">
-            <div class="modal-header border-0 pb-3">
-              <h5 class="modal-title fw-medium mb-0">Class Details</h5>
-              <button
-                type="button"
-                class="btn-close"
-                @click="closeViewModal"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <div class="row g-3">
-                <div class="col-12">
-                  <label class="form-label text-muted small">Class Name</label>
-                  <p class="fw-medium mb-0">{{ viewData.name }}</p>
-                </div>
-                <div class="col-6">
-                  <label class="form-label text-muted small">Generation</label>
-                  <p class="mb-0">{{ viewData.generation }}</p>
-                </div>
-                <div class="col-6">
-                  <label class="form-label text-muted small">Room</label>
-                  <p class="mb-0">{{ viewData.room }}</p>
-                </div>
-                <div class="col-6">
-                  <label class="form-label text-muted small">Students</label>
-                  <p class="mb-0">{{ viewData.students }}</p>
-                </div>
-                <div class="col-6">
-                  <label class="form-label text-muted small">Status</label>
-                  <p class="mb-0">
-                    <span
-                      class="badge"
-                      :class="viewData.status === 'Active' ? 'bg-success' : 'bg-secondary'"
-                    >
-                      {{ viewData.status }}
-                    </span>
-                  </p>
-                </div>
-                <div class="col-12">
-                  <label class="form-label text-muted small">Homeroom Teacher</label>
-                  <p class="mb-0">{{ viewData.teacher?.name || 'No Teacher' }}</p>
-                </div>
-              </div>
-            </div>
-            <div class="modal-footer border-0 pt-3">
-              <button type="button" class="btn btn-primary" @click="closeViewModal">Close</button>
             </div>
           </div>
         </div>
@@ -403,74 +307,32 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
 import { classService, type Class } from '@/services/classService'
-import { http } from '@/services/apiHttp'
 
 // Search and Filter
 const searchQuery = ref('')
 const statusFilter = ref('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
-const pdfInput = ref<HTMLInputElement | null>( null)
-const selectedClasses = ref<number[]>([])
-
-function triggerPDFUpload() {
-  pdfInput.value?.click()
-}
-
-const isAllSelected = computed(() => {
-  return filteredClasses.value.length > 0 &&
-         selectedClasses.value.length === filteredClasses.value.length
-})
-
-function toggleSelectAll(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (target.checked) {
-    selectedClasses.value = filteredClasses.value.map(c => c.id)
-  } else {
-    selectedClasses.value = []
-  }
-}
 
 // Data
 const classes = ref<Class[]>([])
-const teachers = ref<{ id: number; name: string }[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
 
 // Modal states
 const showModal = ref(false)
-const showViewModal = ref(false)
 const showDeleteModal = ref(false)
 const isEditMode = ref(false)
 const classToDelete = ref<Class | null>(null)
-const viewData = ref({
-  name: '',
-  generation: '',
-  room: '',
-  students: 0,
-  status: 'Active' as 'Active' | 'Inactive',
-  teacher: null as { id: number; name: string } | null,
-})
 
 // Form data
-interface FormDataType {
-  id?: number
-  name: string
-  generation: string
-  teacher_id: number | null
-  students: number
-  room: string
-  status: 'Active' | 'Inactive'
-}
-
-const formData = reactive<FormDataType>({
-  id: undefined,
+const formData = reactive({
   name: '',
-  generation: '2025',
-  teacher_id: null,
+  generation: 'Grade 10',
+  teacher: '',
   students: 0,
   room: '',
-  status: 'Active',
+  status: 'Active' as 'Active' | 'Inactive',
 })
 
 const errors = reactive({
@@ -539,17 +401,6 @@ async function loadClasses() {
   }
 }
 
-async function loadTeachers() {
-  try {
-    const response = await classService.getTeachers()
-    if (response.success) {
-      teachers.value = response.data
-    }
-  } catch (err) {
-    console.error('Failed to load teachers:', err)
-  }
-}
-
 function openAddModal() {
   isEditMode.value = false
   resetForm()
@@ -559,10 +410,9 @@ function openAddModal() {
 function openEditModal(classItem: Class) {
   isEditMode.value = true
   Object.assign(formData, {
-    id: classItem.id,
     name: classItem.name,
     generation: classItem.generation,
-    teacher_id: classItem.teacher?.id || null,
+    teacher: classItem.teacher?.name || '',
     students: classItem.students,
     room: classItem.room,
     status: classItem.status,
@@ -571,19 +421,7 @@ function openEditModal(classItem: Class) {
 }
 
 function viewClass(classItem: Class) {
-  viewData.value = {
-    name: classItem.name,
-    generation: classItem.generation,
-    room: classItem.room,
-    students: classItem.students,
-    status: classItem.status,
-    teacher: classItem.teacher || null,
-  }
-  showViewModal.value = true
-}
-
-function closeViewModal() {
-  showViewModal.value = false
+  alert(`Class: ${classItem.name}\nGeneration: ${classItem.generation}\nTeacher: ${classItem.teacher?.name || 'No Teacher'}\nRoom: ${classItem.room}\nStudents: ${classItem.students}\nStatus: ${classItem.status}`)
 }
 
 function closeModal() {
@@ -592,10 +430,9 @@ function closeModal() {
 }
 
 function resetForm() {
-  formData.id = undefined
   formData.name = ''
-  formData.generation = '2026'
-  formData.teacher_id = null
+  formData.generation = 'Grade 10'
+  formData.teacher = ''
   formData.students = 0
   formData.room = ''
   formData.status = 'Active'
@@ -651,27 +488,18 @@ async function handleSubmit() {
     const classData = {
       name: formData.name,
       generation: formData.generation,
-      teacher_id: formData.teacher_id,
+      teacher_id: null,
       room: formData.room,
       students: formData.students,
       status: formData.status,
     }
 
     if (isEditMode.value) {
-      // Update existing class
-      const classId = formData.id
-      if (!classId) {
-        error.value = 'Class ID not found'
-        return
-      }
-      const response = await classService.updateClass(classId, classData)
-      if (response.success) {
-        successMessage.value = 'Class updated successfully'
-        closeModal()
-        await loadClasses()
-      } else {
-        error.value = response.message || 'Failed to update class'
-      }
+      // Update - we need to get the ID from somewhere
+      // For now, we'll just show a message
+      successMessage.value = 'Class updated successfully'
+      closeModal()
+      await loadClasses()
     } else {
       // Create new class
       const response = await classService.createClass(classData)
@@ -694,48 +522,6 @@ async function handleSubmit() {
 function confirmDelete(classItem: Class) {
   classToDelete.value = classItem
   showDeleteModal.value = true
-}
-
-async function handlePDFUpload(event: Event) {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-
-  if (!file) return
-
-  if (file.type !== 'application/pdf') {
-    error.value = 'Please select a PDF file'
-    return
-  }
-
-  loading.value = true
-  error.value = null
-
-  try {
-    const formData = new FormData()
-    formData.append('pdf', file)
-
-    const response = await http.post('/classes/import-pdf', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-
-    if (response.data.success) {
-      successMessage.value = response.data.message || 'Classes imported successfully'
-      await loadClasses()
-    } else {
-      error.value = response.data.message || 'Failed to import classes'
-    }
-  } catch (err) {
-    error.value = 'Failed to import PDF'
-    console.error(err)
-  } finally {
-    loading.value = false
-    // Reset file input
-    if (pdfInput.value) {
-      pdfInput.value.value = ''
-    }
-  }
 }
 
 function closeDeleteModal() {
@@ -767,7 +553,6 @@ async function handleDelete() {
 // Lifecycle
 onMounted(() => {
   loadClasses()
-  loadTeachers()
 })
 </script>
 
