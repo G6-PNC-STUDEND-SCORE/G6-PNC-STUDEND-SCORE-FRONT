@@ -9,7 +9,11 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
+// Auth store for initializing auth state from localStorage before mounting
+import { useAuthStore } from '@/stores/auth'
+
 const app = createApp(App)
+const pinia = createPinia()
 
 const pinia = createPinia()
 app.use(pinia)
