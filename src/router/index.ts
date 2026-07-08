@@ -1,21 +1,28 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes } from './routes'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
-// Navigation guard for authentication
-router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token')
+// Navigation guard to check authentication
+router.beforeEach((to, from, next) => {
+  const authStore = useAuthStore()
 
-  if (to.meta.requiresAuth && !token) {
+  // Public pages that don't require authentication
+  const publicPages = ['/login']
+
+  // Check if the route requires authentication
+  const requiresAuth = !publicPages.includes(to.path)
+
+  if (requiresAuth && !authStore.isAuthenticated) {
     // Redirect to login if not authenticated
-    next({ name: 'login' })
-  } else if (to.meta.guest && token) {
-    // Redirect to dashboard if already logged in
-    next({ name: 'dashboard' })
+    next('/login')
+  } else if (to.path === '/login' && authStore.isAuthenticated) {
+    // Redirect to dashboard if already authenticated
+    next('/dashboard')
   } else {
     next()
   }

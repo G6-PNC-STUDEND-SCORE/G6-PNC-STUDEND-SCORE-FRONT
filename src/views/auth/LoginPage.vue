@@ -112,8 +112,7 @@ const loginSuccess = ref(false)
 async function onSubmit() {
   const success = await auth.login(email.value, password.value)
   if (success) {
-    loginSuccess.value = true
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    await new Promise(resolve => setTimeout(resolve, 1000))
     await router.push('/dashboard')
     loginSuccess.value = false
   }

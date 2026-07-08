@@ -27,46 +27,5 @@ export const routes: RouteRecordRaw[] = [
     component: UserProfile,
     meta: { requiresAuth: true },
   },
-  {
-    path: '/classes',
-    name: 'classes',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Classes' },
-  },
-  {
-    path: '/subjects',
-    name: 'subjects',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Subjects' },
-  },
-  {
-    path: '/students',
-    name: 'students',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Students' },
-  },
-  {
-    path: '/scores',
-    name: 'scores',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Scores' },
-  },
-  {
-    path: '/reports',
-    name: 'reports',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Reports' },
-  },
-  {
-    path: '/users',
-    name: 'users',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Users' },
-  },
-  {
-    path: '/roles',
-    name: 'roles',
-    component: () => import('@/views/PlaceholderPage.vue'),
-    meta: { requiresAuth: true, title: 'Roles & Permissions' },
-  },
+ 
 ]
