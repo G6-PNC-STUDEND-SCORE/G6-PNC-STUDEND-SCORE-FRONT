@@ -293,7 +293,7 @@ type Point = {
 }
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
-const trendYears = [2024, 2025, 2026]
+const trendYears = [2022, 2023, 2024, 2025, 2026]
 const selectedYear = ref(2026)
 
 const primaryStatsCards = computed<StatCard[]>(() => [
