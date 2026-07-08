@@ -2,6 +2,14 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const LoginPage = () => import('@/views/auth/LoginPage.vue')
 const DashboardPage = () => import('@/views/DashboardPage.vue')
+const ClassPage = () => import('@/views/classes/ClassPage.vue')
+const SubjectPage = () => import('@/views/subjects/SubjectPage.vue')
+const StudentPage = () => import('@/views/students/StudentPage.vue')
+const ScorePage = () => import('@/views/scores/ScorePage.vue')
+const ReportPage = () => import('@/views/reports/ReportPage.vue')
+const ProfilePage = () => import('@/views/profile/ProfilePage.vue')
+const UserPage = () => import('@/views/users/UserPage.vue')
+const RolePage = () => import('@/views/roles/RolePage.vue')
 
 export const routes: RouteRecordRaw[] = [
   {

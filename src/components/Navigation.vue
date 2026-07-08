@@ -73,11 +73,11 @@
         <div class="border-top">
             <div class="user d-flex align-items-center px-3 py-2">
                 <div class="avatar">
-                    {{ getUserInitials() }}
+                    {{ displayInitials }}
                 </div>
                 <div class="ms-2 flex-grow-1">
-                    <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name || 'User' }}</h6>
-                    <small class="text-secondary">{{ auth.user?.role || 'Admin' }}</small>
+                    <h6 class="mb-0 fw-bold text-truncate">{{ displayName }}</h6>
+                    <small class="text-secondary">{{ displayRole }}</small>
                 </div>
             </div>
             <button class="logout-btn w-100 d-flex align-items-center px-3 py-2" @click="showLogoutModal = true">
@@ -117,33 +117,42 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const auth = useAuthStore()
+const authStore = useAuthStore()
 
 const settingsOpen = ref(false)
 const showLogoutModal = ref(false)
+const displayName = ref('User')
+const displayRole = ref('Admin')
+const displayInitials = ref('U')
+
+watchEffect(() => {
+  const u = authStore.user
+  if (u) {
+    displayName.value = u.name
+    displayRole.value = u.role
+    const parts = u.name.split(' ').filter(Boolean)
+    displayInitials.value = parts.length >= 2
+      ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
+      : u.name.substring(0, 2).toUpperCase()
+  } else {
+    displayName.value = 'User'
+    displayRole.value = 'Admin'
+    displayInitials.value = 'U'
+  }
+})
 
 function toggleSettings() {
     settingsOpen.value = !settingsOpen.value
 }
 
-function getUserInitials(): string {
-    const name = auth.user?.name || ''
-    if (!name) return 'U'
-    const parts = name.split(' ').filter(Boolean)
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-}
-
- function handleLogout() {
+function handleLogout() {
     showLogoutModal.value = false
-     auth.logout()
+    authStore.logout()
     router.push('/login')
 }
 </script>
