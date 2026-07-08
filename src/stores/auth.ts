@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { login as loginApi, logout as logoutApi, me } from '@/services/authService'
+import { googleLogin as googleLoginApi } from '@/services/googleAuthService'
 import { setAuthToken, clearAuthToken } from '@/services/apiHttp'
 
 export interface User {
@@ -66,6 +67,28 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithGoogle(credential: string) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await googleLoginApi(credential)
+      token.value = response.token
+      user.value = response.user as User
+
+      localStorage.setItem('token', response.token)
+      setAuthToken(response.token)
+
+      return true
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      error.value = err.response?.data?.message || err.message || 'Google login failed'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     token,
     user,
@@ -74,6 +97,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     init,
     login,
+    loginWithGoogle,
     logout,
   }
 })

@@ -18,5 +18,4 @@ export const routes: RouteRecordRaw[] = [
     name: 'dashboard',
     component: DashboardPage,
   },
-  
 ]
