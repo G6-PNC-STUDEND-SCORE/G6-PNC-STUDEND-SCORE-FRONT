@@ -7,6 +7,7 @@ export interface Student {
   name: string
   photo: string | null
   gender: 'Male' | 'Female'
+  status: 'active' | 'inactive'
   created_at: string
   updated_at: string
   class?: {
@@ -62,6 +63,7 @@ export async function createStudent(data: {
   gender: 'Male' | 'Female'
   class_id?: number | null
   photo?: string | null
+  status?: 'active' | 'inactive'
 }): Promise<StudentResponse> {
   const res = await http.post<StudentResponse>('/students', data)
   return res.data
@@ -74,6 +76,7 @@ export async function updateStudent(
     gender?: 'Male' | 'Female'
     class_id?: number | null
     photo?: string | null
+    status?: 'active' | 'inactive'
   }
 ): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}`, data)
