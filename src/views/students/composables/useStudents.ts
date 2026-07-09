@@ -5,7 +5,7 @@ import {
   updateStudent,
   deleteStudent,
   assignStudentToClass,
-  getClasses,
+  // getClasses,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
