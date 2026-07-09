@@ -4,7 +4,7 @@ const LoginPage = () => import('@/views/auth/LoginPage.vue')
 const DashboardPage = () => import('@/views/DashboardPage.vue')
 const UserProfile = () => import('@/views/UserProfile.vue')
 const StudentPage = () => import('@/views/students/StudentPage.vue')
-const PlaceholderPage = () => import('@/views/PlaceholderPage.vue')
+
 
 export const routes: RouteRecordRaw[] = [
   {
