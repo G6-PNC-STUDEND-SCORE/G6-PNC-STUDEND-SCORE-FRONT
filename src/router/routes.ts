@@ -1,68 +1,54 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-const LoginPage = () => import('@/views/auth/LoginPage.vue')
-const UserProfile = () => import('@/views/UserProfile.vue')
-const StudentPage = () => import('@/views/students/StudentPage.vue')
-const PlaceholderPage = () => import('@/views/PlaceholderPage.vue')
+import LoginView from '../views/auth/LoginPage.vue'
+import DashboardView from '../views/DashboardView.vue'
+import UserProfile from '../views/UserProfile.vue'
+import StudentPage from '@/views/students/StudentPage.vue'
+import SubjectPage from '@/views/SubjectPage.vue'
+// import StudentPage from '@/views/students/StudentPage.vue'
+
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/login',
   },
   {
     path: '/login',
     name: 'login',
-    component: LoginPage,
-    meta: { guest: true },
-  },
+    component: LoginView,
 
+
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: DashboardView,
+
+
+  },
   {
     path: '/students',
-    name: 'students',
+    name: 'student',
     component: StudentPage,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/classes',
-    name: 'classes',
-    component: PlaceholderPage,
-    meta: { requiresAuth: true, title: 'Classes' },
+
   },
   {
     path: '/subjects',
-    name: 'subjects',
-    component: PlaceholderPage,
-    meta: { requiresAuth: true, title: 'Subjects' },
+    name: 'subject',
+    component: SubjectPage,
+
   },
-  {
-    path: '/scores',
-    name: 'scores',
-    component: PlaceholderPage,
-    meta: { requiresAuth: true, title: 'Scores' },
-  },
-  {
-    path: '/reports',
-    name: 'reports',
-    component: PlaceholderPage,
-    meta: { requiresAuth: true, title: 'Reports' },
-  },
+
+
+
   {
     path: '/profile',
     name: 'profile',
     component: UserProfile,
-    meta: { requiresAuth: true },
+
   },
-  {
-    path: '/users',
-    name: 'users',
-    component: PlaceholderPage,
-    meta: { requiresAuth: true, title: 'Users' },
-  },
-  {
-    path: '/roles',
-    name: 'roles',
-    component: PlaceholderPage,
-    meta: { requiresAuth: true, title: 'Roles & Permissions' },
-  },
+
+
+
 ]
