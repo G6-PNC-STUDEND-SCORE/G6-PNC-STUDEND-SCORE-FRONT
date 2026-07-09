@@ -15,12 +15,9 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 const pinia = createPinia()
-
 app.use(pinia)
 app.use(router)
 app.use(i18n)
-
-// Initialize auth store after pinia is installed
 
 const authStore = useAuthStore()
 authStore.init()

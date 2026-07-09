@@ -27,3 +27,9 @@ export function clearAuthToken() {
   delete http.defaults.headers.common.Authorization
 }
 
+export function storageUrl(path?: string | null): string {
+  if (!path) return ''
+  const base = (http.defaults.baseURL || '').replace(/\/api\/?$/, '')
+  return base + '/storage/' + path.replace(/^\//, '')
+}
+
