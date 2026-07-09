@@ -18,11 +18,13 @@ export const routes: RouteRecordRaw[] = [
     name: 'login',
     component: LoginView,
 
+
   },
   {
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
+
 
   },
   {
@@ -37,12 +39,16 @@ export const routes: RouteRecordRaw[] = [
     component: SubjectPage,
 
   },
+
+
+
   {
     path: '/profile',
     name: 'profile',
     component: UserProfile,
 
   },
+
 
 
 ]
