@@ -94,6 +94,42 @@
                   </select>
                 </div>
               </div>
+
+              <!-- Status -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-toggle-on me-1"></i>
+                  Status
+                </label>
+                <div class="status-toggle">
+                  <label
+                    class="status-option"
+                    :class="{ active: status === 'active', 'active-on': status === 'active' }"
+                  >
+                    <input
+                      type="radio"
+                      :checked="status === 'active'"
+                      @change="$emit('update:status', 'active')"
+                      class="visually-hidden"
+                    />
+                    <span class="status-dot active"></span>
+                    <span class="status-text">Active</span>
+                  </label>
+                  <label
+                    class="status-option"
+                    :class="{ active: status === 'inactive', 'inactive-on': status === 'inactive' }"
+                  >
+                    <input
+                      type="radio"
+                      :checked="status === 'inactive'"
+                      @change="$emit('update:status', 'inactive')"
+                      class="visually-hidden"
+                    />
+                    <span class="status-dot inactive"></span>
+                    <span class="status-text">Inactive</span>
+                  </label>
+                </div>
+              </div>
             </div>
 
             <!-- Footer -->
@@ -132,6 +168,7 @@ defineProps<{
   name: string
   gender: 'Male' | 'Female'
   classId: number | null
+  status: 'active' | 'inactive'
   classes: SchoolClass[]
   submitting: boolean
   error: string | null
@@ -143,6 +180,7 @@ defineEmits<{
   'update:name': [value: string]
   'update:gender': [value: 'Male' | 'Female']
   'update:classId': [value: number | null]
+  'update:status': [value: 'active' | 'inactive']
 }>()
 </script>
 
@@ -369,6 +407,67 @@ select.modern-input {
 .gender-dot.female { background: #ec4899; }
 
 .gender-text {
+  font-size: 0.8125rem;
+}
+
+/* ==================== Status Toggle ==================== */
+.status-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.status-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0.65rem 1rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.status-option:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.status-option.active {
+  border-color: #2563eb;
+}
+
+.status-option.active.active-on {
+  background: #ecfdf5;
+  color: #15803d;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+}
+
+.status-option.active.inactive-on {
+  background: #f8fafc;
+  color: #64748b;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.active { background: #22c55e; }
+.status-dot.inactive { background: #94a3b8; }
+
+.status-text {
   font-size: 0.8125rem;
 }
 

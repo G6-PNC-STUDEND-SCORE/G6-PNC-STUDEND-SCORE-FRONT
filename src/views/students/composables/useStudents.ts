@@ -32,9 +32,9 @@ export function useStudents() {
   const selectedStudent = ref<Student | null>(null)
 
   // ==================== Form State ====================
-  const editForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null })
+  const editForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
   const assignForm = ref({ class_id: null as number | null })
-  const createForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null })
+  const createForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
 
   // ==================== Computed ====================
   const filteredStudents = computed(() => {
@@ -97,7 +97,7 @@ export function useStudents() {
 
   // ==================== Create ====================
   function openCreateModal() {
-    createForm.value = { name: '', gender: 'Male', class_id: null }
+    createForm.value = { name: '', gender: 'Male', class_id: null, status: 'active' }
     formError.value = null
     showCreateModal.value = true
   }
@@ -133,6 +133,7 @@ export function useStudents() {
       name: student.name,
       gender: student.gender,
       class_id: student.class_id,
+      status: student.status,
     }
     formError.value = null
     showEditModal.value = true

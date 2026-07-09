@@ -1,25 +1,26 @@
 <template>
-  <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-    <!-- Search & Filter Bar -->      <div class="p-3 border-bottom d-flex flex-wrap align-items-center gap-3" style="background: #fafbfc; font-family: 'Inter', 'Noto Sans Khmer', sans-serif;">
-        <div class="position-relative flex-grow-1" style="max-width: 320px;">
-          <i class="bi bi-search position-absolute start-0 top-50 translate-middle-y ms-3" style="color: #9ca3af;"></i>
+  <div class="student-card">
+    <!-- Search & Filter Bar -->
+    <div class="toolbar">
+      <div class="search-box">
+        <i class="bi bi-search search-icon"></i>
         <input
           :value="searchQuery"
           @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
           type="text"
-          class="form-control ps-5"
-          style="border-radius: 0.5rem; border-color: #e5e7eb; font-size: 0.8125rem; padding-top: 0.5rem; padding-bottom: 0.5rem;"
+          class="search-input"
           placeholder="Search by name..."
         />
       </div>
-      <div class="d-flex gap-2 align-items-center">
-        <label class="d-flex align-items-center gap-2" style="font-size: 0.8125rem; color: #374151; font-weight: 500;">
-          Gender:
+
+      <div class="filter-group">
+        <label class="filter-label">
+          <i class="bi bi-gender-ambiguous"></i>
+          <span>Gender</span>
           <select
             :value="genderFilter"
             @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
-            class="form-select"
-            style="border-radius: 0.5rem; border-color: #e5e7eb; font-size: 0.8125rem; width: auto; padding: 0.4rem 2rem 0.4rem 0.75rem;"
+            class="filter-select"
           >
             <option value="">All</option>
             <option value="Male">Male</option>
@@ -27,51 +28,67 @@
           </select>
         </label>
       </div>
-      <span class="badge rounded-pill" style="background: #eef2ff; color: #2563eb; font-size: 0.75rem; padding: 0.35rem 0.75rem;">
+
+      <span class="count-badge">
         {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
       </span>
     </div>
 
     <!-- Table -->
-    <div class="table-responsive" style="font-family: 'Inter', 'Noto Sans Khmer', sans-serif;">
-      <table class="table table-hover align-middle mb-0" style="font-size: 0.875rem;">
-        <thead style="background: #f8fafc; border-bottom: 2px solid #e5e7eb;">
+    <div class="table-wrap">
+      <table class="student-table">
+        <thead>
           <tr>
-            <th class="ps-4 py-3 fw-semibold" style="color: #374151;">#</th>
-            <th class="py-3 fw-semibold" style="color: #374151;">Name</th>
-            <th class="py-3 fw-semibold" style="color: #374151;">Gender</th>
-            <th class="py-3 fw-semibold" style="color: #374151;">Class</th>
-            <th class="py-3 fw-semibold text-end pe-4" style="color: #374151;">Actions</th>
+            <th class="col-check">
+              <input
+                type="checkbox"
+                class="row-check"
+                :checked="allSelected"
+                :indeterminate="someSelected && !allSelected"
+                @change="toggleAll"
+                aria-label="Select all"
+              />
+            </th>
+            <th class="col-index">ID</th>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Class</th>
+            <th>Status</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="students.length === 0">
-            <td colspan="5" class="text-center py-5" style="color: #9ca3af;">
+              <td colspan="7" class="empty-state">
               <i class="bi bi-people fs-1 d-block mb-2"></i>
               No students found
             </td>
           </tr>
           <tr
-            v-for="(student, index) in paginatedStudents"
+            v-for="student in paginatedStudents"
             :key="student.id"
             class="student-row"
             :class="student.gender === 'Male' ? 'row-male' : 'row-female'"
           >
-            <td class="ps-4 py-3" style="color: #6b7280;">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-            <td class="py-3">
-              <div class="d-flex align-items-center gap-3">
-                <div
-                  class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0"
-                  style="width: 36px; height: 36px; font-size: 0.75rem; background: linear-gradient(135deg, #2563eb, #1d4ed8);"
-                >
+            <td class="col-check">
+              <input
+                type="checkbox"
+                class="row-check"
+                :checked="selectedIds.includes(student.id)"
+                @change="toggleRow(student.id)"
+                :aria-label="`Select ${student.name}`"
+              />
+            </td>
+            <td class="col-index">{{ student.id }}</td>
+            <td>
+              <div class="student-cell">
+                <div class="avatar">
                   {{ getInitials(student.name) }}
                 </div>
-                <div>
-                  <span class="fw-semibold" style="color: #1a1a2e;">{{ student.name }}</span>
-                </div>
+                <span class="student-name">{{ student.name }}</span>
               </div>
             </td>
-            <td class="py-3">
+            <td>
               <span
                 class="gender-badge"
                 :class="student.gender === 'Male' ? 'badge-male' : 'badge-female'"
@@ -79,17 +96,22 @@
                 {{ student.gender }}
               </span>
             </td>
-            <td class="py-3">
-              <span v-if="student.class" style="color: #374151;">
-                <i class="bi bi-building me-1" style="color: #9ca3af;"></i>
-                {{ student.class.name }}
-              </span>
-              <span v-else class="fst-italic" style="color: #9ca3af;">
-                <i class="bi bi-dash me-1"></i>
+            <td>
+              <span v-if="student.class" class="class-cell"></span>
+              <span v-else class="class-empty">
+                <i class="bi bi-dash"></i>
                 Not assigned
               </span>
             </td>
-            <td class="py-3 text-end pe-4" @click.stop>
+            <td class="py-3">
+              <span
+                class="status-badge"
+                :class="student.status === 'active' ? 'badge-active' : 'badge-inactive'"
+              >
+                {{ student.status === 'active' ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="col-actions" @click.stop>
               <div class="action-dropdown">
                 <button
                   class="action-trigger"
@@ -158,7 +180,7 @@
             v-if="page !== '...'"
             class="page-btn"
             :class="{ active: currentPage === page }"
-            @click="currentPage = page"
+            @click="currentPage = page as number"
           >
             {{ page }}
           </button>
@@ -190,6 +212,7 @@ const openDropdownId = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const pageSizeOptions = [10, 25, 50]
+const selectedIds = ref<number[]>([])
 
 const props = defineProps<{
   students: Student[]
@@ -205,6 +228,30 @@ const paginatedStudents = computed(() => {
   const end = start + pageSize.value
   return props.students.slice(start, end)
 })
+
+const allSelected = computed(() =>
+  paginatedStudents.value.length > 0 &&
+  paginatedStudents.value.every((s) => selectedIds.value.includes(s.id))
+)
+
+const someSelected = computed(() => selectedIds.value.length > 0)
+
+function toggleRow(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(idx, 1)
+}
+
+function toggleAll() {
+  if (allSelected.value) {
+    selectedIds.value = selectedIds.value.filter(
+      (id) => !paginatedStudents.value.some((s) => s.id === id)
+    )
+  } else {
+    const ids = paginatedStudents.value.map((s) => s.id)
+    selectedIds.value = Array.from(new Set([...selectedIds.value, ...ids]))
+  }
+}
 
 const visiblePages = computed(() => {
   const pages: (number | string)[] = []
@@ -257,6 +304,237 @@ defineEmits<{
 </script>
 
 <style scoped>
+/* ==================== Card ==================== */
+.student-card {
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  transition: box-shadow 0.25s ease;
+}
+
+.student-card:hover {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+/* ==================== Toolbar ==================== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #eef0f3;
+}
+
+.search-box {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 340px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.6rem 0.9rem 0.6rem 2.4rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: #1f2937;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input::placeholder { color: #9ca3af; }
+
+.search-input:hover { border-color: #cbd5e1; }
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.filter-group { display: flex; align-items: center; }
+
+.filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.filter-label:hover { border-color: #cbd5e1; }
+
+.filter-label i { font-size: 0.85rem; color: #94a3b8; }
+
+.filter-select {
+  border: none;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #334155;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.count-badge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eef2ff;
+  padding: 0.4rem 0.85rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+/* ==================== Table ==================== */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.student-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.student-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.col-index {
+  width: 64px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.col-check {
+  width: 44px;
+  padding-left: 18px !important;
+  padding-right: 0 !important;
+}
+
+.row-check {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.col-actions {
+  text-align: right;
+  padding-right: 20px !important;
+}
+
+.col-check {
+  width: 44px;
+  padding-left: 20px !important;
+}
+
+.row-check {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.student-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f3f5;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.student-table tbody tr:last-child td { border-bottom: none; }
+
+.empty-state {
+  text-align: center;
+  padding: 48px 16px !important;
+  color: #9ca3af;
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.student-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.class-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+}
+
+.class-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-style: italic;
+  color: #9ca3af;
+}
+
+/* ==================== Rows ==================== */
 .student-row {
   transition: background 0.2s ease, border-left 0.2s ease;
   border-left: 3px solid transparent;
@@ -270,10 +548,6 @@ defineEmits<{
 .row-female:hover {
   background: #fdf2f8;
   border-left-color: #ec4899;
-}
-
-.table > :not(caption) > * > * {
-  border-bottom-color: #f1f3f5;
 }
 
 /* ==================== Gender Badge ==================== */
@@ -311,8 +585,44 @@ defineEmits<{
   background: #3b82f6;
 }
 
-.badge-female::before {
-  background: #ec4899;
+/* ==================== Status Badge ==================== */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 100px;
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+}
+
+.badge-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge-inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.status-badge::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 7px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.badge-active::before {
+  background: #22c55e;
+}
+
+.badge-inactive::before {
+  background: #94a3b8;
 }
 
 /* ==================== Action Dropdown ==================== */
