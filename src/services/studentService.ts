@@ -51,6 +51,7 @@ export async function getStudents(): Promise<StudentsResponse> {
   }
 }
 
+
 export async function getStudent(id: number): Promise<StudentResponse> {
   const res = await http.get<StudentResponse>(`/students/${id}`)
   return res.data
