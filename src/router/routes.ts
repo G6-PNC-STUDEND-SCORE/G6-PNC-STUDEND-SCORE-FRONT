@@ -1,31 +1,54 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-const LoginPage = () => import('@/views/auth/LoginPage.vue')
-const DashboardPage = () => import('@/views/DashboardPage.vue')
-const UserProfile = () => import('@/views/UserProfile.vue')
+import LoginView from '../views/auth/LoginPage.vue'
+import DashboardView from '../views/DashboardView.vue'
+import UserProfile from '../views/UserProfile.vue'
+import StudentPage from '@/views/students/StudentPage.vue'
+import SubjectPage from '@/views/SubjectPage.vue'
+// import StudentPage from '@/views/students/StudentPage.vue'
+
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/login',
   },
   {
     path: '/login',
     name: 'login',
-    component: LoginPage,
-    meta: { guest: true },
+    component: LoginView,
+
+
   },
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: DashboardPage,
-    meta: { requiresAuth: true },
+    component: DashboardView,
+
+
   },
+  {
+    path: '/students',
+    name: 'student',
+    component: StudentPage,
+
+  },
+  {
+    path: '/subjects',
+    name: 'subject',
+    component: SubjectPage,
+
+  },
+
+
+
   {
     path: '/profile',
     name: 'profile',
     component: UserProfile,
-    meta: { requiresAuth: true },
+
   },
- 
+
+
+
 ]
