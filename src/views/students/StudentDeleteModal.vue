@@ -9,7 +9,12 @@
             </div>
             <h5 class="mb-1 fw-bold" style="color: #1a1a2e;">Delete Student</h5>
             <p class="mb-0" style="font-size: 0.8125rem; color: #6b7280;">
-              Are you sure you want to delete <strong>{{ studentName }}</strong>? This action cannot be undone.
+              <template v-if="studentCount && studentCount > 1">
+                Are you sure you want to delete <strong>{{ studentCount }} students</strong>? This action cannot be undone.
+              </template>
+              <template v-else>
+                Are you sure you want to delete <strong>{{ studentName }}</strong>? This action cannot be undone.
+              </template>
             </p>
           </div>
           <div class="modal-footer-custom">
@@ -41,6 +46,7 @@
 defineProps<{
   show: boolean
   studentName: string
+  studentCount?: number
   submitting: boolean
 }>()
 

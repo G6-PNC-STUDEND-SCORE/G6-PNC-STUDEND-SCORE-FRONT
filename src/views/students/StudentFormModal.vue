@@ -95,6 +95,42 @@
                 </div>
               </div>
 
+              <!-- Photo Upload -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-image me-1"></i>
+                  Profile Photo
+                </label>
+                <div class="photo-upload">
+                  <div class="photo-preview" :class="{ 'has-photo': photoPreview }">
+                    <img v-if="photoPreview" :src="getPhotoUrl(photoPreview)" alt="Preview" class="photo-img" />
+                    <div v-else class="photo-placeholder">
+                      <i class="bi bi-camera"></i>
+                      <span>No photo</span>
+                    </div>
+                  </div>
+                  <label class="photo-btn">
+                    <i class="bi bi-upload me-1"></i>
+                    {{ photoPreview ? 'Change' : 'Upload' }}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      class="visually-hidden"
+                      @change="onFileSelect"
+                    />
+                  </label>
+                  <button
+                    v-if="photoPreview"
+                    type="button"
+                    class="photo-remove"
+                    @click="removePhoto"
+                    title="Remove photo"
+                  >
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+              </div>
+
               <!-- Status -->
               <div class="form-group">
                 <label class="form-label">
@@ -161,6 +197,7 @@
 
 <script setup lang="ts">
 import type { SchoolClass } from '@/services/studentService'
+import { getPhotoUrl } from '@/services/studentService'
 
 defineProps<{
   show: boolean
@@ -168,20 +205,33 @@ defineProps<{
   name: string
   gender: 'Male' | 'Female'
   classId: number | null
+  photoPreview: string | null
   status: 'active' | 'inactive'
   classes: SchoolClass[]
   submitting: boolean
   error: string | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   submit: []
   'update:name': [value: string]
   'update:gender': [value: 'Male' | 'Female']
   'update:classId': [value: number | null]
   'update:status': [value: 'active' | 'inactive']
+  'update:photo': [value: File | null]
 }>()
+
+function onFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    emit('update:photo', input.files[0])
+  }
+}
+
+function removePhoto() {
+  emit('update:photo', null)
+}
 </script>
 
 <style scoped>
@@ -408,6 +458,91 @@ select.modern-input {
 
 .gender-text {
   font-size: 0.8125rem;
+}
+
+/* ==================== Photo Upload ==================== */
+.photo-upload {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.photo-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #f1f5f9;
+  border: 2px dashed #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.photo-preview.has-photo {
+  border-color: #2563eb;
+  border-style: solid;
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #9ca3af;
+  font-size: 0.625rem;
+}
+
+.photo-placeholder i {
+  font-size: 1.2rem;
+  margin-bottom: 1px;
+}
+
+.photo-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.photo-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.photo-remove {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #fef2f2;
+  color: #ef4444;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.7rem;
+}
+
+.photo-remove:hover {
+  background: #fee2e2;
+  transform: scale(1.1);
 }
 
 /* ==================== Status Toggle ==================== */

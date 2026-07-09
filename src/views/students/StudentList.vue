@@ -9,30 +9,74 @@
           @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
           type="text"
           class="search-input"
-          placeholder="Search by name..."
+          placeholder="Search by ID, class, or name..."
         />
       </div>
 
       <div class="filter-group">
-        <label class="filter-label">
-          <i class="bi bi-gender-ambiguous"></i>
-          <span>Gender</span>
-          <select
+        <div class="gender-search-box">
+          <i class="bi bi-gender-ambiguous gender-search-icon"></i>
+          <input
             :value="genderFilter"
-            @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
-            class="filter-select"
-          >
-            <option value="">All</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </label>
+            @input="$emit('update:genderFilter', ($event.target as HTMLInputElement).value)"
+            type="text"
+            class="gender-search-input"
+            placeholder="Search gender..."
+          />
+        </div>
+        <div class="gender-pills">
+          <button
+            class="gender-pill"
+            :class="{ active: statusFilter === '' }"
+            @click="$emit('update:statusFilter', '')"
+          >All</button>
+          <button
+            class="gender-pill"
+            :class="{ active: statusFilter === 'active', 'pill-active': statusFilter === 'active' }"
+            @click="$emit('update:statusFilter', 'active')"
+          >Active</button>
+          <button
+            class="gender-pill"
+            :class="{ active: statusFilter === 'inactive', 'pill-inactive': statusFilter === 'inactive' }"
+            @click="$emit('update:statusFilter', 'inactive')"
+          >Inactive</button>
+        </div>
       </div>
 
-      <span class="count-badge">
-        {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
-      </span>
+      <div class="count-group">
+        <span class="count-badge">
+          {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
+        </span>
+        <span class="count-badge count-male">
+          {{ maleCount }} Male
+        </span>
+        <span class="count-badge count-female">
+          {{ femaleCount }} Female
+        </span>
+      </div>
     </div>
+
+    <!-- Bulk Action Bar -->
+    <Transition name="bulk-bar">
+      <div v-if="props.selectedIds.length > 0" class="bulk-action-bar">
+        <div class="bulk-action-left">
+          <i class="bi bi-check2-square bulk-action-icon"></i>
+          <span class="bulk-action-text">
+            <strong>{{ props.selectedIds.length }}</strong> student{{ props.selectedIds.length !== 1 ? 's' : '' }} selected
+          </span>
+        </div>
+        <div class="bulk-action-right">
+          <button class="bulk-btn bulk-btn-cancel" @click="emit('clearSelection')">
+            <i class="bi bi-x-lg"></i>
+            Cancel
+          </button>
+          <button class="bulk-btn bulk-btn-delete" @click="emit('bulkDelete', [...props.selectedIds])">
+            <i class="bi bi-trash"></i>
+            Delete
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Table -->
     <div class="table-wrap">
@@ -74,7 +118,7 @@
               <input
                 type="checkbox"
                 class="row-check"
-                :checked="selectedIds.includes(student.id)"
+                :checked="props.selectedIds.includes(student.id)"
                 @change="toggleRow(student.id)"
                 :aria-label="`Select ${student.name}`"
               />
@@ -82,7 +126,10 @@
             <td class="col-index">{{ student.id }}</td>
             <td>
               <div class="student-cell">
-                <div class="avatar">
+                <div v-if="student.photo" class="avatar-img">
+                  <img :src="getPhotoUrl(student.photo)" :alt="student.name" class="avatar-photo" />
+                </div>
+                <div v-else class="avatar">
                   {{ getInitials(student.name) }}
                 </div>
                 <span class="student-name">{{ student.name }}</span>
@@ -97,7 +144,10 @@
               </span>
             </td>
             <td>
-              <span v-if="student.class" class="class-cell"></span>
+              <span v-if="student.class" class="class-cell">
+                <i class="bi bi-building" style="color: #9ca3af; font-size: 0.8rem;"></i>
+                {{ student.class.name }}
+              </span>
               <span v-else class="class-empty">
                 <i class="bi bi-dash"></i>
                 Not assigned
@@ -206,20 +256,26 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import type { Student } from '@/services/studentService'
+import { getPhotoUrl, type Student } from '@/services/studentService'
 
 const openDropdownId = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
 const pageSizeOptions = [10, 25, 50]
-const selectedIds = ref<number[]>([])
-
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   students: Student[]
   searchQuery: string
   genderFilter: string
+  statusFilter: string
+  selectedIds?: number[]
+  maleCount?: number
+  femaleCount?: number
   getInitials: (name: string) => string
-}>()
+}>(), {
+  selectedIds: () => [],
+  maleCount: 0,
+  femaleCount: 0,
+})
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.students.length / pageSize.value)))
 
@@ -231,25 +287,25 @@ const paginatedStudents = computed(() => {
 
 const allSelected = computed(() =>
   paginatedStudents.value.length > 0 &&
-  paginatedStudents.value.every((s) => selectedIds.value.includes(s.id))
+  paginatedStudents.value.every((s) => props.selectedIds.includes(s.id))
 )
 
-const someSelected = computed(() => selectedIds.value.length > 0)
+const someSelected = computed(() => props.selectedIds.length > 0)
 
 function toggleRow(id: number) {
-  const idx = selectedIds.value.indexOf(id)
-  if (idx === -1) selectedIds.value.push(id)
-  else selectedIds.value.splice(idx, 1)
+  const idx = props.selectedIds.indexOf(id)
+  if (idx === -1) emit('update:selectedIds', [...props.selectedIds, id])
+  else emit('update:selectedIds', props.selectedIds.filter((i) => i !== id))
 }
 
 function toggleAll() {
   if (allSelected.value) {
-    selectedIds.value = selectedIds.value.filter(
+    emit('update:selectedIds', props.selectedIds.filter(
       (id) => !paginatedStudents.value.some((s) => s.id === id)
-    )
+    ))
   } else {
     const ids = paginatedStudents.value.map((s) => s.id)
-    selectedIds.value = Array.from(new Set([...selectedIds.value, ...ids]))
+    emit('update:selectedIds', Array.from(new Set([...props.selectedIds, ...ids])))
   }
 }
 
@@ -293,13 +349,17 @@ onUnmounted(() => {
   window.removeEventListener('click', handleClickOutside)
 })
 
-defineEmits<{
+const emit = defineEmits<{
   'update:searchQuery': [value: string]
   'update:genderFilter': [value: string]
+  'update:statusFilter': [value: string]
+  'update:selectedIds': [ids: number[]]
   view: [student: Student]
   edit: [student: Student]
   assign: [student: Student]
   delete: [student: Student]
+  bulkDelete: [ids: number[]]
+  clearSelection: []
 }>()
 </script>
 
@@ -368,41 +428,186 @@ defineEmits<{
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
-.filter-group { display: flex; align-items: center; }
+.filter-group { display: flex; align-items: center; gap: 8px; }
 
-.filter-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #64748b;
+.gender-search-box {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.gender-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.gender-search-input {
+  width: 140px;
+  padding: 0.45rem 0.7rem 0.45rem 2rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  color: #1f2937;
   background: #fff;
   border: 1.5px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  border-radius: 8px;
+  outline: none;
   transition: all 0.2s ease;
 }
 
-.filter-label:hover { border-color: #cbd5e1; }
+.gender-search-input::placeholder { color: #9ca3af; }
 
-.filter-label i { font-size: 0.85rem; color: #94a3b8; }
+.gender-search-input:hover { border-color: #cbd5e1; }
 
-.filter-select {
+.gender-search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.gender-pills {
+  display: inline-flex;
+  gap: 0;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.gender-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
   border: none;
   background: transparent;
-  font-size: 0.8125rem;
-  font-family: inherit;
-  font-weight: 600;
-  color: #334155;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
+  color: #64748b;
+  border-radius: 8px;
   cursor: pointer;
-  outline: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+
+
+/* ==================== Bulk Action Bar ==================== */
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%);
+  border-bottom: 1px solid #bfdbfe;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.bulk-action-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-action-icon {
+  font-size: 1.1rem;
+  color: #2563eb;
+}
+
+.bulk-action-text {
+  font-size: 0.875rem;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.bulk-action-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bulk-btn-cancel {
+  background: #fff;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+}
+
+.bulk-btn-cancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.bulk-btn-delete {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+
+.bulk-btn-delete:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+}
+
+.bulk-bar-enter-active {
+  transition: all 0.25s ease-out;
+}
+.bulk-bar-leave-active {
+  transition: all 0.2s ease-in;
+}
+.bulk-bar-enter-from {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+.bulk-bar-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.gender-pill:hover:not(.active) {
+  color: #334155;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.gender-pill.active {
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.gender-pill.active.pill-active {
+  color: #15803d;
+}
+
+.gender-pill.active.pill-inactive {
+  color: #64748b;
+}
+
+.count-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .count-badge {
-  margin-left: auto;
   font-size: 0.75rem;
   font-weight: 600;
   color: #2563eb;
@@ -410,6 +615,19 @@ defineEmits<{
   padding: 0.4rem 0.85rem;
   border-radius: 100px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.count-male {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.count-female {
+  color: #be185d;
+  background: #fce7f3;
 }
 
 /* ==================== Table ==================== */
@@ -499,19 +717,30 @@ defineEmits<{
   gap: 12px;
 }
 
-.avatar {
+.avatar,
+.avatar-img {
   width: 38px;
   height: 38px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar {
   font-size: 0.75rem;
   font-weight: 700;
   color: #fff;
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .student-name {
@@ -572,18 +801,7 @@ defineEmits<{
   color: #be185d;
 }
 
-.gender-badge::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-right: 6px;
-}
 
-.badge-male::before {
-  background: #3b82f6;
-}
 
 /* ==================== Status Badge ==================== */
 .status-badge {
@@ -625,10 +843,20 @@ defineEmits<{
   background: #94a3b8;
 }
 
+/* ==================== Action Column ==================== */
+.col-actions {
+  width: 80px;
+  min-width: 80px;
+  text-align: center !important;
+  padding-right: 20px !important;
+}
+
 /* ==================== Action Dropdown ==================== */
 .action-dropdown {
   position: relative;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-trigger {
@@ -656,7 +884,7 @@ defineEmits<{
   position: absolute;
   right: 0;
   top: calc(100% + 6px);
-  min-width: 190px;
+  min-width: 195px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -698,7 +926,7 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 10px 14px;
   border: none;
   background: transparent;
   border-radius: 8px;
@@ -713,7 +941,7 @@ defineEmits<{
 
 .action-item i {
   font-size: 1rem;
-  width: 18px;
+  width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -741,7 +969,7 @@ defineEmits<{
 .dropdown-divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 4px 8px;
+  margin: 6px 10px;
 }
 
 /* ==================== Pagination ==================== */
@@ -891,15 +1119,24 @@ defineEmits<{
 
 /* ==================== Responsive ==================== */
 @media (max-width: 768px) {
-  .action-trigger {
-    width: 30px;
-    height: 30px;
-    font-size: 0.875rem;
-  }
+    .filter-group {
+      flex-wrap: wrap;
+    }
 
-  .action-menu {
-    right: auto;
-    left: 0;
-  }
+    .gender-pill {
+      padding: 4px 10px;
+      font-size: 0.72rem;
+    }
+
+    .action-trigger {
+      width: 30px;
+      height: 30px;
+      font-size: 0.875rem;
+    }
+
+    .action-menu {
+      right: auto;
+      left: 0;
+    }
 }
 </style>

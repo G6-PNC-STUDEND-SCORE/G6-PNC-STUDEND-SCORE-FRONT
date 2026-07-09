@@ -2,60 +2,87 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show && student" class="modal-overlay" @click.self="$emit('close')">
-        <div class="modal-content-panel" style="max-width: 460px;">
+        <div class="modal-content-panel">
+          <!-- Close -->
+          <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
+            <i class="bi bi-x-lg"></i>
+          </button>
+
+          <!-- Header with Photo -->
           <div class="modal-header-custom">
-            <div class="modal-icon" style="background: #eef2ff; color: #2563eb;">
-              <i class="bi bi-person-badge-fill"></i>
-            </div>
-            <h5 class="mb-1 fw-bold" style="color: #1a1a2e;">Student Details</h5>
-          </div>
-          <div class="modal-body-custom">
-            <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
-              <div
-                class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0"
-                style="width: 52px; height: 52px; font-size: 1.125rem; background: linear-gradient(135deg, #2563eb, #1d4ed8);"
-              >
+            <div class="profile-photo-wrap">
+              <img
+                v-if="student.photo"
+                :src="getPhotoUrl(student.photo)"
+                :alt="student.name"
+                class="profile-photo"
+              />
+              <div v-else class="profile-photo-fallback">
                 {{ getInitials(student.name) }}
               </div>
-              <div>
-                <h6 class="mb-0 fw-bold" style="color: #1a1a2e; font-size: 1rem;">{{ student.name }}</h6>
-                <span
-                  class="badge rounded-pill mt-1"
-                  :style="{
-                    background: student.gender === 'Male' ? '#e0f2fe' : '#fce7f3',
-                    color: student.gender === 'Male' ? '#0369a1' : '#be185d',
-                    fontSize: '0.6875rem',
-                  }"
-                >
-                  <i :class="student.gender === 'Male' ? 'bi bi-gender-male' : 'bi bi-gender-female'"></i>
-                  {{ student.gender }}
-                </span>
-              </div>
+              <div class="photo-ring"></div>
             </div>
-
-            <div class="detail-row mb-2">
-              <span class="detail-label">ID</span>
-              <span class="detail-value">#{{ student.id }}</span>
-            </div>
-            <div class="detail-row mb-2">
-              <span class="detail-label">Class</span>
-              <span class="detail-value">{{ student.class?.name || 'Not assigned' }}</span>
-            </div>
-            <div class="detail-row mb-2">
-              <span class="detail-label">Gender</span>
-              <span class="detail-value">{{ student.gender }}</span>
-            </div>
-            <div class="detail-row mb-2">
-              <span class="detail-label">Created</span>
-              <span class="detail-value">{{ formatDate(student.created_at) }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Updated</span>
-              <span class="detail-value">{{ formatDate(student.updated_at) }}</span>
+            <h3 class="student-name-title">{{ student.name }}</h3>
+            <div class="student-meta">
+              <span class="meta-badge">#{{ student.id }}</span>
+              <span
+                class="meta-badge gender-badge"
+                :class="student.gender === 'Male' ? 'male' : 'female'"
+              >
+                {{ student.gender }}
+              </span>
+              <span
+                class="meta-badge status-indicator"
+                :class="student.status === 'active' ? 'active' : 'inactive'"
+              >
+                {{ student.status === 'active' ? 'Active' : 'Inactive' }}
+              </span>
             </div>
           </div>
+
+          <!-- Details Grid -->
+          <div class="modal-body-custom">
+            <div class="details-grid">
+              <div class="detail-item">
+                <div class="detail-icon"><i class="bi bi-building"></i></div>
+                <div class="detail-info">
+                  <span class="detail-label">Class</span>
+                  <span class="detail-value">{{ student.class?.name || 'Not assigned' }}</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-icon"><i class="bi bi-calendar-plus"></i></div>
+                <div class="detail-info">
+                  <span class="detail-label">Created</span>
+                  <span class="detail-value">{{ formatDate(student.created_at) }}</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-icon"><i class="bi bi-calendar-check"></i></div>
+                <div class="detail-info">
+                  <span class="detail-label">Last Updated</span>
+                  <span class="detail-value">{{ formatDate(student.updated_at) }}</span>
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-icon"><i class="bi bi-person-badge"></i></div>
+                <div class="detail-info">
+                  <span class="detail-label">Status</span>
+                  <span class="detail-value">{{ student.status === 'active' ? 'Active' : 'Inactive' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
           <div class="modal-footer-custom">
-            <button type="button" class="btn-submit" style="background: #2563eb; flex: 1;" @click="$emit('close')">Close</button>
+            <button type="button" class="btn-edit" @click="handleEdit">
+              <i class="bi bi-pencil"></i>
+              Edit Student
+            </button>
+            <button type="button" class="btn-close-custom" @click="$emit('close')">
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -64,18 +91,26 @@
 </template>
 
 <script setup lang="ts">
-import type { Student } from '@/services/studentService'
+import { getPhotoUrl, type Student } from '@/services/studentService'
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   student: Student | null
   getInitials: (name: string) => string
   formatDate: (date?: string) => string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
+  edit: [student: Student]
 }>()
+
+function handleEdit() {
+  if (props.student) {
+    emit('edit', props.student)
+    emit('close')
+  }
+}
 </script>
 
 <style scoped>
@@ -85,51 +120,217 @@ defineEmits<{
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
 }
 
 .modal-content-panel {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 20px;
   width: 480px;
-  max-width: 92vw;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: modalBounce 0.3s ease-out;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+  animation: modalBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  position: relative;
 }
 
 @keyframes modalBounce {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% { transform: scale(0.92) translateY(12px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
-.modal-header-custom { padding: 28px 28px 16px; text-align: center; }
-.modal-header-custom h5 { font-size: 1.1rem; }
-.modal-icon {
-  width: 56px; height: 56px;
+.modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
-  margin: 0 auto 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  z-index: 2;
 }
 
-.modal-body-custom { padding: 0 28px 16px; }
+.modal-close-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+/* ==================== Header ==================== */
+.modal-header-custom {
+  padding: 40px 32px 20px;
+  text-align: center;
+  position: relative;
+}
+
+.profile-photo-wrap {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 16px;
+  position: relative;
+}
+
+.profile-photo,
+.profile-photo-fallback {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.3);
+}
+
+.photo-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  z-index: 0;
+}
+
+.student-name-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px;
+  letter-spacing: -0.01em;
+}
+
+.student-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-badge {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 100px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.meta-badge.gender-badge.male {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.meta-badge.gender-badge.female {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.meta-badge.status-indicator.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.meta-badge.status-indicator.inactive {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ==================== Body ==================== */
+.modal-body-custom {
+  padding: 8px 32px 20px;
+}
+
+.details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  transition: background 0.2s ease;
+}
+
+.detail-item:hover {
+  background: #f1f5f9;
+}
+
+.detail-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #2563eb;
+  font-size: 1rem;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.detail-info {
+  flex: 1;
+}
+
+.detail-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+  margin-bottom: 1px;
+}
+
+.detail-value {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* ==================== Footer ==================== */
 .modal-footer-custom {
   display: flex;
-  gap: 8px;
-  padding: 12px 28px 28px;
+  gap: 10px;
+  padding: 8px 32px 28px;
 }
 
 .modal-footer-custom button {
   flex: 1;
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -139,25 +340,43 @@ defineEmits<{
   justify-content: center;
   gap: 6px;
   border: none;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.btn-submit { color: white; }
-.btn-submit:hover { opacity: 0.9; }
-
-.detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
+.btn-edit {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
 }
 
-.detail-label { font-size: 0.8125rem; color: #6b7280; font-weight: 500; }
-.detail-value { font-size: 0.875rem; color: #1a1a2e; font-weight: 600; }
+.btn-edit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
 
-.modal-enter-active { transition: all 0.2s ease-out; }
+.btn-close-custom {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1.5px solid #e2e8f0 !important;
+}
+
+.btn-close-custom:hover {
+  background: #e2e8f0;
+}
+
+/* ==================== Transitions ==================== */
+.modal-enter-active { transition: all 0.25s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-content-panel,
-.modal-leave-to .modal-content-panel { transform: scale(0.9); }
+.modal-leave-to .modal-content-panel {
+  transform: scale(0.92) translateY(12px);
+}
+
+.modal-content-panel::-webkit-scrollbar { width: 4px; }
+.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
+.modal-content-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
 </style>

@@ -18,6 +18,7 @@ export function useStudents() {
   const error = ref<string | null>(null)
   const searchQuery = ref('')
   const genderFilter = ref('')
+  const statusFilter = ref('')
   const formSubmitting = ref(false)
   const formError = ref<string | null>(null)
 
@@ -31,19 +32,41 @@ export function useStudents() {
   const showDetailsModal = ref(false)
   const selectedStudent = ref<Student | null>(null)
 
+  // ==================== Selection & Bulk Delete State ====================
+  const selectedIds = ref<number[]>([])
+  const showBulkDeleteModal = ref(false)
+  const bulkDeleteIds = ref<number[]>([])
+  const bulkStudentNames = computed(() => {
+    return bulkDeleteIds.value
+      .map((id) => students.value.find((s) => s.id === id))
+      .filter(Boolean)
+      .map((s) => s!.name)
+  })
+
   // ==================== Form State ====================
   const editForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
   const assignForm = ref({ class_id: null as number | null })
   const createForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
+  const photoFile = ref<File | null>(null)
+  const photoPreview = ref<string | null>(null)
 
   // ==================== Computed ====================
   const filteredStudents = computed(() => {
+    const q = searchQuery.value.toLowerCase()
     return students.value.filter((s) => {
-      const matchesSearch = s.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchesGender = !genderFilter.value || s.gender === genderFilter.value
-      return matchesSearch && matchesGender
+      const matchesSearch = !q
+        || s.name.toLowerCase().includes(q)
+        || String(s.id).includes(q)
+        || (s.class?.name?.toLowerCase().includes(q) ?? false)
+      const matchesGender = !genderFilter.value || s.gender.toLowerCase() === genderFilter.value.toLowerCase()
+      const matchesStatus = !statusFilter.value || s.status === statusFilter.value
+      return matchesSearch && matchesGender && matchesStatus
     })
   })
+
+  // ==================== Stats ====================
+  const maleCount = computed(() => students.value.filter((s) => s.gender === 'Male').length)
+  const femaleCount = computed(() => students.value.filter((s) => s.gender === 'Female').length)
 
   // ==================== Helpers ====================
   function getInitials(name: string): string {
@@ -96,8 +119,25 @@ export function useStudents() {
   }
 
   // ==================== Create ====================
+  function handlePhotoUpload(file: File | null) {
+    photoFile.value = file
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          photoPreview.value = reader.result
+        }
+      }
+      reader.readAsDataURL(file)
+    } else {
+      photoPreview.value = null
+    }
+  }
+
   function openCreateModal() {
     createForm.value = { name: '', gender: 'Male', class_id: null, status: 'active' }
+    photoFile.value = null
+    photoPreview.value = null
     formError.value = null
     showCreateModal.value = true
   }
@@ -114,8 +154,14 @@ export function useStudents() {
     formSubmitting.value = true
     formError.value = null
     try {
-      const res = await createStudent(createForm.value)
+      const payload = {
+        ...createForm.value,
+        photo: photoFile.value,
+      }
+      const res = await createStudent(payload)
       students.value.unshift(res.student)
+      photoFile.value = null
+      photoPreview.value = null
       closeCreateModal()
       showToast('Student created successfully')
     } catch (e: unknown) {
@@ -133,8 +179,10 @@ export function useStudents() {
       name: student.name,
       gender: student.gender,
       class_id: student.class_id,
-      status: student.status,
+      status: student.status || 'active',
     }
+    photoFile.value = null
+    photoPreview.value = student.photo
     formError.value = null
     showEditModal.value = true
   }
@@ -153,9 +201,23 @@ export function useStudents() {
     formSubmitting.value = true
     formError.value = null
     try {
-      const res = await updateStudent(selectedStudent.value.id, editForm.value)
+      const payload: Record<string, unknown> = {
+        name: editForm.value.name,
+        gender: editForm.value.gender,
+        class_id: editForm.value.class_id,
+        status: editForm.value.status,
+      }
+      // Handle photo: file to upload, null to remove, undefined to keep
+      if (photoFile.value instanceof File) {
+        payload.photo = photoFile.value
+      } else if (photoFile.value === null && photoPreview.value === null && selectedStudent.value?.photo) {
+        payload.photo = null
+      }
+      const res = await updateStudent(selectedStudent.value.id, payload)
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
       if (index !== -1) students.value[index] = res.student
+      photoFile.value = null
+      photoPreview.value = null
       closeEditModal()
       showToast('Student updated successfully')
     } catch (e: unknown) {
@@ -222,6 +284,36 @@ export function useStudents() {
     }
   }
 
+  // ==================== Bulk Delete ====================
+  function openBulkDeleteModal(ids: number[]) {
+    bulkDeleteIds.value = ids
+    showBulkDeleteModal.value = true
+  }
+
+  function closeBulkDeleteModal() {
+    showBulkDeleteModal.value = false
+    bulkDeleteIds.value = []
+  }
+
+  async function handleBulkDelete() {
+    if (bulkDeleteIds.value.length === 0) return
+    formSubmitting.value = true
+    try {
+      await Promise.all(
+        bulkDeleteIds.value.map((id) => deleteStudent(id))
+      )
+      students.value = students.value.filter((s) => !bulkDeleteIds.value.includes(s.id))
+      selectedIds.value = []
+      closeBulkDeleteModal()
+      showToast('Students deleted successfully')
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
+    } finally {
+      formSubmitting.value = false
+    }
+  }
+
   // ==================== View Details ====================
   function viewDetails(student: Student) {
     selectedStudent.value = student
@@ -242,9 +334,13 @@ export function useStudents() {
     error,
     searchQuery,
     genderFilter,
+    statusFilter,
     formSubmitting,
     formError,
     toast,
+    // Stats
+    maleCount,
+    femaleCount,
     // Modal state
     showCreateModal,
     showEditModal,
@@ -252,16 +348,23 @@ export function useStudents() {
     showAssignModal,
     showDetailsModal,
     selectedStudent,
+    selectedIds,
+    showBulkDeleteModal,
+    bulkDeleteIds,
+    bulkStudentNames,
     // Form state
     createForm,
     editForm,
     assignForm,
+    photoFile,
+    photoPreview,
     // Computed
     filteredStudents,
     // Helpers
     getInitials,
     formatDate,
     showToast,
+    handlePhotoUpload,
     // Actions
     init,
     openCreateModal,
@@ -278,5 +381,8 @@ export function useStudents() {
     handleAssign,
     viewDetails,
     closeDetailsModal,
+    openBulkDeleteModal,
+    closeBulkDeleteModal,
+    handleBulkDelete,
   }
 }

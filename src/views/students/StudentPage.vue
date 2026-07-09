@@ -43,13 +43,21 @@
         :students="filteredStudents"
         :search-query="searchQuery"
         :gender-filter="genderFilter"
+        :status-filter="statusFilter"
+        :selected-ids="selectedIds"
+        :male-count="maleCount"
+        :female-count="femaleCount"
         :get-initials="getInitials"
         @update:search-query="searchQuery = $event"
         @update:gender-filter="genderFilter = $event"
+        @update:status-filter="statusFilter = $event"
+        @update:selected-ids="selectedIds = $event"
         @view="viewDetails"
         @edit="openEditModal"
         @assign="openAssignModal"
         @delete="openDeleteModal"
+        @bulk-delete="openBulkDeleteModal"
+        @clear-selection="selectedIds = []"
       />
 
     <!-- Create Modal -->
@@ -59,6 +67,7 @@
       :name="createForm.name"
       :gender="createForm.gender"
       :class-id="createForm.class_id"
+      :photo-preview="photoPreview"
       :status="createForm.status"
       :classes="classes"
       :submitting="formSubmitting"
@@ -69,6 +78,7 @@
       @update:gender="createForm.gender = $event"
       @update:class-id="createForm.class_id = $event"
       @update:status="createForm.status = $event"
+      @update:photo="handlePhotoUpload"
     />
 
     <!-- Edit Modal -->
@@ -78,6 +88,7 @@
       :name="editForm.name"
       :gender="editForm.gender"
       :class-id="editForm.class_id"
+      :photo-preview="photoPreview"
       :status="editForm.status"
       :classes="classes"
       :submitting="formSubmitting"
@@ -88,15 +99,26 @@
       @update:gender="editForm.gender = $event"
       @update:class-id="editForm.class_id = $event"
       @update:status="editForm.status = $event"
+      @update:photo="handlePhotoUpload"
     />
 
-    <!-- Delete Modal -->
+    <!-- Delete Modal (single) -->
     <StudentDeleteModal
       :show="showDeleteModal"
       :student-name="selectedStudent?.name ?? ''"
       :submitting="formSubmitting"
       @close="closeDeleteModal"
       @confirm="handleDelete"
+    />
+
+    <!-- Delete Modal (bulk) -->
+    <StudentDeleteModal
+      :show="showBulkDeleteModal"
+      :student-name="bulkStudentNames.join(', ')"
+      :student-count="bulkDeleteIds.length"
+      :submitting="formSubmitting"
+      @close="closeBulkDeleteModal"
+      @confirm="handleBulkDelete"
     />
 
     <!-- Assign Modal -->
@@ -118,6 +140,7 @@
       :get-initials="getInitials"
       :format-date="formatDate"
       @close="closeDetailsModal"
+      @edit="openEditModal"
     />
 
     <!-- Toast Notification -->
@@ -147,9 +170,13 @@ const {
   error,
   searchQuery,
   genderFilter,
+  statusFilter,
   formSubmitting,
   formError,
   toast,
+  // Stats
+  maleCount,
+  femaleCount,
   // Modal state
   showCreateModal,
   showEditModal,
@@ -157,10 +184,16 @@ const {
   showAssignModal,
   showDetailsModal,
   selectedStudent,
+  selectedIds,
+  showBulkDeleteModal,
+  bulkDeleteIds,
+  bulkStudentNames,
   // Form state
   createForm,
   editForm,
   assignForm,
+  photoPreview,
+  handlePhotoUpload,
   // Other data
   classes,
   // Computed
@@ -179,6 +212,9 @@ const {
   openDeleteModal,
   closeDeleteModal,
   handleDelete,
+  openBulkDeleteModal,
+  closeBulkDeleteModal,
+  handleBulkDelete,
   openAssignModal,
   closeAssignModal,
   handleAssign,
