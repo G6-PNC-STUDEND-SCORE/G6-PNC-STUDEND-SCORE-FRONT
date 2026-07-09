@@ -1,45 +1,69 @@
-import SubjectPage from '@/page/subjects/SubjectPage.vue'
 import type { RouteRecordRaw } from 'vue-router'
 
-const LoginPage = () => import('@/views/auth/LoginPage.vue')
-const DashboardPage = () => import('@/views/DashboardPage.vue')
-const UserProfile = () => import('@/views/UserProfile.vue')
+const LoginPage = () => import('@/page/login/LoginPage.vue')
+const DashboardPage = () => import('@/page/dashboard/DashboardPage.vue')
 const ClassPage = () => import('@/page/classes/ClassPage.vue')
+const SubjectPage = () => import('@/page/subjects/SubjectPage.vue')
+const StudentPage = () => import('@/page/students/StudentPage.vue')
+const ScorePage = () => import('@/page/scores/ScorePage.vue')
+const ReportPage = () => import('@/page/reports/ReportPage.vue')
+const ProfilePage = () => import('@/page/profile/ProfilePage.vue')
+const UserPage = () => import('@/page/users/UserPage.vue')
+const RolePage = () => import('@/page/roles/RolePage.vue')
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/login',
   },
   {
     path: '/login',
     name: 'login',
     component: LoginPage,
-    meta: { guest: true },
   },
   {
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardPage,
-    meta: { requiresAuth: true },
+  },
+  {
+    path: '/classes',
+    name: 'class',
+    component: ClassPage,
+  },
+  {
+    path: '/subjects',
+    name: 'subject',
+    component: SubjectPage,
+  },
+  {
+    path: '/students',
+    name: 'student',
+    component: StudentPage,
+  },
+  {
+    path: '/scores',
+    name: 'score',
+    component: ScorePage,
+  },
+  {
+    path: '/reports',
+    name: 'report',
+    component: ReportPage,
   },
   {
     path: '/profile',
     name: 'profile',
-    component: UserProfile,
-    meta: { requiresAuth: true },
+    component: ProfilePage,
   },
   {
-    path: '/subjects',
-    name: 'subjects',
-    component: SubjectPage,
-    meta: { requiresAuth: true },
+    path: '/users',
+    name: 'users',
+    component: UserPage,
   },
   {
-    path: '/classes',
-    name: 'classes',
-    component: ClassPage,
-    meta: { requiresAuth: true },
+    path: '/roles',
+    name: 'roles',
+    component: RolePage,
   },
-
 ]

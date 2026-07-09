@@ -1,4 +1,4 @@
-<template>
+[09/07/2026 08:34] LIN Sreymao: <template>
   <div class="subject-management">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
@@ -80,14 +80,21 @@
         <span class="visually-hidden">Loading...</span>
       </div>
     </div>
-
-     <!-- Subjects Table -->
+<!-- Subjects Table -->
      <div v-else class="card" style="border-radius: 12px; overflow: hidden;">
        <div class="card-body p-0">
          <div class="table-responsive">
            <table class="table table-hover mb-0" style="border-radius: 12px;">
             <thead class="table-light">
               <tr>
+                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3" style="width: 50px;">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    @change="toggleSelectAll"
+                    :checked="isAllSelected"
+                  />
+                </th>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">SUBJECT</th>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">TEACHER</th>
                 <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">CLASS</th>
@@ -96,7 +103,16 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="subject in filteredSubjects" :key="subject.id">
+              <tr v-for="subject in filteredSubjects" :key="subject.id" @click="openEditModal(subject)" style="cursor: pointer;">
+                <td class="py-2 px-3 text-center">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    :value="subject.id"
+                    v-model="selectedSubjects"
+                    @click.stop
+                  />
+                </td>
                 <td class="py-2 px-3">
                   <div class="d-flex align-items-center">
                     <div class="subject-icon me-2 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :style="{ backgroundColor: getSubjectColor(subject.name), width: '24px', height: '24px', fontSize: '0.75rem' }">
@@ -108,34 +124,36 @@
                 <td class="small py-2 px-3">{{ subject.teacher }}</td>
                 <td class="small py-2 px-3">{{ subject.class }}</td>
                 <td class="py-2 px-3">
-<span
-  class="badge"
-  :class="subject.status === 'Active' ? 'bg-success' : 'bg-secondary'"
->
+                  <span
+                    class="badge"
+                    :class="subject.status === 'Active' ? 'bg-success' : 'bg-secondary'"
+                  >
                     {{ subject.status }}
                   </span>
                 </td>
                 <td class="text-center py-2 px-3">
                   <div class="btn-group" role="group">
-<button
-  class="btn btn-sm btn-outline-warning"
-  @click="openEditModal(subject)"
-  title="Edit"
->
-  <i class="bi bi-pencil"></i>
-</button>
-<button
-  class="btn btn-sm btn-outline-danger"
-  @click="confirmDelete(subject)"
-  title="Delete"
->
-  <i class="bi bi-trash"></i>
-</button>
+                    <button
+                      class="btn btn-sm text-warning"
+                      @click="openEditModal(subject)"
+                      title="Edit"
+                      style="background: none; border: none; padding: 0.25rem 0.5rem;"
+                    >
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm text-danger"
+                      @click="confirmDelete(subject)"
+                      title="Delete"
+                      style="background: none; border: none; padding: 0.25rem 0.5rem;"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
                   </div>
                 </td>
               </tr>
               <tr v-if="filteredSubjects.length === 0">
-                <td colspan="5" class="text-center py-5 text-muted">
+                <td colspan="6" class="text-center py-5 text-muted">
                   <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                   No subjects found
                 </td>
@@ -145,8 +163,7 @@
         </div>
       </div>
     </div>
-
-    <!-- Add/Edit Subject Modal -->
+<!-- Add/Edit Subject Modal -->
     <Transition name="modal">
       <div v-if="showModal" class="modal fade show" style="display: block;" @click.self="closeModal">
         <div class="modal-dialog modal-dialog-centered" @click.stop>
@@ -199,19 +216,21 @@
 
                   <div class="col-12">
                     <label for="class" class="form-label text-muted small">Class <span class="text-danger">*</span></label>
-                    <input
-                      type="text"
-                      class="form-control form-control-sm"
+                    <select
+                      class="form-select form-select-sm"
                       id="class"
                       v-model="formData.class"
                       :class="{ 'is-invalid': errors.class }"
-                      placeholder="Enter class name"
                       required
-                    />
+                    >
+                      <option value="">Select a class</option>
+                      <option v-for="cls in classes" :key="cls.id" :value="cls.name">
+                        {{ cls.name }}
+                      </option>
+                    </select>
                     <div v-if="errors.class" class="invalid-feedback">{{ errors.class }}</div>
                   </div>
-
-                  <div class="col-12">
+                    <div class="col-12">
                     <label for="status" class="form-label text-muted small">Status <span class="text-danger">*</span></label>
                     <select
                       class="form-select form-select-sm"
@@ -287,6 +306,7 @@ import { useSubjectStore } from '@/stores/subject'
 import type { Subject } from '@/services/subjectService'
 import { getSubjectColor } from '@/assets/subject-images'
 import { subjectService } from '@/services/subjectService'
+import { classService } from '@/services/classService'
 
 const store = useSubjectStore()
 
@@ -299,11 +319,18 @@ let searchTimeout: ReturnType<typeof setTimeout> | null = null
 const teachers = ref<string[]>([])
 const loadingTeachers = ref(false)
 
+// Classes list
+const classes = ref<{ id: number; name: string }[]>([])
+const loadingClasses = ref(false)
+
 // Modal states
 const showModal = ref(false)
 const showDeleteModal = ref(false)
 const isEditMode = ref(false)
 const subjectToDelete = ref<Subject | null>(null)
+
+// Selected subjects for checkbox
+const selectedSubjects = ref<number[]>([])
 
 // Form data
 const formData = reactive({
@@ -322,20 +349,20 @@ const errors = reactive({
 
 // Computed
 const filteredSubjects = computed(() => {
-  // When using server-side search/filter, just return store.subjects
-  // The API already handles the filtering
   return store.subjects
+})
+ const isAllSelected = computed(() => {
+  return filteredSubjects.value.length > 0 &&
+         selectedSubjects.value.length === filteredSubjects.value.length
 })
 
 // Methods
 
 function handleSearch() {
-  // Clear previous timeout
   if (searchTimeout) {
     clearTimeout(searchTimeout)
   }
 
-  // Debounce search to avoid too many API calls
   searchTimeout = setTimeout(() => {
     store.fetchSubjects(searchQuery.value, statusFilter.value)
   }, 300)
@@ -427,20 +454,16 @@ async function handleSubmit() {
     const success = await store.updateSubject(store.currentSubject.id, subjectData)
     if (success) {
       closeModal()
-      // Refresh the subjects list to show updated data
       await store.fetchSubjects(searchQuery.value, statusFilter.value)
     } else if (store.error) {
-      // Error is already set in the store, it will be displayed
       console.error('Failed to update subject:', store.error)
     }
   } else {
     const success = await store.createSubject(subjectData)
     if (success) {
       closeModal()
-      // Refresh the subjects list to show new data
       await store.fetchSubjects(searchQuery.value, statusFilter.value)
     } else if (store.error) {
-      // Error is already set in the store, it will be displayed
       console.error('Failed to create subject:', store.error)
     }
   }
@@ -449,6 +472,14 @@ async function handleSubmit() {
 function confirmDelete(subject: Subject) {
   subjectToDelete.value = subject
   showDeleteModal.value = true
+}
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedSubjects.value = []
+  } else {
+    selectedSubjects.value = filteredSubjects.value.map(s => s.id)
+  }
 }
 
 function closeDeleteModal() {
@@ -469,6 +500,7 @@ async function handleDelete() {
 onMounted(() => {
   store.fetchSubjects()
   fetchTeachers()
+  fetchClasses()
 })
 
 async function fetchTeachers() {
@@ -487,6 +519,24 @@ async function fetchTeachers() {
     teachers.value = []
   } finally {
     loadingTeachers.value = false
+  }
+}
+ async function fetchClasses() {
+  loadingClasses.value = true
+  try {
+    const response = await classService.getClasses()
+    console.log('Classes response:', response)
+    if (response.success) {
+      classes.value = Array.isArray(response.data) ? response.data : []
+      console.log('Classes loaded:', classes.value)
+    } else {
+      console.error('Failed to fetch classes')
+    }
+  } catch (error) {
+    console.error('Error fetching classes:', error)
+    classes.value = []
+  } finally {
+    loadingClasses.value = false
   }
 }
 </script>
