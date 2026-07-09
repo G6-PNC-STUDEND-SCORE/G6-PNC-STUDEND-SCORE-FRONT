@@ -32,9 +32,24 @@ export interface ClassesResponse {
 }
 
 export async function getStudents(): Promise<StudentsResponse> {
-  const res = await http.get<StudentsResponse>('/students')
-  return res.data
+  // const res = await http.get<StudentsResponse>('/students')
+  // return res.data
+  return {
+    students: [
+      {
+        id: 1,
+        class_id: 1,
+        name: 'John Doe',
+        photo: null,
+        gender: 'Male',
+        created_at: '2022-01-01',
+        updated_at: '2022-01-01',
+        class: { id: 1, name: 'Class 1' },
+      },
+    ],
+  }
 }
+
 
 export async function getStudent(id: number): Promise<StudentResponse> {
   const res = await http.get<StudentResponse>(`/students/${id}`)

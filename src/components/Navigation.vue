@@ -1,6 +1,6 @@
- <template>
-    <aside :class="['sidebar', 'd-flex', 'flex-column', { 'dark-mode': theme.isDark }]">
-        <div class="logo d-flex align-items-center">
+<template>
+    <aside class="sidebar d-flex flex-column">
+        <div class="logo d-flex align-items-center px-3 py-2 border-bottom">
             <div class="logo-icon me-2">
                 <img src="/images/images.png" alt="PNCStudentScore" class="logo-img">
             </div>
@@ -10,42 +10,59 @@
             </div>
         </div>
         <nav class="px-2 py-2 flex-grow-1">
-            <RouterLink 
-                v-for="route in sidebarRoutes" 
-                :key="route.path" 
-                :to="route.path" 
-                class="sidebar-link"
-                :class="{ 'submenu-item': route.meta?.parent }"
-            >
-                <i :class="route.meta?.icon || 'bi bi-link'"></i>
-                {{ getRouteTitle(route) }}
+            <RouterLink to="/dashboard" class="sidebar-link">
+                <i class="bi bi-grid-fill me-2"></i>
+                Dashboard
             </RouterLink>
 
-            <h6 v-if="hasSettingsRoutes" class="menu-title mt-3 mb-2">{{ t('nav.administration') }}</h6>
+            <RouterLink to="/classes" class="sidebar-link">
+                <i class="bi bi-people-fill me-2"></i>
+                Classes
+            </RouterLink>
 
-            <div 
-                v-if="hasSettingsRoutes" 
-                class="menu-parent" 
-                @click="toggleSettings" 
-                @keydown.enter.prevent="toggleSettings" 
-                role="button"
-                tabindex="0"
-            >
+            <RouterLink to="/subjects" class="sidebar-link">
+                <i class="bi bi-book-fill me-2"></i>
+                Subjects
+            </RouterLink>
+
+            <RouterLink to="/students" class="sidebar-link">
+                <i class="bi bi-person-badge-fill me-2"></i>
+                Students
+            </RouterLink>
+
+            <RouterLink to="/scores" class="sidebar-link">
+                <i class="bi bi-clipboard-data-fill me-2"></i>
+                Scores
+            </RouterLink>
+
+            <RouterLink to="/reports" class="sidebar-link">
+                <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>
+                Reports
+            </RouterLink>
+
+            <RouterLink to="/profile" class="sidebar-link">
+                <i class="bi bi-person-circle me-2"></i>
+                Profile
+            </RouterLink>
+
+            <h6 class="menu-title mt-3 mb-2">ADMINISTRATION</h6>
+
+            <div class="menu-parent" @click="toggleSettings" @keydown.enter.prevent="toggleSettings" role="button"
+                tabindex="0">
                 <i class="bi bi-gear-fill me-2"></i>
-                {{ t('nav.settings') }}
+                Settings
                 <i class="bi ms-auto chevron-icon" :class="settingsOpen ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
             </div>
 
             <Transition name="slide">
                 <div v-if="settingsOpen" class="submenu">
-                    <RouterLink 
-                        v-for="route in settingsRoutes" 
-                        :key="route.path" 
-                        :to="route.path" 
-                        class="sidebar-link submenu-item"
-                    >
-                        <i :class="route.meta?.icon || 'bi bi-link'"></i>
-                        {{ getRouteTitle(route) }}
+                    <RouterLink to="/users" class="sidebar-link submenu-item">
+                        <i class="bi bi-person-fill me-2"></i>
+                        Users
+                    </RouterLink>
+                    <RouterLink to="/roles" class="sidebar-link submenu-item">
+                        <i class="bi bi-shield-lock-fill me-2"></i>
+                        Roles & Permissions
                     </RouterLink>
                 </div>
             </Transition>
@@ -100,15 +117,6 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
-import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useThemeStore } from '@/stores/theme'
-import { routes } from '@/router/routes'
-
-const { t } = useI18n()
-const theme = useThemeStore()
-=======
 import { ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -116,7 +124,6 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 
->>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
 const settingsOpen = ref(false)
 const showLogoutModal = ref(false)
 const displayName = ref('User')
@@ -139,42 +146,14 @@ watchEffect(() => {
   }
 })
 
-const sidebarRoutes = computed(() => {
-  return routes.filter(route => 
-    route.meta?.showInSidebar === true && 
-    route.meta?.parent !== 'settings' &&
-    route.path !== '/login'
-  )
-})
-
-const settingsRoutes = computed(() => {
-  return routes.filter(route => 
-    route.meta?.showInSidebar === true && 
-    route.meta?.parent === 'settings'
-  )
-})
-
-const hasSettingsRoutes = computed(() => settingsRoutes.value.length > 0)
-
 function toggleSettings() {
     settingsOpen.value = !settingsOpen.value
 }
 
-<<<<<<< HEAD
-function getRouteTitle(route: any) {
-  const metaTitle = route.meta?.title
-  if (metaTitle) {
-    const translationKey = metaTitle.toLowerCase().replace(/\s+/g, '')
-    const translated = t(`nav.${translationKey}`)
-    return translated !== `nav.${translationKey}` ? translated : metaTitle
-  }
-  return route.name || 'Unknown'
-=======
 function handleLogout() {
     showLogoutModal.value = false
     authStore.logout()
     router.push('/login')
->>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
 }
 </script>
 
@@ -186,20 +165,11 @@ function handleLogout() {
     border-right: 1px solid #e9ecef;
     display: flex;
     flex-direction: column;
-<<<<<<< HEAD
-    transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-
-.sidebar.dark-mode {
-    background: #1e293b;
-    border-right-color: #334155;
-=======
     flex-shrink: 0;
     position: fixed;
     left: 0;
     top: 0;
     z-index: 1000;
->>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
 }
 
 .logo-icon {
@@ -219,36 +189,14 @@ function handleLogout() {
     object-fit: cover;
 }
 
-.logo {
-    height: 56px;
-    padding: 0 16px;
-    border-bottom: 2px solid #e9ecef;
-    transition: border-color 0.3s ease;
-}
-
-.sidebar.dark-mode .logo {
-    border-bottom-color: #334155;
-}
-
 .logo-text h5 {
     color: #253858;
     font-size: 0.95rem;
     line-height: 1.2;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .logo-text h5 {
-    color: #f1f5f9;
 }
 
 .logo-text small {
     font-size: 0.65rem;
-    color: #64748b;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .logo-text small {
-    color: #94a3b8;
 }
 
 .menu-title {
@@ -257,11 +205,6 @@ function handleLogout() {
     font-weight: 700;
     letter-spacing: 1px;
     padding: 0 12px;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .menu-title {
-    color: #64748b;
 }
 
 .sidebar-link {
@@ -279,10 +222,6 @@ function handleLogout() {
     font-family: "Inter", "Noto Sans Khmer", sans-serif;
 }
 
-.sidebar.dark-mode .sidebar-link {
-    color: #cbd5e1;
-}
-
 .sidebar-link i {
     font-size: 1.05rem;
     width: 20px;
@@ -295,20 +234,10 @@ function handleLogout() {
     color: #2563eb;
 }
 
-.sidebar.dark-mode .sidebar-link:hover {
-    background: #334155;
-    color: #60a5fa;
-}
-
 .sidebar-link.router-link-active {
     background: #e8f1ff;
     color: #2563eb;
     font-weight: 600;
-}
-
-.sidebar.dark-mode .sidebar-link.router-link-active {
-    background: #1e40af;
-    color: #60a5fa;
 }
 
 .sidebar-link.router-link-active i {
@@ -327,10 +256,6 @@ function handleLogout() {
     font-size: 13px;
     user-select: none;
     outline: none;
-}
-
-.sidebar.dark-mode .menu-parent {
-    color: #cbd5e1;
 }
 
 .menu-parent:focus-visible {
@@ -355,11 +280,6 @@ function handleLogout() {
     color: #2563eb;
 }
 
-.sidebar.dark-mode .menu-parent:hover {
-    background: #334155;
-    color: #60a5fa;
-}
-
 .menu-parent:hover i.chevron-icon {
     color: #2563eb;
 }
@@ -370,11 +290,6 @@ function handleLogout() {
     margin-bottom: 2px;
     border-left: 2px solid #e2e8f0;
     margin-left: 22px;
-    transition: border-color 0.3s ease;
-}
-
-.sidebar.dark-mode .submenu {
-    border-left-color: #334155;
 }
 
 .submenu-item {
@@ -393,16 +308,8 @@ function handleLogout() {
     transition: background 0.2s ease;
 }
 
-.sidebar.dark-mode .user {
-    background: #0f172a;
-}
-
 .user:hover {
     background: #f8fafc;
-}
-
-.sidebar.dark-mode .user:hover {
-    background: #1e293b;
 }
 
 .avatar {
@@ -422,21 +329,10 @@ function handleLogout() {
 .user h6 {
     font-size: 0.8rem;
     color: #253858;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .user h6 {
-    color: #f1f5f9;
 }
 
 .user small {
     font-size: 0.65rem;
-    color: #64748b;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .user small {
-    color: #94a3b8;
 }
 
 .logout-btn {

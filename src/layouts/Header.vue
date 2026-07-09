@@ -52,7 +52,7 @@ const pageTitle = computed(() => {
 
 <style scoped>
 .app-header {
-  height: 56px;
+  height: 59.5px;
   padding: 0 16px;
   background: #ffffff;
   border-bottom: 1px solid #e9ecef;
