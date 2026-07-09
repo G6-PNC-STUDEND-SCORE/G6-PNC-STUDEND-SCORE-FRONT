@@ -1,3 +1,4 @@
+// import { log } from 'console'
 import { http } from './api'
 
 export interface Student {
@@ -94,7 +95,8 @@ export async function assignStudentToClass(
   return res.data
 }
 
-export async function getClasses(): Promise<ClassesResponse> {
-  const res = await http.get<ClassesResponse>('/classes/list')
-  return res.data
-}
+// export async function getClasses(): Promise<ClassesResponse> {
+//   log('getClasses')
+//   // const res = await http.get<ClassesResponse>('/classes/list')
+//   // return res.data
+// }
