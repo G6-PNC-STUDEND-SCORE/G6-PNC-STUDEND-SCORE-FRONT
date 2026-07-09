@@ -71,7 +71,6 @@
                 <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile"
                     @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
                     <div class="avatar">
-                        {{ getUserInitials() }}
                         <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
                         <template v-else>{{ getUserInitials() }}</template>
                     </div>

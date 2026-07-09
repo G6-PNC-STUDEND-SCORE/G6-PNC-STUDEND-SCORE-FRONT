@@ -40,12 +40,30 @@
       <!-- Profile Card -->
       <div class="profile-card">
         <div class="profile-body">
-          <div class="avatar-wrap" @click="triggerUpload" role="button" tabindex="0" @keydown.enter.prevent="triggerUpload" :title="avatarUploading ? 'Uploading...' : 'Click to change photo'">
-            <div class="avatar">
+          <div class="avatar-wrap">
+            <div
+              class="avatar"
+              :class="{ 'avatar--clickable': avatarUrl }"
+              role="button"
+              tabindex="0"
+              :title="avatarUrl ? 'Click to view full screen' : 'Click to add a photo'"
+              @click="avatarUrl ? openViewer() : triggerUpload()"
+              @keydown.enter.prevent="avatarUrl ? openViewer() : triggerUpload()"
+            >
               <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="avatar" />
               <div v-else class="avatar-fallback">{{ initials }}</div>
+              <span v-if="avatarUrl" class="avatar-zoom" aria-hidden="true">
+                <i class="bi bi-arrows-fullscreen"></i>
+              </span>
             </div>
-            <span class="avatar-hint">
+            <span
+              class="avatar-hint"
+              role="button"
+              tabindex="0"
+              @click="triggerUpload"
+              @keydown.enter.prevent="triggerUpload"
+              :title="avatarUploading ? 'Uploading...' : 'Click to change photo'"
+            >
               <template v-if="avatarUploading">
                 <span class="spinner-border spinner-border-sm" role="status"></span>
                 Uploading...
@@ -187,11 +205,28 @@
       class="sr-only"
       @change="onFileChange"
     />
+
+    <!-- Full-screen avatar viewer -->
+    <Transition name="viewer-fade">
+      <div
+        v-if="viewerOpen && avatarUrl"
+        class="avatar-viewer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Profile photo full screen"
+        @click.self="closeViewer"
+      >
+        <button type="button" class="viewer-close" aria-label="Close" @click="closeViewer">
+          <i class="bi bi-x-lg"></i>
+        </button>
+        <img :src="avatarUrl" class="viewer-img" alt="Profile photo full screen" @click.stop />
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
+import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { http } from '@/services/apiHttp'
@@ -240,6 +275,21 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const showCurrent = ref(false)
 const showNew = ref(false)
 const showConfirm = ref(false)
+const viewerOpen = ref(false)
+
+function openViewer() {
+  if (avatarUrl.value) {
+    viewerOpen.value = true
+  }
+}
+
+function closeViewer() {
+  viewerOpen.value = false
+}
+
+function onViewerKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeViewer()
+}
 
 const initials = computed(() => {
   if (!form.name) return 'U'
@@ -446,10 +496,22 @@ onMounted(() => {
   loadProfile()
 })
 
+watch(viewerOpen, (open) => {
+  if (open) {
+    window.addEventListener('keydown', onViewerKeydown)
+    document.body.style.overflow = 'hidden'
+  } else {
+    window.removeEventListener('keydown', onViewerKeydown)
+    document.body.style.overflow = ''
+  }
+})
+
 onUnmounted(() => {
   if (objectUrl) {
     URL.revokeObjectURL(objectUrl)
   }
+  window.removeEventListener('keydown', onViewerKeydown)
+  document.body.style.overflow = ''
 })
 </script>
 
@@ -527,7 +589,6 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
   outline: none;
 }
 
@@ -536,6 +597,7 @@ onUnmounted(() => {
 }
 
 .avatar {
+  position: relative;
   width: 92px;
   height: 92px;
   border-radius: 50%;
@@ -549,9 +611,35 @@ onUnmounted(() => {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.avatar--clickable {
+  cursor: zoom-in;
+}
+
+.avatar:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.4);
+}
+
 .avatar-wrap:hover .avatar {
   transform: scale(1.05);
   box-shadow: 0 12px 30px rgba(21, 101, 216, 0.35);
+}
+
+.avatar-zoom {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  color: #ffffff;
+  font-size: 20px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.avatar--clickable:hover .avatar-zoom {
+  opacity: 1;
 }
 
 .avatar-img {
@@ -570,11 +658,70 @@ onUnmounted(() => {
 .avatar-hint {
   font-size: 12px;
   color: #64748b;
+  cursor: pointer;
   transition: color 0.2s ease;
 }
 
-.avatar-wrap:hover .avatar-hint {
+.avatar-hint:hover,
+.avatar-hint:focus-visible {
   color: #1565d8;
+  outline: none;
+}
+
+/* Full-screen viewer */
+.avatar-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: rgba(15, 23, 42, 0.9);
+  backdrop-filter: blur(4px);
+  cursor: zoom-out;
+}
+
+.viewer-img {
+  max-width: 92vw;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+.viewer-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.viewer-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+.viewer-fade-enter-active,
+.viewer-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.viewer-fade-enter-from,
+.viewer-fade-leave-to {
+  opacity: 0;
 }
 
 .profile-meta {
