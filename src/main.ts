@@ -14,13 +14,10 @@ import { useAuthStore } from '@/stores/auth'
 
 const app = createApp(App)
 const pinia = createPinia()
-
-const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 
 // Initialize auth store
-import { useAuthStore } from './stores/auth'
 const authStore = useAuthStore()
 authStore.init()
 

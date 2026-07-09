@@ -40,11 +40,6 @@
                 Reports
             </RouterLink>
 
-            <RouterLink to="/profile" class="sidebar-link">
-                <i class="bi bi-person-circle me-2"></i>
-                Profile
-            </RouterLink>
-
             <h6 class="menu-title mt-3 mb-2">ADMINISTRATION</h6>
 
             <div class="menu-parent" @click="toggleSettings" @keydown.enter.prevent="toggleSettings" role="button"
@@ -71,9 +66,10 @@
 
         <!-- User Section & Logout -->
         <div class="border-top">
-            <div class="user d-flex align-items-center px-3 py-2">
+            <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile" @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
                 <div class="avatar">
-                    {{ getUserInitials() }}
+                    <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
+                    <template v-else>{{ getUserInitials() }}</template>
                 </div>
                 <div class="ms-2 flex-grow-1">
                     <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name || 'User' }}</h6>
@@ -117,12 +113,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { storageUrl } from '@/services/apiHttp'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 
 const settingsOpen = ref(false)
 const showLogoutModal = ref(false)
@@ -145,6 +144,10 @@ function getUserInitials(): string {
     showLogoutModal.value = false
      auth.logout()
     router.push('/login')
+}
+
+function goToProfile() {
+    router.push('/profile')
 }
 </script>
 
@@ -315,6 +318,14 @@ function getUserInitials(): string {
     font-weight: bold;
     font-size: 0.75rem;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .user h6 {

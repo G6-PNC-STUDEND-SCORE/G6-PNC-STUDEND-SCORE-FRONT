@@ -139,15 +139,30 @@
           <div class="stacked-form">
             <div class="field">
               <label>Current Password</label>
-              <input type="password" v-model="password.current" placeholder="Enter current password" />
+              <div class="password-input">
+                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
+                <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
+                  <i :class="showCurrent ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                </button>
+              </div>
             </div>
             <div class="field">
               <label>New Password</label>
-              <input type="password" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
+              <div class="password-input">
+                <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
+                <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
+                  <i :class="showNew ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                </button>
+              </div>
             </div>
             <div class="field">
               <label>Confirm Password</label>
-              <input type="password" v-model="password.confirm" placeholder="Confirm new password" />
+              <div class="password-input">
+                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
+                <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
+                  <i :class="showConfirm ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -222,6 +237,9 @@ const passwordStatus = ref('')
 const passwordSaving = ref(false)
 const avatarUrl = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const showCurrent = ref(false)
+const showNew = ref(false)
+const showConfirm = ref(false)
 
 const initials = computed(() => {
   if (!form.name) return 'U'
@@ -353,6 +371,10 @@ async function onFileChange(event: Event) {
     // Build full URL for the uploaded avatar
     const baseUrl = http.defaults.baseURL?.replace('/api', '') || ''
     avatarUrl.value = baseUrl + '/storage/' + result.avatar
+    // Keep the sidebar avatar in sync
+    if (auth.user) {
+      auth.user.avatar = result.avatar
+    }
     successMessage.value = 'Avatar uploaded successfully!'
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
@@ -654,6 +676,57 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.password-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input input {
+  width: 100%;
+  padding-right: 46px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.password-toggle:hover {
+  color: #1565d8;
+  background: #eff6ff;
+}
+
+.password-toggle:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.password-toggle:focus-visible {
+  color: #1565d8;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.2);
+}
+
+.password-input input:focus ~ .password-toggle {
+  color: #1565d8;
 }
 
 .field {
