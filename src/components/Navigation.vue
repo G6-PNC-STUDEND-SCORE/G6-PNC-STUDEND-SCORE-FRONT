@@ -40,6 +40,7 @@
                 Reports
             </RouterLink>
 
+
             <h6 class="menu-title mt-3 mb-2">ADMINISTRATION</h6>
 
             <div class="menu-parent" @click="toggleSettings" @keydown.enter.prevent="toggleSettings" role="button"
@@ -66,19 +67,20 @@
 
         <!-- User Section & Logout -->
         <div class="border-top">
-            <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile" @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
-                <div class="avatar">
-<<<<<<< HEAD
-                    <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-                    <template v-else>{{ getUserInitials() }}</template>
-=======
-                    {{ displayInitials }}
->>>>>>> 75f6032ac0546dd0850ffe4d793d11f0e19995ce
+            <div class="user d-flex align-items-center px-3 py-2">
+                <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile"
+                    @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
+                    <div class="avatar">
+                        {{ getUserInitials() }}
+                        <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
+                        <template v-else>{{ getUserInitials() }}</template>
+                    </div>
+                    <div class="ms-2 flex-grow-1">
+                        <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name   }}</h6>
+                        <small class="text-secondary">{{ auth.user?.role  }}</small>
+                    </div>
                 </div>
-                <div class="ms-2 flex-grow-1">
-                    <h6 class="mb-0 fw-bold text-truncate">{{ displayName }}</h6>
-                    <small class="text-secondary">{{ displayRole }}</small>
-                </div>
+
             </div>
             <button class="logout-btn w-100 d-flex align-items-center px-3 py-2" @click="showLogoutModal = true">
                 <i class="bi bi-box-arrow-right me-2"></i>
@@ -86,9 +88,7 @@
             </button>
         </div>
 
-    </aside>
-
-    <!-- Logout Confirmation Modal -->
+    </aside><!-- Logout Confirmation Modal -->
     <Teleport to="body">
         <Transition name="modal">
             <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
@@ -117,49 +117,37 @@
 </template>
 
 <script setup lang="ts">
-<<<<<<< HEAD
+
 import { ref, computed } from 'vue'
-=======
-import { ref, watchEffect } from 'vue'
->>>>>>> 75f6032ac0546dd0850ffe4d793d11f0e19995ce
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { storageUrl } from '@/services/apiHttp'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const auth = useAuthStore()
 
 const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 
 const settingsOpen = ref(false)
 const showLogoutModal = ref(false)
-const displayName = ref('User')
-const displayRole = ref('Admin')
-const displayInitials = ref('U')
-
-watchEffect(() => {
-  const u = authStore.user
-  if (u) {
-    displayName.value = u.name
-    displayRole.value = u.role
-    const parts = u.name.split(' ').filter(Boolean)
-    displayInitials.value = parts.length >= 2
-      ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-      : u.name.substring(0, 2).toUpperCase()
-  } else {
-    displayName.value = 'User'
-    displayRole.value = 'Admin'
-    displayInitials.value = 'U'
-  }
-})
 
 function toggleSettings() {
     settingsOpen.value = !settingsOpen.value
 }
 
+function getUserInitials(): string {
+    const name = auth.user?.name || ''
+    if (!name) return 'U'
+    const parts = name.split(' ').filter(Boolean)
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+}
+
 function handleLogout() {
     showLogoutModal.value = false
-    authStore.logout()
+    auth.logout()
     router.push('/login')
 }
 
@@ -278,9 +266,7 @@ function goToProfile() {
     width: 20px;
     text-align: center;
     flex-shrink: 0;
-}
-
-.menu-parent i.chevron-icon {
+}.menu-parent i.chevron-icon {
     font-size: 0.75rem;
     color: #94a3b8;
     transition: color 0.2s ease;
@@ -408,6 +394,7 @@ function goToProfile() {
         transform: scale(0.9);
         opacity: 0;
     }
+
     100% {
         transform: scale(1);
         opacity: 1;
@@ -527,9 +514,7 @@ function goToProfile() {
     opacity: 1;
     max-height: 120px;
     overflow: hidden;
-}
-
-.slide-leave-to {
+}.slide-leave-to {
     opacity: 0;
     max-height: 0;
     overflow: hidden;
