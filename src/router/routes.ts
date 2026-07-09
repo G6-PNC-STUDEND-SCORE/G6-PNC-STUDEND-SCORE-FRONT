@@ -1,5 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 
+<<<<<<< HEAD
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import ClassesView from '../views/ClassesView.vue'
@@ -10,24 +11,35 @@ import ReportsView from '../views/ReportsView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import UsersView from '../views/UsersView.vue'
 import RolesView from '../views/RolesView.vue'
+=======
+const LoginPage = () => import('@/views/auth/LoginPage.vue')
+const DashboardPage = () => import('@/views/DashboardPage.vue')
+const UserProfile = () => import('@/views/UserProfile.vue')
+>>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
 
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/login',
+    redirect: '/dashboard',
   },
   {
     path: '/login',
     name: 'login',
+<<<<<<< HEAD
     component: LoginView,
     meta: {
       title: 'Login',
       showInSidebar: false,
     },
+=======
+    component: LoginPage,
+    meta: { guest: true },
+>>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
   },
   {
     path: '/dashboard',
     name: 'dashboard',
+<<<<<<< HEAD
     component: DashboardView,
     meta: {
       title: 'Dashboard',
@@ -84,10 +96,15 @@ export const routes: RouteRecordRaw[] = [
       icon: 'bi bi-file-earmark-bar-graph-fill',
       showInSidebar: true,
     },
+=======
+    component: DashboardPage,
+    meta: { requiresAuth: true },
+>>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
   },
   {
     path: '/profile',
     name: 'profile',
+<<<<<<< HEAD
     component: ProfileView,
     meta: {
       title: 'Profile',
@@ -116,5 +133,10 @@ export const routes: RouteRecordRaw[] = [
       showInSidebar: true,
       parent: 'settings',
     },
+=======
+    component: UserProfile,
+    meta: { requiresAuth: true },
+>>>>>>> e6ce300496dc71640e459534c2e098c9970f1676
   },
+ 
 ]
