@@ -40,3 +40,4 @@ __screenshots__/
 
 .git_disabled
 .vscode
+.env
