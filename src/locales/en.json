@@ -28,7 +28,9 @@
   "userAccountUpdated": "User account updated",
   "pass": "Pass",
   "fail": "Fail",
-  "welcome": "Welcome",
+  "retry": "Retry",
+"retrying": "Retrying...",
+"welcome": "Welcome",
   "nav": {
     "classes": "Classes",
     "subjects": "Subjects",

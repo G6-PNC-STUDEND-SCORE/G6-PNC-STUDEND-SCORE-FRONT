@@ -3,16 +3,32 @@ import { http } from './api'
 
 export interface Student {
   id: number
+  user_id: number
+  student_number_sequence_id: number | null
+  generation_id: number | null
   class_id: number | null
-  name: string
-  photo: string | null
-  gender: 'Male' | 'Female'
-  status: 'active' | 'inactive'
   created_at: string
   updated_at: string
+  user?: {
+    id: number
+    name: string
+    email: string
+    gender: string | null
+    status: string
+    avatar: string | null
+  } | null
   class?: {
     id: number
     name: string
+  } | null
+  generation?: {
+    id: number
+    name: string
+  } | null
+  studentNumberSequence?: {
+    id: number
+    student_number: string
+    intake_year: number
   } | null
 }
 
@@ -34,22 +50,8 @@ export interface ClassesResponse {
 }
 
 export async function getStudents(): Promise<StudentsResponse> {
-  // const res = await http.get<StudentsResponse>('/students')
-  // return res.data
-  return {
-    students: [
-      {
-        id: 1,
-        class_id: 1,
-        name: 'John Doe',
-        photo: null,
-        gender: 'Male',
-        created_at: '2022-01-01',
-        updated_at: '2022-01-01',
-        class: { id: 1, name: 'Class 1' },
-      },
-    ],
-  }
+  const res = await http.get<StudentsResponse>('/students')
+  return res.data
 }
 
 
@@ -59,11 +61,16 @@ export async function getStudent(id: number): Promise<StudentResponse> {
 }
 
 export async function createStudent(data: {
-  name: string
-  gender: 'Male' | 'Female'
+  user_id: number
+  student_number: string
+  intake_year: number
+  sequence_number: number
+  name?: string
+  gender?: string
+  status?: string
   class_id?: number | null
-  photo?: string | null
-  status?: 'active' | 'inactive'
+  academic_year_id?: number | null
+  enrollment_date?: string | null
 }): Promise<StudentResponse> {
   const res = await http.post<StudentResponse>('/students', data)
   return res.data
@@ -73,10 +80,11 @@ export async function updateStudent(
   id: number,
   data: {
     name?: string
-    gender?: 'Male' | 'Female'
+    gender?: string
+    status?: string
     class_id?: number | null
-    photo?: string | null
-    status?: 'active' | 'inactive'
+    academic_year_id?: number | null
+    enrollment_date?: string | null
   }
 ): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}`, data)

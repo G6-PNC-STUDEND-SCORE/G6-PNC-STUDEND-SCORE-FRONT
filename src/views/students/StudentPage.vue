@@ -93,7 +93,7 @@
     <!-- Delete Modal -->
     <StudentDeleteModal
       :show="showDeleteModal"
-      :student-name="selectedStudent?.name ?? ''"
+      :student-name="selectedStudent?.user?.name ?? ''"
       :submitting="formSubmitting"
       @close="closeDeleteModal"
       @confirm="handleDelete"
@@ -102,7 +102,7 @@
     <!-- Assign Modal -->
     <StudentAssignModal
       :show="showAssignModal"
-      :student-name="selectedStudent?.name ?? ''"
+      :student-name="selectedStudent?.user?.name ?? ''"
       :class-id="assignForm.class_id"
       :classes="classes"
       :submitting="formSubmitting"

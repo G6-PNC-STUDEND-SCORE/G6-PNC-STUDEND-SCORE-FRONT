@@ -194,7 +194,7 @@
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
-import { http } from '@/services/apiHttp'
+import { storageUrl } from '@/services/apiHttp'
 
 const auth = useAuthStore()
 let objectUrl: string | null = null
@@ -283,7 +283,7 @@ async function loadProfile() {
     form.joined = profile.created_at || ''
 
     if (profile.avatar) {
-      avatarUrl.value = http.defaults.baseURL?.replace('/api', '') + '/storage/' + profile.avatar
+      avatarUrl.value = storageUrl(profile.avatar)
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
@@ -368,9 +368,7 @@ async function onFileChange(event: Event) {
 
   try {
     const result = await uploadAvatar(file)
-    // Build full URL for the uploaded avatar
-    const baseUrl = http.defaults.baseURL?.replace('/api', '') || ''
-    avatarUrl.value = baseUrl + '/storage/' + result.avatar
+    avatarUrl.value = storageUrl(result.avatar)
     // Keep the sidebar avatar in sync
     if (auth.user) {
       auth.user.avatar = result.avatar

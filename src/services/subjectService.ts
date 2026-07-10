@@ -3,14 +3,25 @@ import { http } from './apiHttp'
 export interface Subject {
   id: number
   name: string
-  code?: string
-  teacher: string
-  class: string
-  credits?: number
+  teacher_id: number | null
+  class_id: number | null
   status: 'Active' | 'Inactive'
-  image?: string
   created_at?: string
   updated_at?: string
+  teacher?: {
+    id: number
+    user_id: number
+    teacher_code: string
+    user?: {
+      name: string
+      email: string
+    }
+  } | null
+  class?: {
+    id: number
+    name: string
+    code: string
+  } | null
 }
 
 export interface SubjectResponse {
@@ -50,7 +61,7 @@ export const subjectService = {
     return response.data
   },
 
-  async getTeachers(): Promise<{ success: boolean; data: string[] }> {
+  async getTeachers(): Promise<{ success: boolean; data: { id: number; name: string }[] }> {
     const response = await http.get('/teachers')
     return response.data
   },

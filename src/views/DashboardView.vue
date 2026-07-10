@@ -4,6 +4,19 @@
       <h1 class="page-title">{{ t('dashboard') }}</h1>
       <p class="page-subtitle">{{ t('overview') }}</p>
 
+      <!-- Error Banner with Retry -->
+      <div
+        v-if="errorMessage"
+        class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 mb-3 rounded-3 border-0"
+        style="font-size: 0.82rem;"
+      >
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span class="flex-grow-1">{{ errorMessage }}</span>
+        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="fetchDashboardData">
+          {{ t('retry') }}
+        </button>
+      </div>
+
       <section class="row g-2 g-xl-3 mb-3">
         <div v-for="card in primaryStatsCards" :key="card.label" class="col-12 col-sm-6 col-lg-3">
           <article :class="['stat-card', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
@@ -18,7 +31,7 @@
                 </div>
               </div>
               <div class="mt-auto">
-                <div class="stat-value">{{ card.value }}</div>
+                <div class="stat-value"><AnimatedNumber :value="card.rawValue" /></div>
                 <div class="stat-label">{{ card.label }}</div>
                 <div class="stat-subtitle">{{ card.subtitle }}</div>
               </div>
@@ -96,7 +109,7 @@
                   </g>
 
                   <g class="x-axis-labels">
-                    <text v-for="(label, index) in months" :key="label" :x="xLabelPositions[index]" y="142">
+                    <text v-for="(label, index) in monthLabels" :key="label" :x="xLabelPositions[index]" y="142">
                       {{ label }}
                     </text>
                   </g>
@@ -128,7 +141,7 @@
                 <div class="donut-wrap flex-grow-1 d-flex align-items-center justify-content-center">
                   <div class="donut" :style="donutStyle">
                     <div class="donut-inner">
-                      <div class="donut-value">{{ passRateLabel }}</div>
+                      <div class="donut-value"><AnimatedNumber :value="hasScores ? passRate : 0" :decimals="1" v-if="hasScores" /><template v-else>N/A</template></div>
                       <small class="text-secondary" style="font-size: 0.65rem;">{{ t('passRate') }}</small>
                     </div>
                   </div>
@@ -146,8 +159,8 @@
                     </div>
                   </div>
                   <div class="text-end">
-                    <div class="fw-semibold" style="font-size: 0.85rem;">624</div>
-                    <div class="fw-semibold" style="font-size: 0.85rem;">36</div>
+                    <div class="fw-semibold" style="font-size: 0.85rem;"><AnimatedNumber :value="hasScores ? stats.passCount : 0" v-if="hasScores" /><template v-else>—</template></div>
+                    <div class="fw-semibold" style="font-size: 0.85rem;"><AnimatedNumber :value="hasScores ? stats.failCount : 0" v-if="hasScores" /><template v-else>—</template></div>
                   </div>
                 </div>
               </div>
@@ -162,7 +175,10 @@
                 <h2 class="panel-title mb-0">{{ t('gradeDistribution') }}</h2>
                 <p class="panel-subtitle mb-3">{{ t('allStudents') }}</p>
 
-                <div class="grade-bars">
+                <div v-if="gradeDistribution.length === 0" class="text-center text-secondary py-4" style="font-size: 0.82rem;">
+                  <i class="bi bi-inbox me-1"></i> No grade data available
+                </div>
+                <div v-else class="grade-bars">
                   <div v-for="grade in gradeDistribution" :key="grade.label" class="grade-row">
                     <div class="grade-label">{{ grade.label }}</div>
                     <div class="grade-track">
@@ -183,7 +199,10 @@
                 <h2 class="panel-title mb-0">{{ t('averageScoreClass') }}</h2>
                 <p class="panel-subtitle mb-3">{{ t('schoolWide') }}</p>
 
-                <div class="class-bars">
+                <div v-if="classAverages.length === 0" class="text-center text-secondary py-4" style="font-size: 0.82rem;">
+                  <i class="bi bi-inbox me-1"></i> No subject data available
+                </div>
+                <div v-else class="class-bars">
                   <div v-for="item in classAverages" :key="item.label" class="class-bar-item">
                     <div class="class-bar-track">
                       <div class="class-bar-fill" :style="{ height: `${item.height}%` }"></div>
@@ -202,7 +221,10 @@
               <div class="card-body py-3 px-3">
                 <h2 class="panel-title mb-3">{{ t('recentActivity') }}</h2>
 
-                <div class="activity-list">
+                <div v-if="recentActivity.length === 0" class="text-center text-secondary py-4" style="font-size: 0.82rem;">
+                  <i class="bi bi-inbox me-1"></i> No recent activity
+                </div>
+                <div v-else class="activity-list">
                   <div v-for="item in recentActivity" :key="item.title" class="activity-item">
                     <div class="activity-icon" :class="item.iconClass">
                       <i :class="item.icon"></i>
@@ -228,7 +250,10 @@
                   </span>
                 </div>
 
-                <div class="exam-list">
+                <div v-if="upcomingExams.length === 0" class="text-center text-secondary py-4" style="font-size: 0.82rem;">
+                  <i class="bi bi-calendar-check me-1"></i> No exams scheduled
+                </div>
+                <div v-else class="exam-list">
                   <div v-for="exam in upcomingExams" :key="exam.title" class="exam-item">
                     <div>
                       <div class="fw-semibold" style="font-size: 0.85rem;">{{ exam.title }}</div>
@@ -248,18 +273,46 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
-import header from '@/layouts/Header.vue'
 import Header from '@/layouts/Header.vue'
+import AnimatedNumber from '@/components/AnimatedNumber.vue'
+import { dashboardService } from '@/services/dashboardService'
+import type { DashboardStats, GradeDistribution, SubjectPerformance, TrendMonth, ActivityItem as ActivityItemApi } from '@/services/dashboardService'
+
 const { t } = useI18n()
 const theme = useThemeStore()
 
+// ── State ────────────────────────────────────────────────────────
+const errorMessage = ref<string | null>(null)
+
+const stats = ref<DashboardStats>({
+  totalStudents: 0,
+  totalClasses: 0,
+  totalSubjects: 0,
+  totalTeachers: 0,
+  averageScore: 0,
+  passCount: 0,
+  failCount: 0,
+  passRate: 0,
+})
+
+const backendGradeDistribution = ref<GradeDistribution[]>([])
+const subjectPerformance = ref<SubjectPerformance[]>([])
+const trendMonths = ref<TrendMonth[]>([])
+const activityItems = ref<ActivityItemApi[]>([])
+
+// ── Declare reactive refs BEFORE any watch/effect that accesses them ──
+const trendYears = [2022, 2023, 2024, 2025, 2026]
+const selectedYear = ref(2026)
+
+// ── Types ────────────────────────────────────────────────────────
 type StatCard = {
   label: string
   subtitle: string
   value: string
+  rawValue: number
   icon: string
   iconClass: string
   trend: string
@@ -273,7 +326,7 @@ type GradeItem = {
   color: string
 }
 
-type ActivityItem = {
+type ActivityDisplayItem = {
   title: string
   subtitle: string
   time: string
@@ -294,153 +347,182 @@ type Point = {
   y: number
 }
 
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug']
-const trendYears = [2022, 2023, 2024, 2025, 2026]
-const selectedYear = ref(2026)
+// ── Unmount guard ────────────────────────────────────────────────
+let isUnmounted = false
+onUnmounted(() => { isUnmounted = true })
+
+// ── Fetch Data ───────────────────────────────────────────────────
+async function fetchDashboardData() {
+  errorMessage.value = null
+  try {
+    const [data, activity] = await Promise.all([
+      dashboardService.getAll(),
+      dashboardService.getRecentActivity(),
+    ])
+    if (isUnmounted) return
+    stats.value = data.stats
+    backendGradeDistribution.value = data.gradeDistribution
+    subjectPerformance.value = data.subjectPerformance
+    activityItems.value = activity
+  } catch (error: unknown) {
+    if (isUnmounted) return
+    const msg = error instanceof Error ? error.message : 'Failed to load dashboard data'
+    console.error('Dashboard fetch error:', error)
+    errorMessage.value = msg
+  }
+}
+
+async function fetchTrendData() {
+  const year = selectedYear.value
+  try {
+    const trendData = await dashboardService.getTrends(year)
+    if (!isUnmounted && selectedYear.value === year) {
+      trendMonths.value = trendData.months
+    }
+  } catch (error) {
+    console.error('Trend fetch error:', error)
+  }
+}
+
+onMounted(fetchDashboardData)
+watch(selectedYear, () => {
+  fetchTrendData()
+}, { immediate: true })
+
+// ── Auto-refresh every 30 seconds ────────────────────────────────
+let refreshTimer: ReturnType<typeof setInterval> | null = null
+
+function startAutoRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer)
+  refreshTimer = setInterval(() => {
+    if (!isUnmounted) {
+      fetchDashboardData()
+      fetchTrendData()
+    }
+  }, 30_000)
+}
+
+onMounted(startAutoRefresh)
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+})
 
 const primaryStatsCards = computed<StatCard[]>(() => [
   {
     label: t('totalStudents'),
     subtitle: t('acrossClasses'),
-    value: '660',
+    rawValue: stats.value.totalStudents,
+    value: stats.value.totalStudents.toLocaleString(),
     icon: 'bi bi-mortarboard',
     iconClass: 'icon-blue',
-    trend: '4.2%',
+    trend: '—',
     trendIcon: 'bi bi-arrow-up-short',
     trendClass: 'trend-up',
   },
   {
     label: t('totalClasses'),
     subtitle: t('activeSemester'),
-    value: '6',
+    rawValue: stats.value.totalClasses,
+    value: stats.value.totalClasses.toLocaleString(),
     icon: 'bi bi-building',
     iconClass: 'icon-violet',
-    trend: '0%',
+    trend: '—',
     trendIcon: 'bi bi-arrow-up-short',
     trendClass: 'trend-up',
   },
   {
     label: t('totalSubjects'),
     subtitle: t('teachersAssigned'),
-    value: '18',
+    rawValue: stats.value.totalSubjects,
+    value: stats.value.totalSubjects.toLocaleString(),
     icon: 'bi bi-book',
     iconClass: 'icon-orange',
-    trend: '2.1%',
+    trend: '—',
     trendIcon: 'bi bi-arrow-up-short',
     trendClass: 'trend-up',
   },
   {
     label: t('totalTeachers'),
     subtitle: t('fullPartTime'),
-    value: '12',
+    rawValue: stats.value.totalTeachers,
+    value: stats.value.totalTeachers.toLocaleString(),
     icon: 'bi bi-people',
     iconClass: 'icon-green',
-    trend: '8.3%',
+    trend: '—',
     trendIcon: 'bi bi-arrow-up-short',
     trendClass: 'trend-up',
   },
 ])
 
-const gradeDistribution: GradeItem[] = [
-  { label: 'A (90-100)', percent: 63, color: '#18c08b' },
-  { label: 'B (80-89)', percent: 98, color: '#2563eb' },
-  { label: 'C (70-79)', percent: 78, color: '#f59e0b' },
-  { label: 'D (60-69)', percent: 40, color: '#f97316' },
-  { label: 'F (<60)', percent: 18, color: '#ef4444' },
-]
+const gradeDistribution = computed<GradeItem[]>(() => {
+  if (!backendGradeDistribution.value.length) {
+    return [
+      { label: 'A (90-100)', percent: 0, color: '#18c08b' },
+      { label: 'B (80-89)', percent: 0, color: '#2563eb' },
+      { label: 'C (70-79)', percent: 0, color: '#f59e0b' },
+      { label: 'D (60-69)', percent: 0, color: '#f97316' },
+      { label: 'F (<60)', percent: 0, color: '#ef4444' },
+    ]
+  }
+  return backendGradeDistribution.value.map(item => ({
+    label: item.label,
+    percent: item.percent,
+    color: item.color,
+  }))
+})
 
-const classAverages = [
-  { label: '10A', height: 83 },
-  { label: '10B', height: 78 },
-  { label: '11A', height: 85 },
-  { label: '11B', height: 76 },
-  { label: '12A', height: 88 },
-  { label: '12B', height: 72 },
-]
+const classAverages = computed(() => {
+  if (!subjectPerformance.value.length) {
+    return []
+  }
+  return subjectPerformance.value.slice(0, 6).map(item => ({
+    label: item.subject.substring(0, 6).toUpperCase(),
+    height: Math.min(100, Math.max(0, item.average_score)),
+  }))
+})
 
-const recentActivity = computed<ActivityItem[]>(() => [
-  {
-    title: t('scoresSubmitted'),
-    subtitle: 'Mathematics — Class 10A',
-    time: '2 min ago',
-    icon: 'bi bi-clipboard2-data',
-    iconClass: 'activity-blue',
-  },
-  {
-    title: t('newStudentEnrolled'),
-    subtitle: 'Emma Johnson → Class 10A',
-    time: '15 min ago',
-    icon: 'bi bi-mortarboard',
-    iconClass: 'activity-green',
-  },
-  {
-    title: t('reportGenerated'),
-    subtitle: 'Q2 Performance Report',
-    time: '1 hr ago',
-    icon: 'bi bi-bar-chart',
-    iconClass: 'activity-violet',
-  },
-  {
-    title: t('classCreated'),
-    subtitle: 'Class 12C — Grade 12',
-    time: '3 hrs ago',
-    icon: 'bi bi-building',
-    iconClass: 'activity-orange',
-  },
-  {
-    title: t('userAccountUpdated'),
-    subtitle: 'Dr. Linda Foster profile',
-    time: '5 hrs ago',
-    icon: 'bi bi-person-gear',
-    iconClass: 'activity-sky',
-  },
-])
+/** Map API activity items to display format */
+const recentActivity = computed<ActivityDisplayItem[]>(() => {
+  if (!activityItems.value.length) return []
+  return activityItems.value.map(item => ({
+    title: item.description,
+    subtitle: `${item.user_name} — ${item.module}`,
+    time: item.created_at,
+    icon: moduleIcon(item.module),
+    iconClass: moduleIconClass(item.action),
+  }))
+})
 
-const upcomingExams: ExamItem[] = [
-  {
-    title: 'Mathematics',
-    classLabel: 'Class 10A',
-    date: 'Jul 15, 2026',
-    badge: 'Midterm',
-    badgeClass: 'badge-warm',
-  },
-  {
-    title: 'English Literature',
-    classLabel: 'Class 11B',
-    date: 'Jul 18, 2026',
-    badge: 'Final',
-    badgeClass: 'badge-red',
-  },
-  {
-    title: 'Biology',
-    classLabel: 'Class 12A',
-    date: 'Jul 22, 2026',
-    badge: 'Quiz',
-    badgeClass: 'badge-blue',
-  },
-  {
-    title: 'Physics',
-    classLabel: 'Class 11A',
-    date: 'Jul 25, 2026',
-    badge: 'Midterm',
-    badgeClass: 'badge-warm',
-  },
-]
-
-const trendData: Record<number, { avgScores: number[]; passRates: number[] }> = {
-  2024: {
-    avgScores: [68, 70, 69, 72, 75, 77, 76, 78],
-    passRates: [81, 83, 82, 85, 87, 89, 88, 90],
-  },
-  2025: {
-    avgScores: [70, 72, 69, 75, 77, 79, 76, 80],
-    passRates: [83, 85, 82, 88, 90, 92, 89, 93],
-  },
-  2026: {
-    avgScores: [72, 74, 71, 78, 80, 82, 79, 83],
-    passRates: [85, 87, 83, 90, 92, 94, 91, 95],
-  },
+function moduleIcon(module: string): string {
+  const map: Record<string, string> = {
+    students: 'bi bi-mortarboard',
+    teachers: 'bi bi-people',
+    classes: 'bi bi-building',
+    subjects: 'bi bi-book',
+    scores: 'bi bi-clipboard2-data',
+    auth: 'bi bi-shield-check',
+    users: 'bi bi-person-gear',
+  }
+  return map[module.toLowerCase()] || 'bi bi-activity'
 }
+
+function moduleIconClass(action: string): string {
+  const map: Record<string, string> = {
+    Create: 'activity-green',
+    Update: 'activity-blue',
+    Delete: 'activity-orange',
+    Login: 'activity-sky',
+    Logout: 'activity-violet',
+    Export: 'activity-blue',
+    Import: 'activity-green',
+  }
+  return map[action] || 'activity-blue'
+}
+
+const upcomingExams = ref<ExamItem[]>([])
 
 function buildLinePoints(values: number[]): Point[] {
   const left = 50
@@ -476,10 +558,15 @@ function buildAreaPath(points: Point[]) {
   return `${buildPath(points)} L ${last.x.toFixed(1)} 120 L ${first.x.toFixed(1)} 120 Z`
 }
 
-const currentTrendSeries = computed(() => trendData[selectedYear.value] ?? trendData[2026])
+/** The visible months for the chart — up to 8 (Jan-Aug) to match the SVG layout */
+const visibleMonths = computed(() => trendMonths.value.slice(0, 8))
 
-const avgPoints = computed(() => buildLinePoints(currentTrendSeries.value?.avgScores ?? []))
-const passPoints = computed(() => buildLinePoints(currentTrendSeries.value?.passRates ?? []))
+const avgScores = computed(() => visibleMonths.value.map(m => m.avg_score))
+const passRates = computed(() => visibleMonths.value.map(m => m.pass_rate))
+const monthLabels = computed(() => visibleMonths.value.map(m => m.month_name))
+
+const avgPoints = computed(() => buildLinePoints(avgScores.value))
+const passPoints = computed(() => buildLinePoints(passRates.value))
 
 const avgLinePath = computed(() => buildPath(avgPoints.value))
 const passLinePath = computed(() => buildPath(passPoints.value))
@@ -494,14 +581,28 @@ const yAxisLabels = [
   { value: '70', y: 80 },
   { value: '60', y: 100 },
 ]
-const xLabelPositions = [50, 157, 264, 371, 479, 586, 693, 800]
 
-const passRate = 94.6
-const donutStyle = computed(() => ({
-  background: `conic-gradient(#18c08b 0 ${passRate}%, #ef4444 ${passRate}% 100%)`,
-}))
+/** Dynamic x-axis label positions based on visible month count */
+const xLabelPositions = computed(() => {
+  const count = monthLabels.value.length
+  if (count === 0) return []
+  const left = 50
+  const right = 800
+  const step = count > 1 ? (right - left) / (count - 1) : 0
+  return monthLabels.value.map((_, i) => Math.round(left + i * step))
+})
 
-const passRateLabel = `${passRate.toFixed(1)}%`
+const passRate = computed(() => stats.value.passRate)
+const hasScores = computed(() => (stats.value.passCount + stats.value.failCount) > 0)
+
+const donutStyle = computed(() => {
+  if (!hasScores.value) {
+    return { background: '#e2e8f0' }
+  }
+  return {
+    background: `conic-gradient(#18c08b 0 ${passRate.value}%, #ef4444 ${passRate.value}% 100%)`,
+  }
+})
 
 function selectYear(year: number) {
   selectedYear.value = year

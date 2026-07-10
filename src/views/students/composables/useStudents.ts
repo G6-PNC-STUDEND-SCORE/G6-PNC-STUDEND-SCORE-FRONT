@@ -1,14 +1,16 @@
 import { ref, computed } from 'vue'
 import {
   getStudents,
+  getStudent,
   createStudent,
   updateStudent,
   deleteStudent,
   assignStudentToClass,
-  // getClasses,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
+
+import { classService } from '@/services/classService'
 
 export function useStudents() {
   // ==================== Data ====================
@@ -17,7 +19,6 @@ export function useStudents() {
   const loading = ref(true)
   const error = ref<string | null>(null)
   const searchQuery = ref('')
-  const genderFilter = ref('')
   const formSubmitting = ref(false)
   const formError = ref<string | null>(null)
 
@@ -32,25 +33,53 @@ export function useStudents() {
   const selectedStudent = ref<Student | null>(null)
 
   // ==================== Form State ====================
-  const editForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
+  const genderFilter = ref('')
+
+  const initialCreateForm = () => ({
+    user_id: 0,
+    student_number: '',
+    intake_year: new Date().getFullYear(),
+    sequence_number: 0,
+    name: '',
+    gender: 'Male' as 'Male' | 'Female',
+    status: 'active' as 'active' | 'inactive',
+    class_id: null as number | null,
+    academic_year_id: null as number | null,
+    enrollment_date: null as string | null,
+  })
+
+  const createForm = ref(initialCreateForm())
+  
+  const initialEditForm = () => ({
+    name: '',
+    gender: 'Male' as 'Male' | 'Female',
+    status: 'active' as 'active' | 'inactive',
+    class_id: null as number | null,
+    academic_year_id: null as number | null,
+    enrollment_date: null as string | null,
+  })
+
+  const editForm = ref(initialEditForm())
+  
   const assignForm = ref({ class_id: null as number | null })
-  const createForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
 
   // ==================== Computed ====================
   const filteredStudents = computed(() => {
     return students.value.filter((s) => {
-      const matchesSearch = s.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchesGender = !genderFilter.value || s.gender === genderFilter.value
-      return matchesSearch && matchesGender
+      const studentName = s.user?.name || ''
+      const matchesSearch = studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
+      const matchesStudentNumber = (s.studentNumberSequence?.student_number || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      return matchesSearch || matchesStudentNumber
     })
   })
 
   // ==================== Helpers ====================
   function getInitials(name: string): string {
-    const parts = name.split(' ').filter(Boolean)
+    const safeName = name || ''
+    const parts = safeName.split(' ').filter(Boolean)
     return parts.length >= 2
       ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-      : name.substring(0, 2).toUpperCase()
+      : safeName.substring(0, 2).toUpperCase()
   }
 
   function formatDate(dateStr?: string): string {
@@ -84,8 +113,10 @@ export function useStudents() {
 
   async function loadClasses() {
     try {
-      const res = await getClasses()
-      classes.value = res.classes
+      const response = await classService.getClasses()
+      if (response.success) {
+        classes.value = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
+      }
     } catch {
       // Silently fail
     }
@@ -97,7 +128,7 @@ export function useStudents() {
 
   // ==================== Create ====================
   function openCreateModal() {
-    createForm.value = { name: '', gender: 'Male', class_id: null, status: 'active' }
+    createForm.value = initialCreateForm()
     formError.value = null
     showCreateModal.value = true
   }
@@ -107,8 +138,8 @@ export function useStudents() {
   }
 
   async function handleCreate() {
-    if (!createForm.value.name.trim()) {
-      formError.value = 'Name is required'
+    if (!createForm.value.student_number.trim()) {
+      formError.value = 'Student number is required'
       return
     }
     formSubmitting.value = true
@@ -130,10 +161,10 @@ export function useStudents() {
   function openEditModal(student: Student) {
     selectedStudent.value = student
     editForm.value = {
-      name: student.name,
-      gender: student.gender,
+      ...initialEditForm(),
       class_id: student.class_id,
-      status: student.status,
+      academic_year_id: student.academic_year_id,
+      enrollment_date: student.enrollment_date,
     }
     formError.value = null
     showEditModal.value = true
@@ -146,10 +177,6 @@ export function useStudents() {
 
   async function handleEdit() {
     if (!selectedStudent.value) return
-    if (!editForm.value.name.trim()) {
-      formError.value = 'Name is required'
-      return
-    }
     formSubmitting.value = true
     formError.value = null
     try {
@@ -241,7 +268,6 @@ export function useStudents() {
     loading,
     error,
     searchQuery,
-    genderFilter,
     formSubmitting,
     formError,
     toast,
@@ -253,6 +279,7 @@ export function useStudents() {
     showDetailsModal,
     selectedStudent,
     // Form state
+    genderFilter,
     createForm,
     editForm,
     assignForm,

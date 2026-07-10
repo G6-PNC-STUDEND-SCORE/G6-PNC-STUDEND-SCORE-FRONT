@@ -68,7 +68,7 @@
             v-for="student in paginatedStudents"
             :key="student.id"
             class="student-row"
-            :class="student.gender === 'Male' ? 'row-male' : 'row-female'"
+            :class="(student.user?.gender || '') === 'Male' ? 'row-male' : 'row-female'"
           >
             <td class="col-check">
               <input
@@ -76,28 +76,31 @@
                 class="row-check"
                 :checked="selectedIds.includes(student.id)"
                 @change="toggleRow(student.id)"
-                :aria-label="`Select ${student.name}`"
+                :aria-label="`Select ${student.user?.name || student.id}`"
               />
             </td>
             <td class="col-index">{{ student.id }}</td>
             <td>
               <div class="student-cell">
                 <div class="avatar">
-                  {{ getInitials(student.name) }}
+                  {{ getInitials(student.user?.name || '') }}
                 </div>
-                <span class="student-name">{{ student.name }}</span>
+                <span class="student-name">{{ student.user?.name }}</span>
               </div>
             </td>
             <td>
               <span
                 class="gender-badge"
-                :class="student.gender === 'Male' ? 'badge-male' : 'badge-female'"
+                :class="(student.user?.gender || '') === 'Male' ? 'badge-male' : 'badge-female'"
               >
-                {{ student.gender }}
+                {{ student.user?.gender || '—' }}
               </span>
             </td>
             <td>
-              <span v-if="student.class" class="class-cell"></span>
+              <span v-if="student.class" class="class-cell">
+                <i class="bi bi-building"></i>
+                {{ student.class.name }}
+              </span>
               <span v-else class="class-empty">
                 <i class="bi bi-dash"></i>
                 Not assigned
@@ -106,16 +109,16 @@
             <td class="py-3">
               <span
                 class="status-badge"
-                :class="student.status === 'active' ? 'badge-active' : 'badge-inactive'"
+                :class="(student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'"
               >
-                {{ student.status === 'active' ? 'Active' : 'Inactive' }}
+                {{ (student.user?.status || '') === 'active' ? 'Active' : 'Inactive' }}
               </span>
             </td>
             <td class="col-actions" @click.stop>
               <div class="action-dropdown">
                 <button
                   class="action-trigger"
-                  :title="`Actions for ${student.name}`"
+                  :title="`Actions for ${student.user?.name || student.id}`"
                   @click="toggleDropdown(student.id)"
                 >
                   <i class="bi bi-three-dots-vertical"></i>

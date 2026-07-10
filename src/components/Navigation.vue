@@ -67,20 +67,16 @@
 
         <!-- User Section & Logout -->
         <div class="border-top">
-            <div class="user d-flex align-items-center px-3 py-2">
-                <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile"
-                    @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
-                    <div class="avatar">
-                        {{ getUserInitials() }}
-                        <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-                        <template v-else>{{ getUserInitials() }}</template>
-                    </div>
-                    <div class="ms-2 flex-grow-1">
-                        <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name   }}</h6>
-                        <small class="text-secondary">{{ auth.user?.role  }}</small>
-                    </div>
+            <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile"
+                @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
+                <div class="avatar">
+                    <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
+                    <span v-else class="initials">{{ getUserInitials() }}</span>
                 </div>
-
+                <div class="ms-2 flex-grow-1">
+                    <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name }}</h6>
+                    <small class="text-secondary">{{ auth.user?.role }}</small>
+                </div>
             </div>
             <button class="logout-btn w-100 d-flex align-items-center px-3 py-2" @click="showLogoutModal = true">
                 <i class="bi bi-box-arrow-right me-2"></i>
