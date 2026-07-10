@@ -5,10 +5,10 @@ import {
   updateStudent,
   deleteStudent,
   assignStudentToClass,
-  // getClasses,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
+import { classService } from '@/services/classService'
 
 export function useStudents() {
   // ==================== Data ====================
@@ -107,8 +107,8 @@ export function useStudents() {
 
   async function loadClasses() {
     try {
-      const res = await getClasses()
-      classes.value = res.classes
+      const res = await classService.getClasses()
+      classes.value = Array.isArray(res.data) ? res.data : []
     } catch {
       // Silently fail
     }

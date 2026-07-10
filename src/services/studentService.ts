@@ -51,22 +51,8 @@ export function getPhotoUrl(path: string | null | undefined): string | null {
 }
 
 export async function getStudents(): Promise<StudentsResponse> {
-  // const res = await http.get<StudentsResponse>('/students')
-  // return res.data
-  return {
-    students: [
-      {
-        id: 1,
-        class_id: 1,
-        name: 'John Doe',
-        photo: null,
-        gender: 'Male',
-        created_at: '2022-01-01',
-        updated_at: '2022-01-01',
-        class: { id: 1, name: 'Class 1' },
-      },
-    ],
-  }
+  const res = await http.get<StudentsResponse>('/students')
+  return res.data
 }
 
 
