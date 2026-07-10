@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="px-4 py-4">
       <!-- Header -->
       <div class="page-header">
@@ -140,6 +141,7 @@ import StudentDeleteModal from './StudentDeleteModal.vue'
 import StudentAssignModal from './StudentAssignModal.vue'
 import StudentDetailsModal from './StudentDetailsModal.vue'
 import { useStudents } from './composables/useStudents'
+import Header from '@/layouts/Header.vue'
 
 const {
   // Data

@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="admin-profile-page">
     <header class="page-header">
       <div>
@@ -195,6 +196,7 @@ import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { http } from '@/services/apiHttp'
+import Header from '@/layouts/Header.vue'
 
 const auth = useAuthStore()
 let objectUrl: string | null = null

@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="subject-management">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
@@ -310,6 +311,7 @@ import type { Subject } from '@/services/subjectService'
 import { getSubjectColor } from '@/assets/subject-images'
 import { subjectService } from '@/services/subjectService'
 import { classService } from '@/services/classService'
+import Header from '@/layouts/Header.vue'
 
 const store = useSubjectStore()
 
