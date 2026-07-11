@@ -40,10 +40,6 @@
                 Reports
             </RouterLink>
 
-            <RouterLink to="/profile" class="sidebar-link">
-                <i class="bi bi-person-circle me-2"></i>
-                Profile
-            </RouterLink>
 
             <h6 class="menu-title mt-3 mb-2">ADMINISTRATION</h6>
 
@@ -71,13 +67,15 @@
 
         <!-- User Section & Logout -->
         <div class="border-top">
-            <div class="user d-flex align-items-center px-3 py-2">
+            <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile"
+                @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
                 <div class="avatar">
-                    {{ getUserInitials() }}
+                    <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
+                    <span v-else class="initials">{{ getUserInitials() }}</span>
                 </div>
                 <div class="ms-2 flex-grow-1">
-                    <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name || 'User' }}</h6>
-                    <small class="text-secondary">{{ auth.user?.role || 'Admin' }}</small>
+                    <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name }}</h6>
+                    <small class="text-secondary">{{ auth.user?.role }}</small>
                 </div>
             </div>
             <button class="logout-btn w-100 d-flex align-items-center px-3 py-2" @click="showLogoutModal = true">
@@ -86,9 +84,7 @@
             </button>
         </div>
 
-    </aside>
-
-    <!-- Logout Confirmation Modal -->
+    </aside><!-- Logout Confirmation Modal -->
     <Teleport to="body">
         <Transition name="modal">
             <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
@@ -117,12 +113,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { storageUrl } from '@/services/apiHttp'
 
 const router = useRouter()
 const auth = useAuthStore()
+
+const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 
 const settingsOpen = ref(false)
 const showLogoutModal = ref(false)
@@ -141,10 +141,14 @@ function getUserInitials(): string {
     return name.substring(0, 2).toUpperCase()
 }
 
- function handleLogout() {
+function handleLogout() {
     showLogoutModal.value = false
-     auth.logout()
+    auth.logout()
     router.push('/login')
+}
+
+function goToProfile() {
+    router.push('/profile')
 }
 </script>
 
@@ -160,6 +164,7 @@ function getUserInitials(): string {
     position: fixed;
     left: 0;
     top: 0;
+    z-index: 1000;
 }
 
 .logo-icon {
@@ -257,9 +262,7 @@ function getUserInitials(): string {
     width: 20px;
     text-align: center;
     flex-shrink: 0;
-}
-
-.menu-parent i.chevron-icon {
+}.menu-parent i.chevron-icon {
     font-size: 0.75rem;
     color: #94a3b8;
     transition: color 0.2s ease;
@@ -314,6 +317,14 @@ function getUserInitials(): string {
     font-weight: bold;
     font-size: 0.75rem;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .user h6 {
@@ -379,6 +390,7 @@ function getUserInitials(): string {
         transform: scale(0.9);
         opacity: 0;
     }
+
     100% {
         transform: scale(1);
         opacity: 1;
@@ -498,9 +510,7 @@ function getUserInitials(): string {
     opacity: 1;
     max-height: 120px;
     overflow: hidden;
-}
-
-.slide-leave-to {
+}.slide-leave-to {
     opacity: 0;
     max-height: 0;
     overflow: hidden;
