@@ -6,6 +6,8 @@ import {
   updateStudent,
   deleteStudent,
   assignStudentToClass,
+  uploadStudentPhoto,
+  deleteStudentPhoto,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
@@ -189,6 +191,10 @@ export function useStudents() {
     }
   }
 
+  // ==================== Photo ====================
+  const photoFile = ref<File | null>(null)
+  const removePhotoFlag = ref(false)
+
   // ==================== Edit ====================
   function openEditModal(student: Student) {
     selectedStudent.value = student
@@ -199,12 +205,28 @@ export function useStudents() {
       enrollment_date: student.enrollment_date ?? null,
     }
     formError.value = null
+    photoFile.value = null
+    removePhotoFlag.value = false
     showEditModal.value = true
   }
 
   function closeEditModal() {
     showEditModal.value = false
     selectedStudent.value = null
+    photoFile.value = null
+    removePhotoFlag.value = false
+  }
+
+  function onEditPhotoSelected(file: File | null) {
+    photoFile.value = file
+    if (file) {
+      removePhotoFlag.value = false
+    }
+  }
+
+  function onEditRemovePhoto() {
+    photoFile.value = null
+    removePhotoFlag.value = true
   }
 
   async function handleEdit() {
@@ -212,9 +234,21 @@ export function useStudents() {
     formSubmitting.value = true
     formError.value = null
     try {
+      // Update student info first
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
+      let updatedStudent = res.student
+
+      // Upload photo if selected
+      if (photoFile.value) {
+        const photoRes = await uploadStudentPhoto(selectedStudent.value.id, photoFile.value)
+        updatedStudent = photoRes.student
+      } else if (removePhotoFlag.value) {
+        const photoRes = await deleteStudentPhoto(selectedStudent.value.id)
+        updatedStudent = photoRes.student
+      }
+
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
-      if (index !== -1) students.value[index] = res.student
+      if (index !== -1) students.value[index] = updatedStudent
       invalidateStudentCache()
       closeEditModal()
       showToast('Student updated successfully')
@@ -318,6 +352,8 @@ export function useStudents() {
     createForm,
     editForm,
     assignForm,
+    photoFile,
+    existingPhotoUrl: computed(() => selectedStudent.value?.profile_photo_url ?? null),
     // Computed
     filteredStudents,
     // Helpers
@@ -333,6 +369,8 @@ export function useStudents() {
     openEditModal,
     closeEditModal,
     handleEdit,
+    onEditPhotoSelected,
+    onEditRemovePhoto,
     openDeleteModal,
     closeDeleteModal,
     handleDelete,

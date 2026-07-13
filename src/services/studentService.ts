@@ -5,6 +5,8 @@ export interface Student {
   user_id: number
   student_number_sequence_id: number | null
   generation_id: number | null
+  profile_photo: string | null
+  profile_photo_url: string | null
   class_id?: number | null
   academic_year_id?: number | null
   enrollment_date?: string | null
@@ -115,5 +117,28 @@ export async function assignStudentToClass(
   const res = await http.put<StudentResponse>(`/students/${id}/assign-class`, {
     class_id: classId,
   })
+  return res.data
+}
+
+export async function uploadStudentPhoto(
+  id: number,
+  file: File
+): Promise<StudentResponse> {
+  const formData = new FormData()
+  formData.append('profile_photo', file)
+
+  // Ensure we send multipart/form-data
+  const res = await http.post<StudentResponse>(`/students/${id}/photo`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return res.data
+}
+
+export async function deleteStudentPhoto(
+  id: number
+): Promise<StudentResponse> {
+  const res = await http.delete<StudentResponse>(`/students/${id}/photo`)
   return res.data
 }
