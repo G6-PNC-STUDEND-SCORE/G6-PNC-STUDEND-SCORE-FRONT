@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { subjectService } from '@/services/subjectService'
-import type { Subject } from '@/services/subjectService'
+import type { Subject, SubjectPayload } from '@/services/subjectService'
+
+const CACHE_TTL = 30_000 // 30 seconds
 
 export const useSubjectStore = defineStore('subject', () => {
   const subjects = ref<Subject[]>([])
@@ -9,6 +11,9 @@ export const useSubjectStore = defineStore('subject', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const successMessage = ref<string | null>(null)
+  let subjectsCacheTime = 0
+  let lastSearch = ''
+  let lastStatus = ''
 
   const totalSubjects = computed(() => subjects.value.length)
   const activeSubjects = computed(() => subjects.value.filter(s => s.is_active === 'Active').length)
@@ -20,7 +25,13 @@ export const useSubjectStore = defineStore('subject', () => {
   }
 
   async function fetchSubjects(search?: string, status?: string) {
-    loading.value = true
+    const cacheKey = `${search ?? ''}_${status ?? ''}`
+    const now = Date.now()
+    if (search === lastSearch && status === lastStatus && subjects.value.length > 0 && (now - subjectsCacheTime) < CACHE_TTL) {
+      return
+    }
+
+    loading.value = subjects.value.length === 0
     error.value = null
     clearMessages()
 
@@ -28,6 +39,9 @@ export const useSubjectStore = defineStore('subject', () => {
       const response = await subjectService.getSubjects(search, status)
       if (response.success) {
         subjects.value = response.data as Subject[]
+        subjectsCacheTime = Date.now()
+        lastSearch = search ?? ''
+        lastStatus = status ?? ''
       } else {
         error.value = response.message || 'Failed to fetch subjects'
       }
@@ -62,7 +76,13 @@ export const useSubjectStore = defineStore('subject', () => {
     }
   }
 
-  async function createSubject(subjectData: Omit<Subject, 'id'>) {
+  function invalidateCache() {
+    subjectsCacheTime = 0
+    lastSearch = ''
+    lastStatus = ''
+  }
+
+  async function createSubject(subjectData: SubjectPayload) {
     loading.value = true
     error.value = null
     clearMessages()
@@ -71,6 +91,7 @@ export const useSubjectStore = defineStore('subject', () => {
       const response = await subjectService.createSubject(subjectData)
       if (response.success) {
         subjects.value.push(response.data as Subject)
+        subjectsCacheTime = Date.now()
         successMessage.value = response.message || 'Subject created successfully'
         return true
       } else {
@@ -90,7 +111,7 @@ export const useSubjectStore = defineStore('subject', () => {
     }
   }
 
-  async function updateSubject(id: number, subjectData: Partial<Subject>) {
+  async function updateSubject(id: number, subjectData: Partial<SubjectPayload>) {
     loading.value = true
     error.value = null
     clearMessages()
@@ -102,6 +123,7 @@ export const useSubjectStore = defineStore('subject', () => {
         if (index !== -1) {
           subjects.value[index] = response.data as Subject
         }
+        invalidateCache()
         successMessage.value = response.message || 'Subject updated successfully'
         return true
       } else {
@@ -126,6 +148,7 @@ export const useSubjectStore = defineStore('subject', () => {
       const response = await subjectService.deleteSubject(id)
       if (response.success) {
         subjects.value = subjects.value.filter(s => s.id !== id)
+        invalidateCache()
         successMessage.value = response.message || 'Subject deleted successfully'
         return true
       } else {
@@ -151,6 +174,7 @@ export const useSubjectStore = defineStore('subject', () => {
     activeSubjects,
     inactiveSubjects,
     clearMessages,
+    invalidateCache,
     fetchSubjects,
     fetchSubject,
     createSubject,

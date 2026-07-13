@@ -7,25 +7,28 @@ const router = createRouter({
   routes,
 })
 
-// Navigation guard to check authentication
-router.beforeEach((to, from, next) => {
+// Navigation guard - redirect to login if not authenticated
+// Note: authStore.init() completes before app.mount() in main.ts,
+// so authReady is always true by the time this guard runs.
+router.beforeEach((to, _from) => {
   const authStore = useAuthStore()
-
-  // Public pages that don't require authentication
-  const publicPages = ['/login']
-
-  // Check if the route requires authentication
-  const requiresAuth = !publicPages.includes(to.path)
-
-  if (requiresAuth && !authStore.isAuthenticated) {
-    // Redirect to login if not authenticated
-    next('/login')
-  } else if (to.path === '/login' && authStore.isAuthenticated) {
-    // Redirect to dashboard if already authenticated
-    next('/dashboard')
-  } else {
-    next()
+  
+  // Routes that don't require authentication
+  const publicRoutes = ['/login']
+  
+  if (publicRoutes.includes(to.path)) {
+    // Redirect to dashboard if already logged in
+    if (authStore.isAuthenticated) {
+      return '/dashboard'
+    }
+    return true
   }
+  
+  // Require authentication for all other routes
+  if (!authStore.isAuthenticated) {
+    return '/login'
+  }
+  return true
 })
 
 export default router

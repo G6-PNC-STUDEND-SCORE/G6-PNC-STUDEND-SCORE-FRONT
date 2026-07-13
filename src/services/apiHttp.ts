@@ -15,6 +15,20 @@ export const http = axios.create({
   },
 })
 
+// 401 response interceptor — automatically logs out and redirects to login
+// when the backend rejects the token as invalid/expired.
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      // Hard redirect to reset all Vue/Pinia state
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
+
 export function setAuthToken(token: string | null) {
   if (token) {
     http.defaults.headers.common.Authorization = `Bearer ${token}`
@@ -25,5 +39,11 @@ export function setAuthToken(token: string | null) {
 
 export function clearAuthToken() {
   delete http.defaults.headers.common.Authorization
+}
+
+export function storageUrl(path?: string | null): string {
+  if (!path) return ''
+  const base = (http.defaults.baseURL || '').replace(/\/api\/?$/, '')
+  return base + '/storage/' + path.replace(/^\//, '')
 }
 

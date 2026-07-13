@@ -1,16 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-const LoginPage = () => import('@/page/login/LoginPage.vue')
-const DashboardPage = () => import('@/page/dashboard/DashboardPage.vue')
-const ClassPage = () => import('@/page/classes/ClassPage.vue')
-const SubjectPage = () => import('@/page/subjects/SubjectPage.vue')
-const StudentPage = () => import('@/page/students/StudentPage.vue')
-const ScorePage = () => import('@/page/scores/ScorePage.vue')
-const ReportPage = () => import('@/page/reports/ReportPage.vue')
-const ProfilePage = () => import('@/page/profile/ProfilePage.vue')
-const UserPage = () => import('@/page/users/UserPage.vue')
-const RolePage = () => import('@/page/roles/RolePage.vue')
-
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -19,51 +8,56 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
-    component: LoginPage,
+    component: () => import('@/views/auth/LoginPage.vue'),
   },
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: DashboardPage,
+    component: () => import('@/views/DashboardView.vue'),
   },
   {
     path: '/classes',
-    name: 'class',
-    component: ClassPage,
+    name: 'classes',
+    component: () => import('@/views/classes/ClassPage.vue'),
   },
   {
     path: '/subjects',
     name: 'subject',
-    component: SubjectPage,
+    component: () => import('@/views/SubjectPage.vue'),
+  },
+  {
+    path: '/teachers',
+    name: 'teachers',
+    component: () => import('@/views/teachers/TeacherPage.vue'),
   },
   {
     path: '/students',
     name: 'student',
-    component: StudentPage,
+    component: () => import('@/views/students/StudentPage.vue'),
   },
   {
     path: '/scores',
-    name: 'score',
-    component: ScorePage,
+    name: 'scores',
+    component: () => import('@/views/scores/ScorePage.vue'),
   },
   {
     path: '/reports',
-    name: 'report',
-    component: ReportPage,
-  },
-  {
-    path: '/profile',
-    name: 'profile',
-    component: ProfilePage,
+    name: 'reports',
+    component: () => import('@/views/reports/ReportPage.vue'),
   },
   {
     path: '/users',
     name: 'users',
-    component: UserPage,
+    component: () => import('@/views/users/UsersPage.vue'),
   },
   {
     path: '/roles',
     name: 'roles',
-    component: RolePage,
+    component: () => import('@/views/roles/RolesPage.vue'),
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/UserProfile.vue'),
   },
 ]
