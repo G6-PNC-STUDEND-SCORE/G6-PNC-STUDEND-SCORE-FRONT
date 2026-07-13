@@ -1,262 +1,297 @@
-[09/07/2026 08:34] LIN Sreymao: <template>
+<template>
   <div class="subject-management">
-    <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb" class="mb-3">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <router-link to="/dashboard">Home</router-link>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">Subjects</li>
-      </ol>
-    </nav>
-
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h1 class="h3 fw-medium mb-0">Subject Management</h1>
-        <p class="text-muted small mb-0 mt-1">Manage your subjects efficiently</p>
-      </div>
-      <button class="btn btn-primary btn-sm shadow-sm" @click="openAddModal">
-        <i class="bi bi-plus-lg me-1"></i>Add Subject
-      </button>
-    </div>
-
-    <!-- Alert Messages -->
-    <div v-if="store.error" class="alert alert-danger alert-dismissible fade show" role="alert">
-      <i class="bi bi-exclamation-triangle-fill me-2"></i>
-      {{ store.error }}
-      <button type="button" class="btn-close" @click="store.clearMessages()"></button>
-    </div>
-
-    <div v-if="store.successMessage" class="alert alert-success alert-dismissible fade show" role="alert">
-      <i class="bi bi-check-circle-fill me-2"></i>
-      {{ store.successMessage }}
-      <button type="button" class="btn-close" @click="store.clearMessages()"></button>
-    </div>
-
-    <!-- Search and Filter -->
-    <div class="card mb-4 border-0 shadow-sm">
-      <div class="card-body py-3">
-        <div class="row g-3 align-items-center">
-          <div class="col-md-8">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-search text-muted"></i>
-              </span>
-              <input
-                type="text"
-                class="form-control form-control-sm border-start-0 ps-0"
-                placeholder="Search subjects by name, teacher, or class..."
-                v-model="searchQuery"
-                @input="handleSearch"
-                style="font-size: 0.9rem;"
-              />
-            </div>
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+            <i class="bi bi-journal-bookmark"></i>
           </div>
-          <div class="col-md-4">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-funnel text-muted"></i>
-              </span>
-              <select
-                class="form-select form-select-sm border-start-0 ps-0"
-                v-model="statusFilter"
-                @change="handleFilter"
-                style="font-size: 0.9rem;"
-              >
-                <option value="">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TOTAL SUBJECTS</p>
+            <h3 class="stat-value mb-0">{{ store.totalSubjects }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">UNASSIGNED SUBJECTS</p>
+            <h3 class="stat-value mb-0">{{ unassignedSubjects }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-success bg-opacity-10 text-success">
+            <i class="bi bi-person-video3"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TEACHING TUTORS</p>
+            <h3 class="stat-value mb-0">{{ teachingTutors }}</h3>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Loading Spinner -->
-    <div v-if="store.loading" class="text-center my-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
-<!-- Subjects Table -->
-     <div v-else class="card" style="border-radius: 12px; overflow: hidden;">
-       <div class="card-body p-0">
-         <div class="table-responsive">
-           <table class="table table-hover mb-0" style="border-radius: 12px;">
-            <thead class="table-light">
-              <tr>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3" style="width: 50px;">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    @change="toggleSelectAll"
-                    :checked="isAllSelected"
-                  />
-                </th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">SUBJECT</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">TEACHER</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">CLASS</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">STATUS</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="subject in filteredSubjects" :key="subject.id" @click="openEditModal(subject)" style="cursor: pointer;">
-                <td class="py-2 px-3 text-center">
+    <!-- Curriculum Subjects Section -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <!-- Section Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-medium mb-0">Curriculum Subjects</h5>
+          <div class="d-flex gap-2">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              placeholder="Search subject..."
+              v-model="searchQuery"
+              @input="handleSearch"
+              style="width: 250px;"
+            />
+            <button class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-file-earmark-text me-1"></i>Template
+            </button>
+            <button class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-upload me-1"></i>Import
+            </button>
+            <button class="btn btn-primary btn-sm" @click="openAddModal">
+              <i class="bi bi-plus-lg me-1"></i>Create Subject
+            </button>
+          </div>
+        </div>
+
+        <!-- Select All Checkbox -->
+        <div class="mb-3">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="selectAll"
+            :checked="isAllSelected"
+            @change="toggleSelectAll"
+          />
+          <label class="form-check-label small text-muted ms-2" for="selectAll">
+            Select all visible subjects
+          </label>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div v-if="store.loading" class="text-center my-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Subjects List -->
+        <div v-else-if="filteredSubjects.length > 0">
+          <div v-for="subject in filteredSubjects" :key="subject.id" class="subject-item border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-2">
                   <input
                     type="checkbox"
                     class="form-check-input"
                     :value="subject.id"
                     v-model="selectedSubjects"
-                    @click.stop
                   />
-                </td>
-                <td class="py-2 px-3">
-                  <div class="d-flex align-items-center">
-                    <div class="subject-icon me-2 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :style="{ backgroundColor: getSubjectColor(subject.name), width: '24px', height: '24px', fontSize: '0.75rem' }">
-                      <i class="bi bi-book text-white"></i>
-                    </div>
-                    <span class="fw-medium">{{ subject.name }}</span>
-                  </div>
-                </td>
-                <td class="small py-2 px-3">{{ subject.teacher }}</td>
-                <td class="small py-2 px-3">{{ subject.class }}</td>
-                <td class="py-2 px-3">
-                  <span
-                    class="badge"
-                    :class="subject.status === 'Active' ? 'bg-success' : 'bg-secondary'"
-                  >
-                    {{ subject.status }}
-                  </span>
-                </td>
-                <td class="text-center py-2 px-3">
-                  <div class="btn-group" role="group">
-                    <button
-                      class="btn btn-sm text-warning"
-                      @click="openEditModal(subject)"
-                      title="Edit"
-                      style="background: none; border: none; padding: 0.25rem 0.5rem;"
+                  <span class="badge bg-secondary text-dark small">#{{ subject.id }}</span>
+                  <h6 class="fw-medium mb-0">{{ subject.name }}</h6>
+                  <span class="badge bg-success bg-opacity-10 text-success small">Active</span>
+                </div>
+
+                <div class="ms-5">
+                  <p class="text-muted small mb-2">
+                    <i class="bi bi-diagram-3 me-1"></i>
+                    {{ getClassCount(subject) }} classes
+                    <span class="mx-2">•</span>
+                    <i class="bi bi-gear me-1"></i>
+                    Weights: Quiz (20%) · Assignment (10%) · Midterm (30%) · Final (40%)
+                  </p>
+
+                  <div class="d-flex gap-2 flex-wrap">
+                    <span
+                      v-for="classInfo in getSubjectClasses(subject)"
+                      :key="classInfo.class"
+                      class="badge bg-light text-dark border"
                     >
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      class="btn btn-sm text-danger"
-                      @click="confirmDelete(subject)"
-                      title="Delete"
-                      style="background: none; border: none; padding: 0.25rem 0.5rem;"
-                    >
-                      <i class="bi bi-trash"></i>
-                    </button>
+                      {{ classInfo.class }} {{ classInfo.teacher }}
+                    </span>
                   </div>
-                </td>
-              </tr>
-              <tr v-if="filteredSubjects.length === 0">
-                <td colspan="6" class="text-center py-5 text-muted">
-                  <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                  No subjects found
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" @click="openAssignModal">
+                  <i class="bi bi-link me-1"></i>Assign to Class
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @click="openEditModal(subject)">
+                  <i class="bi bi-three-dots"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else class="text-center py-5 text-muted">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          <p>No subjects found</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+          <div class="small text-muted">
+            Showing 1 to {{ filteredSubjects.length }} of {{ store.totalSubjects }} subjects
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted">Show:</span>
+            <select class="form-select form-select-sm" style="width: auto;">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
-<!-- Add/Edit Subject Modal -->
+
+    <!-- Alert Messages -->
+    <div v-if="store.error" class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      {{ store.error }}
+      <button type="button" class="btn-close" @click="store.clearMessages()"></button>
+    </div>
+
+    <div v-if="store.successMessage" class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      {{ store.successMessage }}
+      <button type="button" class="btn-close" @click="store.clearMessages()"></button>
+    </div>
+
+    <!-- Add/Edit Subject Modal -->
     <Transition name="modal">
       <div v-if="showModal" class="modal fade show" style="display: block;" @click.self="closeModal">
         <div class="modal-dialog modal-dialog-centered" @click.stop>
           <div class="modal-content">
-            <div class="modal-header border-0 pb-3">
-              <div class="d-flex align-items-center">
-                <div class="subject-icon me-3 rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" :style="{ backgroundColor: getSubjectColor(formData.name), width: '24px', height: '24px', fontSize: '0.75rem' }">
-                  <i class="bi bi-book text-white"></i>
-                </div>
-                <h5 class="modal-title fw-medium mb-0">{{ isEditMode ? 'Edit Subject' : 'Add Subject' }}</h5>
-              </div>
+            <div class="modal-header border-0 pt-3 px-3">
+              <h5 class="modal-title fw-medium fs-5">Create Subject</h5>
               <button
                 type="button"
                 class="btn-close"
                 @click="closeModal"
               ></button>
             </div>
-            <div class="modal-body pt-0">
+            <div class="modal-body px-3">
               <form @submit.prevent="handleSubmit">
-                <div class="row g-3">
-                  <div class="col-12">
-                    <label for="name" class="form-label text-muted small">Subject Name <span class="text-danger">*</span></label>
-                    <input
-                      type="text"
-                      class="form-control form-control-sm"
-                      id="name"
-                      v-model="formData.name"
-                      :class="{ 'is-invalid': errors.name }"
-                      placeholder="Enter subject name"
-                      required
-                    />
-                    <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
-                  </div>
-
-                  <div class="col-12">
-                    <label for="teacher" class="form-label text-muted small">Teacher <span class="text-muted">(Optional)</span></label>
-                    <select
-                      class="form-select form-select-sm"
-                      id="teacher"
-                      v-model="formData.teacher"
-                      :class="{ 'is-invalid': errors.teacher }"
-                    >
-                      <option value="">Select a teacher</option>
-                      <option v-for="teacher in teachers" :key="teacher" :value="teacher">
-                        {{ teacher }}
-                      </option>
-                    </select>
-                    <div v-if="errors.teacher" class="invalid-feedback">{{ errors.teacher }}</div>
-                  </div>
-
-                  <div class="col-12">
-                    <label for="class" class="form-label text-muted small">Class <span class="text-danger">*</span></label>
-                    <select
-                      class="form-select form-select-sm"
-                      id="class"
-                      v-model="formData.class"
-                      :class="{ 'is-invalid': errors.class }"
-                      required
-                    >
-                      <option value="">Select a class</option>
-                      <option v-for="cls in classes" :key="cls.id" :value="cls.name">
-                        {{ cls.name }}
-                      </option>
-                    </select>
-                    <div v-if="errors.class" class="invalid-feedback">{{ errors.class }}</div>
-                  </div>
-                    <div class="col-12">
-                    <label for="status" class="form-label text-muted small">Status <span class="text-danger">*</span></label>
-                    <select
-                      class="form-select form-select-sm"
-                      id="status"
-                      v-model="formData.status"
-                      :class="{ 'is-invalid': errors.status }"
-                      required
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                    <div v-if="errors.status" class="invalid-feedback">{{ errors.status }}</div>
-                  </div>
+                <div class="mb-3">
+                  <label for="name" class="form-label text-muted small fw-medium text-uppercase">Subject Name</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="name"
+                    v-model="formData.name"
+                    :class="{ 'is-invalid': errors.name }"
+                    placeholder="e.g. Science"
+                    required
+                  />
+                  <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
                 </div>
               </form>
             </div>
-            <div class="modal-footer border-0 pt-3">
-              <button type="button" class="btn btn-light" @click="closeModal">Cancel</button>
+            <div class="modal-footer border-0 pt-3 px-3 pb-3">
+              <button type="button" class="btn btn-light px-4" @click="closeModal">Cancel</button>
               <button
                 type="button"
-                class="btn btn-primary"
+                class="btn btn-primary px-4"
                 @click="handleSubmit"
                 :disabled="store.loading"
               >
                 <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
-                {{ isEditMode ? 'Update' : 'Create' }} Subject
+                Save Subject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Assign to Class Modal -->
+    <Transition name="modal">
+      <div v-if="showAssignModal" class="modal fade show" style="display: block;" @click.self="closeAssignModal">
+        <div class="modal-dialog modal-lg" @click.stop>
+          <div class="modal-content">
+            <div class="modal-header border-0 pt-3 px-3">
+              <h5 class="modal-title fw-medium fs-5">Subjects & Teachers for Class {{ selectedClassForAssign }}</h5>
+              <button
+                type="button"
+                class="btn-close"
+                @click="closeAssignModal"
+              ></button>
+            </div>
+            <div class="modal-body px-3">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th scope="col" class="small fw-semibold text-muted py-2" style="width: 80px;">SELECT</th>
+                      <th scope="col" class="small fw-semibold text-muted py-2">SUBJECT</th>
+                      <th scope="col" class="small fw-semibold text-muted py-2">ASSIGNED TEACHER</th>
+                      <th scope="col" class="small fw-semibold text-muted py-2" style="width: 100px;">STATUS</th>
+                      <th scope="col" class="small fw-semibold text-muted py-2" style="width: 100px;">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="subject in assignableSubjects" :key="subject.id">
+                      <td class="py-2">
+                        <input
+                          type="checkbox"
+                          class="form-check-input"
+                          :value="subject.id"
+                          v-model="selectedSubjectsForAssign"
+                        />
+                      </td>
+                      <td class="py-2">
+                        <span class="fw-medium">{{ subject.name }}</span>
+                      </td>
+                      <td class="py-2">
+                        <select
+                          class="form-select form-select-sm"
+                          v-model="subjectAssignments[subject.id]"
+                          style="width: 200px;"
+                        >
+                          <option value="">Select teacher</option>
+                          <option v-for="teacher in teachers" :key="teacher" :value="teacher">
+                            Professor {{ teacher }}
+                          </option>
+                        </select>
+                      </td>
+                      <td class="py-2">
+                        <span class="badge bg-success bg-opacity-10 text-success small">Active</span>
+                      </td>
+                      <td class="py-2">
+                        <button class="btn btn-outline-primary btn-sm">
+                          <i class="bi bi-journal-text me-1"></i>Subjects
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-3 px-3 pb-3">
+              <button type="button" class="btn btn-light px-4" @click="closeAssignModal">Cancel</button>
+              <button
+                type="button"
+                class="btn btn-primary px-4"
+                @click="applyAssignments"
+                :disabled="store.loading"
+              >
+                <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
+                Apply Changes
               </button>
             </div>
           </div>
@@ -304,7 +339,6 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
 import type { Subject } from '@/services/subjectService'
-import { getSubjectColor } from '@/assets/subject-images'
 import { subjectService } from '@/services/subjectService'
 import { classService } from '@/services/classService'
 
@@ -326,37 +360,78 @@ const loadingClasses = ref(false)
 // Modal states
 const showModal = ref(false)
 const showDeleteModal = ref(false)
+const showAssignModal = ref(false)
 const isEditMode = ref(false)
 const subjectToDelete = ref<Subject | null>(null)
+const selectedClassForAssign = ref('')
 
 // Selected subjects for checkbox
 const selectedSubjects = ref<number[]>([])
+const selectedSubjectsForAssign = ref<number[]>([])
+const subjectAssignments = ref<Record<number, string>>({})
 
 // Form data
 const formData = reactive({
   name: '',
   teacher: '',
   class: '',
-  status: 'Active' as 'Active' | 'Inactive',
+  is_active: 'Active' as 'Active' | 'Inactive',
 })
 
 const errors = reactive({
   name: '',
   teacher: '',
   class: '',
-  status: '',
+  is_active: '',
 })
 
 // Computed
 const filteredSubjects = computed(() => {
   return store.subjects
 })
- const isAllSelected = computed(() => {
+
+const isAllSelected = computed(() => {
   return filteredSubjects.value.length > 0 &&
          selectedSubjects.value.length === filteredSubjects.value.length
 })
 
+const unassignedSubjects = computed(() => {
+  return store.subjects.filter(s => !s.teacher || s.teacher === '').length
+})
+
+const teachingTutors = computed(() => {
+  const uniqueTeachers = new Set(store.subjects.filter(s => s.teacher && s.teacher !== '').map(s => s.teacher))
+  return uniqueTeachers.size
+})
+
+const assignableSubjects = computed(() => {
+  return store.subjects.filter(s => s.is_active === 'Active')
+})
+
 // Methods
+
+function getClassCount(subject: Subject): number {
+  // Count how many classes this subject is assigned to
+  const subjectClasses = store.subjects.filter(s => s.name === subject.name)
+  return new Set(subjectClasses.map(s => s.class)).size
+}
+
+function getSubjectClasses(subject: Subject) {
+  // Get unique class-teacher combinations for this subject
+  const classMap = new Map()
+  store.subjects.forEach(s => {
+    if (s.name === subject.name) {
+      const key = s.class
+      if (!classMap.has(key)) {
+        classMap.set(key, {
+          class: s.class,
+          teacher: s.teacher ? `Professor ${s.teacher}` : ''
+        })
+      }
+    }
+  })
+  return Array.from(classMap.values())
+}
 
 function handleSearch() {
   if (searchTimeout) {
@@ -366,10 +441,6 @@ function handleSearch() {
   searchTimeout = setTimeout(() => {
     store.fetchSubjects(searchQuery.value, statusFilter.value)
   }, 300)
-}
-
-function handleFilter() {
-  store.fetchSubjects(searchQuery.value, statusFilter.value)
 }
 
 function openAddModal() {
@@ -385,7 +456,7 @@ function openEditModal(subject: Subject) {
     name: subject.name,
     teacher: subject.teacher,
     class: subject.class,
-    status: subject.status,
+    is_active: subject.is_active,
   })
   showModal.value = true
 }
@@ -399,7 +470,7 @@ function resetForm() {
   formData.name = ''
   formData.teacher = ''
   formData.class = ''
-  formData.status = 'Active'
+  formData.is_active = 'Active'
   Object.keys(errors).forEach(key => {
     errors[key as keyof typeof errors] = ''
   })
@@ -428,11 +499,11 @@ function validateForm(): boolean {
     errors.class = ''
   }
 
-  if (!formData.status) {
-    errors.status = 'Status is required'
+  if (!formData.is_active) {
+    errors.is_active = 'Status is required'
     isValid = false
   } else {
-    errors.status = ''
+    errors.is_active = ''
   }
 
   return isValid
@@ -447,7 +518,7 @@ async function handleSubmit() {
     name: formData.name,
     teacher: formData.teacher,
     class: formData.class,
-    status: formData.status,
+    is_active: formData.is_active,
   }
 
   if (isEditMode.value && store.currentSubject) {
@@ -469,17 +540,26 @@ async function handleSubmit() {
   }
 }
 
-function confirmDelete(subject: Subject) {
-  subjectToDelete.value = subject
-  showDeleteModal.value = true
-}
-
 function toggleSelectAll() {
   if (isAllSelected.value) {
     selectedSubjects.value = []
   } else {
     selectedSubjects.value = filteredSubjects.value.map(s => s.id)
   }
+}
+
+function openAssignModal() {
+  selectedClassForAssign.value = '2027A'
+  selectedSubjectsForAssign.value = []
+  subjectAssignments.value = {}
+  showAssignModal.value = true
+}
+
+function closeAssignModal() {
+  showAssignModal.value = false
+  selectedClassForAssign.value = ''
+  selectedSubjectsForAssign.value = []
+  subjectAssignments.value = {}
 }
 
 function closeDeleteModal() {
@@ -494,6 +574,21 @@ async function handleDelete() {
   if (success) {
     closeDeleteModal()
   }
+}
+
+async function applyAssignments() {
+  // Here you would typically send the assignments to the backend
+  console.log('Applying assignments:', {
+    class: selectedClassForAssign.value,
+    assignments: subjectAssignments.value
+  })
+  
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 500))
+  
+  closeAssignModal()
+  // Optionally refresh the subjects list
+  await store.fetchSubjects(searchQuery.value, statusFilter.value)
 }
 
 // Lifecycle
@@ -521,7 +616,8 @@ async function fetchTeachers() {
     loadingTeachers.value = false
   }
 }
- async function fetchClasses() {
+
+async function fetchClasses() {
   loadingClasses.value = true
   try {
     const response = await classService.getClasses()
@@ -544,5 +640,73 @@ async function fetchTeachers() {
 <style scoped>
 .subject-management {
   padding: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0;
+  color: #1f2937;
+}
+
+.subject-item {
+  background: white;
+  transition: box-shadow 0.2s;
+}
+
+.subject-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.badge {
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+}
+
+.form-control-sm,
+.form-select-sm {
+  font-size: 0.875rem;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
 }
 </style>

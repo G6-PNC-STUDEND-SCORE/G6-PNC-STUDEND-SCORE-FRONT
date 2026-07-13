@@ -11,8 +11,8 @@ export const useSubjectStore = defineStore('subject', () => {
   const successMessage = ref<string | null>(null)
 
   const totalSubjects = computed(() => subjects.value.length)
-  const activeSubjects = computed(() => subjects.value.filter(s => s.status === 'Active').length)
-  const inactiveSubjects = computed(() => subjects.value.filter(s => s.status === 'Inactive').length)
+  const activeSubjects = computed(() => subjects.value.filter(s => s.is_active === 'Active').length)
+  const inactiveSubjects = computed(() => subjects.value.filter(s => s.is_active === 'Inactive').length)
 
   function clearMessages() {
     error.value = null

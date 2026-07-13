@@ -6,8 +6,9 @@ export interface Subject {
   code?: string
   teacher: string
   class: string
-  credits?: number
-  status: 'Active' | 'Inactive'
+  credit_hours?: number
+  is_active: 'Active' | 'Inactive'
+  description?: string
   image?: string
   created_at?: string
   updated_at?: string

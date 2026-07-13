@@ -79,7 +79,7 @@
               class="d-none"
             />
             <button class="btn btn-light btn-sm w-100 shadow-sm" @click="triggerPDFUpload" style="background-color: white; color: black; border: 1px solid #dee2e6;">
-              <i class="bi bi-file-earmark-pdf me-1"></i>Import
+              <i class="bi bi-file-earmark-pdf me-1"></i>Export
             </button>
           </div>
         </div>
@@ -219,19 +219,17 @@
                   </div>
 
                   <div class="col-12">
-                    <label for="generation" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Grade Level</label>
-                    <select
-                      class="form-select"
+                    <label for="generation" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">GENERATION</label>
+                    <input
+                      type="text"
+                      class="form-control"
                       id="generation"
                       v-model="formData.generation"
                       :class="{ 'is-invalid': errors.generation }"
-                      required
+                      placeholder="e.g. 2026"
                       style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
-                    >
-                      <option value="2025">2025</option>
-                      <option value="2026">2026</option>
-                      <option value="2027">2027</option>
-                    </select>
+                      required
+                    />
                     <div v-if="errors.generation" class="invalid-feedback">{{ errors.generation }}</div>
                   </div>
 
@@ -263,6 +261,21 @@
                       required
                     />
                     <div v-if="errors.room" class="invalid-feedback">{{ errors.room }}</div>
+                  </div>
+
+                  <div class="col-12">
+                    <label for="students" class="form-label mb-2" style="font-size: 0.875rem; color: #4a5568;">Number of Students</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="students"
+                      v-model="formData.students"
+                      :class="{ 'is-invalid': errors.students }"
+                      placeholder="e.g. 30"
+                      min="0"
+                      style="border-radius: 8px; border: 1px solid #e2e8f0; padding: 0.625rem 0.875rem;"
+                    />
+                    <div v-if="errors.students" class="invalid-feedback">{{ errors.students }}</div>
                   </div>
 
                   <div class="col-12">
@@ -684,8 +697,11 @@ async function handleSubmit() {
       }
     }
   } catch (err) {
-    error.value = 'Failed to save class'
-    console.error(err)
+    const axiosError = err as { response?: { data?: { message?: string } }; message?: string }
+    const errorMessage = axiosError?.response?.data?.message || axiosError?.message || 'Failed to save class'
+    error.value = errorMessage
+    console.error('Error saving class:', err)
+    console.error('Error response:', axiosError?.response?.data)
   } finally {
     loading.value = false
   }
