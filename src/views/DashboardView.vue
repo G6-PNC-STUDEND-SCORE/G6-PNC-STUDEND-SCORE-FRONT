@@ -251,7 +251,6 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
-import header from '@/layouts/Header.vue'
 import Header from '@/layouts/Header.vue'
 const { t } = useI18n()
 const theme = useThemeStore()
