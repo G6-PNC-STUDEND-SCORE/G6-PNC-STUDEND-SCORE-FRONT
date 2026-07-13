@@ -2,15 +2,44 @@ import { http } from './api'
 
 export interface Student {
   id: number
-  class_id: number | null
-  name: string
-  photo: string | null
-  gender: 'Male' | 'Female'
+  user_id: number
+  student_number_sequence_id: number | null
+  generation_id: number | null
+  class_id?: number | null
+  academic_year_id?: number | null
+  enrollment_date?: string | null
+  gender?: string | null
   created_at: string
   updated_at: string
+  user?: {
+    id: number
+    name: string
+    email: string
+    gender: string | null
+    status: string
+    avatar: string | null
+  } | null
+  classHistories?: Array<{
+    id: number
+    class_id: number
+    status: string
+    class?: {
+      id: number
+      name: string
+    } | null
+  }> | null
   class?: {
     id: number
     name: string
+  } | null
+  generation?: {
+    id: number
+    name: string
+  } | null
+  studentNumberSequence?: {
+    id: number
+    student_number: string
+    intake_year: number
   } | null
 }
 
@@ -42,10 +71,17 @@ export async function getStudent(id: number): Promise<StudentResponse> {
 }
 
 export async function createStudent(data: {
-  name: string
-  gender: 'Male' | 'Female'
+  user_id: number
+  student_number: string
+  intake_year: number
+  sequence_number: number
+  name?: string
+  gender?: string
+  status?: string
+  generation_id?: number | null
   class_id?: number | null
-  photo?: string | null
+  academic_year_id?: number | null
+  enrollment_date?: string | null
 }): Promise<StudentResponse> {
   const res = await http.post<StudentResponse>('/students', data)
   return res.data
@@ -55,9 +91,12 @@ export async function updateStudent(
   id: number,
   data: {
     name?: string
-    gender?: 'Male' | 'Female'
+    gender?: string
+    status?: string
+    generation_id?: number | null
     class_id?: number | null
-    photo?: string | null
+    academic_year_id?: number | null
+    enrollment_date?: string | null
   }
 ): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}`, data)
@@ -76,10 +115,5 @@ export async function assignStudentToClass(
   const res = await http.put<StudentResponse>(`/students/${id}/assign-class`, {
     class_id: classId,
   })
-  return res.data
-}
-
-export async function getClasses(): Promise<ClassesResponse> {
-  const res = await http.get<ClassesResponse>('/classes/list')
   return res.data
 }

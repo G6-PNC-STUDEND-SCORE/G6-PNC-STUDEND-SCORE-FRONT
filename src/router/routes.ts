@@ -1,31 +1,63 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-const LoginPage = () => import('@/views/auth/LoginPage.vue')
-const DashboardPage = () => import('@/views/DashboardPage.vue')
-const UserProfile = () => import('@/views/UserProfile.vue')
-
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/login',
   },
   {
     path: '/login',
     name: 'login',
-    component: LoginPage,
-    meta: { guest: true },
+    component: () => import('@/views/auth/LoginPage.vue'),
   },
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: DashboardPage,
-    meta: { requiresAuth: true },
+    component: () => import('@/views/DashboardView.vue'),
+  },
+  {
+    path: '/classes',
+    name: 'classes',
+    component: () => import('@/views/classes/ClassPage.vue'),
+  },
+  {
+    path: '/subjects',
+    name: 'subject',
+    component: () => import('@/views/SubjectPage.vue'),
+  },
+  {
+    path: '/teachers',
+    name: 'teachers',
+    component: () => import('@/views/teachers/TeacherPage.vue'),
+  },
+  {
+    path: '/students',
+    name: 'student',
+    component: () => import('@/views/students/StudentPage.vue'),
+  },
+  {
+    path: '/scores',
+    name: 'scores',
+    component: () => import('@/views/scores/ScorePage.vue'),
+  },
+  {
+    path: '/reports',
+    name: 'reports',
+    component: () => import('@/views/reports/ReportPage.vue'),
+  },
+  {
+    path: '/users',
+    name: 'users',
+    component: () => import('@/views/users/UsersPage.vue'),
+  },
+  {
+    path: '/roles',
+    name: 'roles',
+    component: () => import('@/views/roles/RolesPage.vue'),
   },
   {
     path: '/profile',
     name: 'profile',
-    component: UserProfile,
-    meta: { requiresAuth: true },
+    component: () => import('@/views/UserProfile.vue'),
   },
- 
 ]
