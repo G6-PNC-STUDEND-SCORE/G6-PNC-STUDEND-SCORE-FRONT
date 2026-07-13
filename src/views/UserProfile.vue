@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="admin-profile-page">
     <header class="page-header">
       <div>
@@ -191,15 +192,30 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
 
+// ── Module-level profile cache ──
+let cachedProfile: UserProfile | null = null
+let profileCacheTime = 0
+const PROFILE_CACHE_TTL = 30_000 // 30 seconds
+
+function isProfileCacheStale(): boolean {
+  return Date.now() - profileCacheTime > PROFILE_CACHE_TTL
+}
+
+function invalidateProfileCache() {
+  cachedProfile = null
+  profileCacheTime = 0
+}
+
 const auth = useAuthStore()
 let objectUrl: string | null = null
 
-const loading = ref(true)
+const loading = ref(!cachedProfile || isProfileCacheStale())
 const saving = ref(false)
 const fetchError = ref('')
 const saveError = ref('')
@@ -260,31 +276,40 @@ const formattedDate = computed(() => {
 
 
 
+function applyProfile(profile: UserProfile) {
+  form.name = profile.name || ''
+  form.email = profile.email || ''
+  form.phone = profile.phone || ''
+  form.department = profile.department || ''
+  form.school = profile.school || ''
+  form.role = profile.role || ''
+  Object.assign(originalForm, {
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    department: form.department,
+    school: form.school,
+    role: form.role,
+  })
+  form.joined = profile.created_at || ''
+  if (profile.avatar) {
+    avatarUrl.value = storageUrl(profile.avatar)
+  }
+}
+
 async function loadProfile() {
+  if (cachedProfile && !isProfileCacheStale()) {
+    applyProfile(cachedProfile)
+    loading.value = false
+    return
+  }
   loading.value = true
   fetchError.value = ''
   try {
     const profile = await getProfile()
-    form.name = profile.name || ''
-    form.email = profile.email || ''
-    form.phone = profile.phone || ''
-    form.department = profile.department || ''
-    form.school = profile.school || ''
-    form.role = profile.role || ''
-    Object.assign(originalForm, {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      department: form.department,
-      school: form.school,
-      role: form.role,
-    })
-
-    form.joined = profile.created_at || ''
-
-    if (profile.avatar) {
-      avatarUrl.value = storageUrl(profile.avatar)
-    }
+    cachedProfile = profile
+    profileCacheTime = Date.now()
+    applyProfile(profile)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
     fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
@@ -307,20 +332,10 @@ async function saveProfile() {
       school: form.school || undefined,
     })
 
-    form.name = updated.name || ''
-    form.email = updated.email || ''
-    form.phone = updated.phone || ''
-    form.department = updated.department || ''
-    form.school = updated.school || ''
-    Object.assign(originalForm, {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      department: form.department,
-      school: form.school,
-      role: form.role,
-    })
-
+    invalidateProfileCache()
+    cachedProfile = updated
+    profileCacheTime = Date.now()
+    applyProfile(updated)
     successMessage.value = 'Profile updated successfully!'
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {

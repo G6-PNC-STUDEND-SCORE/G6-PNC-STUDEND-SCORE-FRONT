@@ -12,10 +12,21 @@ import {
 
 import { classService } from '@/services/classService'
 
+// ── Module-level cache (shared across component instances) ──
+let cachedStudents: Student[] | null = null
+let cachedClasses: SchoolClass[] | null = null
+let studentCacheTime = 0
+let classCacheTime = 0
+const CACHE_TTL = 30_000 // 30 seconds
+
+function isCacheStale(cacheTime: number): boolean {
+  return Date.now() - cacheTime > CACHE_TTL
+}
+
 export function useStudents() {
   // ==================== Data ====================
-  const students = ref<Student[]>([])
-  const classes = ref<SchoolClass[]>([])
+  const students = ref<Student[]>(cachedStudents ?? [])
+  const classes = ref<SchoolClass[]>(cachedClasses ?? [])
   const loading = ref(true)
   const error = ref<string | null>(null)
   const searchQuery = ref('')
@@ -98,11 +109,18 @@ export function useStudents() {
     setTimeout(() => { toast.value.show = false }, 3000)
   }
 
-  // ==================== API Calls ====================
+  // ==================== API Calls with Cache ====================
   async function loadStudents() {
+    if (cachedStudents && !isCacheStale(studentCacheTime)) {
+      students.value = cachedStudents
+      loading.value = false
+      return
+    }
     try {
       const res = await getStudents()
-      students.value = res.students
+      cachedStudents = res.students
+      studentCacheTime = Date.now()
+      students.value = cachedStudents
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       error.value = err.response?.data?.message || err.message || 'Failed to load students'
@@ -112,10 +130,16 @@ export function useStudents() {
   }
 
   async function loadClasses() {
+    if (cachedClasses && !isCacheStale(classCacheTime)) {
+      classes.value = cachedClasses
+      return
+    }
     try {
       const response = await classService.getClasses()
       if (response.success) {
-        classes.value = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
+        cachedClasses = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
+        classCacheTime = Date.now()
+        classes.value = cachedClasses
       }
     } catch {
       // Silently fail
@@ -123,7 +147,14 @@ export function useStudents() {
   }
 
   async function init() {
+    loading.value = !cachedStudents || isCacheStale(studentCacheTime)
     await Promise.all([loadStudents(), loadClasses()])
+  }
+
+  // Invalidate cache on mutations so next visit re-fetches
+  function invalidateStudentCache() {
+    cachedStudents = null
+    studentCacheTime = 0
   }
 
   // ==================== Create ====================
@@ -147,6 +178,7 @@ export function useStudents() {
     try {
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
+      invalidateStudentCache()
       closeCreateModal()
       showToast('Student created successfully')
     } catch (e: unknown) {
@@ -162,9 +194,9 @@ export function useStudents() {
     selectedStudent.value = student
     editForm.value = {
       ...initialEditForm(),
-      class_id: student.class_id,
-      academic_year_id: student.academic_year_id,
-      enrollment_date: student.enrollment_date,
+      class_id: student.class_id ?? null,
+      academic_year_id: student.academic_year_id ?? null,
+      enrollment_date: student.enrollment_date ?? null,
     }
     formError.value = null
     showEditModal.value = true
@@ -183,6 +215,7 @@ export function useStudents() {
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
       if (index !== -1) students.value[index] = res.student
+      invalidateStudentCache()
       closeEditModal()
       showToast('Student updated successfully')
     } catch (e: unknown) {
@@ -210,6 +243,7 @@ export function useStudents() {
     try {
       await deleteStudent(selectedStudent.value.id)
       students.value = students.value.filter((s) => s.id !== selectedStudent.value!.id)
+      invalidateStudentCache()
       closeDeleteModal()
       showToast('Student deleted successfully')
     } catch (e: unknown) {
@@ -223,7 +257,7 @@ export function useStudents() {
   // ==================== Assign ====================
   function openAssignModal(student: Student) {
     selectedStudent.value = student
-    assignForm.value = { class_id: student.class_id }
+    assignForm.value = { class_id: student.class_id ?? null }
     showAssignModal.value = true
   }
 
@@ -239,6 +273,7 @@ export function useStudents() {
       const res = await assignStudentToClass(selectedStudent.value.id, assignForm.value.class_id)
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
       if (index !== -1) students.value[index] = res.student
+      invalidateStudentCache()
       closeAssignModal()
       showToast('Student assigned to class successfully')
     } catch (e: unknown) {
@@ -291,6 +326,7 @@ export function useStudents() {
     showToast,
     // Actions
     init,
+    invalidateStudentCache,
     openCreateModal,
     closeCreateModal,
     handleCreate,

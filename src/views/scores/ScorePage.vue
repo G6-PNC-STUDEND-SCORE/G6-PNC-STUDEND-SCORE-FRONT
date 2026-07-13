@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="px-4 py-4">
     <div class="page-header">
       <div class="page-header-left">
@@ -22,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 </script>
 
 <style scoped>

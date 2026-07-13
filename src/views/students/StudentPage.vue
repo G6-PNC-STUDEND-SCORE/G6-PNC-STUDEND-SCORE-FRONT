@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="px-4 py-4">
       <!-- Header -->
       <div class="page-header">
@@ -133,6 +134,7 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 import { onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'

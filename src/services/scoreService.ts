@@ -6,34 +6,46 @@ export interface ScoreDetail {
   type: 'quiz' | 'assignment' | 'midterm' | 'final'
   label: string
   mark: number | null
+  max_score?: number | null
+  order_number?: number | null
   created_at: string
   updated_at: string
 }
 
 export interface Score {
   id: number
-  student_id: number
-  subject_id: number
-  term_id: number
+  student_subject_enrollment_id: number
   total: number | null
   grade: string | null
   remarks: string | null
   created_at: string
   updated_at: string
-  student?: {
+  enrollment?: {
     id: number
-    user?: {
+    student_id: number
+    subject_offering_id: number
+    student?: {
       id: number
-      name: string
-    }
-  } | null
-  subject?: {
-    id: number
-    name: string
-  } | null
-  term?: {
-    id: number
-    name: string
+      user?: {
+        id: number
+        name: string
+      }
+    } | null
+    subject_offering?: {
+      id: number
+      subject_id: number
+      class_id: number
+      generation_id: number
+      term_id: number
+      subject?: {
+        id: number
+        name: string
+      } | null
+      term?: {
+        id: number
+        name: string
+      } | null
+    } | null
   } | null
   details?: ScoreDetail[]
 }
@@ -51,16 +63,19 @@ export interface Term {
 export const scoreService = {
   async getAll(params?: {
     student_id?: number
-    subject_id?: number
-    term_id?: number
+    subject_offering_id?: number
   }): Promise<Score[]> {
     const response = await http.get('/scores', { params })
-    // Backend returns array directly or wrapped
     return Array.isArray(response.data) ? response.data : response.data.data
   },
 
   async getOne(id: number): Promise<Score> {
     const response = await http.get(`/scores/${id}`)
+    return response.data.data || response.data
+  },
+
+  async getByEnrollment(enrollmentId: number): Promise<Score | null> {
+    const response = await http.get(`/scores/by-enrollment/${enrollmentId}`)
     return response.data.data || response.data
   },
 

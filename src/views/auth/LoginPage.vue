@@ -16,12 +16,8 @@
           />
         </div>
 
-        <!-- Branding -->
-        <p class="brand-system">Student Score Management System</p>
-
         <!-- Welcome heading -->
-        <h1 class="welcome-heading">Welcome Back</h1>
-        <p class="welcome-subtitle">Sign in to your account to continue</p>
+        <h1 class="welcome-heading">Student Score Management System</h1>
 
         <!-- Error alert -->
         <div v-if="auth.error" class="alert-custom alert-error">
@@ -360,21 +356,12 @@ onUnmounted(() => {
   transform: scale(1.03);
 }
 
-.brand-system {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: #9ca3af;
-  letter-spacing: 0.04em;
-  margin: 0 0 0 0;
-  text-align: center;
-  text-transform: uppercase;
-}
 
 /* ==========================================
    Welcome Heading
    ========================================== */
 .welcome-heading {
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #111827;
   text-align: center;
@@ -382,13 +369,6 @@ onUnmounted(() => {
   line-height: 1.3;
 }
 
-.welcome-subtitle {
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: center;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.5;
-}
 
 /* ==========================================
    Alert Messages

@@ -310,16 +310,16 @@ defineEmits<{
 /* ==================== Card ==================== */
 .student-card {
   background: #fff;
-  border: 1px solid #eef0f3;
+  border: 1px solid #e9ecef;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   transition: box-shadow 0.25s ease;
 }
 
 .student-card:hover {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 12px 32px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 /* ==================== Toolbar ==================== */
@@ -329,8 +329,8 @@ defineEmits<{
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #eef0f3;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .search-box {
@@ -356,7 +356,7 @@ defineEmits<{
   font-family: inherit;
   color: #1f2937;
   background: #fff;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   outline: none;
   transition: all 0.2s ease;
@@ -381,7 +381,7 @@ defineEmits<{
   font-weight: 500;
   color: #64748b;
   background: #fff;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.4rem 0.5rem 0.4rem 0.75rem;
   transition: all 0.2s ease;
@@ -409,7 +409,7 @@ defineEmits<{
   font-size: 0.75rem;
   font-weight: 600;
   color: #2563eb;
-  background: #eef2ff;
+  background: #eff6ff;
   padding: 0.4rem 0.85rem;
   border-radius: 100px;
   white-space: nowrap;
@@ -438,7 +438,7 @@ defineEmits<{
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #64748b;
   padding: 14px 16px;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
@@ -543,14 +543,10 @@ defineEmits<{
   border-left: 3px solid transparent;
 }
 
-.row-male:hover {
-  background: #eff6ff;
-  border-left-color: #3b82f6;
-}
-
+.row-male:hover,
 .row-female:hover {
-  background: #fdf2f8;
-  border-left-color: #ec4899;
+  background: #eff6ff;
+  border-left-color: #2563eb;
 }
 
 /* ==================== Gender Badge ==================== */

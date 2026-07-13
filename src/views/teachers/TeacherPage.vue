@@ -4,20 +4,20 @@
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">
-          <i class="bi bi-shield-lock-fill"></i>
+          <i class="bi bi-person-vcard-fill"></i>
         </div>
         <div>
-          <h2 class="page-title">Roles &amp; Permissions</h2>
-          <p class="page-subtitle">Manage roles and access control</p>
+          <h2 class="page-title">Teachers</h2>
+          <p class="page-subtitle">Manage teacher profiles and assignments</p>
         </div>
       </div>
     </div>
     <div class="empty-state">
       <div class="empty-state-icon">
-        <i class="bi bi-inbox"></i>
+        <i class="bi bi-people"></i>
       </div>
-      <h5>Roles &amp; Permissions</h5>
-      <p class="text-secondary">Role management features coming soon.</p>
+      <h5>Teacher Management</h5>
+      <p class="text-secondary">Teacher management features coming soon.</p>
     </div>
   </div>
 </template>

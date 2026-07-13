@@ -1,21 +1,23 @@
 <template>
-  <div class="subject-management">
-    <nav aria-label="breadcrumb" class="mb-3">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item">
-          <router-link to="/dashboard">Home</router-link>
-        </li>
-        <li class="breadcrumb-item active" aria-current="page">Subjects</li>
-      </ol>
-    </nav>
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h1 class="h3 fw-medium mb-0">Subject Management</h1>
-        <p class="text-muted small mb-0 mt-1">Manage your subjects efficiently</p>
+  <Header />
+  <div class="px-4 py-4">
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-header-icon">
+          <i class="bi bi-book-fill"></i>
+        </div>
+        <div>
+          <h2 class="page-title">Subjects</h2>
+          <p class="page-subtitle">Manage your subjects efficiently</p>
+        </div>
       </div>
-      <button class="btn btn-primary btn-sm shadow-sm" @click="openAddModal">
-        <i class="bi bi-plus-lg me-1"></i>Add Subject
+      <button
+        class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+        style="border-radius: 0.625rem; background: #2563eb; padding: 0.5rem 1.125rem; font-size: 0.875rem;"
+        @click="openAddModal"
+      >
+        <i class="bi bi-plus-lg"></i>
+        Add Subject
       </button>
     </div>
 
@@ -196,6 +198,7 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 import { ref, onMounted, reactive } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
 import type { Subject } from '@/services/subjectService'
@@ -253,8 +256,8 @@ function openEditModal(subject: Subject) {
   isEditMode.value = true
   store.currentSubject = subject
   formData.name = subject.name
-  formData.teacher_id = subject.teacher_id
-  formData.class_id = subject.class_id
+  formData.teacher_id = subject.teacher_id ?? subject.offerings?.[0]?.teacher_id ?? null
+  formData.class_id = subject.class_id ?? subject.offerings?.[0]?.class_id ?? null
   formData.status = subject.status
   showModal.value = true
 }
@@ -343,6 +346,4 @@ async function fetchClasses() {
 }
 </script>
 
-<style scoped>
-.subject-management { padding: 2rem; }
-</style>
+<style scoped></style>

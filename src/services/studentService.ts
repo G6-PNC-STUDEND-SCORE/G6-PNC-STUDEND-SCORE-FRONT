@@ -1,4 +1,3 @@
-// import { log } from 'console'
 import { http } from './api'
 
 export interface Student {
@@ -6,7 +5,10 @@ export interface Student {
   user_id: number
   student_number_sequence_id: number | null
   generation_id: number | null
-  class_id: number | null
+  class_id?: number | null
+  academic_year_id?: number | null
+  enrollment_date?: string | null
+  gender?: string | null
   created_at: string
   updated_at: string
   user?: {
@@ -17,6 +19,15 @@ export interface Student {
     status: string
     avatar: string | null
   } | null
+  classHistories?: Array<{
+    id: number
+    class_id: number
+    status: string
+    class?: {
+      id: number
+      name: string
+    } | null
+  }> | null
   class?: {
     id: number
     name: string
@@ -54,7 +65,6 @@ export async function getStudents(): Promise<StudentsResponse> {
   return res.data
 }
 
-
 export async function getStudent(id: number): Promise<StudentResponse> {
   const res = await http.get<StudentResponse>(`/students/${id}`)
   return res.data
@@ -68,6 +78,7 @@ export async function createStudent(data: {
   name?: string
   gender?: string
   status?: string
+  generation_id?: number | null
   class_id?: number | null
   academic_year_id?: number | null
   enrollment_date?: string | null
@@ -82,6 +93,7 @@ export async function updateStudent(
     name?: string
     gender?: string
     status?: string
+    generation_id?: number | null
     class_id?: number | null
     academic_year_id?: number | null
     enrollment_date?: string | null
@@ -105,9 +117,3 @@ export async function assignStudentToClass(
   })
   return res.data
 }
-
-// export async function getClasses(): Promise<ClassesResponse> {
-//   log('getClasses')
-//   // const res = await http.get<ClassesResponse>('/classes/list')
-//   // return res.data
-// }
