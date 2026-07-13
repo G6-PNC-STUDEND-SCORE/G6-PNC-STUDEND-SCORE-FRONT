@@ -15,20 +15,20 @@
                 class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0"
                 style="width: 52px; height: 52px; font-size: 1.125rem; background: linear-gradient(135deg, #2563eb, #1d4ed8);"
               >
-                {{ getInitials(student.name) }}
+                {{ getInitials(student.user?.name || '') }}
               </div>
               <div>
-                <h6 class="mb-0 fw-bold" style="color: #1a1a2e; font-size: 1rem;">{{ student.name }}</h6>
+                <h6 class="mb-0 fw-bold" style="color: #1a1a2e; font-size: 1rem;">{{ student.user?.name }}</h6>
                 <span
                   class="badge rounded-pill mt-1"
                   :style="{
                     background: student.gender === 'Male' ? '#e0f2fe' : '#fce7f3',
-                    color: student.gender === 'Male' ? '#0369a1' : '#be185d',
+                    color: (student.user?.gender || '') === 'Male' ? '#0369a1' : '#be185d',
                     fontSize: '0.6875rem',
                   }"
                 >
-                  <i :class="student.gender === 'Male' ? 'bi bi-gender-male' : 'bi bi-gender-female'"></i>
-                  {{ student.gender }}
+                  <i :class="(student.user?.gender || '') === 'Male' ? 'bi bi-gender-male' : 'bi bi-gender-female'"></i>
+                  {{ student.user?.gender || '—' }}
                 </span>
               </div>
             </div>
@@ -43,7 +43,7 @@
             </div>
             <div class="detail-row mb-2">
               <span class="detail-label">Gender</span>
-              <span class="detail-value">{{ student.gender }}</span>
+              <span class="detail-value">{{ student.user?.gender || '—' }}</span>
             </div>
             <div class="detail-row mb-2">
               <span class="detail-label">Created</span>

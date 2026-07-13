@@ -1,13 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-import LoginView from '../views/auth/LoginPage.vue'
-import DashboardView from '../views/DashboardView.vue'
-import UserProfile from '../views/UserProfile.vue'
-import StudentPage from '@/views/students/StudentPage.vue'
-import SubjectPage from '@/views/SubjectPage.vue'
-// import StudentPage from '@/views/students/StudentPage.vue'
-
-
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -16,39 +8,56 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
-    component: LoginView,
-
-
+    component: () => import('@/views/auth/LoginPage.vue'),
   },
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: DashboardView,
-
-
+    component: () => import('@/views/DashboardView.vue'),
   },
   {
-    path: '/students',
-    name: 'student',
-    component: StudentPage,
-
+    path: '/classes',
+    name: 'classes',
+    component: () => import('@/views/classes/ClassPage.vue'),
   },
   {
     path: '/subjects',
     name: 'subject',
-    component: SubjectPage,
-
+    component: () => import('@/views/SubjectPage.vue'),
   },
-
-
-
+  {
+    path: '/teachers',
+    name: 'teachers',
+    component: () => import('@/views/teachers/TeacherPage.vue'),
+  },
+  {
+    path: '/students',
+    name: 'student',
+    component: () => import('@/views/students/StudentPage.vue'),
+  },
+  {
+    path: '/scores',
+    name: 'scores',
+    component: () => import('@/views/scores/ScorePage.vue'),
+  },
+  {
+    path: '/reports',
+    name: 'reports',
+    component: () => import('@/views/reports/ReportPage.vue'),
+  },
+  {
+    path: '/users',
+    name: 'users',
+    component: () => import('@/views/users/UsersPage.vue'),
+  },
+  {
+    path: '/roles',
+    name: 'roles',
+    component: () => import('@/views/roles/RolesPage.vue'),
+  },
   {
     path: '/profile',
     name: 'profile',
-    component: UserProfile,
-
+    component: () => import('@/views/UserProfile.vue'),
   },
-
-
-
 ]

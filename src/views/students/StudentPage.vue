@@ -94,7 +94,7 @@
     <!-- Delete Modal -->
     <StudentDeleteModal
       :show="showDeleteModal"
-      :student-name="selectedStudent?.name ?? ''"
+      :student-name="selectedStudent?.user?.name ?? ''"
       :submitting="formSubmitting"
       @close="closeDeleteModal"
       @confirm="handleDelete"
@@ -103,7 +103,7 @@
     <!-- Assign Modal -->
     <StudentAssignModal
       :show="showAssignModal"
-      :student-name="selectedStudent?.name ?? ''"
+      :student-name="selectedStudent?.user?.name ?? ''"
       :class-id="assignForm.class_id"
       :classes="classes"
       :submitting="formSubmitting"
@@ -134,6 +134,7 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 import { onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
@@ -141,7 +142,7 @@ import StudentDeleteModal from './StudentDeleteModal.vue'
 import StudentAssignModal from './StudentAssignModal.vue'
 import StudentDetailsModal from './StudentDetailsModal.vue'
 import { useStudents } from './composables/useStudents'
-import Header from '@/layouts/Header.vue'
+
 
 const {
   // Data

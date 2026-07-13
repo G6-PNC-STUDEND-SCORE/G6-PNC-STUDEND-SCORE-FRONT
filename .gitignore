@@ -37,7 +37,12 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+<<<<<<< HEAD
 
 .git_disabled
 .vscode
 .env
+=======
+.git_disabled
+.vscode
+>>>>>>> 45994b52f3e3d3e2e873b31360d1d337afa0e017

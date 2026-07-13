@@ -1,14 +1,29 @@
 import { http } from './apiHttp'
 
-export interface Class {
+export interface SchoolClass {
   id: number
   name: string
+  code: string
+  teacher_id: number | null
+  academic_year_id: number | null
+  description: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  teacher?: {
+    id: number
+    name: string
+  } | null
+  academicYear?: {
+    id: number
+    name: string
+  } | null
 }
 
 export interface ClassResponse {
   success: boolean
   message?: string
-  data: Class | Class[]
+  data: SchoolClass | SchoolClass[]
   errors?: Record<string, string[]>
 }
 
