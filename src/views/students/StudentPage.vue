@@ -1,7 +1,6 @@
 <template>
-  <div class="d-flex">
-    <Navigation />
-    <main class="flex-grow-1 p-4" style="margin-left: 220px;">
+  <Header />
+  <div class="px-4 py-4">
       <!-- Header -->
       <div class="page-header">
         <div class="page-header-left">
@@ -53,7 +52,6 @@
         @assign="openAssignModal"
         @delete="openDeleteModal"
       />
-    </main>
 
     <!-- Create Modal -->
     <StudentFormModal
@@ -62,6 +60,7 @@
       :name="createForm.name"
       :gender="createForm.gender"
       :class-id="createForm.class_id"
+      :status="createForm.status"
       :classes="classes"
       :submitting="formSubmitting"
       :error="formError"
@@ -70,6 +69,7 @@
       @update:name="createForm.name = $event"
       @update:gender="createForm.gender = $event"
       @update:class-id="createForm.class_id = $event"
+      @update:status="createForm.status = $event"
     />
 
     <!-- Edit Modal -->
@@ -79,6 +79,7 @@
       :name="editForm.name"
       :gender="editForm.gender"
       :class-id="editForm.class_id"
+      :status="editForm.status"
       :classes="classes"
       :submitting="formSubmitting"
       :error="formError"
@@ -87,12 +88,13 @@
       @update:name="editForm.name = $event"
       @update:gender="editForm.gender = $event"
       @update:class-id="editForm.class_id = $event"
+      @update:status="editForm.status = $event"
     />
 
     <!-- Delete Modal -->
     <StudentDeleteModal
       :show="showDeleteModal"
-      :student-name="selectedStudent?.name ?? ''"
+      :student-name="selectedStudent?.user?.name ?? ''"
       :submitting="formSubmitting"
       @close="closeDeleteModal"
       @confirm="handleDelete"
@@ -101,7 +103,7 @@
     <!-- Assign Modal -->
     <StudentAssignModal
       :show="showAssignModal"
-      :student-name="selectedStudent?.name ?? ''"
+      :student-name="selectedStudent?.user?.name ?? ''"
       :class-id="assignForm.class_id"
       :classes="classes"
       :submitting="formSubmitting"
@@ -132,8 +134,8 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 import { onMounted } from 'vue'
-import Navigation from '@/components/Navigation.vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
 import StudentDeleteModal from './StudentDeleteModal.vue'

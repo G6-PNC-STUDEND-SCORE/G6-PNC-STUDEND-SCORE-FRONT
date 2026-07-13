@@ -1,5 +1,5 @@
 {
-  "dashboard": "Dashboard",
+  "dashboard": "Student Score Management System",
   "overview": "Overview of the student score management system",
   "totalStudents": "Total Students",
   "acrossClasses": "Across 6 classes",
@@ -28,7 +28,9 @@
   "userAccountUpdated": "User account updated",
   "pass": "Pass",
   "fail": "Fail",
-  "welcome": "Welcome",
+  "retry": "Retry",
+"retrying": "Retrying...",
+"welcome": "Welcome",
   "nav": {
     "classes": "Classes",
     "subjects": "Subjects",

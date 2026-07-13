@@ -1,4 +1,5 @@
 <template>
+  <Header />
   <div class="admin-profile-page">
     <header class="page-header">
       <div>
@@ -139,15 +140,30 @@
           <div class="stacked-form">
             <div class="field">
               <label>Current Password</label>
-              <input type="password" v-model="password.current" placeholder="Enter current password" />
+              <div class="password-input">
+                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
+                <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
+                  <i :class="showCurrent ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                </button>
+              </div>
             </div>
             <div class="field">
               <label>New Password</label>
-              <input type="password" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
+              <div class="password-input">
+                <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
+                <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
+                  <i :class="showNew ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                </button>
+              </div>
             </div>
             <div class="field">
               <label>Confirm Password</label>
-              <input type="password" v-model="password.confirm" placeholder="Confirm new password" />
+              <div class="password-input">
+                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
+                <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
+                  <i :class="showConfirm ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -176,15 +192,30 @@
 </template>
 
 <script setup lang="ts">
+import Header from '@/layouts/Header.vue'
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
-import { http } from '@/services/apiHttp'
+import { storageUrl } from '@/services/apiHttp'
+
+// ── Module-level profile cache ──
+let cachedProfile: UserProfile | null = null
+let profileCacheTime = 0
+const PROFILE_CACHE_TTL = 30_000 // 30 seconds
+
+function isProfileCacheStale(): boolean {
+  return Date.now() - profileCacheTime > PROFILE_CACHE_TTL
+}
+
+function invalidateProfileCache() {
+  cachedProfile = null
+  profileCacheTime = 0
+}
 
 const auth = useAuthStore()
 let objectUrl: string | null = null
 
-const loading = ref(true)
+const loading = ref(!cachedProfile || isProfileCacheStale())
 const saving = ref(false)
 const fetchError = ref('')
 const saveError = ref('')
@@ -222,6 +253,9 @@ const passwordStatus = ref('')
 const passwordSaving = ref(false)
 const avatarUrl = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const showCurrent = ref(false)
+const showNew = ref(false)
+const showConfirm = ref(false)
 
 const initials = computed(() => {
   if (!form.name) return 'U'
@@ -242,31 +276,40 @@ const formattedDate = computed(() => {
 
 
 
+function applyProfile(profile: UserProfile) {
+  form.name = profile.name || ''
+  form.email = profile.email || ''
+  form.phone = profile.phone || ''
+  form.department = profile.department || ''
+  form.school = profile.school || ''
+  form.role = profile.role || ''
+  Object.assign(originalForm, {
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    department: form.department,
+    school: form.school,
+    role: form.role,
+  })
+  form.joined = profile.created_at || ''
+  if (profile.avatar) {
+    avatarUrl.value = storageUrl(profile.avatar)
+  }
+}
+
 async function loadProfile() {
+  if (cachedProfile && !isProfileCacheStale()) {
+    applyProfile(cachedProfile)
+    loading.value = false
+    return
+  }
   loading.value = true
   fetchError.value = ''
   try {
     const profile = await getProfile()
-    form.name = profile.name || ''
-    form.email = profile.email || ''
-    form.phone = profile.phone || ''
-    form.department = profile.department || ''
-    form.school = profile.school || ''
-    form.role = profile.role || ''
-    Object.assign(originalForm, {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      department: form.department,
-      school: form.school,
-      role: form.role,
-    })
-
-    form.joined = profile.created_at || ''
-
-    if (profile.avatar) {
-      avatarUrl.value = http.defaults.baseURL?.replace('/api', '') + '/storage/' + profile.avatar
-    }
+    cachedProfile = profile
+    profileCacheTime = Date.now()
+    applyProfile(profile)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
     fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
@@ -289,20 +332,10 @@ async function saveProfile() {
       school: form.school || undefined,
     })
 
-    form.name = updated.name || ''
-    form.email = updated.email || ''
-    form.phone = updated.phone || ''
-    form.department = updated.department || ''
-    form.school = updated.school || ''
-    Object.assign(originalForm, {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      department: form.department,
-      school: form.school,
-      role: form.role,
-    })
-
+    invalidateProfileCache()
+    cachedProfile = updated
+    profileCacheTime = Date.now()
+    applyProfile(updated)
     successMessage.value = 'Profile updated successfully!'
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
@@ -350,9 +383,11 @@ async function onFileChange(event: Event) {
 
   try {
     const result = await uploadAvatar(file)
-    // Build full URL for the uploaded avatar
-    const baseUrl = http.defaults.baseURL?.replace('/api', '') || ''
-    avatarUrl.value = baseUrl + '/storage/' + result.avatar
+    avatarUrl.value = storageUrl(result.avatar)
+    // Keep the sidebar avatar in sync
+    if (auth.user) {
+      auth.user.avatar = result.avatar
+    }
     successMessage.value = 'Avatar uploaded successfully!'
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
@@ -654,6 +689,57 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.password-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input input {
+  width: 100%;
+  padding-right: 46px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.password-toggle:hover {
+  color: #1565d8;
+  background: #eff6ff;
+}
+
+.password-toggle:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+.password-toggle:focus-visible {
+  color: #1565d8;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.2);
+}
+
+.password-input input:focus ~ .password-toggle {
+  color: #1565d8;
 }
 
 .field {

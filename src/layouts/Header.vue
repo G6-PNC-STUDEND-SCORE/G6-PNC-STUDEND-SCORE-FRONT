@@ -2,8 +2,7 @@
   <header :class="['app-header', 'd-flex', 'align-items-center', 'justify-content-between', { 'dark-mode': theme.isDark }]">
     <div class="d-flex align-items-center gap-2">
       <span class="welcome-text">
-        <i class="bi bi-hand-wave me-1"></i>
-        {{ t('welcome') }}, {{ pageTitle }}
+        <strong>Student Score Management System</strong>
       </span>
     </div>
 
@@ -25,29 +24,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 
-const route = useRoute()
-const { t } = useI18n()
-const auth = useAuthStore()
 const theme = useThemeStore()
-
-const userName = computed(() => auth.user?.name || 'User')
-
-const pageTitle = computed(() => {
-  const metaTitle = route.meta.title as string
-  if (metaTitle) {
-    const translationKey = metaTitle.toLowerCase().replace(/\s+/g, '')
-    const translated = t(`nav.${translationKey}`)
-    return translated !== `nav.${translationKey}` ? translated : metaTitle
-  }
-  return 'Dashboard'
-})
 </script>
 
 <style scoped>
@@ -69,7 +49,7 @@ const pageTitle = computed(() => {
 
 .welcome-text {
   color: #334155;
-  font-size: 0.92rem;
+  font-size: 1.05rem;
   line-height: 56px;
   transition: color 0.3s ease;
 }
