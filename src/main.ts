@@ -3,7 +3,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import { useAuthStore } from './stores/auth'
-import router from './router'
+import router from './router/index.ts'
 import i18n from './i18n'
 
 import 'bootstrap/dist/css/bootstrap.min.css'
