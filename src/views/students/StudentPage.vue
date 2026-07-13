@@ -142,7 +142,7 @@ import StudentDeleteModal from './StudentDeleteModal.vue'
 import StudentAssignModal from './StudentAssignModal.vue'
 import StudentDetailsModal from './StudentDetailsModal.vue'
 import { useStudents } from './composables/useStudents'
-import Header from '@/layouts/Header.vue'
+
 
 const {
   // Data
