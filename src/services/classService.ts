@@ -3,7 +3,13 @@ import { http } from './apiHttp'
 export interface Class {
   id: number
   name: string
-  generation: string
+  generation: {
+    id: number
+    year: number
+    is_current: boolean
+    created_at?: string
+    updated_at?: string
+  }
   teacher_id?: number | null
   teacher?: {
     id: number
