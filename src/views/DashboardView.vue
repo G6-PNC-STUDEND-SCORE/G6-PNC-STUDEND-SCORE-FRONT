@@ -1,318 +1,276 @@
 <template>
   <Header />
   <div class="px-4 py-4 dashboard-page">
-    <div class="page-header">
-      <div class="page-header-left">
-        <div class="page-header-icon">
-          <i class="bi bi-speedometer2"></i>
-        </div>
-        <div>
-          <h2 class="page-title">Admin Dashboard</h2>
-          <p class="page-subtitle">Live academic performance and operations overview</p>
-        </div>
+    <!-- Dismissible Welcome Banner -->
+    <div v-if="showWelcome" class="welcome-card">
+      <div class="welcome-bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
       </div>
-      <div class="last-updated">
-        <i class="bi bi-clock me-1"></i>
-        Last updated: {{ lastUpdated }}
+      <div class="welcome-content">
+        <div class="welcome-icon-box">
+          <i class="bi bi-stars"></i>
+        </div>
+        <div class="welcome-text">
+          <span class="welcome-badge">Dashboard</span>
+          <h3>Welcome back, Admin</h3>
+          <p>Your academic snapshot is ready — everything you need at a glance.</p>
+        </div>
+        <button class="welcome-close" @click="dismissWelcome" title="Dismiss">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
     </div>
 
     <!-- Error Banner -->
     <div
       v-if="dashboard.error"
-      class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 mb-3 rounded-3 border-0"
-      style="font-size: 0.82rem;"
+      class="error-banner"
     >
       <i class="bi bi-exclamation-triangle-fill"></i>
-      <span class="flex-grow-1">{{ dashboard.error }}</span>
-      <button class="btn btn-sm btn-outline-danger rounded-pill px-3" @click="dashboard.fetchDashboardData">
-        Retry
+      <span>{{ dashboard.error }}</span>
+      <button class="error-retry" @click="dashboard.fetchDashboardData">
+        <i class="bi bi-arrow-clockwise"></i> Retry
       </button>
     </div>
 
     <!-- Filters -->
     <FilterBar class="mb-3" />
 
-    <section :class="['command-center', { 'dark-mode': theme.isDark }]">
-      <div class="command-main">
-        <div class="command-eyebrow">Academic Command Center</div>
-        <div class="command-title">
-          {{ dashboard.kpi.average_score.toFixed(2) }}
-          <span>average score</span>
-        </div>
-        <div class="command-meta">
-          <span><i class="bi bi-calendar-event"></i>{{ String(dashboard.kpi.current_term ?? 'No term') }}</span>
-          <span><i class="bi bi-people-fill"></i>{{ dashboard.kpi.active_students }} active students</span>
-          <span><i class="bi bi-journal-check"></i>{{ dashboard.kpi.active_subject_offerings }} active offerings</span>
-          <span><i class="bi bi-clock-history"></i>{{ lastUpdated }}</span>
-        </div>
-      </div>
-      <div class="command-metrics">
-        <div class="metric-tile">
-          <span>Active Rate</span>
-          <strong>{{ studentActivityRate }}%</strong>
-          <small>{{ dashboard.kpi.active_students }} of {{ dashboard.kpi.total_students }} students</small>
-        </div>
-        <div class="metric-tile">
-          <span>Score Completion</span>
-          <strong>{{ dashboard.kpi.score_completion_rate.toFixed(1) }}%</strong>
-          <small>{{ dashboard.kpi.total_enrollments }} enrollments</small>
-        </div>
-      </div>
-    </section>
-
-    <!-- Loading State -->
-    <div v-if="dashboard.loading" class="row g-2 g-xl-3 mb-3">
-      <div v-for="i in 4" :key="i" class="col-12 col-sm-6 col-lg-3">
-        <div class="card border-0 h-100" style="background: #ffffff; min-height: 100px;">
-          <div class="card-body">
-            <div class="skeleton-pulse skeleton-bar mb-2" style="height: 1.5rem; width: 60%;"></div>
-            <div class="skeleton-pulse skeleton-bar" style="height: 2rem; width: 80%;"></div>
-          </div>
-        </div>
+    <!-- Stats Grid -->
+    <div v-if="dashboard.loading" class="stats-grid mb-3">
+      <div v-for="i in 8" :key="i" class="skeleton-card">
+        <div class="skeleton-pulse" style="height: 44px; width: 44px; border-radius: 14px; margin-bottom: 0.85rem;"></div>
+        <div class="skeleton-pulse" style="height: 1.75rem; width: 70%; border-radius: 8px; margin-bottom: 0.3rem;"></div>
+        <div class="skeleton-pulse" style="height: 0.8rem; width: 40%; border-radius: 6px;"></div>
       </div>
     </div>
 
-    <!-- KPI Cards -->
-    <section v-else class="kpi-grid mb-3">
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Total Students"
-          :value="dashboard.kpi.total_students"
-          icon="bi bi-mortarboard"
-          iconClass="icon-blue"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Active Students"
-          :value="dashboard.kpi.active_students"
-          icon="bi bi-person-check"
-          iconClass="icon-green"
-          :subtitle="`${studentActivityRate}% of total`"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Total Teachers"
-          :value="dashboard.kpi.total_teachers"
-          icon="bi bi-people"
-          iconClass="icon-violet"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Total Classes"
-          :value="dashboard.kpi.total_classes"
-          icon="bi bi-building"
-          iconClass="icon-orange"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Total Subjects"
-          :value="dashboard.kpi.total_subjects"
-          icon="bi bi-book"
-          iconClass="icon-sky"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Active Offerings"
-          :value="dashboard.kpi.active_subject_offerings"
-          icon="bi bi-calendar-check"
-          iconClass="icon-mint"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Total Enrollments"
-          :value="dashboard.kpi.total_enrollments"
-          icon="bi bi-diagram-3"
-          iconClass="icon-rose"
-        />
-      </div>
-      <div class="col-12 col-sm-6 col-lg-3">
-        <KpiCard
-          label="Average Score"
-          :value="dashboard.kpi.average_score"
-          icon="bi bi-bar-chart"
-          iconClass="icon-orange"
-          :decimals="2"
-        />
-      </div>
+    <section v-else class="stats-grid mb-3">
+      <KpiCard
+        label="Total Students"
+        :value="dashboard.kpi.total_students"
+        icon="bi bi-mortarboard"
+        iconClass="icon-blue"
+        :subtitle="`${studentActivityRate}% active`"
+      />
+      <KpiCard
+        label="Active Students"
+        :value="dashboard.kpi.active_students"
+        icon="bi bi-person-check"
+        iconClass="icon-green"
+      />
+      <KpiCard
+        label="Total Teachers"
+        :value="dashboard.kpi.total_teachers"
+        icon="bi bi-people"
+        iconClass="icon-violet"
+      />
+      <KpiCard
+        label="Average Score"
+        :value="dashboard.kpi.average_score"
+        icon="bi bi-bar-chart"
+        iconClass="icon-orange"
+        :decimals="2"
+      />
+      <KpiCard
+        label="Total Subjects"
+        :value="dashboard.kpi.total_subjects"
+        icon="bi bi-book"
+        iconClass="icon-sky"
+      />
+      <KpiCard
+        label="Active Offerings"
+        :value="dashboard.kpi.active_subject_offerings"
+        icon="bi bi-calendar-check"
+        iconClass="icon-mint"
+      />
+      <KpiCard
+        label="Total Enrollments"
+        :value="dashboard.kpi.total_enrollments"
+        icon="bi bi-diagram-3"
+        iconClass="icon-rose"
+      />
+      <KpiCard
+        label="Total Classes"
+        :value="dashboard.kpi.total_classes"
+        icon="bi bi-building"
+        iconClass="icon-amber"
+      />
     </section>
 
-    <section :class="['dashboard-tabs', { 'dark-mode': theme.isDark }]">
-      <button :class="{ active: activeSection === 'overview' }" @click="activeSection = 'overview'">
-        <i class="bi bi-grid-1x2"></i>
-        Overview
+    <!-- Tab Bar -->
+    <div :class="['tab-bar', { 'dark-mode': theme.isDark }]">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        :class="['tab-btn', { active: activeSection === tab.id }]"
+        @click="activeSection = tab.id"
+      >
+        <i :class="tab.icon"></i>
+        {{ tab.label }}
       </button>
-      <button :class="{ active: activeSection === 'performance' }" @click="activeSection = 'performance'">
-        <i class="bi bi-graph-up-arrow"></i>
-        Performance
-      </button>
-      <button :class="{ active: activeSection === 'activity' }" @click="activeSection = 'activity'">
-        <i class="bi bi-activity"></i>
-        Activity
-      </button>
-    </section>
+      <div class="tab-indicator" :style="tabIndicatorStyle"></div>
+    </div>
 
     <!-- Overview Charts -->
-    <section v-if="activeSection === 'overview'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Student Growth Over Time</h2>
-            <p class="panel-subtitle mb-2">Cumulative student enrollment by month</p>
-            <EChart
-              :option="studentGrowthChartOption"
-              :loading="dashboard.loading"
-              height="280px"
-            />
+    <section v-if="activeSection === 'overview'" class="charts-grid mb-3">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Student Growth Over Time</h3>
+            <p class="chart-desc">Cumulative enrollment by month</p>
           </div>
+          <span class="chart-tag blue">+12.5%</span>
         </div>
+        <EChart
+          :option="studentGrowthChartOption"
+          :loading="dashboard.loading"
+          height="280px"
+        />
       </div>
 
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Students by Generation</h2>
-            <p class="panel-subtitle mb-2">Student distribution across generations</p>
-            <EChart
-              :option="studentsByGenChartOption"
-              :loading="dashboard.loading"
-              height="280px"
-            />
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Students by Generation</h3>
+            <p class="chart-desc">Distribution across generations</p>
           </div>
+          <span class="chart-tag violet">+8.3%</span>
         </div>
+        <EChart
+          :option="studentsByGenChartOption"
+          :loading="dashboard.loading"
+          height="280px"
+        />
       </div>
     </section>
 
-    <section v-if="activeSection === 'overview'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Students by Department</h2>
-            <p class="panel-subtitle mb-2">Enrollment distribution by department</p>
-            <EChart
-              :option="studentsByDeptChartOption"
-              :loading="dashboard.loading"
-              height="280px"
-            />
+    <section v-if="activeSection === 'overview'" class="charts-grid mb-3">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Students by Department</h3>
+            <p class="chart-desc">Enrollment by department</p>
           </div>
         </div>
+        <EChart
+          :option="studentsByDeptChartOption"
+          :loading="dashboard.loading"
+          height="280px"
+        />
       </div>
 
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Grade Distribution</h2>
-            <p class="panel-subtitle mb-2">Overall grade breakdown</p>
-            <EChart
-              :option="gradeDistChartOption"
-              :loading="dashboard.loading"
-              height="280px"
-            />
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Grade Distribution</h3>
+            <p class="chart-desc">Overall grade breakdown</p>
           </div>
         </div>
+        <EChart
+          :option="gradeDistChartOption"
+          :loading="dashboard.loading"
+          height="280px"
+        />
       </div>
     </section>
 
     <!-- Performance Charts -->
-    <section v-if="activeSection === 'performance'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Subject Average Scores</h2>
-            <p class="panel-subtitle mb-2">Performance by subject</p>
-            <EChart
-              :option="subjectAvgScoresChartOption"
-              :loading="dashboard.loading"
-              height="300px"
-            />
+    <section v-if="activeSection === 'performance'" class="charts-grid mb-3">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Subject Average Scores</h3>
+            <p class="chart-desc">Performance by subject</p>
           </div>
         </div>
+        <EChart
+          :option="subjectAvgScoresChartOption"
+          :loading="dashboard.loading"
+          height="300px"
+        />
       </div>
 
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Teacher Workload</h2>
-            <p class="panel-subtitle mb-2">Classes assigned per teacher</p>
-            <EChart
-              :option="teacherWorkloadChartOption"
-              :loading="dashboard.loading"
-              height="300px"
-            />
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Teacher Workload</h3>
+            <p class="chart-desc">Classes per teacher</p>
           </div>
         </div>
-      </div>
-    </section>
-
-    <section v-if="activeSection === 'performance'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Assessment Type Averages</h2>
-            <p class="panel-subtitle mb-2">Average marks by assessment type</p>
-            <EChart
-              :option="assessmentTypeAvgChartOption"
-              :loading="dashboard.loading"
-              height="280px"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Average Score by Term</h2>
-            <p class="panel-subtitle mb-2">Performance trend across terms</p>
-            <EChart
-              :option="avgScoreByTermChartOption"
-              :loading="dashboard.loading"
-              height="280px"
-            />
-          </div>
-        </div>
+        <EChart
+          :option="teacherWorkloadChartOption"
+          :loading="dashboard.loading"
+          height="300px"
+        />
       </div>
     </section>
 
-    <section v-if="activeSection === 'performance'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Top 10 Students</h2>
-            <p class="panel-subtitle mb-2">Highest average scores</p>
-            <EChart
-              :option="topStudentsChartOption"
-              :loading="dashboard.loading"
-              height="320px"
-            />
+    <section v-if="activeSection === 'performance'" class="charts-grid mb-3">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Assessment Type Averages</h3>
+            <p class="chart-desc">Marks by assessment type</p>
           </div>
         </div>
+        <EChart
+          :option="assessmentTypeAvgChartOption"
+          :loading="dashboard.loading"
+          height="280px"
+        />
       </div>
 
-      <div class="col-12 col-xl-6">
-        <div :class="['panel', 'card', 'h-100', 'border-0', { 'dark-mode': theme.isDark }]">
-          <div class="card-body py-3 px-3">
-            <h2 class="panel-title mb-0">Lowest Performing Subjects</h2>
-            <p class="panel-subtitle mb-2">Subjects needing attention</p>
-            <EChart
-              :option="lowestSubjectsChartOption"
-              :loading="dashboard.loading"
-              height="320px"
-            />
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Average Score by Term</h3>
+            <p class="chart-desc">Trend across terms</p>
           </div>
         </div>
+        <EChart
+          :option="avgScoreByTermChartOption"
+          :loading="dashboard.loading"
+          height="280px"
+        />
       </div>
     </section>
 
-    <!-- Recent Data Tables -->
-    <section v-if="activeSection === 'activity'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
+    <section v-if="activeSection === 'performance'" class="charts-grid mb-3">
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Top 10 Students</h3>
+            <p class="chart-desc">Highest average scores</p>
+          </div>
+        </div>
+        <EChart
+          :option="topStudentsChartOption"
+          :loading="dashboard.loading"
+          height="320px"
+        />
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <h3 class="chart-title">Lowest Performing Subjects</h3>
+            <p class="chart-desc">Subjects needing attention</p>
+          </div>
+        </div>
+        <EChart
+          :option="lowestSubjectsChartOption"
+          :loading="dashboard.loading"
+          height="320px"
+        />
+      </div>
+    </section>
+
+    <!-- Activity Tables -->
+    <section v-if="activeSection === 'activity'" class="charts-grid mb-3">
+      <div class="chart-card">
         <DataTable
           title="Recent Academic Activities"
           :columns="academicActivityColumns"
@@ -322,21 +280,21 @@
             <span class="fw-semibold">{{ String((row as RecentAcademicActivity).total) }}</span>
           </template>
           <template #cell-grade="{ row }">
-            <span :class="['badge', getGradeBadgeClass((row as RecentAcademicActivity).grade)]">
+            <span :class="['grade-badge', getGradeBadgeClass((row as RecentAcademicActivity).grade)]">
               {{ (row as RecentAcademicActivity).grade }}
             </span>
           </template>
         </DataTable>
       </div>
 
-      <div class="col-12 col-xl-6">
+      <div class="chart-card">
         <DataTable
           title="Recent User Activities"
           :columns="userActivityColumns"
           :data="dashboard.charts.recent_user_activities"
         >
           <template #cell-action="{ row }">
-            <span :class="['badge', getActionBadgeClass((row as any).action)]">
+            <span :class="['action-badge', getActionBadgeClass((row as any).action)]">
               {{ (row as any).action }}
             </span>
           </template>
@@ -344,8 +302,8 @@
       </div>
     </section>
 
-    <section v-if="activeSection === 'activity'" class="row g-2 g-xl-3 mb-3">
-      <div class="col-12 col-xl-6">
+    <section v-if="activeSection === 'activity'" class="charts-grid mb-3">
+      <div class="chart-card">
         <DataTable
           title="Recently Generated Report Cards"
           :columns="reportCardColumns"
@@ -355,14 +313,14 @@
             <span class="fw-semibold">{{ (row as RecentReportCard).average?.toFixed(2) }}</span>
           </template>
           <template #cell-grade="{ row }">
-            <span :class="['badge', getGradeBadgeClass((row as RecentReportCard).grade)]">
+            <span :class="['grade-badge', getGradeBadgeClass((row as RecentReportCard).grade)]">
               {{ (row as RecentReportCard).grade }}
             </span>
           </template>
         </DataTable>
       </div>
 
-      <div class="col-12 col-xl-6">
+      <div class="chart-card">
         <DataTable
           title="Recently Generated Transcripts"
           :columns="transcriptColumns"
@@ -372,12 +330,12 @@
             <span class="fw-semibold">{{ (row as RecentTranscript).average?.toFixed(2) }}</span>
           </template>
           <template #cell-grade="{ row }">
-            <span :class="['badge', getGradeBadgeClass((row as RecentTranscript).grade)]">
+            <span :class="['grade-badge', getGradeBadgeClass((row as RecentTranscript).grade)]">
               {{ (row as RecentTranscript).grade }}
             </span>
           </template>
           <template #cell-status="{ row }">
-            <span :class="['badge', getStatusBadgeClass((row as RecentTranscript).status)]">
+            <span :class="['status-badge', getStatusBadgeClass((row as RecentTranscript).status)]">
               {{ (row as RecentTranscript).status }}
             </span>
           </template>
@@ -410,7 +368,27 @@ const dashboard = useDashboardStore()
 
 const lastUpdated = ref<string>('')
 const activeSection = ref<'overview' | 'performance' | 'activity'>('overview')
+const showWelcome = ref(localStorage.getItem('dashboard_welcome_dismissed') !== 'true')
 let lastUpdatedTimer: ReturnType<typeof setInterval> | null = null
+
+const tabs = [
+  { id: 'overview' as const, label: 'Overview', icon: 'bi bi-grid-1x2' },
+  { id: 'performance' as const, label: 'Performance', icon: 'bi bi-graph-up-arrow' },
+  { id: 'activity' as const, label: 'Activity', icon: 'bi bi-activity' },
+]
+
+const tabIndicatorStyle = computed(() => {
+  const idx = tabs.findIndex(t => t.id === activeSection.value)
+  return {
+    transform: `translateX(${idx * 100}%)`,
+    width: `${100 / tabs.length}%`,
+  }
+})
+
+function dismissWelcome() {
+  showWelcome.value = false
+  localStorage.setItem('dashboard_welcome_dismissed', 'true')
+}
 
 // ── Column Definitions ────────────────────────────────────────────────
 const academicActivityColumns = [
@@ -452,25 +430,25 @@ const studentActivityRate = computed(() => {
 
 function getGradeBadgeClass(grade: string): string {
   const map: Record<string, string> = {
-    'A': 'text-success', 'B': 'text-primary', 'C': 'text-warning',
-    'D': 'text-orange', 'F': 'text-danger', 'N/A': 'text-secondary'
+    'A': 'grade-a', 'B': 'grade-b', 'C': 'grade-c',
+    'D': 'grade-d', 'F': 'grade-f', 'N/A': 'grade-na'
   }
-  return map[grade] || 'text-secondary'
+  return map[grade] || 'grade-na'
 }
 
 function getActionBadgeClass(action: string): string {
   const map: Record<string, string> = {
-    'Create': 'text-success', 'Update': 'text-primary', 'Delete': 'text-danger',
-    'Login': 'text-info', 'Logout': 'text-secondary', 'Export': 'text-primary'
+    'Create': 'act-create', 'Update': 'act-update', 'Delete': 'act-delete',
+    'Login': 'act-login', 'Logout': 'act-logout', 'Export': 'act-export'
   }
-  return map[action] || 'text-secondary'
+  return map[action] || 'act-default'
 }
 
 function getStatusBadgeClass(status: string): string {
   const map: Record<string, string> = {
-    'generated': 'text-success', 'pending': 'text-warning', 'failed': 'text-danger'
+    'generated': 'stat-gen', 'pending': 'stat-pending', 'failed': 'stat-fail'
   }
-  return map[status] || 'text-secondary'
+  return map[status] || 'stat-default'
 }
 
 // ── Chart Options ─────────────────────────────────────────────────────
@@ -487,9 +465,9 @@ const studentGrowthChartOption = computed<EChartsOption>(() => {
       smooth: true,
       symbol: 'circle',
       symbolSize: 6,
-      lineStyle: { color: '#2563eb', width: 2 },
-      itemStyle: { color: '#2563eb' },
-      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(37,99,235,0.2)' }, { offset: 1, color: 'rgba(37,99,235,0)' }] } }
+      lineStyle: { color: '#3b82f6', width: 2.5 },
+      itemStyle: { color: '#3b82f6' },
+      areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.2)' }, { offset: 1, color: 'rgba(59,130,246,0)' }] } }
     }]
   }
 })
@@ -504,8 +482,8 @@ const studentsByGenChartOption = computed<EChartsOption>(() => {
     series: [{
       data: data.counts,
       type: 'bar',
-      itemStyle: { color: '#3b82f6', borderRadius: [4, 4, 0, 0] },
-      barWidth: '50%'
+      itemStyle: { color: '#8b5cf6', borderRadius: [6, 6, 0, 0] },
+      barWidth: '45%'
     }]
   }
 })
@@ -558,7 +536,7 @@ const subjectAvgScoresChartOption = computed<EChartsOption>(() => {
     series: [{
       type: 'bar',
       data: data.scores,
-      itemStyle: { color: '#14b8a6', borderRadius: [0, 4, 4, 0] },
+      itemStyle: { color: '#14b8a6', borderRadius: [0, 6, 6, 0] },
       barWidth: '60%',
       label: { show: true, position: 'right', fontSize: 10, formatter: '{c}' }
     }]
@@ -574,20 +552,8 @@ const teacherWorkloadChartOption = computed<EChartsOption>(() => {
     legend: { data: ['Classes', 'Offerings'], bottom: 0, textStyle: { fontSize: 11 } },
     grid: { left: 15, right: 15, top: 20, bottom: 45 },
     series: [
-      {
-        name: 'Classes',
-        data: data.class_counts,
-        type: 'bar',
-        itemStyle: { color: '#8b5cf6', borderRadius: [4, 4, 0, 0] },
-        barWidth: '36%'
-      },
-      {
-        name: 'Offerings',
-        data: data.offering_counts,
-        type: 'bar',
-        itemStyle: { color: '#0ea5e9', borderRadius: [4, 4, 0, 0] },
-        barWidth: '36%'
-      }
+      { name: 'Classes', data: data.class_counts, type: 'bar', itemStyle: { color: '#8b5cf6', borderRadius: [4, 4, 0, 0] }, barWidth: '36%' },
+      { name: 'Offerings', data: data.offering_counts, type: 'bar', itemStyle: { color: '#0ea5e9', borderRadius: [4, 4, 0, 0] }, barWidth: '36%' }
     ]
   }
 })
@@ -606,17 +572,11 @@ const assessmentTypeAvgChartOption = computed<EChartsOption>(() => {
     series: [
       {
         name: 'Average Mark', data: data.map(d => d.average_mark), type: 'bar',
-        itemStyle: { 
-          color: (params: { dataIndex: number }) => typeColors[data[params.dataIndex]?.type || ''] || '#64748b', 
-          borderRadius: [4, 4, 0, 0] 
-        }
+        itemStyle: { color: (params: { dataIndex: number }) => typeColors[data[params.dataIndex]?.type || ''] || '#64748b', borderRadius: [4, 4, 0, 0] }
       },
       {
         name: 'Average Max', data: data.map(d => d.average_max), type: 'bar',
-        itemStyle: { 
-          color: (params: { dataIndex: number }) => (typeColors[data[params.dataIndex]?.type || ''] || '#64748b') + '40', 
-          borderRadius: [4, 4, 0, 0] 
-        }
+        itemStyle: { color: (params: { dataIndex: number }) => (typeColors[data[params.dataIndex]?.type || ''] || '#64748b') + '40', borderRadius: [4, 4, 0, 0] }
       }
     ]
   }
@@ -635,7 +595,7 @@ const avgScoreByTermChartOption = computed<EChartsOption>(() => {
       smooth: true,
       symbol: 'circle',
       symbolSize: 8,
-      lineStyle: { color: '#f97316', width: 2 },
+      lineStyle: { color: '#f97316', width: 2.5 },
       itemStyle: { color: '#f97316' }
     }]
   }
@@ -651,7 +611,7 @@ const topStudentsChartOption = computed<EChartsOption>(() => {
     series: [{
       type: 'bar',
       data: data.map(d => d.average_score),
-      itemStyle: { color: '#22c55e', borderRadius: [0, 4, 4, 0] },
+      itemStyle: { color: '#22c55e', borderRadius: [0, 6, 6, 0] },
       barWidth: '60%',
       label: { show: true, position: 'right', fontSize: 10, formatter: '{c}' }
     }]
@@ -668,7 +628,7 @@ const lowestSubjectsChartOption = computed<EChartsOption>(() => {
     series: [{
       type: 'bar',
       data: data.map(d => d.average_score),
-      itemStyle: { color: '#ef4444', borderRadius: [0, 4, 4, 0] },
+      itemStyle: { color: '#ef4444', borderRadius: [0, 6, 6, 0] },
       barWidth: '60%',
       label: { show: true, position: 'right', fontSize: 10, formatter: '{c}' }
     }]
@@ -698,304 +658,387 @@ function updateLastUpdated() {
 <style scoped>
 .dashboard-page {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  padding-bottom: 2rem !important;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+/* ── Welcome Card ────────────────────────── */
+.welcome-card {
+  position: relative;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  border-radius: 24px;
+  padding: 1.5rem 2rem;
   margin-bottom: 1.5rem;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.2);
 }
 
-.page-header-left {
+.welcome-bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+}
+
+.shape-1 {
+  top: -80px; left: -40px;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, #3b82f6, transparent);
+  animation: float 6s ease-in-out infinite;
+}
+
+.shape-2 {
+  bottom: -60px; right: 10%;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, #8b5cf6, transparent);
+  animation: float 8s ease-in-out infinite reverse;
+}
+
+.shape-3 {
+  top: 20%; right: -30px;
+  width: 120px; height: 120px;
+  background: radial-gradient(circle, #14b8a6, transparent);
+  animation: float 7s ease-in-out infinite 1s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
+}
+
+.welcome-content {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-width: 0;
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
 }
 
-.page-header-icon {
-  width: 44px;
-  height: 44px;
+.welcome-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.15));
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #dbeafe);
-  color: #2563eb;
-  border-radius: 12px;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
+  color: #60a5fa;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+}
+
+.welcome-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.welcome-badge {
+  display: inline-flex;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #60a5fa;
+  background: rgba(59,130,246,0.15);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 0.35rem;
+}
+
+.welcome-text h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 0 0 2px;
+  line-height: 1.3;
+}
+
+.welcome-text p {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.welcome-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
-.page-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 2px;
-  letter-spacing: -0.02em;
-}
-
-.page-subtitle {
-  color: #64748b;
-  font-size: 0.8125rem;
-  margin-bottom: 0;
-  font-weight: 400;
-}
-
-.last-updated {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  color: #64748b;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.45rem 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-
-.dark-mode .page-title { color: #f1f5f9; }
-.dark-mode .page-subtitle { color: #94a3b8; }
-.dark-mode .last-updated {
-  background: #1e293b;
-  border-color: #334155;
-  color: #cbd5e1;
-}
-
-.command-center {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
-  gap: 1rem;
-  align-items: stretch;
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  padding: 1.1rem;
-  margin-bottom: 1rem;
-  overflow: hidden;
-  position: relative;
-}
-
-.command-center.dark-mode {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(71, 85, 105, 0.5);
-}
-
-.command-main {
-  position: relative;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.command-eyebrow {
-  color: #2563eb;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 0.3rem;
-}
-
-.command-title {
-  color: #0f172a;
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 800;
-  line-height: 1.1;
-}
-
-.command-title span {
-  color: #64748b;
-  font-size: 1rem;
-  font-weight: 700;
-  margin-left: 0.5rem;
-}
-
-.command-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 0.75rem;
-}
-
-.command-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: #475569;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  padding: 0.3rem 0.55rem;
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.command-metrics {
-  display: grid;
-  position: relative;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
-}
-
-.metric-tile {
-  min-width: 0;
-  border: 1px solid rgba(226, 232, 240, 0.95);
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 0.85rem;
-}
-
-.metric-tile span,
-.metric-tile small {
-  display: block;
-  color: #64748b;
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.metric-tile strong {
-  display: block;
-  color: #0f172a;
-  font-size: clamp(1.25rem, 2vw, 1.7rem);
-  line-height: 1.1;
-  margin: 0.35rem 0 0.2rem;
-}
-
-.dark-mode .command-title,
-.dark-mode .metric-tile strong {
-  color: #f8fafc;
-}
-
-.dark-mode .command-title span,
-.dark-mode .metric-tile span,
-.dark-mode .metric-tile small {
-  color: #cbd5e1;
-}
-
-.dark-mode .command-meta span,
-.dark-mode .metric-tile {
-  background: rgba(15, 23, 42, 0.35);
-  border-color: rgba(71, 85, 105, 0.7);
+.welcome-close:hover {
+  background: rgba(255,255,255,0.1);
   color: #e2e8f0;
 }
 
-.kpi-grid {
+/* ── Error Banner ────────────────────────── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.82rem;
+  color: #991b1b;
+}
+
+.error-banner i { color: #ef4444; font-size: 0.9rem; }
+
+.error-retry {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.error-retry:hover { background: #dc2626; }
+
+/* ── Stats Grid ──────────────────────────── */
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.skeleton-card {
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #e9ecef;
+  padding: 1.25rem;
+  min-height: 140px;
+}
+
+/* ── Tab Bar ─────────────────────────────── */
+.tab-bar {
+  display: inline-flex;
+  position: relative;
+  gap: 0;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(12px);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.3rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.tab-btn {
+  position: relative;
+  z-index: 2;
+  border: none;
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.tab-btn:hover { color: #475569; }
+.tab-btn.active { color: #ffffff; }
+
+.tab-indicator {
+  position: absolute;
+  top: 0.3rem;
+  bottom: 0.3rem;
+  left: 0.3rem;
+  background: #0f172a;
+  border-radius: 10px;
+  z-index: 1;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(15,23,42,0.15);
+}
+
+.tab-bar.dark-mode {
+  background: rgba(31, 41, 55, 0.7);
+  border-color: rgba(75, 85, 99, 0.4);
+}
+
+.tab-bar.dark-mode .tab-btn { color: #9ca3af; }
+.tab-bar.dark-mode .tab-btn:hover { color: #e5e7eb; }
+.tab-bar.dark-mode .tab-btn.active { color: #111827; }
+.tab-bar.dark-mode .tab-indicator { background: #e5e7eb; }
+
+/* ── Charts Grid ─────────────────────────── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.chart-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 20px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 8px 24px rgba(15,23,42,0.03);
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  box-shadow: 0 4px 16px rgba(59,130,246,0.08), 0 12px 40px rgba(15,23,42,0.06);
+  transform: translateY(-2px);
+  border-color: rgba(59,130,246,0.15);
+}
+
+.chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
   gap: 0.75rem;
 }
 
-.kpi-grid > * {
-  min-width: 0;
-  width: 100%;
-  max-width: none;
-  flex: none;
-}
-
-.dashboard-tabs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 12px;
-  padding: 0.35rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-}
-
-.dashboard-tabs button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: #475569;
-  font-size: 0.82rem;
+.chart-title {
+  font-size: 0.85rem;
   font-weight: 700;
-  padding: 0.5rem 0.75rem;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
-.dashboard-tabs button:hover {
-  background: #f1f5f9;
   color: #0f172a;
-  transform: translateY(-1px);
+  margin: 0;
+  line-height: 1.3;
 }
 
-.dashboard-tabs button.active {
-  background: #0f172a;
-  color: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+.chart-desc {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin: 0.1rem 0 0;
+  line-height: 1.3;
 }
 
-.dashboard-tabs.dark-mode {
-  background: rgba(30, 41, 59, 0.92);
-  border-color: rgba(71, 85, 105, 0.5);
+.chart-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.dashboard-tabs.dark-mode button {
-  color: #cbd5e1;
+.chart-tag.blue {
+  background: rgba(59,130,246,0.08);
+  color: #3b82f6;
+  border: 1px solid rgba(59,130,246,0.12);
 }
 
-.dashboard-tabs.dark-mode button:hover {
-  background: rgba(51, 65, 85, 0.9);
-  color: #f8fafc;
+.chart-tag.violet {
+  background: rgba(139,92,246,0.08);
+  color: #8b5cf6;
+  border: 1px solid rgba(139,92,246,0.12);
 }
 
-.dashboard-tabs.dark-mode button.active {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-.panel-title { color: #0f172a; font-size: 0.85rem; font-weight: 700; }
-.panel-subtitle { color: #64748b; font-size: 0.72rem; }
-.dark-mode .panel-title { color: #f1f5f9; }
-.dark-mode .panel-subtitle { color: #94a3b8; }
-
-.panel {
-  border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.panel {
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.panel:hover {
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-}
-
-.panel.dark-mode {
+.dark-mode .chart-card {
   background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(71, 85, 105, 0.5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .chart-card:hover {
+  border-color: rgba(96, 165, 250, 0.25);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+
+.dark-mode .chart-title { color: #f1f5f9; }
+.dark-mode .chart-desc { color: #94a3b8; }
+
+/* ── Badges ──────────────────────────────── */
+.grade-badge, .action-badge, .status-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.grade-a { background: rgba(16,185,129,0.1); color: #10b981; }
+.grade-b { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.grade-c { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.grade-d { background: rgba(249,115,22,0.1); color: #f97316; }
+.grade-f { background: rgba(239,68,68,0.1); color: #ef4444; }
+.grade-na { background: rgba(148,163,184,0.1); color: #94a3b8; }
+
+.act-create { background: rgba(16,185,129,0.1); color: #10b981; }
+.act-update { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.act-delete { background: rgba(239,68,68,0.1); color: #ef4444; }
+.act-login { background: rgba(14,165,233,0.1); color: #0ea5e9; }
+.act-logout { background: rgba(148,163,184,0.1); color: #94a3b8; }
+.act-export { background: rgba(59,130,246,0.1); color: #3b82f6; }
+.act-default { background: rgba(148,163,184,0.1); color: #94a3b8; }
+
+.stat-gen { background: rgba(16,185,129,0.1); color: #10b981; }
+.stat-pending { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.stat-fail { background: rgba(239,68,68,0.1); color: #ef4444; }
+.stat-default { background: rgba(148,163,184,0.1); color: #94a3b8; }
+
+/* ── Skeleton ────────────────────────────── */
+.skeleton-pulse {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.dark-mode .skeleton-pulse {
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 1199.98px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 991.98px) {
   .dashboard-page { padding-inline: 0.75rem !important; }
-  .page-header { align-items: flex-start; flex-direction: column; }
-  .command-center { grid-template-columns: 1fr; }
-  .command-metrics { grid-template-columns: 1fr; }
-  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .charts-grid { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 575.98px) {
-  .kpi-grid { grid-template-columns: 1fr; }
-  .dashboard-tabs {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
+@media (max-width: 767.98px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .tab-bar { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .tab-indicator { display: none; }
+  .tab-btn.active { background: #0f172a; color: #fff; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .welcome-content { flex-wrap: wrap; }
 }
 </style>

@@ -41,6 +41,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/scores/ScorePage.vue'),
   },
   {
+    path: '/scores/subject/:subjectId/term/:termId',
+    name: 'score-sheet',
+    component: () => import('@/views/scores/ScoreSheetView.vue'),
+  },
+  {
     path: '/reports',
     name: 'reports',
     component: () => import('@/views/reports/ReportPage.vue'),

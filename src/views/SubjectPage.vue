@@ -205,6 +205,7 @@ import type { Subject } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
 import { classService } from '@/services/classService'
 
+
 const store = useSubjectStore()
 const searchQuery = ref('')
 const statusFilter = ref('')
