@@ -10,15 +10,41 @@
       </ol>
     </nav>
 
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h1 class="h3 fw-medium mb-0">Class Management</h1>
-        <p class="text-muted small mb-0 mt-1">Manage your classes efficiently</p>
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+            <i class="bi bi-journal-bookmark"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TOTAL CLASSES</p>
+            <h3 class="stat-value mb-0">{{ totalClasses }}</h3>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-primary btn-sm shadow-sm" @click="openAddModal">
-        <i class="bi bi-plus-lg me-1"></i>Add Class
-      </button>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-success bg-opacity-10 text-success">
+            <i class="bi bi-people"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TOTAL STUDENTS</p>
+            <h3 class="stat-value mb-0">{{ totalStudents }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-info bg-opacity-10 text-info">
+            <i class="bi bi-person-badge"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TEACHERS ASSIGNED</p>
+            <h3 class="stat-value mb-0">{{ teachersAssigned }}</h3>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Alert Messages -->
@@ -425,6 +451,14 @@ let searchTimeout: ReturnType<typeof setTimeout> | null = null
 const pdfInput = ref<HTMLInputElement | null>( null)
 const selectedClasses = ref<number[]>([])
 
+// Statistics
+const totalClasses = computed(() => classes.value.length)
+const totalStudents = computed(() => classes.value.reduce((sum, cls) => sum + (cls.students || 0), 0))
+const teachersAssigned = computed(() => {
+  const uniqueTeachers = new Set(classes.value.filter(cls => cls.teacher?.name).map(cls => cls.teacher!.name))
+  return uniqueTeachers.size
+})
+
 function triggerPDFUpload() {
   pdfInput.value?.click()
 }
@@ -561,12 +595,6 @@ async function loadTeachers() {
   } catch (err) {
     console.error('Failed to load teachers:', err)
   }
-}
-
-function openAddModal() {
-  isEditMode.value = false
-  resetForm()
-  showModal.value = true
 }
 
 function openEditModal(classItem: Class) {
@@ -794,5 +822,49 @@ onMounted(() => {
 
 .ls-tight {
   letter-spacing: 0.05em;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0;
+  color: #1f2937;
 }
 </style>

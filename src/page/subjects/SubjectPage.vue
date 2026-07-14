@@ -124,12 +124,40 @@
               </div>
 
               <div class="d-flex gap-2">
-                <button class="btn btn-outline-primary btn-sm" @click="openAssignModal">
-                  <i class="bi bi-link me-1"></i>Assign to Class
-                </button>
-                <button class="btn btn-outline-secondary btn-sm" @click="openEditModal(subject)">
-                  <i class="bi bi-three-dots"></i>
-                </button>
+                <div class="dropdown">
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    :id="'dropdownMenuButton-' + subject.id"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu" :aria-labelledby="'dropdownMenuButton-' + subject.id">
+                    <li>
+                      <button class="dropdown-item" type="button" @click="viewSubjectDetails(subject)">
+                        <i class="bi bi-eye me-2"></i>View Details
+                      </button>
+                    </li>
+                    <li>
+                      <button class="dropdown-item" type="button" @click="openEditModal(subject)">
+                        <i class="bi bi-pencil me-2"></i>Edit
+                      </button>
+                    </li>
+                    <li>
+                      <button class="dropdown-item" type="button" @click="openAssignModal">
+                        <i class="bi bi-link me-2"></i>Assign Class
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button class="dropdown-item text-danger" type="button" @click="confirmDelete(subject)">
+                        <i class="bi bi-trash me-2"></i>Delete
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -144,11 +172,11 @@
         <!-- Footer -->
         <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
           <div class="small text-muted">
-            Showing 1 to {{ filteredSubjects.length }} of {{ store.totalSubjects }} subjects
+            Showing {{ paginationStart }} to {{ paginationEnd }} of {{ store.totalSubjects }} subjects
           </div>
           <div class="d-flex align-items-center gap-2">
             <span class="small text-muted">Show:</span>
-            <select class="form-select form-select-sm" style="width: auto;">
+            <select class="form-select form-select-sm" style="width: auto;" v-model="itemsPerPage" @change="handleItemsPerPageChange">
               <option value="5">5</option>
               <option value="10">10</option>
               <option value="25">25</option>
@@ -178,7 +206,7 @@
         <div class="modal-dialog modal-dialog-centered" @click.stop>
           <div class="modal-content">
             <div class="modal-header border-0 pt-3 px-3">
-              <h5 class="modal-title fw-medium fs-5">Create Subject</h5>
+              <h5 class="modal-title fw-medium fs-5">{{ isEditMode ? 'Edit Subject' : 'Create Subject' }}</h5>
               <button
                 type="button"
                 class="btn-close"
@@ -200,6 +228,74 @@
                   />
                   <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
                 </div>
+
+                <div class="mb-3">
+                  <label for="status" class="form-label text-muted small fw-medium text-uppercase">Status</label>
+                  <select
+                    class="form-select"
+                    id="status"
+                    v-model="formData.status"
+                    required
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <!-- Grading Weights Section -->
+                <div>
+                  <p class="text-muted small fw-medium mb-3">GRADING WEIGHTS</p>
+                  <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                      <label for="quiz_weight" class="form-label text-muted small">Quiz (%)</label>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        id="quiz_weight"
+                        v-model="formData.quiz_weight"
+                        min="0"
+                        max="100"
+                        required
+                      />
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <label for="assignment_weight" class="form-label text-muted small">Assignment (%)</label>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        id="assignment_weight"
+                        v-model="formData.assignment_weight"
+                        min="0"
+                        max="100"
+                        required
+                      />
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <label for="midterm_weight" class="form-label text-muted small">Midterm (%)</label>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        id="midterm_weight"
+                        v-model="formData.midterm_weight"
+                        min="0"
+                        max="100"
+                        required
+                      />
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <label for="final_weight" class="form-label text-muted small">Final (%)</label>
+                      <input
+                        type="number"
+                        class="form-control form-control-sm"
+                        id="final_weight"
+                        v-model="formData.final_weight"
+                        min="0"
+                        max="100"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
               </form>
             </div>
             <div class="modal-footer border-0 pt-3 px-3 pb-3">
@@ -211,7 +307,7 @@
                 :disabled="store.loading"
               >
                 <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
-                Save Subject
+                {{ isEditMode ? 'Update' : 'Save' }} Subject
               </button>
             </div>
           </div>
@@ -264,8 +360,8 @@
                           style="width: 200px;"
                         >
                           <option value="">Select teacher</option>
-                          <option v-for="teacher in teachers" :key="teacher" :value="teacher">
-                            Professor {{ teacher }}
+                          <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.name">
+                            Professor {{ teacher.name }}
                           </option>
                         </select>
                       </td>
@@ -293,6 +389,96 @@
                 <span v-if="store.loading" class="spinner-border spinner-border-sm me-2"></span>
                 Apply Changes
               </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- View Subject Details Modal -->
+    <Transition name="modal">
+      <div v-if="showViewDetailsModal" class="modal fade show" style="display: block;" @click.self="closeViewDetailsModal">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header border-0 pt-3 px-3">
+              <h5 class="modal-title fw-medium fs-5">Subject Details</h5>
+              <button
+                type="button"
+                class="btn-close"
+                @click="closeViewDetailsModal"
+              ></button>
+            </div>
+            <div class="modal-body px-3">
+              <div class="row g-3">
+                <div class="col-12">
+                  <div class="p-3 bg-light rounded">
+                    <div class="row g-2">
+                      <div class="col-sm-4">
+                        <p class="text-muted small mb-1 fw-medium">NAME</p>
+                        <p class="mb-0 fw-medium">{{ selectedSubject?.name }}</p>
+                      </div>
+                      <div class="col-sm-4">
+                        <p class="text-muted small mb-1 fw-medium">CODE</p>
+                        <p class="mb-0 fw-medium">{{ selectedSubject?.subject_code || 'N/A' }}</p>
+                      </div>
+                      <div class="col-sm-4">
+                        <p class="text-muted small mb-1 fw-medium">STATUS</p>
+                        <p class="mb-0">
+                          <span class="badge" :class="selectedSubject?.is_active === 'Active' ? 'bg-success bg-opacity-10 text-success' : 'bg-danger bg-opacity-10 text-danger'">
+                            {{ selectedSubject?.is_active || 'Inactive' }}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12" v-if="selectedSubject && getSubjectClasses(selectedSubject).length > 0">
+                  <p class="text-muted small fw-medium mb-2">ASSIGNED CLASSES</p>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <span
+                      v-for="classInfo in getSubjectClasses(selectedSubject)"
+                      :key="classInfo.class"
+                      class="badge bg-primary bg-opacity-10 text-primary"
+                    >
+                      <i class="bi bi-diagram-3 me-1"></i>
+                      {{ classInfo.class }}
+                      <span v-if="classInfo.teacher" class="ms-1">• Professor {{ classInfo.teacher }}</span>
+                    </span>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <p class="text-muted small fw-medium mb-2">GRADING WEIGHTS</p>
+                  <div class="row g-2">
+                    <div class="col-6 col-md-3">
+                      <div class="p-2 bg-light rounded text-center">
+                        <p class="text-muted small mb-0">Quiz</p>
+                        <p class="fw-medium mb-0">20%</p>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <div class="p-2 bg-light rounded text-center">
+                        <p class="text-muted small mb-0">Assignment</p>
+                        <p class="fw-medium mb-0">10%</p>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <div class="p-2 bg-light rounded text-center">
+                        <p class="text-muted small mb-0">Midterm</p>
+                        <p class="fw-medium mb-0">30%</p>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                      <div class="p-2 bg-light rounded text-center">
+                        <p class="text-muted small mb-0">Final</p>
+                        <p class="fw-medium mb-0">40%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-0 pt-3 px-3 pb-3">
+              <button type="button" class="btn btn-primary px-4" @click="closeViewDetailsModal">OK</button>
             </div>
           </div>
         </div>
@@ -338,7 +524,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
-import type { Subject } from '@/services/subjectService'
+import type { Subject, SubjectPayload } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
 import { classService } from '@/services/classService'
 
@@ -347,10 +533,11 @@ const store = useSubjectStore()
 // Search and Filter
 const searchQuery = ref('')
 const statusFilter = ref('')
+const itemsPerPage = ref(5)
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 // Teachers list
-const teachers = ref<string[]>([])
+const teachers = ref<{ id: number; name: string }[]>([])
 const loadingTeachers = ref(false)
 
 // Classes list
@@ -361,8 +548,10 @@ const loadingClasses = ref(false)
 const showModal = ref(false)
 const showDeleteModal = ref(false)
 const showAssignModal = ref(false)
+const showViewDetailsModal = ref(false)
 const isEditMode = ref(false)
 const subjectToDelete = ref<Subject | null>(null)
+const selectedSubject = ref<Subject | null>(null)
 const selectedClassForAssign = ref('')
 
 // Selected subjects for checkbox
@@ -373,21 +562,33 @@ const subjectAssignments = ref<Record<number, string>>({})
 // Form data
 const formData = reactive({
   name: '',
-  teacher: '',
-  class: '',
-  is_active: 'Active' as 'Active' | 'Inactive',
+  teacher_id: null as number | null,
+  class_id: null as number | null,
+  status: 'Active' as 'Active' | 'Inactive',
+  quiz_weight: 20,
+  assignment_weight: 10,
+  midterm_weight: 30,
+  final_weight: 40,
 })
 
 const errors = reactive({
   name: '',
-  teacher: '',
-  class: '',
-  is_active: '',
+  teacher_id: '',
+  class_id: '',
+  status: '',
 })
 
 // Computed
 const filteredSubjects = computed(() => {
-  return store.subjects
+  return store.subjects.slice(0, itemsPerPage.value)
+})
+
+const paginationStart = computed(() => {
+  return store.subjects.length > 0 ? 1 : 0
+})
+
+const paginationEnd = computed(() => {
+  return Math.min(itemsPerPage.value, store.subjects.length)
 })
 
 const isAllSelected = computed(() => {
@@ -396,11 +597,11 @@ const isAllSelected = computed(() => {
 })
 
 const unassignedSubjects = computed(() => {
-  return store.subjects.filter(s => !s.teacher || s.teacher === '').length
+  return store.subjects.filter(s => !s.teacher?.user?.name || s.teacher.user.name === '').length
 })
 
 const teachingTutors = computed(() => {
-  const uniqueTeachers = new Set(store.subjects.filter(s => s.teacher && s.teacher !== '').map(s => s.teacher))
+  const uniqueTeachers = new Set(store.subjects.filter(s => s.teacher?.user?.name).map(s => s.teacher!.user!.name))
   return uniqueTeachers.size
 })
 
@@ -413,19 +614,21 @@ const assignableSubjects = computed(() => {
 function getClassCount(subject: Subject): number {
   // Count how many classes this subject is assigned to
   const subjectClasses = store.subjects.filter(s => s.name === subject.name)
-  return new Set(subjectClasses.map(s => s.class)).size
+  return new Set(subjectClasses.map(s => s.class?.name || '')).size
 }
 
-function getSubjectClasses(subject: Subject) {
+function getSubjectClasses(subject: Subject | null) {
   // Get unique class-teacher combinations for this subject
+  if (!subject) return []
+
   const classMap = new Map()
   store.subjects.forEach(s => {
-    if (s.name === subject.name) {
-      const key = s.class
+    if (s.name === subject.name && s.class) {
+      const key = s.class.name
       if (!classMap.has(key)) {
         classMap.set(key, {
-          class: s.class,
-          teacher: s.teacher ? `Professor ${s.teacher}` : ''
+          class: s.class.name,
+          teacher: s.teacher?.user?.name ? `Professor ${s.teacher.user.name}` : ''
         })
       }
     }
@@ -443,6 +646,11 @@ function handleSearch() {
   }, 300)
 }
 
+function handleItemsPerPageChange() {
+  // The computed property will automatically update the displayed items
+  console.log('Items per page changed to:', itemsPerPage.value)
+}
+
 function openAddModal() {
   isEditMode.value = false
   resetForm()
@@ -454,9 +662,13 @@ function openEditModal(subject: Subject) {
   store.currentSubject = subject
   Object.assign(formData, {
     name: subject.name,
-    teacher: subject.teacher,
-    class: subject.class,
-    is_active: subject.is_active,
+    teacher_id: subject.teacher?.id || null,
+    class_id: subject.class?.id || null,
+    status: subject.is_active,
+    quiz_weight: subject.quiz_weight || 20,
+    assignment_weight: subject.assignment_weight || 10,
+    midterm_weight: subject.midterm_weight || 30,
+    final_weight: subject.final_weight || 40,
   })
   showModal.value = true
 }
@@ -468,9 +680,13 @@ function closeModal() {
 
 function resetForm() {
   formData.name = ''
-  formData.teacher = ''
-  formData.class = ''
-  formData.is_active = 'Active'
+  formData.teacher_id = null
+  formData.class_id = null
+  formData.status = 'Active'
+  formData.quiz_weight = 20
+  formData.assignment_weight = 10
+  formData.midterm_weight = 30
+  formData.final_weight = 40
   Object.keys(errors).forEach(key => {
     errors[key as keyof typeof errors] = ''
   })
@@ -486,24 +702,21 @@ function validateForm(): boolean {
     errors.name = ''
   }
 
-  if (!formData.teacher.trim()) {
-    errors.teacher = ''
-  } else {
-    errors.teacher = ''
-  }
+  // Only validate teacher_id, class_id, and status in edit mode
+  if (isEditMode.value) {
+    if (!formData.class_id) {
+      errors.class_id = 'Class is required'
+      isValid = false
+    } else {
+      errors.class_id = ''
+    }
 
-  if (!formData.class.trim()) {
-    errors.class = 'Class is required'
-    isValid = false
-  } else {
-    errors.class = ''
-  }
-
-  if (!formData.is_active) {
-    errors.is_active = 'Status is required'
-    isValid = false
-  } else {
-    errors.is_active = ''
+    if (!formData.status) {
+      errors.status = 'Status is required'
+      isValid = false
+    } else {
+      errors.status = ''
+    }
   }
 
   return isValid
@@ -514,29 +727,60 @@ async function handleSubmit() {
     return
   }
 
-  const subjectData = {
-    name: formData.name,
-    teacher: formData.teacher,
-    class: formData.class,
-    is_active: formData.is_active,
-  }
+  try {
+    if (isEditMode.value && store.currentSubject) {
+      // For edit mode, submit only the fields that are allowed
+      const subjectData: Partial<SubjectPayload> = {
+        name: formData.name,
+        status: formData.status,
+      }
 
-  if (isEditMode.value && store.currentSubject) {
-    const success = await store.updateSubject(store.currentSubject.id, subjectData)
-    if (success) {
-      closeModal()
-      await store.fetchSubjects(searchQuery.value, statusFilter.value)
-    } else if (store.error) {
-      console.error('Failed to update subject:', store.error)
+      // Only include grading weights if they exist
+      if (formData.quiz_weight !== undefined) {
+        subjectData.quiz_weight = formData.quiz_weight
+      }
+      if (formData.assignment_weight !== undefined) {
+        subjectData.assignment_weight = formData.assignment_weight
+      }
+      if (formData.midterm_weight !== undefined) {
+        subjectData.midterm_weight = formData.midterm_weight
+      }
+      if (formData.final_weight !== undefined) {
+        subjectData.final_weight = formData.final_weight
+      }
+
+      console.log('Updating subject with data:', subjectData)
+      const success = await store.updateSubject(store.currentSubject.id, subjectData)
+      if (success) {
+        closeModal()
+        await store.fetchSubjects(searchQuery.value, statusFilter.value)
+      } else {
+        console.error('Update failed:', store.error)
+        alert('Failed to update subject: ' + (store.error || 'Unknown error'))
+      }
+    } else {
+      // For create mode, submit only the name, status, and grading weights
+      const subjectData: Partial<SubjectPayload> = {
+        name: formData.name,
+        status: formData.status,
+        quiz_weight: formData.quiz_weight,
+        assignment_weight: formData.assignment_weight,
+        midterm_weight: formData.midterm_weight,
+        final_weight: formData.final_weight,
+      }
+      console.log('Creating subject with data:', subjectData)
+      const success = await store.createSubject(subjectData)
+      if (success) {
+        closeModal()
+        await store.fetchSubjects(searchQuery.value, statusFilter.value)
+      } else {
+        console.error('Create failed:', store.error)
+        alert('Failed to create subject: ' + (store.error || 'Unknown error'))
+      }
     }
-  } else {
-    const success = await store.createSubject(subjectData)
-    if (success) {
-      closeModal()
-      await store.fetchSubjects(searchQuery.value, statusFilter.value)
-    } else if (store.error) {
-      console.error('Failed to create subject:', store.error)
-    }
+  } catch (error) {
+    console.error('Error submitting form:', error)
+    alert('An error occurred: ' + error)
   }
 }
 
@@ -567,6 +811,21 @@ function closeDeleteModal() {
   subjectToDelete.value = null
 }
 
+function confirmDelete(subject: Subject) {
+  subjectToDelete.value = subject
+  showDeleteModal.value = true
+}
+
+function viewSubjectDetails(subject: Subject) {
+  selectedSubject.value = subject
+  showViewDetailsModal.value = true
+}
+
+function closeViewDetailsModal() {
+  showViewDetailsModal.value = false
+  selectedSubject.value = null
+}
+
 async function handleDelete() {
   if (!subjectToDelete.value) return
 
@@ -582,10 +841,10 @@ async function applyAssignments() {
     class: selectedClassForAssign.value,
     assignments: subjectAssignments.value
   })
-  
+
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500))
-  
+
   closeAssignModal()
   // Optionally refresh the subjects list
   await store.fetchSubjects(searchQuery.value, statusFilter.value)

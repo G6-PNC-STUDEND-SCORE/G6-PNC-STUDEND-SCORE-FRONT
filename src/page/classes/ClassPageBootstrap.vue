@@ -10,6 +10,43 @@
       </ol>
     </nav>
 
+    <!-- Statistics Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+            <i class="bi bi-journal-bookmark"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TOTAL CLASSES</p>
+            <h3 class="stat-value mb-0">{{ totalClasses }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-success bg-opacity-10 text-success">
+            <i class="bi bi-people"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TOTAL STUDENTS</p>
+            <h3 class="stat-value mb-0">{{ totalStudents }}</h3>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="stat-card">
+          <div class="stat-icon bg-info bg-opacity-10 text-info">
+            <i class="bi bi-person-badge"></i>
+          </div>
+          <div class="stat-content">
+            <p class="stat-label text-muted small mb-1">TEACHERS ASSIGNED</p>
+            <h3 class="stat-value mb-0">{{ teachersAssigned }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -34,120 +71,148 @@
       <button type="button" class="btn-close" @click="clearMessages()"></button>
     </div>
 
-    <!-- Search and Filter -->
-    <div class="card mb-4 border-0 shadow-sm">
-      <div class="card-body py-3">
-        <div class="row g-3 align-items-center">
-          <div class="col-md-8">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-search text-muted"></i>
-              </span>
-              <input
-                type="text"
-                class="form-control form-control-sm border-start-0 ps-0"
-                placeholder="Search classes by name, generation, or room..."
-                v-model="searchQuery"
-                @input="handleSearch"
-                style="font-size: 0.9rem;"
-              />
-            </div>
+    <!-- Curriculum Classes Section -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <!-- Section Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-medium mb-0">Curriculum Classes</h5>
+          <div class="d-flex gap-2">
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              placeholder="Search class..."
+              v-model="searchQuery"
+              @input="handleSearch"
+              style="width: 250px;"
+            />
+            <button class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-file-earmark-text me-1"></i>Template
+            </button>
+            <button class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-upload me-1"></i>Import
+            </button>
+            <button class="btn btn-primary btn-sm" @click="openAddModal">
+              <i class="bi bi-plus-lg me-1"></i>Create Class
+            </button>
           </div>
-          <div class="col-md-4">
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-funnel text-muted"></i>
-              </span>
-              <select
-                class="form-select form-select-sm border-start-0 ps-0"
-                v-model="statusFilter"
-                @change="handleFilter"
-                style="font-size: 0.9rem;"
-              >
-                <option value="">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
+        </div>
+
+        <!-- Select All Checkbox -->
+        <div class="mb-3">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="selectAll"
+            :checked="isAllSelected"
+            @change="toggleSelectAll"
+          />
+          <label class="form-check-label small text-muted ms-2" for="selectAll">
+            Select all visible classes
+          </label>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div v-if="loading" class="text-center my-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Classes List -->
+        <div v-else-if="filteredClasses.length > 0">
+          <div v-for="classItem in filteredClasses" :key="classItem.id" class="class-item border rounded p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    class="form-check-input"
+                    :value="classItem.id"
+                    v-model="selectedClasses"
+                  />
+                  <span class="badge bg-secondary text-dark small">#{{ classItem.id }}</span>
+                  <h6 class="fw-medium mb-0">{{ classItem.name }}</h6>
+                  <span class="badge bg-success bg-opacity-10 text-success small">Active</span>
+                </div>
+
+                <div class="ms-5">
+                  <p class="text-muted small mb-2">
+                    <i class="bi bi-diagram-3 me-1"></i>
+                    {{ classItem.students }} students
+                    <span class="mx-2">•</span>
+                    <i class="bi bi-geo-alt me-1"></i>
+                    Room {{ classItem.room }}
+                  </p>
+
+                  <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-light text-dark border">
+                      <i class="bi bi-calendar3 me-1"></i>
+                      {{ classItem.generation }}
+                    </span>
+                    <span v-if="classItem.teacher?.name" class="badge bg-light text-dark border">
+                      <i class="bi bi-person me-1"></i>
+                      {{ classItem.teacher.name }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2">
+                <div class="dropdown">
+                  <button
+                    class="btn btn-outline-secondary btn-sm"
+                    type="button"
+                    :id="'dropdownMenuButton-' + classItem.id"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu" :aria-labelledby="'dropdownMenuButton-' + classItem.id">
+                    <li>
+                      <button class="dropdown-item" type="button" @click="viewClass(classItem)">
+                        <i class="bi bi-eye me-2"></i>View Details
+                      </button>
+                    </li>
+                    <li>
+                      <button class="dropdown-item" type="button" @click="openEditModal(classItem)">
+                        <i class="bi bi-pencil me-2"></i>Edit
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button class="dropdown-item text-danger" type="button" @click="confirmDelete(classItem)">
+                        <i class="bi bi-trash me-2"></i>Delete
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Loading Spinner -->
-    <div v-if="loading" class="text-center my-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
+        <!-- Empty State -->
+        <div v-else class="text-center py-5 text-muted">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          <p>No classes found</p>
+        </div>
 
-    <!-- Classes Table -->
-    <div v-else class="card" style="border-radius: 12px; overflow: hidden;">
-      <div class="card-body p-0">
-        <div class="table-responsive">
-          <table class="table table-hover mb-0" style="border-radius: 12px;">
-            <thead class="table-light">
-              <tr>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">CLASS</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">GENERATION</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">TEACHER</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">STUDENTS</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">ROOM</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">STATUS</th>
-                <th scope="col" class="text-uppercase fw-semibold text-muted small ls-tight py-2 px-3">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="classItem in filteredClasses" :key="classItem.id">
-                <td class="py-2 px-3">
-                  <span class="fw-medium">{{ classItem.name }}</span>
-                </td>
-                <td class="small py-2 px-3">{{ classItem.generation }}</td>
-                <td class="small py-2 px-3">{{ classItem.teacher?.name || 'No Teacher' }}</td>
-                <td class="small py-2 px-3">{{ classItem.students }}</td>
-                <td class="small py-2 px-3">{{ classItem.room }}</td>
-                <td class="py-2 px-3">
-                  <span
-                    class="badge"
-                    :class="classItem.status === 'Active' ? 'bg-success' : 'bg-secondary'"
-                  >
-                    {{ classItem.status }}
-                  </span>
-                </td>
-                <td class="text-center py-2 px-3">
-                  <div class="btn-group" role="group">
-                    <button
-                      class="btn btn-sm btn-outline-primary"
-                      @click="viewClass(classItem)"
-                      title="View"
-                    >
-                      <i class="bi bi-eye"></i>
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-warning"
-                      @click="openEditModal(classItem)"
-                      title="Edit"
-                    >
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      class="btn btn-sm btn-outline-danger"
-                      @click="confirmDelete(classItem)"
-                      title="Delete"
-                    >
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="filteredClasses.length === 0">
-                <td colspan="7" class="text-center py-5 text-muted">
-                  <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                  No classes found
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Footer -->
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+          <div class="small text-muted">
+            Showing {{ paginationStart }} to {{ paginationEnd }} of {{ totalClasses }} classes
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted">Show:</span>
+            <select class="form-select form-select-sm" style="width: auto;" v-model="itemsPerPage" @change="handleItemsPerPageChange">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -312,12 +377,22 @@ import { classService, type Class } from '@/services/classService'
 const searchQuery = ref('')
 const statusFilter = ref('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
+const selectedClasses = ref<number[]>([])
+const itemsPerPage = ref(5)
 
 // Data
 const classes = ref<Class[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const successMessage = ref<string | null>(null)
+
+// Statistics
+const totalClasses = computed(() => classes.value.length)
+const totalStudents = computed(() => classes.value.reduce((sum, cls) => sum + (cls.students || 0), 0))
+const teachersAssigned = computed(() => {
+  const uniqueTeachers = new Set(classes.value.filter(cls => cls.teacher?.name).map(cls => cls.teacher!.name))
+  return uniqueTeachers.size
+})
 
 // Modal states
 const showModal = ref(false)
@@ -362,6 +437,19 @@ const filteredClasses = computed(() => {
   })
 })
 
+const paginationStart = computed(() => {
+  return classes.value.length > 0 ? 1 : 0
+})
+
+const paginationEnd = computed(() => {
+  return Math.min(itemsPerPage.value, classes.value.length)
+})
+
+const isAllSelected = computed(() => {
+  return filteredClasses.value.length > 0 &&
+         selectedClasses.value.length === filteredClasses.value.length
+})
+
 // Methods
 function clearMessages() {
   error.value = null
@@ -378,8 +466,17 @@ function handleSearch() {
   }, 300)
 }
 
-function handleFilter() {
-  loadClasses()
+function handleItemsPerPageChange() {
+  // The computed property will automatically update the displayed items
+  console.log('Items per page changed to:', itemsPerPage.value)
+}
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedClasses.value = []
+  } else {
+    selectedClasses.value = filteredClasses.value.map(c => c.id)
+  }
 }
 
 async function loadClasses() {
@@ -563,5 +660,73 @@ onMounted(() => {
 
 .ls-tight {
   letter-spacing: 0.05em;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0;
+  color: #1f2937;
+}
+
+.class-item {
+  background: white;
+  transition: box-shadow 0.2s;
+}
+
+.class-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.badge {
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+}
+
+.form-control-sm,
+.form-select-sm {
+  font-size: 0.875rem;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
 }
 </style>

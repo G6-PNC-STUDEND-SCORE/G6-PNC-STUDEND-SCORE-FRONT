@@ -23,7 +23,7 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/subjects',
     name: 'subject',
-    component: () => import('@/views/SubjectPage.vue'),
+    component: () => import('@/page/subjects/SubjectPage.vue'),
   },
   {
     path: '/teachers',
