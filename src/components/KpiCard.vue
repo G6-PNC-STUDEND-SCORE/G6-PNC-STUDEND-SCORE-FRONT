@@ -1,19 +1,21 @@
 <template>
   <div
-    :class="['kpi-card', 'card', 'border-0', { 'dark-mode': isDark }]"
+    :class="['kpi-card', { 'dark-mode': isDark }]"
   >
-    <div class="card-body">
-      <div class="kpi-header">
-        <div class="kpi-icon" :class="iconClass">
+    <div class="kpi-glow"></div>
+    <div class="kpi-bg-pattern"></div>
+    <div class="kpi-content">
+      <div class="kpi-top">
+        <div class="kpi-icon-wrap" :class="iconClass">
           <i :class="icon" />
         </div>
+        <span v-if="subtitle" class="kpi-badge">{{ subtitle }}</span>
       </div>
       <div class="kpi-value">
         <AnimatedNumber v-if="!loading" :value="value" :decimals="decimals" />
         <div v-else class="skeleton-value skeleton-pulse" />
       </div>
       <div class="kpi-label">{{ label }}</div>
-      <div v-if="subtitle" class="kpi-subtitle">{{ subtitle }}</div>
     </div>
   </div>
 </template>
@@ -43,74 +45,128 @@ withDefaults(defineProps<{
 
 <style scoped>
 .kpi-card {
-  border-radius: 16px;
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
-  min-height: 118px;
-  width: 100%;
-  overflow: hidden;
   position: relative;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1.25rem;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 8px 32px rgba(15, 23, 42, 0.03);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  min-height: 140px;
+  cursor: default;
 }
 
-.kpi-card::after {
+.kpi-card::before {
   content: '';
   position: absolute;
-  inset: auto 0 0;
-  height: 3px;
-  background: linear-gradient(90deg, #2563eb, #14b8a6, #f97316);
-  opacity: 0.75;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.kpi-card:hover::before {
+  opacity: 1;
 }
 
 .kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-6px);
+  box-shadow:
+    0 8px 30px rgba(59, 130, 246, 0.12),
+    0 20px 60px rgba(15, 23, 42, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
 }
 
-.kpi-card.dark-mode {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: rgba(71, 85, 105, 0.5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+.kpi-glow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
 }
 
-.card-body {
-  padding: 1rem;
+.kpi-card:hover .kpi-glow {
+  opacity: 1;
+}
+
+.kpi-bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(139, 92, 246, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.kpi-content {
   position: relative;
   z-index: 1;
-  min-width: 0;
 }
 
-.kpi-header {
-  margin-bottom: 0.75rem;
+.kpi-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin-bottom: 0.85rem;
 }
 
-.kpi-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 12px;
-  display: inline-flex;
+.kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.icon-blue { background: rgba(37, 99, 235, 0.09); color: #2563eb; }
-.icon-violet { background: rgba(124, 58, 237, 0.09); color: #7c3aed; }
-.icon-orange { background: rgba(249, 115, 22, 0.11); color: #f97316; }
-.icon-green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.icon-sky { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; }
-.icon-rose { background: rgba(244, 63, 94, 0.1); color: #f43f5e; }
-.icon-mint { background: rgba(20, 184, 166, 0.1); color: #14b8a6; }
+.kpi-card:hover .kpi-icon-wrap {
+  transform: scale(1.08);
+}
+
+.icon-blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06)); color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); }
+.icon-green { background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.06)); color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15); }
+.icon-violet { background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.06)); color: #8b5cf6; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15); }
+.icon-orange { background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.06)); color: #f97316; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.15); }
+.icon-sky { background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(14, 165, 233, 0.06)); color: #0ea5e9; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15); }
+.icon-rose { background: linear-gradient(135deg, rgba(244, 63, 94, 0.12), rgba(244, 63, 94, 0.06)); color: #f43f5e; box-shadow: 0 4px 12px rgba(244, 63, 94, 0.15); }
+.icon-mint { background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(20, 184, 166, 0.06)); color: #14b8a6; box-shadow: 0 4px 12px rgba(20, 184, 166, 0.15); }
+.icon-amber { background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.06)); color: #f59e0b; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15); }
+
+.kpi-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  white-space: nowrap;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .kpi-value {
-  font-size: clamp(1.45rem, 1.8vw, 1.85rem);
-  font-weight: 800;
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: 1;
   color: #0f172a;
-  line-height: 1.1;
+  letter-spacing: -0.03em;
   overflow-wrap: anywhere;
 }
 
@@ -119,34 +175,44 @@ withDefaults(defineProps<{
 }
 
 .kpi-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #334155;
-  margin-top: 0.25rem;
+  font-size: 0.77rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-top: 0.3rem;
   line-height: 1.25;
-  overflow-wrap: normal;
-  word-break: normal;
-  hyphens: none;
+  letter-spacing: 0.01em;
 }
 
 .dark-mode .kpi-label {
-  color: #e2e8f0;
-}
-
-.kpi-subtitle {
-  color: #64748b;
-  font-size: 0.68rem;
-  margin-top: 0.1rem;
-}
-
-.dark-mode .kpi-subtitle {
   color: #94a3b8;
 }
 
+/* ── Dark Mode ────────────────────────── */
+.kpi-card.dark-mode {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(30, 41, 59, 0.98));
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.kpi-card.dark-mode::before {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.4), rgba(167, 139, 250, 0.4), transparent 60%);
+}
+
+.kpi-card.dark-mode:hover {
+  border-color: rgba(96, 165, 250, 0.25);
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.3),
+    0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.kpi-card.dark-mode .kpi-glow {
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.08) 0%, transparent 70%);
+}
+
+/* ── Skeleton ─────────────────────────── */
 .skeleton-value {
-  height: 1.8rem;
+  height: 1.75rem;
   width: 60%;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .skeleton-pulse {
