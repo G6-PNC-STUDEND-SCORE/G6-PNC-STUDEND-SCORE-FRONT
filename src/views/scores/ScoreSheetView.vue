@@ -298,8 +298,12 @@ const passRate = computed(() => {
 })
 
 const topStudent = computed(() => {
-  const sorted = [...filteredRows.value].filter(r => r.total !== null).sort((a, b) => (b.total || 0) - (a.total || 0))
-  return sorted.length ? sorted[0].student_name : '-'
+  const rows = filteredRows.value ?? []
+  const withScores = rows.filter(r => r.total !== null)
+  if (withScores.length === 0) return '-'
+  const sorted = [...withScores].sort((a, b) => (b.total || 0) - (a.total || 0))
+  const top = sorted[0]
+  return top?.student_name ?? '-'
 })
 
 const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + (v || 0), 0))
@@ -327,8 +331,12 @@ const saveStatusText = computed(() => ({
 
 // ─── Helper Functions ────────────────────────────────────────────────
 function getCellMark(row: SpreadsheetRow, detailId: number): number | null {
-  const m = row.details[detailId]
-  return m !== undefined ? m : null
+  const details = row.details
+  if (!details) return null
+  if (detailId === null || detailId === undefined) return null
+  const m = details[detailId]
+  if (m === undefined) return null
+  return m
 }
 
 function formatCellValue(value: number | null): string {
@@ -359,9 +367,12 @@ function focusCell(rowIdx: number, colId: number) {
     saveEdit()  // Save any pending edit first
   }
   // For frozen columns (-2, -1, 0), focus first actual column
-  const actualColId = (colId <= 0 && columns.value.length > 0) ? columns.value[0].id : colId
-  selectedRowIndex.value = Math.max(0, Math.min(rowIdx, filteredRows.value.length - 1))
-  selectedCol.value = actualColId
+  const cols = columns.value
+  const firstCol = cols[0]
+  const actualColId = (colId <= 0 && firstCol) ? firstCol.id : colId
+  const rowCount = filteredRows.value?.length ?? 0
+  selectedRowIndex.value = Math.max(0, Math.min(rowIdx, rowCount - 1))
+  selectedCol.value = actualColId ?? null
 }
 
 function startEditing(rowIdx: number, detailId: number) {
@@ -441,25 +452,28 @@ function saveEdit() {
 function recalculateRowTotal(row: SpreadsheetRow) {
   // Simple local recalculation of total and grade for display
   const columns_list = columns.value
-  if (!columns_list.length) return
+  if (!columns_list || !columns_list.length) return
 
   let total = 0
   const typeGroups: Record<string, number[]> = {}
 
+  const safeDetails = row.details ?? {}
   columns_list.forEach(col => {
-    const mark = row.details[col.id]
+    const mark = safeDetails[col.id]
     if (mark !== null && mark !== undefined) {
-      if (!typeGroups[col.type]) typeGroups[col.type] = []
-      typeGroups[col.type].push(mark)
+      const type = col.type ?? 'unknown'
+      if (!typeGroups[type]) typeGroups[type] = []
+      typeGroups[type].push(mark)
     }
   })
 
   // Get weights from assessments
-  const assessments_map = new Map(assessments.value.map(a => [a.code, a.weight_percent]))
+  const assessmentsList = assessments.value ?? []
+  const assessments_map = new Map(assessmentsList.map(a => [a.code ?? 'unknown', a.weight_percent]))
 
   Object.entries(typeGroups).forEach(([type, marks]) => {
     const avg = marks.reduce((a, b) => a + b, 0) / marks.length
-    const weight = (assessments_map.get(type) || 0) / 100
+    const weight = assessments_map.has(type) ? (assessments_map.get(type) || 0) / 100 : 0
     total += avg * weight
   })
 
@@ -485,13 +499,15 @@ function onGlobalKeydown(event: KeyboardEvent) {
   if (!cols.length || !filteredRows.value.length) return
 
   let currentRow = selectedRowIndex.value
-  let currentColIdx = selectedCol.value !== null ? cols.findIndex(c => c.id === selectedCol.value) : 0
+  const colsList = cols ?? []
+  let currentColIdx = selectedCol.value !== null ? colsList.findIndex(c => c.id === selectedCol.value) : 0
   if (currentColIdx < 0) currentColIdx = 0
 
   switch (event.key) {
     case 'ArrowDown':
       event.preventDefault()
-      if (currentRow < filteredRows.value.length - 1) {
+      const downLen = filteredRows.value?.length ?? 0
+      if (currentRow < downLen - 1) {
         selectedRowIndex.value = currentRow + 1
         scrollToCell(currentRow + 1, currentColIdx)
       }
@@ -505,41 +521,51 @@ function onGlobalKeydown(event: KeyboardEvent) {
       break
     case 'ArrowLeft':
       event.preventDefault()
-      if (currentColIdx > 0) {
+      if (currentColIdx > 0 && colsList[currentColIdx - 1] !== undefined) {
         currentColIdx--
-        selectedCol.value = cols[currentColIdx].id
-        scrollToCell(currentRow, currentColIdx)
+        const col = colsList[currentColIdx]
+        if (col) {
+          selectedCol.value = col.id
+          scrollToCell(currentRow, currentColIdx)
+        }
       }
       break
     case 'ArrowRight':
       event.preventDefault()
-      if (currentColIdx < cols.length - 1) {
+      if (currentColIdx < colsList.length - 1 && colsList[currentColIdx + 1] !== undefined) {
         currentColIdx++
-        selectedCol.value = cols[currentColIdx].id
-        scrollToCell(currentRow, currentColIdx)
+        const col = colsList[currentColIdx]
+        if (col) {
+          selectedCol.value = col.id
+          scrollToCell(currentRow, currentColIdx)
+        }
       }
       break
     case 'Tab':
       event.preventDefault()
       if (event.shiftKey) {
-        if (currentColIdx > 0) {
+        if (currentColIdx > 0 && colsList[currentColIdx - 1] !== undefined) {
           currentColIdx--
-          selectedCol.value = cols[currentColIdx].id
+          const col = colsList[currentColIdx]
+          if (col) selectedCol.value = col.id
         } else if (currentRow > 0) {
           currentRow--
           selectedRowIndex.value = currentRow
-          currentColIdx = cols.length - 1
-          selectedCol.value = cols[currentColIdx].id
+          currentColIdx = colsList.length - 1
+          const col = colsList[currentColIdx]
+          if (col) selectedCol.value = col.id
         }
       } else {
-        if (currentColIdx < cols.length - 1) {
+        if (currentColIdx < colsList.length - 1 && colsList[currentColIdx + 1] !== undefined) {
           currentColIdx++
-          selectedCol.value = cols[currentColIdx].id
-        } else if (currentRow < filteredRows.value.length - 1) {
+          const col = colsList[currentColIdx]
+          if (col) selectedCol.value = col.id
+        } else if (currentRow < (filteredRows.value?.length ?? 0) - 1) {
           currentRow++
           selectedRowIndex.value = currentRow
           currentColIdx = 0
-          selectedCol.value = cols[currentColIdx].id
+          const col = colsList[currentColIdx]
+          if (col) selectedCol.value = col.id
         }
       }
       scrollToCell(currentRow, currentColIdx)
@@ -558,7 +584,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
       break
     case 'Delete':
     case 'Backspace':
-      if (selectedCol.value && selectedCol.value > 0 && !event.ctrlKey && !event.metaKey) {
+      if (selectedCol.value !== null && selectedCol.value > 0 && !event.ctrlKey && !event.metaKey) {
         event.preventDefault()
         const row = filteredRows.value[selectedRowIndex.value]
         if (row) {
@@ -566,13 +592,20 @@ function onGlobalKeydown(event: KeyboardEvent) {
           if (oldValue !== null) {
             // Clear cell
             const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-            if (actualRow) actualRow.details[selectedCol.value] = null
+            if (actualRow) {
+              actualRow.details[selectedCol.value] = null
+            }
             undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
             redoStack.value = []
             showSaveStatus('saving')
             updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
               .then(() => { showSaveStatus('saved'); refreshData() })
-              .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value] = oldValue })
+              .catch(() => { 
+                showSaveStatus('failed'); 
+                if (actualRow && selectedCol.value !== null) {
+                  actualRow.details[selectedCol.value] = oldValue 
+                }
+              })
           }
         }
       }
@@ -601,37 +634,50 @@ function onEditKeydown(event: KeyboardEvent) {
       event.preventDefault()
       saveEdit()
       // Move to cell below
-      if (selectedRowIndex.value < filteredRows.value.length - 1) {
+      const enterLen = filteredRows.value?.length ?? 0
+      if (selectedRowIndex.value < enterLen - 1) {
         selectedRowIndex.value++
       }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      const enterCol = selectedCol.value
+      if (enterCol !== null && enterCol > 0) {
+        nextTick(() => startEditing(selectedRowIndex.value, enterCol))
       }
       break
     case 'Tab':
       event.preventDefault()
       saveEdit()
+      const editCols = columns.value ?? []
+      const idx = selectedCol.value ? editCols.findIndex(c => c.id === selectedCol.value) : 0
       if (event.shiftKey) {
-        const cols = columns.value
-        const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
-        if (idx > 0) {
-          selectedCol.value = cols[idx - 1].id
+        if (idx > 0 && editCols[idx - 1] !== undefined) {
+          const col = editCols[idx - 1]
+          if (col) {
+            selectedCol.value = col.id
+          }
         } else if (selectedRowIndex.value > 0) {
           selectedRowIndex.value--
-          selectedCol.value = cols[cols.length - 1].id
+          if (editCols.length > 0) {
+            const lastCol = editCols[editCols.length - 1]
+            if (lastCol) selectedCol.value = lastCol.id
+          }
         }
       } else {
-        const cols = columns.value
-        const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
-        if (idx < cols.length - 1) {
-          selectedCol.value = cols[idx + 1].id
-        } else if (selectedRowIndex.value < filteredRows.value.length - 1) {
+        if (idx < editCols.length - 1 && editCols[idx + 1] !== undefined) {
+          const col = editCols[idx + 1]
+          if (col) {
+            selectedCol.value = col.id
+          }
+        } else if (selectedRowIndex.value < (filteredRows.value?.length ?? 0) - 1) {
           selectedRowIndex.value++
-          selectedCol.value = cols[0].id
+          if (editCols.length > 0) {
+            const firstCol = editCols[0]
+            if (firstCol) selectedCol.value = firstCol.id
+          }
         }
       }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      const editCol = selectedCol.value
+      if (editCol !== null && editCol > 0) {
+        nextTick(() => startEditing(selectedRowIndex.value, editCol))
       }
       break
     case 'Escape':
@@ -644,18 +690,21 @@ function onEditKeydown(event: KeyboardEvent) {
       if (selectedRowIndex.value > 0) {
         selectedRowIndex.value--
       }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      const upCol = selectedCol.value
+      if (upCol !== null && upCol > 0) {
+        nextTick(() => startEditing(selectedRowIndex.value, upCol))
       }
       break
     case 'ArrowDown':
       event.preventDefault()
       saveEdit()
-      if (selectedRowIndex.value < filteredRows.value.length - 1) {
+      const downEditLen = filteredRows.value?.length ?? 0
+      if (selectedRowIndex.value < downEditLen - 1) {
         selectedRowIndex.value++
       }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      const downCol = selectedCol.value
+      if (downCol !== null && downCol > 0) {
+        nextTick(() => startEditing(selectedRowIndex.value, downCol))
       }
       break
   }
@@ -698,12 +747,18 @@ function redo() {
   // Toggle: redo sets to opposite of what was undone (null -> oldValue or oldValue -> null)
   const row = rows.value.find(r => r.enrollment_id === action.enrollmentId)
   if (!row) return
-  const current = row.details[action.detailId]
-  row.details[action.detailId] = current === null ? action.oldValue : null
-
-  updateCellMark(subjectId.value, termId.value, action.detailId, row.details[action.detailId])
-    .then(() => { showSaveStatus('saved'); refreshData() })
-    .catch(() => showSaveStatus('failed'))
+  const details = row.details
+  if (!details) return
+  const current = details[action.detailId]
+  const newValue = current === null ? action.oldValue : null
+  if (newValue !== null) {
+    const safeDetails = { ...details }
+    safeDetails[action.detailId] = newValue
+    row.details = safeDetails
+    updateCellMark(subjectId.value, termId.value, action.detailId, newValue)
+      .then(() => { showSaveStatus('saved'); refreshData() })
+      .catch(() => showSaveStatus('failed'))
+  }
 }
 
 // ─── Data Loading ────────────────────────────────────────────────────
@@ -713,23 +768,30 @@ async function refreshData() {
   if (!subjectId.value || !termId.value) return
   loading.value = true
   try {
-    data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value)
-    assessments.value = data.value.assessment_types
-    assessments.value.forEach(at => { weightEdits[at.id] = at.weight_percent })
+    const result = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value)
+    data.value = result
+    if (result.assessment_types) {
+      assessments.value = result.assessment_types
+      assessments.value.forEach(at => { weightEdits[at.id] = at.weight_percent })
+    }
     // Reset selection
     selectedRowIndex.value = 0
-    selectedCol.value = columns.value.length > 0 ? columns.value[0].id : null
+    const firstColumn = columns.value[0]
+    selectedCol.value = firstColumn ? firstColumn.id : null
   } catch { showSaveStatus('failed') }
   finally { loading.value = false }
 }
 
 // ─── Column Management ───────────────────────────────────────────────
 function startRenameColumn(col: SpreadsheetColumn) {
+  if (!col || !col.label) return
   renamingColumn.value = col
   renameValue.value = col.label
   nextTick(() => {
-    const input = document.querySelector('.modal-overlay .form-input') as HTMLInputElement
-    if (input) input.focus()
+    const input = document.querySelector('.modal-overlay .form-input') as HTMLInputElement | null
+    if (input) {
+      input.focus()
+    }
   })
 }
 
@@ -743,8 +805,10 @@ async function doRenameColumn() {
   } catch { showSaveStatus('failed') }
 }
 
-function confirmDeleteColumn(col: SpreadsheetColumn) {
-  deleteConfirm.value = { col, label: col.label }
+function confirmDeleteColumn(col: SpreadsheetColumn | undefined) {
+  if (!col) return
+  const label = col.label ?? ''
+  deleteConfirm.value = { col: col, label: label || 'this column' }
 }
 
 async function doDeleteColumn() {
@@ -1087,16 +1151,18 @@ watch([subjectId, termId], () => {
 
 /* ─── Table ────────────────────────────────────────────────────────── */
 .sheet-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   width: max-content;
   min-width: 100%;
   font-size: 0.8rem;
 }
 
 /* ─── Header ───────────────────────────────────────────────────────── */
-.sheet-table thead { position: sticky; top: 0; z-index: 10; }
-
-.cell-header {
+.sheet-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   padding: 5px 8px;
@@ -1105,35 +1171,60 @@ watch([subjectId, termId], () => {
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: #475569;
-  position: sticky;
-  top: 0;
-  z-index: 10;
   text-align: left;
   white-space: nowrap;
   min-width: 80px;
   user-select: none;
 }
 
+/* Corner cells (intersection of header row and frozen columns) need highest z-index */
+.sheet-table thead th.cell-frozen {
+  z-index: 30;
+  background: #f1f5f9;
+}
+
+/* ─── Frozen Columns ────────────────────────────────────────────────── */
 .cell-frozen {
   position: sticky;
   z-index: 20;
   background: #f1f5f9;
 }
 
-.row-num-header, .row-num { left: 0; width: 36px; min-width: 36px; max-width: 36px; text-align: center; z-index: 30; }
-.student-name-header, .cell-student-name { left: 36px; min-width: 160px; z-index: 25; }
-.student-id-header, .cell-student-id { left: 196px; min-width: 90px; z-index: 25; }
+/* Row number column (#) - leftmost frozen column */
+.row-num-header, .row-num { 
+  left: 0; 
+  width: 36px; 
+  min-width: 36px; 
+  max-width: 36px; 
+  text-align: center; 
+}
+
+/* Student Name column - second frozen column */
+.student-name-header, .cell-student-name { 
+  left: 36px; 
+  min-width: 160px; 
+}
+
+/* Student ID column - third frozen column */
+.student-id-header, .cell-student-id { 
+  left: 196px; 
+  min-width: 90px; 
+}
 
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  min-height: 40px;
+  width: 100%;
 }
 
 .column-header-content {
   flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
 }
 
 .column-label {
@@ -1141,6 +1232,8 @@ watch([subjectId, termId], () => {
   text-overflow: ellipsis;
   cursor: pointer;
   font-size: 0.68rem;
+  text-align: center;
+  width: 100%;
 }
 
 .column-type-badge {
@@ -1160,13 +1253,18 @@ watch([subjectId, termId], () => {
 .col-type-final .column-type-badge { background: #fee2e2; color: #dc2626; }
 
 .column-actions {
-  display: none;
+  display: flex;
   gap: 2px;
   margin-top: 2px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  justify-content: center;
 }
 
 .cell-header:hover .column-actions {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
 }
 
 .col-action-btn {
@@ -1191,6 +1289,11 @@ watch([subjectId, termId], () => {
 
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
+
+/* Ensure frozen cells maintain background when scrolling */
+.cell-frozen.cell-total, .cell-frozen.cell-grade {
+  background: #fafafa;
+}
 
 /* ─── Cells ────────────────────────────────────────────────────────── */
 .cell {
@@ -1260,7 +1363,7 @@ watch([subjectId, termId], () => {
 /* ─── Row States ───────────────────────────────────────────────────── */
 .row-even .cell { background-color: #fafafa; }
 .row-selected .cell { background-color: #f0f4ff; }
-.row-selected .cell.frozen { background-color: #e8effb; }
+.row-selected .cell.cell-frozen { background-color: #e8effb; }
 
 /* ─── Grade Colors ─────────────────────────────────────────────────── */
 .grade-a { color: #16a34a !important; font-weight: 700 !important; }
