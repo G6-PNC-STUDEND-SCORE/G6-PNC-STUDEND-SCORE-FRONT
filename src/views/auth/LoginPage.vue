@@ -25,11 +25,7 @@
           <span>{{ auth.error }}</span>
         </div>
 
-        <!-- Success alert -->
-        <div v-if="loginSuccess" class="alert-custom alert-success">
-          <i class="bi bi-check-circle-fill"></i>
-          <span>Login successful! Welcome back.</span>
-        </div>
+
 
         <!-- Login form -->
         <form @submit.prevent="onSubmit" class="login-form">
@@ -91,7 +87,7 @@
           <button
             type="submit"
             class="btn-submit"
-            :disabled="auth.loading || loginSuccess"
+            :disabled="auth.loading"
           >
             <template v-if="auth.loading">
               <span class="spinner"></span>
@@ -161,16 +157,13 @@ const auth = useAuthStore()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
-const loginSuccess = ref(false)
 const googleButtonRef = ref<HTMLElement | null>(null)
 let retryTimeout: ReturnType<typeof setTimeout> | undefined
 
 async function onSubmit() {
   const success = await auth.login(email.value, password.value)
   if (success) {
-    await new Promise(resolve => setTimeout(resolve, 1000))
     await router.push('/dashboard')
-    loginSuccess.value = false
   }
 }
 

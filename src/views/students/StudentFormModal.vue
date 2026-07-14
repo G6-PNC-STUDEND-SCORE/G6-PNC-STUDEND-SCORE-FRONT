@@ -89,6 +89,45 @@
                 </div>
               </div>
 
+              <!-- Email (Create mode only) -->
+              <div v-if="!isEdit" class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-envelope-fill me-1"></i>
+                  Email Address
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    :value="email"
+                    @input="$emit('update:email', ($event.target as HTMLInputElement).value)"
+                    type="email"
+                    class="modern-input"
+                    placeholder="student@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Password (Create mode only) -->
+              <div v-if="!isEdit" class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-lock-fill me-1"></i>
+                  Password
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    :value="password"
+                    @input="$emit('update:password', ($event.target as HTMLInputElement).value)"
+                    type="password"
+                    class="modern-input"
+                    placeholder="Min. 8 characters"
+                    required
+                    minlength="8"
+                  />
+                </div>
+              </div>
+
+
+
               <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
@@ -222,6 +261,9 @@ const props = defineProps<{
   submitting: boolean
   error: string | null
   existingPhotoUrl?: string | null
+  // Create-only fields
+  email?: string
+  password?: string
 }>()
 
 const emit = defineEmits<{
@@ -233,6 +275,8 @@ const emit = defineEmits<{
   'update:status': [value: 'active' | 'inactive']
   'update:photo': [file: File | null]
   'remove-photo': []
+  'update:email': [value: string]
+  'update:password': [value: string]
 }>()
 
 const photoPreview = ref<string | null>(null)

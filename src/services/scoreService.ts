@@ -20,6 +20,7 @@ export interface SpreadsheetRow {
   total: number | null
   grade: string | null
   details: Record<number, number | null>
+  detail_ids: Record<number, number | null>  // Canonical col ID -> actual detail ID for this student
 }
 
 export interface AssessmentTypeWeight {

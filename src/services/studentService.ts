@@ -73,17 +73,13 @@ export async function getStudent(id: number): Promise<StudentResponse> {
 }
 
 export async function createStudent(data: {
-  user_id: number
-  student_number: string
-  intake_year: number
-  sequence_number: number
-  name?: string
+  name: string
+  email: string
+  password: string
   gender?: string
   status?: string
   generation_id?: number | null
   class_id?: number | null
-  academic_year_id?: number | null
-  enrollment_date?: string | null
 }): Promise<StudentResponse> {
   const res = await http.post<StudentResponse>('/students', data)
   return res.data
