@@ -49,16 +49,13 @@ export function useStudents() {
   const genderFilter = ref('')
 
   const initialCreateForm = () => ({
-    user_id: 0,
-    student_number: '',
-    intake_year: new Date().getFullYear(),
-    sequence_number: 0,
     name: '',
+    email: '',
+    password: '',
     gender: 'Male' as 'Male' | 'Female',
     status: 'active' as 'active' | 'inactive',
     class_id: null as number | null,
-    academic_year_id: null as number | null,
-    enrollment_date: null as string | null,
+    generation_id: null as number | null,
   })
 
   const createForm = ref(initialCreateForm())
@@ -171,8 +168,16 @@ export function useStudents() {
   }
 
   async function handleCreate() {
-    if (!createForm.value.student_number.trim()) {
-      formError.value = 'Student number is required'
+    if (!createForm.value.name.trim()) {
+      formError.value = 'Student name is required'
+      return
+    }
+    if (!createForm.value.email.trim()) {
+      formError.value = 'Email address is required'
+      return
+    }
+    if (!createForm.value.password || createForm.value.password.length < 8) {
+      formError.value = 'Password must be at least 8 characters'
       return
     }
     formSubmitting.value = true

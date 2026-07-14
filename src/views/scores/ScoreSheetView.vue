@@ -140,7 +140,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header"><h5>Rename Column</h5><button class="modal-close" @click="renamingColumn = null">&times;</button></div>
         <div class="modal-body">
-          <div class="form-group"><label>New Label</label><input v-model="renameValue" class="form-input" ref="renameInput" @keydown.enter="doRenameColumn" /></div>
+          <div class="form-group"><label>New Label</label><input v-model="renameValue" class="form-input" ref="renameInput" @keydown.enter="doRenameColumn" @keydown.esc="renamingColumn = null" /></div>
         </div>
         <div class="modal-footer"><button class="btn btn-secondary" @click="renamingColumn = null">Cancel</button><button class="btn btn-primary" @click="doRenameColumn">Rename</button></div>
       </div>
@@ -257,8 +257,10 @@ const editingCol = ref<number | null>(null)   // col detailId being edited
 const editValue = ref('')
 const cellEditor = ref<HTMLInputElement | null>(null)
 
-// Prevents blur-triggered saveEdit from cancelling the new cell during keyboard navigation
-let keyboardNavGuard = false
+// Helper: given a canonical column ID and a row, return the ACTUAL detail ID for that student
+function getActualDetailId(detailId: number, row: SpreadsheetRow): number {
+  return row.detail_ids?.[detailId] ?? detailId
+}
 
 // ─── Modal State ─────────────────────────────────────────────────────
 const showAddColumn = ref(false)
@@ -266,6 +268,7 @@ const showWeights = ref(false)
 const showImport = ref(false)
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
+const renameInput = ref<HTMLInputElement | null>(null)
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
 
 // ─── Form State ──────────────────────────────────────────────────────
@@ -377,9 +380,6 @@ function focusCell(rowIdx: number, colId: number) {
 }
 
 function startEditing(rowIdx: number, detailId: number) {
-  // Safety: always clear the navigation guard when entering edit mode
-  keyboardNavGuard = false
-  
   // Don't edit if columns not loaded or invalid column
   if (!columns.value.length) return
   if (detailId <= 0) return
@@ -408,9 +408,6 @@ function startEditing(rowIdx: number, detailId: number) {
 }
 
 function saveEdit() {
-  // If a keyboard-navigation blur fires from the old removed input,
-  // ignore it — the new cell's startEditing has already set up state
-  if (keyboardNavGuard) return
   if (editingRow.value === null || editingCol.value === null) return
 
   const filteredRow = filteredRows.value[editingRow.value]
@@ -435,6 +432,9 @@ function saveEdit() {
   // Update local state immediately
   actualRow.details[detailId] = newValue
 
+  // Get the ACTUAL detail ID for this specific student (not the canonical column ID)
+  const actualDetailId = getActualDetailId(detailId, actualRow)
+
   // Save to undo stack
   undoStack.value.push({ enrollmentId: filteredRow.enrollment_id, detailId, oldValue })
   redoStack.value = []
@@ -443,8 +443,8 @@ function saveEdit() {
   cancelEdit()
   showSaveStatus('saving')
 
-  // Save to backend
-  updateCellMark(subjectId.value, termId.value, detailId, newValue)
+  // Save to backend using the actual detail ID for this student
+  updateCellMark(subjectId.value, termId.value, actualDetailId, newValue)
     .then(() => {
       showSaveStatus('saved')
       // Don't refresh data immediately - it causes the row to jump
@@ -486,6 +486,16 @@ function recalculateRowTotal(row: SpreadsheetRow) {
   row.grade = total >= 90 ? 'A' : total >= 80 ? 'B+' : total >= 75 ? 'B' : total >= 70 ? 'C+' : total >= 60 ? 'C' : total >= 50 ? 'D' : 'F'
 }
 
+// Refocus the sheet container after any keyboard action that exits editing,
+// so keydown events (@keydown="onGlobalKeydown") continue to be caught.
+function refocusSheet() {
+  nextTick(() => {
+    if (sheetContainer.value) {
+      sheetContainer.value.focus()
+    }
+  })
+}
+
 function cancelEdit() {
   editingRow.value = null
   editingCol.value = null
@@ -497,6 +507,13 @@ function onGlobalKeydown(event: KeyboardEvent) {
   // If editing, handle edit keys
   if (editingRow.value !== null && editingCol.value !== null) {
     onEditKeydown(event)
+    // Catch printable characters that arrive before the input element has
+    // rendered (in the gap between startEditing() setting state and the
+    // nextTick that creates/focuses the input). The input's @keydown.stop
+    // prevents this from double-firing when the input IS focused.
+    if (!event.defaultPrevented && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      editValue.value += event.key
+    }
     return
   }
 
@@ -513,10 +530,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
       if (currentRow < filteredRows.value.length - 1) {
         selectedRowIndex.value = currentRow + 1
         scrollToCell(currentRow + 1, currentColIdx)
-        // Auto-edit instantly — startEditing has its own nextTick for focus
-        if (selectedCol.value && selectedCol.value > 0) {
-          startEditing(selectedRowIndex.value, selectedCol.value)
-        }
       }
       break
     case 'ArrowUp':
@@ -524,10 +537,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
       if (currentRow > 0) {
         selectedRowIndex.value = currentRow - 1
         scrollToCell(currentRow - 1, currentColIdx)
-        // Auto-edit instantly — startEditing has its own nextTick for focus
-        if (selectedCol.value && selectedCol.value > 0) {
-          startEditing(selectedRowIndex.value, selectedCol.value)
-        }
       }
       break
     case 'ArrowLeft':
@@ -536,10 +545,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
         currentColIdx--
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
-        // Auto-edit instantly — startEditing has its own nextTick for focus
-        if (selectedCol.value && selectedCol.value > 0) {
-          startEditing(selectedRowIndex.value, selectedCol.value)
-        }
       }
       break
     case 'ArrowRight':
@@ -548,10 +553,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
         currentColIdx++
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
-        // Auto-edit instantly — startEditing has its own nextTick for focus
-        if (selectedCol.value && selectedCol.value > 0) {
-          startEditing(selectedRowIndex.value, selectedCol.value)
-        }
       }
       break
     case 'Tab':
@@ -578,22 +579,15 @@ function onGlobalKeydown(event: KeyboardEvent) {
         }
       }
       scrollToCell(currentRow, currentColIdx)
-      // Auto-edit instantly — startEditing has its own nextTick for focus
+      // Tab in navigation mode: start editing on the moved-to cell
       if (selectedCol.value && selectedCol.value > 0) {
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
       break
     case 'Enter':
       event.preventDefault()
-      // Move down and auto-edit
-      if (currentRow < filteredRows.value.length - 1) {
-        selectedRowIndex.value = currentRow + 1
-        scrollToCell(currentRow + 1, currentColIdx)
-        if (selectedCol.value && selectedCol.value > 0) {
-          startEditing(selectedRowIndex.value, selectedCol.value)
-        }
-      } else if (selectedCol.value && selectedCol.value > 0) {
-        // At last row, just start editing
+      // Enter in navigation mode: start editing the selected cell
+      if (selectedCol.value && selectedCol.value > 0) {
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
       break
@@ -613,11 +607,13 @@ function onGlobalKeydown(event: KeyboardEvent) {
           if (oldValue !== null) {
             // Clear cell
             const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-            if (actualRow) actualRow.details[selectedCol.value] = null
+            if (!actualRow) break
+            actualRow.details[selectedCol.value] = null
+            const actualDetailId = getActualDetailId(selectedCol.value, actualRow)
             undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
             redoStack.value = []
             showSaveStatus('saving')
-            updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
+            updateCellMark(subjectId.value, termId.value, actualDetailId, null)
               .then(() => { showSaveStatus('saved'); refreshData() })
               .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value] = oldValue })
           }
@@ -639,157 +635,104 @@ function onGlobalKeydown(event: KeyboardEvent) {
         redo()
       }
       break
+    default:
+      // Printable character pressed on a selected cell → auto-start editing
+      // with that character (like Google Sheets: select + type = edit)
+      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault()
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+          // Replace the pre-filled existing value with the pressed key
+          editValue.value = event.key
+          // Position cursor at end so the next character appends (not replaces)
+          nextTick(() => {
+            if (cellEditor.value) {
+              const len = editValue.value.length
+              cellEditor.value.setSelectionRange(len, len)
+            }
+          })
+        }
+      }
+      break
   }
 }
 
 function onEditKeydown(event: KeyboardEvent) {
+  // Helper: save the current cell and move the selection to (targetRow, targetColId).
+  // The target cell is selected (blue outline) but NOT auto-opened for editing.
+  // Typing a number will start editing (handled by onGlobalKeydown's default case).
+  // The blur event from the old input fires after Vue re-renders (microtask),
+  // but by then editValue already matches the new cell's existing value, so
+  // saveEdit() returns early (oldValue === newValue) — no double-save issues.
+  function navigateAfterSave(targetRow: number, targetColId: number | null) {
+    saveEdit()
+    selectedRowIndex.value = Math.max(0, Math.min(targetRow, filteredRows.value.length - 1))
+    if (targetColId && targetColId > 0) {
+      selectedCol.value = targetColId
+    }
+    const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
+    scrollToCell(selectedRowIndex.value, Math.max(0, colIdx))
+    // Refocus sheet container so keyboard events continue to work
+    refocusSheet()
+  }
+
   switch (event.key) {
     case 'Enter':
       event.preventDefault()
-      saveEdit()
-      // Guard against blur event from old input being removed
-      keyboardNavGuard = true
-      // Move to cell below
-      {
-        const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
-        if (selectedRowIndex.value < filteredRows.value.length - 1) {
-          selectedRowIndex.value++
-        }
-        if (selectedCol.value && selectedCol.value > 0) {
-          scrollToCell(selectedRowIndex.value, colIdx)
-          nextTick(() => {
-            startEditing(selectedRowIndex.value, selectedCol.value)
-            keyboardNavGuard = false
-          })
-        } else {
-          keyboardNavGuard = false
-        }
-      }
+      // Save + select the cell below
+      navigateAfterSave(selectedRowIndex.value + 1, selectedCol.value)
       break
     case 'Tab':
       event.preventDefault()
-      saveEdit()
-      // Guard against blur event from old input being removed
-      keyboardNavGuard = true
       if (event.shiftKey) {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
         if (idx > 0) {
-          selectedCol.value = cols[idx - 1].id
+          navigateAfterSave(selectedRowIndex.value, cols[idx - 1].id)
         } else if (selectedRowIndex.value > 0) {
-          selectedRowIndex.value--
-          selectedCol.value = cols[cols.length - 1].id
+          navigateAfterSave(selectedRowIndex.value - 1, cols[cols.length - 1]?.id ?? null)
         }
       } else {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
         if (idx < cols.length - 1) {
-          selectedCol.value = cols[idx + 1].id
+          navigateAfterSave(selectedRowIndex.value, cols[idx + 1].id)
         } else if (selectedRowIndex.value < filteredRows.value.length - 1) {
-          selectedRowIndex.value++
-          selectedCol.value = cols[0].id
+          navigateAfterSave(selectedRowIndex.value + 1, cols[0]?.id ?? null)
         }
-      }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => {
-          startEditing(selectedRowIndex.value, selectedCol.value)
-          keyboardNavGuard = false
-        })
-      } else {
-        keyboardNavGuard = false
       }
       break
     case 'Escape':
       event.preventDefault()
       cancelEdit()
+      // Refocus sheet container for keyboard navigation
+      refocusSheet()
       break
     case 'ArrowUp':
       event.preventDefault()
-      saveEdit()
-      // Guard against blur event from old input being removed
-      keyboardNavGuard = true
-      {
-        const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
-        if (selectedRowIndex.value > 0) {
-          selectedRowIndex.value--
-        }
-        if (selectedCol.value && selectedCol.value > 0) {
-          scrollToCell(selectedRowIndex.value, colIdx)
-          nextTick(() => {
-            startEditing(selectedRowIndex.value, selectedCol.value)
-            keyboardNavGuard = false
-          })
-        } else {
-          keyboardNavGuard = false
-        }
-      }
+      navigateAfterSave(selectedRowIndex.value - 1, selectedCol.value)
       break
     case 'ArrowDown':
       event.preventDefault()
-      saveEdit()
-      // Guard against blur event from old input being removed
-      keyboardNavGuard = true
-      {
-        const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
-        if (selectedRowIndex.value < filteredRows.value.length - 1) {
-          selectedRowIndex.value++
-        }
-        if (selectedCol.value && selectedCol.value > 0) {
-          scrollToCell(selectedRowIndex.value, colIdx)
-          nextTick(() => {
-            startEditing(selectedRowIndex.value, selectedCol.value)
-            keyboardNavGuard = false
-          })
-        } else {
-          keyboardNavGuard = false
-        }
-      }
+      navigateAfterSave(selectedRowIndex.value + 1, selectedCol.value)
       break
     case 'ArrowLeft':
       event.preventDefault()
-      saveEdit()
-      // Guard against blur event from old input being removed
-      keyboardNavGuard = true
       {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
         if (idx > 0) {
-          selectedCol.value = cols[idx - 1].id
-          if (selectedCol.value && selectedCol.value > 0) {
-            scrollToCell(selectedRowIndex.value, idx - 1)
-            nextTick(() => {
-              startEditing(selectedRowIndex.value, selectedCol.value)
-              keyboardNavGuard = false
-            })
-          } else {
-            keyboardNavGuard = false
-          }
-        } else {
-          keyboardNavGuard = false
+          navigateAfterSave(selectedRowIndex.value, cols[idx - 1].id)
         }
       }
       break
     case 'ArrowRight':
       event.preventDefault()
-      saveEdit()
-      // Guard against blur event from old input being removed
-      keyboardNavGuard = true
       {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
         if (idx < cols.length - 1) {
-          selectedCol.value = cols[idx + 1].id
-          if (selectedCol.value && selectedCol.value > 0) {
-            scrollToCell(selectedRowIndex.value, idx + 1)
-            nextTick(() => {
-              startEditing(selectedRowIndex.value, selectedCol.value)
-              keyboardNavGuard = false
-            })
-          } else {
-            keyboardNavGuard = false
-          }
-        } else {
-          keyboardNavGuard = false
+          navigateAfterSave(selectedRowIndex.value, cols[idx + 1].id)
         }
       }
       break
@@ -808,7 +751,7 @@ function scrollToCell(rowIdx: number, colIdx: number) {
   // Scroll to keep the row visible vertically
   const rowCells = container.querySelectorAll('tbody tr')
   if (rowCells[rowIdx]) {
-    rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'auto' })
   }
 
   // Scroll to keep the column visible horizontally
@@ -816,7 +759,7 @@ function scrollToCell(rowIdx: number, colIdx: number) {
     const scoreCells = rowCells[rowIdx].querySelectorAll('.cell-score')
     const targetCell = scoreCells[colIdx] as HTMLElement | undefined
     if (targetCell) {
-      targetCell.scrollIntoView({ inline: 'nearest', behavior: 'smooth' })
+      targetCell.scrollIntoView({ inline: 'nearest', behavior: 'auto' })
     }
   }
 }
@@ -830,7 +773,8 @@ function undo() {
   row.details[action.detailId] = action.oldValue
   redoStack.value.push(action)
 
-  updateCellMark(subjectId.value, termId.value, action.detailId, action.oldValue)
+  const actualDetailId = getActualDetailId(action.detailId, row)
+  updateCellMark(subjectId.value, termId.value, actualDetailId, action.oldValue)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -845,7 +789,8 @@ function redo() {
   const current = row.details[action.detailId]
   row.details[action.detailId] = current === null ? action.oldValue : null
 
-  updateCellMark(subjectId.value, termId.value, action.detailId, row.details[action.detailId])
+  const actualDetailId = getActualDetailId(action.detailId, row)
+  updateCellMark(subjectId.value, termId.value, actualDetailId, row.details[action.detailId])
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -876,8 +821,10 @@ function startRenameColumn(col: SpreadsheetColumn) {
   renamingColumn.value = col
   renameValue.value = col.label
   nextTick(() => {
-    const input = document.querySelector('.modal-overlay .form-input') as HTMLInputElement
-    if (input) input.focus()
+    if (renameInput.value) {
+      renameInput.value.focus()
+      renameInput.value.setSelectionRange(0, renameInput.value.value.length)
+    }
   })
 }
 
@@ -1042,8 +989,9 @@ onMounted(() => {
   refreshData()
   // Focus the sheet container for keyboard events
   nextTick(() => {
-    const container = document.querySelector('.sheet-wrapper') as HTMLElement
-    if (container) container.focus()
+    if (sheetContainer.value) {
+      sheetContainer.value.focus()
+    }
   })
 })
 
