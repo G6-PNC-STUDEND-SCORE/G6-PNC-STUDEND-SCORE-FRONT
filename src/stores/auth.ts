@@ -28,15 +28,15 @@ export const useAuthStore = defineStore('auth', () => {
     if (token.value) {
       setAuthToken(token.value)
       // Try to load the user profile in the background.
+      // Return a promise so main.ts can await it before mounting the app.
       // Failure here won't log the user out — the 401 interceptor on axios
       // will handle truly invalid tokens when real API calls are made.
-      void me()
-        .then((response) => {
-          user.value = response.user as User
-        })
-        .catch(() => {
-          console.warn('Auth init: could not verify token with /user endpoint, proceeding anyway')
-        })
+      try {
+        const response = await me()
+        user.value = response.user as User
+      } catch {
+        console.warn('Auth init: could not verify token with /user endpoint, proceeding anyway')
+      }
     }
   }
 

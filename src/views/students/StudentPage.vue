@@ -58,6 +58,8 @@
       :show="showCreateModal"
       :is-edit="false"
       :name="createForm.name"
+      :email="createForm.email"
+      :password="createForm.password"
       :gender="createForm.gender"
       :class-id="createForm.class_id"
       :status="createForm.status"
@@ -67,6 +69,8 @@
       @close="closeCreateModal"
       @submit="handleCreate"
       @update:name="createForm.name = $event"
+      @update:email="createForm.email = $event"
+      @update:password="createForm.password = $event"
       @update:gender="createForm.gender = $event"
       @update:class-id="createForm.class_id = $event"
       @update:status="createForm.status = $event"
@@ -167,6 +171,10 @@ const {
   createForm,
   editForm,
   assignForm,
+  // Photo state
+  existingPhotoUrl,
+  onEditPhotoSelected,
+  onEditRemovePhoto,
   // Other data
   classes,
   // Computed
