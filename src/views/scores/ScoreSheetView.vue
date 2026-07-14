@@ -36,9 +36,6 @@
           <button class="tb-btn" @click="exportCSV" title="Export CSV">
             <i class="bi bi-download"></i> <span>Export</span>
           </button>
-          <button class="tb-btn" @click="refreshData" title="Refresh">
-            <i class="bi bi-arrow-clockwise" :class="{ spinning: loading }"></i>
-          </button>
         </div>
         <div class="search-box">
           <i class="bi bi-search"></i>
