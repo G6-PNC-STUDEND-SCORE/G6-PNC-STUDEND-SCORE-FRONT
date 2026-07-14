@@ -109,12 +109,14 @@
                   <input
                     ref="cellEditor"
                     v-model="editValue"
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputmode="decimal"
                     class="cell-editor"
-                    @keydown="onEditKeydown"
+                    @keydown.stop="onEditKeydown"
                     @blur="saveEdit()"
                     @input="onEditInput"
+                    @focus="selectCellText($event)"
+                    @mouseup.prevent="selectCellText($event)"
                   />
                 </div>
                 <span v-else class="cell-value" :title="getCellTitle(col, row)">{{ formatCellValue(getCellMark(row, col.id)) }}</span>
@@ -255,6 +257,9 @@ const editingCol = ref<number | null>(null)   // col detailId being edited
 const editValue = ref('')
 const cellEditor = ref<HTMLInputElement | null>(null)
 
+// Prevents blur-triggered saveEdit from cancelling the new cell during keyboard navigation
+let keyboardNavGuard = false
+
 // ─── Modal State ─────────────────────────────────────────────────────
 const showAddColumn = ref(false)
 const showWeights = ref(false)
@@ -326,6 +331,13 @@ const saveStatusText = computed(() => ({
 }[saveStatus.value]))
 
 // ─── Helper Functions ────────────────────────────────────────────────
+function selectCellText(event: FocusEvent | MouseEvent) {
+  const input = event.target as HTMLInputElement
+  // Use setSelectionRange which is more reliable than .select() across browsers
+  const len = input.value.length
+  input.setSelectionRange(0, len)
+}
+
 function getCellMark(row: SpreadsheetRow, detailId: number): number | null {
   const m = row.details[detailId]
   return m !== undefined ? m : null
@@ -365,6 +377,9 @@ function focusCell(rowIdx: number, colId: number) {
 }
 
 function startEditing(rowIdx: number, detailId: number) {
+  // Safety: always clear the navigation guard when entering edit mode
+  keyboardNavGuard = false
+  
   // Don't edit if columns not loaded or invalid column
   if (!columns.value.length) return
   if (detailId <= 0) return
@@ -374,24 +389,28 @@ function startEditing(rowIdx: number, detailId: number) {
   const row = filteredRows.value[rowIdx]
   if (!row) return
 
-  const oldValue = getCellMark(row, detailId)
-  
   // Use the filtered row index for editing
+  const oldValue = getCellMark(row, detailId)
   editingRow.value = rowIdx
   editingCol.value = detailId
   selectedRowIndex.value = rowIdx
   selectedCol.value = detailId
+  // Show the existing value — it will be auto-selected via @focus so typing replaces it
   editValue.value = oldValue !== null ? String(oldValue) : ''
 
   nextTick(() => {
     if (cellEditor.value) {
       cellEditor.value.focus()
-      cellEditor.value.select()
+      // setSelectionRange is more reliable than .select() across browsers
+      cellEditor.value.setSelectionRange(0, cellEditor.value.value.length)
     }
   })
 }
 
 function saveEdit() {
+  // If a keyboard-navigation blur fires from the old removed input,
+  // ignore it — the new cell's startEditing has already set up state
+  if (keyboardNavGuard) return
   if (editingRow.value === null || editingCol.value === null) return
 
   const filteredRow = filteredRows.value[editingRow.value]
@@ -494,6 +513,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
       if (currentRow < filteredRows.value.length - 1) {
         selectedRowIndex.value = currentRow + 1
         scrollToCell(currentRow + 1, currentColIdx)
+        // Auto-edit instantly — startEditing has its own nextTick for focus
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+        }
       }
       break
     case 'ArrowUp':
@@ -501,6 +524,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
       if (currentRow > 0) {
         selectedRowIndex.value = currentRow - 1
         scrollToCell(currentRow - 1, currentColIdx)
+        // Auto-edit instantly — startEditing has its own nextTick for focus
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+        }
       }
       break
     case 'ArrowLeft':
@@ -509,6 +536,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
         currentColIdx--
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
+        // Auto-edit instantly — startEditing has its own nextTick for focus
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+        }
       }
       break
     case 'ArrowRight':
@@ -517,6 +548,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
         currentColIdx++
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
+        // Auto-edit instantly — startEditing has its own nextTick for focus
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+        }
       }
       break
     case 'Tab':
@@ -543,10 +578,22 @@ function onGlobalKeydown(event: KeyboardEvent) {
         }
       }
       scrollToCell(currentRow, currentColIdx)
+      // Auto-edit instantly — startEditing has its own nextTick for focus
+      if (selectedCol.value && selectedCol.value > 0) {
+        startEditing(selectedRowIndex.value, selectedCol.value)
+      }
       break
     case 'Enter':
       event.preventDefault()
-      if (selectedCol.value && selectedCol.value > 0) {
+      // Move down and auto-edit
+      if (currentRow < filteredRows.value.length - 1) {
+        selectedRowIndex.value = currentRow + 1
+        scrollToCell(currentRow + 1, currentColIdx)
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+        }
+      } else if (selectedCol.value && selectedCol.value > 0) {
+        // At last row, just start editing
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
       break
@@ -600,17 +647,30 @@ function onEditKeydown(event: KeyboardEvent) {
     case 'Enter':
       event.preventDefault()
       saveEdit()
+      // Guard against blur event from old input being removed
+      keyboardNavGuard = true
       // Move to cell below
-      if (selectedRowIndex.value < filteredRows.value.length - 1) {
-        selectedRowIndex.value++
-      }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      {
+        const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
+        if (selectedRowIndex.value < filteredRows.value.length - 1) {
+          selectedRowIndex.value++
+        }
+        if (selectedCol.value && selectedCol.value > 0) {
+          scrollToCell(selectedRowIndex.value, colIdx)
+          nextTick(() => {
+            startEditing(selectedRowIndex.value, selectedCol.value)
+            keyboardNavGuard = false
+          })
+        } else {
+          keyboardNavGuard = false
+        }
       }
       break
     case 'Tab':
       event.preventDefault()
       saveEdit()
+      // Guard against blur event from old input being removed
+      keyboardNavGuard = true
       if (event.shiftKey) {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
@@ -631,7 +691,12 @@ function onEditKeydown(event: KeyboardEvent) {
         }
       }
       if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+        nextTick(() => {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+          keyboardNavGuard = false
+        })
+      } else {
+        keyboardNavGuard = false
       }
       break
     case 'Escape':
@@ -641,21 +706,91 @@ function onEditKeydown(event: KeyboardEvent) {
     case 'ArrowUp':
       event.preventDefault()
       saveEdit()
-      if (selectedRowIndex.value > 0) {
-        selectedRowIndex.value--
-      }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      // Guard against blur event from old input being removed
+      keyboardNavGuard = true
+      {
+        const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
+        if (selectedRowIndex.value > 0) {
+          selectedRowIndex.value--
+        }
+        if (selectedCol.value && selectedCol.value > 0) {
+          scrollToCell(selectedRowIndex.value, colIdx)
+          nextTick(() => {
+            startEditing(selectedRowIndex.value, selectedCol.value)
+            keyboardNavGuard = false
+          })
+        } else {
+          keyboardNavGuard = false
+        }
       }
       break
     case 'ArrowDown':
       event.preventDefault()
       saveEdit()
-      if (selectedRowIndex.value < filteredRows.value.length - 1) {
-        selectedRowIndex.value++
+      // Guard against blur event from old input being removed
+      keyboardNavGuard = true
+      {
+        const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
+        if (selectedRowIndex.value < filteredRows.value.length - 1) {
+          selectedRowIndex.value++
+        }
+        if (selectedCol.value && selectedCol.value > 0) {
+          scrollToCell(selectedRowIndex.value, colIdx)
+          nextTick(() => {
+            startEditing(selectedRowIndex.value, selectedCol.value)
+            keyboardNavGuard = false
+          })
+        } else {
+          keyboardNavGuard = false
+        }
       }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      saveEdit()
+      // Guard against blur event from old input being removed
+      keyboardNavGuard = true
+      {
+        const cols = columns.value
+        const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
+        if (idx > 0) {
+          selectedCol.value = cols[idx - 1].id
+          if (selectedCol.value && selectedCol.value > 0) {
+            scrollToCell(selectedRowIndex.value, idx - 1)
+            nextTick(() => {
+              startEditing(selectedRowIndex.value, selectedCol.value)
+              keyboardNavGuard = false
+            })
+          } else {
+            keyboardNavGuard = false
+          }
+        } else {
+          keyboardNavGuard = false
+        }
+      }
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      saveEdit()
+      // Guard against blur event from old input being removed
+      keyboardNavGuard = true
+      {
+        const cols = columns.value
+        const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
+        if (idx < cols.length - 1) {
+          selectedCol.value = cols[idx + 1].id
+          if (selectedCol.value && selectedCol.value > 0) {
+            scrollToCell(selectedRowIndex.value, idx + 1)
+            nextTick(() => {
+              startEditing(selectedRowIndex.value, selectedCol.value)
+              keyboardNavGuard = false
+            })
+          } else {
+            keyboardNavGuard = false
+          }
+        } else {
+          keyboardNavGuard = false
+        }
       }
       break
   }
@@ -669,11 +804,20 @@ function scrollToCell(rowIdx: number, colIdx: number) {
   // Scroll the container to keep the focused cell visible
   const container = sheetContainer.value?.querySelector('.sheet-scroll')
   if (!container) return
-  const cells = container.querySelectorAll('.cell-score')
-  // Simplified: just scroll to the row
+
+  // Scroll to keep the row visible vertically
   const rowCells = container.querySelectorAll('tbody tr')
   if (rowCells[rowIdx]) {
     rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }
+
+  // Scroll to keep the column visible horizontally
+  if (colIdx >= 0 && rowCells[rowIdx]) {
+    const scoreCells = rowCells[rowIdx].querySelectorAll('.cell-score')
+    const targetCell = scoreCells[colIdx] as HTMLElement | undefined
+    if (targetCell) {
+      targetCell.scrollIntoView({ inline: 'nearest', behavior: 'smooth' })
+    }
   }
 }
 
@@ -719,6 +863,10 @@ async function refreshData() {
     // Reset selection
     selectedRowIndex.value = 0
     selectedCol.value = columns.value.length > 0 ? columns.value[0].id : null
+    // Auto-start editing the very first cell so you can type immediately
+    if (selectedCol.value && selectedCol.value > 0 && filteredRows.value.length > 0) {
+      nextTick(() => startEditing(0, selectedCol.value!))
+    }
   } catch { showSaveStatus('failed') }
   finally { loading.value = false }
 }
@@ -1214,12 +1362,14 @@ watch([subjectId, termId], () => {
   background: #f8fafc;
 }
 
+/* ─── Cell Selection Animation ───────────────────────────────────── */
 .cell-selected {
   outline: 2px solid #3b82f6;
   outline-offset: -1px;
   background: #eff6ff !important;
   z-index: 5;
   position: relative;
+  animation: cell-select-pop 0.15s ease-out;
 }
 
 .cell-editing {
@@ -1228,6 +1378,20 @@ watch([subjectId, termId], () => {
   outline-offset: -1px;
   z-index: 5;
   position: relative;
+  animation: cell-select-pop 0.15s ease-out;
+}
+
+@keyframes cell-select-pop {
+  0% {
+    outline-width: 4px;
+    outline-color: #60a5fa;
+    transform: scale(1.02);
+  }
+  100% {
+    outline-width: 2px;
+    outline-color: #3b82f6;
+    transform: scale(1);
+  }
 }
 
 /* ─── Cell Colors ──────────────────────────────────────────────────── */

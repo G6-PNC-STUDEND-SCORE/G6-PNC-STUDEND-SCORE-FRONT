@@ -23,6 +23,54 @@
                 {{ error }}
               </div>
 
+              <!-- Profile Photo (Edit mode only) -->
+              <div v-if="isEdit" class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-camera-fill me-1"></i>
+                  Profile Photo
+                </label>
+                <div class="photo-upload-area">
+                  <!-- Preview -->
+                  <div class="photo-preview-wrapper">
+                    <div v-if="photoPreview" class="photo-preview">
+                      <img :src="photoPreview" alt="Preview" class="preview-img" />
+                    </div>
+                    <div v-else-if="existingPhotoUrl" class="photo-preview">
+                      <img :src="existingPhotoUrl" alt="Current photo" class="preview-img" />
+                    </div>
+                    <div v-else class="photo-placeholder">
+                      <i class="bi bi-person-fill"></i>
+                    </div>
+                  </div>
+                  <div class="photo-actions">
+                    <label class="photo-upload-btn">
+                      <i class="bi bi-cloud-arrow-up me-1"></i>
+                      {{ existingPhotoUrl || photoPreview ? 'Change Photo' : 'Upload Photo' }}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                        class="visually-hidden"
+                        @change="onPhotoSelected"
+                      />
+                    </label>
+                    <button
+                      v-if="existingPhotoUrl || photoPreview"
+                      type="button"
+                      class="photo-remove-btn"
+                      @click="onRemovePhoto"
+                    >
+                      <i class="bi bi-trash3 me-1"></i>
+                      Remove
+                    </button>
+                  </div>
+                  <p v-if="photoError" class="photo-error">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    {{ photoError }}
+                  </p>
+                  <p v-else class="photo-hint">JPEG, PNG, JPG, GIF, or WebP. Max 2MB.</p>
+                </div>
+              </div>
+
               <!-- Full Name -->
               <div class="form-group">
                 <label class="form-label">
@@ -160,9 +208,10 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { SchoolClass } from '@/services/studentService'
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   isEdit: boolean
   name: string
@@ -172,16 +221,77 @@ defineProps<{
   classes: SchoolClass[]
   submitting: boolean
   error: string | null
+  existingPhotoUrl?: string | null
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   submit: []
   'update:name': [value: string]
   'update:gender': [value: 'Male' | 'Female']
   'update:classId': [value: number | null]
   'update:status': [value: 'active' | 'inactive']
+  'update:photo': [file: File | null]
+  'remove-photo': []
 }>()
+
+const photoPreview = ref<string | null>(null)
+const photoError = ref<string | null>(null)
+
+// Reset photo preview when modal opens
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    photoPreview.value = null
+    photoError.value = null
+  }
+})
+
+// Watch for existingPhotoUrl changes (when editing different students)
+watch(() => props.existingPhotoUrl, () => {
+  photoPreview.value = null
+  photoError.value = null
+})
+
+function onPhotoSelected(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  const file = target.files[0]
+  photoError.value = null
+
+  // Validate file type (extra client-side validation)
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    photoError.value = 'Invalid file type. Allowed: JPEG, PNG, JPG, GIF, WebP.'
+    target.value = ''
+    return
+  }
+
+  // Validate file size (max 2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    photoError.value = 'File is too large. Maximum size is 2MB.'
+    target.value = ''
+    return
+  }
+
+  // Create preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    photoPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+
+  emit('update:photo', file)
+
+  // Reset input so the same file can be re-selected
+  target.value = ''
+}
+
+function onRemovePhoto() {
+  photoPreview.value = null
+  photoError.value = null
+  emit('remove-photo')
+}
 </script>
 
 <style scoped>
@@ -534,6 +644,122 @@ select.modern-input {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* ==================== Photo Upload ==================== */
+.photo-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1.5px dashed #d1d5db;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.photo-upload-area:hover {
+  border-color: #93c5fd;
+  background: #f0f5ff;
+}
+
+.photo-preview-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  color: #94a3b8;
+  font-size: 2rem;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.photo-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.photo-upload-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.photo-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.photo-remove-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
+}
+
+.photo-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+  text-align: center;
+}
+
+.photo-error {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin: 0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ==================== Transitions ==================== */

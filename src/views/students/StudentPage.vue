@@ -83,12 +83,15 @@
       :classes="classes"
       :submitting="formSubmitting"
       :error="formError"
+      :existing-photo-url="existingPhotoUrl"
       @close="closeEditModal"
       @submit="handleEdit"
       @update:name="editForm.name = $event"
       @update:gender="editForm.gender = $event"
       @update:class-id="editForm.class_id = $event"
       @update:status="editForm.status = $event"
+      @update:photo="onEditPhotoSelected"
+      @remove-photo="onEditRemovePhoto"
     />
 
     <!-- Delete Modal -->
