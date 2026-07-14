@@ -20,7 +20,6 @@
         </div>
       </div>
 
-      <!-- Subjects grid -->
       <div v-if="loading" class="loading-state">
         <div class="spinner-sm"></div>
         <span>Loading subjects...</span>
@@ -92,7 +91,6 @@ const filteredSubjects = computed(() => {
 })
 
 function goToSheet(subject: SubjectItem) {
-  // Go to the first term available
   if (subject.terms.length > 0) {
     const firstTerm = subject.terms[0]
     if (firstTerm) {
