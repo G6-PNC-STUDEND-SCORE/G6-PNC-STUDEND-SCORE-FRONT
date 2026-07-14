@@ -1,93 +1,134 @@
-import { http } from './apiHttp'
+import { http } from './api'
 
-export interface ScoreDetail {
+export interface SpreadsheetColumn {
   id: number
   score_id: number
-  type: 'quiz' | 'assignment' | 'midterm' | 'final'
   label: string
-  mark: number | null
-  max_score?: number | null
-  order_number?: number | null
-  created_at: string
-  updated_at: string
+  type: string
+  order_number: number
+  max_score: number | null
+  assessment_type_id: number
 }
 
-export interface Score {
-  id: number
-  student_subject_enrollment_id: number
+export interface SpreadsheetRow {
+  enrollment_id: number
+  score_id: number | null
+  student_id: number
+  student_name: string
+  student_number: string
+  offering_id: number
   total: number | null
   grade: string | null
-  remarks: string | null
-  created_at: string
-  updated_at: string
-  enrollment?: {
-    id: number
-    student_id: number
-    subject_offering_id: number
-    student?: {
-      id: number
-      user?: {
-        id: number
-        name: string
-      }
-    } | null
-    subject_offering?: {
-      id: number
-      subject_id: number
-      class_id: number
-      generation_id: number
-      term_id: number
-      subject?: {
-        id: number
-        name: string
-      } | null
-      term?: {
-        id: number
-        name: string
-      } | null
-    } | null
-  } | null
-  details?: ScoreDetail[]
+  details: Record<number, number | null>
 }
 
-export interface Subject {
+export interface AssessmentTypeWeight {
+  id: number
+  code: string
+  name: string
+  weight_percent: number
+}
+
+export interface SubjectTerm {
+  term_id: number
+  term_name: string
+  teachers: string[]
+  classes: string[]
+  offering_ids: number[]
+  enrollment_count: number
+}
+
+export interface SubjectItem {
   id: number
   name: string
+  code: string
+  terms: SubjectTerm[]
 }
 
-export interface Term {
-  id: number
+export interface SpreadsheetResponse {
+  subject: { id: number; name: string; subject_code: string }
+  term: { id: number; name: string }
+  offerings: Array<{ teacher_name: string; class_name: string }>
+  columns: SpreadsheetColumn[]
+  rows: SpreadsheetRow[]
+  assessment_types: AssessmentTypeWeight[]
+}
+
+export interface SubjectsResponse {
+  subjects: SubjectItem[]
+  terms: Array<{ id: number; name: string }>
+}
+
+export async function getSpreadsheetSubjects(): Promise<SubjectsResponse> {
+  const res = await http.get('/spreadsheet/subjects')
+  return res.data.data
+}
+
+export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number): Promise<SpreadsheetResponse> {
+  const res = await http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
+  return res.data.data
+}
+
+export async function updateCellMark(subjectId: number, termId: number, detailId: number, mark: number | null): Promise<void> {
+  await http.put(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}`, { mark })
+}
+
+export async function renameColumn(subjectId: number, termId: number, detailId: number, label: string): Promise<void> {
+  await http.patch(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}/rename`, { label })
+}
+
+export async function addColumn(subjectId: number, termId: number, data: {
+  type: string
+  label: string
+  max_score?: number | null
+  order_number?: number
+}): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/details`, data)
+}
+
+export async function deleteColumn(subjectId: number, termId: number, detailId: number): Promise<void> {
+  await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}`)
+}
+
+export async function reorderColumns(subjectId: number, termId: number, columns: { id: number; order_number: number }[]): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/reorder`, { columns })
+}
+
+export async function updateWeights(weights: { id: number; weight_percent: number }[]): Promise<void> {
+  await http.put('/spreadsheet/weights', { weights })
+}
+
+export async function syncToGoogleSheets(subjectId: number, termId: number): Promise<{
+  csv_content: string
+  google_sheets_url: string
+  download_url: string
+}> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/sync-google`)
+  return res.data.data
+}
+
+export async function createGoogleSheet(subjectId: number, termId: number, accessToken: string): Promise<{
+  spreadsheet_id: string
+  url: string
   name: string
+}> {
+  const res = await http.post('/google-sheets/create', {
+    subject_id: subjectId,
+    term_id: termId,
+    access_token: accessToken,
+  })
+  return res.data.data
 }
 
-export const scoreService = {
-  async getAll(params?: {
-    student_id?: number
-    subject_offering_id?: number
-  }): Promise<Score[]> {
-    const response = await http.get('/scores', { params })
-    return Array.isArray(response.data) ? response.data : response.data.data
-  },
+export async function importFromGoogleSheets(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<void> {
+  await http.post('/google-sheets/import', {
+    subject_id: subjectId,
+    term_id: termId,
+    spreadsheet_id: spreadsheetId,
+    access_token: accessToken,
+  })
+}
 
-  async getOne(id: number): Promise<Score> {
-    const response = await http.get(`/scores/${id}`)
-    return response.data.data || response.data
-  },
-
-  async getByEnrollment(enrollmentId: number): Promise<Score | null> {
-    const response = await http.get(`/scores/by-enrollment/${enrollmentId}`)
-    return response.data.data || response.data
-  },
-
-  async getSubjects(): Promise<Subject[]> {
-    const response = await http.get('/subjects')
-    const data = response.data
-    return data.data || data
-  },
-
-  async getTerms(): Promise<Term[]> {
-    const response = await http.get('/terms')
-    const data = response.data
-    return data.data || data
-  },
+export async function importFromGoogleSheetsCSV(subjectId: number, termId: number, csvContent: string): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
 }
