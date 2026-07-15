@@ -346,10 +346,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 import { useDashboardStore } from '@/stores/dashboard'
 import Header from '@/layouts/Header.vue'
+import KpiCard from '@/components/KpiCard.vue'
+import FilterBar from '@/components/FilterBar.vue'
+import EChart from '@/components/EChart.vue'
+import DataTable from '@/components/DataTable.vue'
+import type { EChartsOption } from 'echarts'
+import type {
+  RecentAcademicActivity,
+  RecentReportCard,
+  RecentTranscript,
+  TopStudent,
+  LowestPerformingSubject
+} from '@/types/dashboard'
 
 const theme = useThemeStore()
 const dashboard = useDashboardStore()
@@ -626,11 +638,21 @@ const lowestSubjectsChartOption = computed<EChartsOption>(() => {
 // ── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(() => {
   dashboard.initialize()
+  updateLastUpdated()
+  lastUpdatedTimer = setInterval(updateLastUpdated, 30000)
 })
 
 onUnmounted(() => {
-  // Cleanup if needed
+  if (lastUpdatedTimer) {
+    clearInterval(lastUpdatedTimer)
+    lastUpdatedTimer = null
+  }
 })
+
+function updateLastUpdated() {
+  const now = new Date()
+  lastUpdated.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
 </script>
 
 <style scoped>
@@ -1020,3 +1042,4 @@ onUnmounted(() => {
   .welcome-content { flex-wrap: wrap; }
 }
 </style>
+

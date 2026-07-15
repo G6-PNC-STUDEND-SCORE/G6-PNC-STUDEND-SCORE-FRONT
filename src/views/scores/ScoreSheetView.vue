@@ -215,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   getSpreadsheetBySubjectAndTerm,
@@ -268,10 +268,10 @@ const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number 
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
 
-// ─── Undo/Redo ───────────────────────────────────────────────────────
-const maxUndo = 50
-const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
-const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
+  // ─── Undo/Redo ───────────────────────────────────────────────────────
+  const maxUndo = 50
+  const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null; newValue: number | null }>>([])
+  const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null; newValue: number | null }>>([])
 
 // ─── Computed ────────────────────────────────────────────────────────
 const columns = computed(() => data.value?.columns || [])
@@ -302,7 +302,7 @@ const topStudent = computed(() => {
   return sorted.length ? sorted[0].student_name : '-'
 })
 
-const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + (v || 0), 0))
+const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + (v || 0), 0) as number)
 
 const saveStatusClass = computed(() => ({
   'status-saving': saveStatus.value === 'saving',
@@ -320,8 +320,8 @@ const saveStatusIcon = computed(() => ({
 
 const saveStatusText = computed(() => ({
   saving: 'Saving...',
-  saved: 'Saved',
-  failed: 'Failed',
+  saved: 'Saved ✓',
+  failed: 'Failed ✗',
   idle: '',
 }[saveStatus.value]))
 
@@ -417,7 +417,7 @@ function saveEdit() {
   actualRow.details[detailId] = newValue
 
   // Save to undo stack
-  undoStack.value.push({ enrollmentId: filteredRow.enrollment_id, detailId, oldValue })
+  undoStack.value.push({ enrollmentId: filteredRow.enrollment_id, detailId, oldValue, newValue })
   redoStack.value = []
   if (undoStack.value.length > maxUndo) undoStack.value.shift()
 
@@ -567,7 +567,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
             // Clear cell
             const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
             if (actualRow) actualRow.details[selectedCol.value] = null
-            undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
+            undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue, newValue: null })
             redoStack.value = []
             showSaveStatus('saving')
             updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
@@ -658,6 +658,21 @@ function onEditKeydown(event: KeyboardEvent) {
         nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
       }
       break
+    case 'z':
+    case 'Z':
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault()
+        if (event.shiftKey) redo()
+        else undo()
+      }
+      break
+    case 'y':
+    case 'Y':
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault()
+        redo()
+      }
+      break
   }
 }
 
@@ -667,12 +682,10 @@ function onEditInput() {
 
 function scrollToCell(rowIdx: number, colIdx: number) {
   // Scroll the container to keep the focused cell visible
-  const container = sheetContainer.value?.querySelector('.sheet-scroll')
-  if (!container) return
-  const cells = container.querySelectorAll('.cell-score')
-  // Simplified: just scroll to the row
-  const rowCells = container.querySelectorAll('tbody tr')
-  if (rowCells[rowIdx]) {
+  const scrollEl = sheetContainer.value?.querySelector('.sheet-scroll')
+  if (!scrollEl) return
+  const rowCells = scrollEl.querySelectorAll('tbody tr')
+  if (rowIdx >= 0 && rowIdx < rowCells.length) {
     rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }
 }
@@ -695,13 +708,11 @@ function redo() {
   const action = redoStack.value.pop()
   if (!action) return
   undoStack.value.push(action)
-  // Toggle: redo sets to opposite of what was undone (null -> oldValue or oldValue -> null)
   const row = rows.value.find(r => r.enrollment_id === action.enrollmentId)
   if (!row) return
-  const current = row.details[action.detailId]
-  row.details[action.detailId] = current === null ? action.oldValue : null
+  row.details[action.detailId] = action.newValue
 
-  updateCellMark(subjectId.value, termId.value, action.detailId, row.details[action.detailId])
+  updateCellMark(subjectId.value, termId.value, action.detailId, action.newValue)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -892,6 +903,8 @@ function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
 // ─── Lifecycle ───────────────────────────────────────────────────────
 onMounted(() => {
   refreshData()
+  // Add global keyboard listener for undo/redo (works even when input is focused)
+  window.addEventListener('keydown', handleGlobalUndoRedo)
   // Focus the sheet container for keyboard events
   nextTick(() => {
     const container = document.querySelector('.sheet-wrapper') as HTMLElement
@@ -899,9 +912,47 @@ onMounted(() => {
   })
 })
 
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleGlobalUndoRedo)
+})
+
 watch([subjectId, termId], () => {
   if (subjectId.value && termId.value) refreshData()
 })
+
+// ─── Global Undo/Redo Handler ────────────────────────────────────────
+function handleGlobalUndoRedo(event: KeyboardEvent) {
+  // Only handle Ctrl+Z/Y, let other keys pass through
+  if (!event.ctrlKey && !event.metaKey) return
+  if (event.key !== 'z' && event.key !== 'Z' && event.key !== 'y' && event.key !== 'Y') return
+  
+  // Don't trigger if user is typing in an input/textarea (except our cell editor)
+  const target = event.target as HTMLElement
+  const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT'
+  
+  // Skip if typing in any input (let the input handle it normally)
+  if (isInput) return
+  
+  // Check if the event originated from within the sheet component
+  // If yes, skip and let the component's onGlobalKeydown handle it
+  const sheetWrapper = sheetContainer.value
+  if (sheetWrapper && sheetWrapper.contains(target)) return
+  
+  // Event is from outside the sheet (e.g., search box, other page elements)
+  // Prevent browser's native undo/redo and handle it ourselves
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation()
+  
+  // Small delay to ensure browser doesn't process it
+  setTimeout(() => {
+    if (event.key === 'y' || event.key === 'Y' || (event.key === 'z' && event.shiftKey)) {
+      redo()
+    } else {
+      undo()
+    }
+  }, 0)
+}
 </script>
 
 <style scoped>
