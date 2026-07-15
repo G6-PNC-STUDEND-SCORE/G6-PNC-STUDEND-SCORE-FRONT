@@ -1109,7 +1109,7 @@ watch([subjectId, termId], () => {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
-  min-width: 120px;
+  min-width: 220px;
 }
 
 .search-box input {
@@ -1117,7 +1117,7 @@ watch([subjectId, termId], () => {
   background: transparent;
   outline: none;
   font-size: 0.78rem;
-  width: 100px;
+  width: 200px;
   color: #1e293b;
 }
 

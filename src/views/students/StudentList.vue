@@ -345,8 +345,8 @@ defineEmits<{
 
 .search-box {
   position: relative;
-  flex: 1 1 260px;
-  max-width: 340px;
+  flex: 1 1 320px;
+  max-width: 520px;
 }
 
 .search-icon {
