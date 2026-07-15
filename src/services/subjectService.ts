@@ -30,9 +30,11 @@ export interface Subject {
   id: number
   subject_code?: string
   name: string
-  teacher_id?: number | null
-  class_id?: number | null
-  status: 'Active' | 'Inactive'
+  code?: string
+  credit_hours?: number
+  is_active: 'Active' | 'Inactive'
+  description?: string
+  image?: string
   created_at?: string
   updated_at?: string
   teacher?: {
@@ -47,14 +49,22 @@ export interface Subject {
     name: string
   } | null
   offerings?: SubjectOffering[]
+  quiz_weight?: number
+  assignment_weight?: number
+  midterm_weight?: number
+  final_weight?: number
 }
 
 export interface SubjectPayload {
   subject_code?: string
   name: string
-  teacher_id: number | null
-  class_id: number | null
-  status: 'Active' | 'Inactive'
+  teacher_id?: number | null
+  class_id?: number | null
+  status?: 'Active' | 'Inactive'
+  quiz_weight?: number
+  assignment_weight?: number
+  midterm_weight?: number
+  final_weight?: number
 }
 
 export interface SubjectResponse {
