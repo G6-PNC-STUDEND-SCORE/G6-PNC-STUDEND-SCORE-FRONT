@@ -199,10 +199,9 @@ import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/ser
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/api'
 
-// ── Module-level profile cache ──
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
-const PROFILE_CACHE_TTL = 30_000 // 30 seconds
+const PROFILE_CACHE_TTL = 30_000
 
 function isProfileCacheStale(): boolean {
   return Date.now() - profileCacheTime > PROFILE_CACHE_TTL
@@ -529,7 +528,6 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
-/* Profile Card */
 .profile-card {
   max-width: 1200px;
   margin: 0 auto 28px;
@@ -649,7 +647,6 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* Bottom */
 .content-grid {
   max-width: 1200px;
   margin: 0 auto;
