@@ -1,7 +1,7 @@
 <template>
   <div class="app-layout">
     <Navigation v-if="showSidebar" />
-    <div class="content-wrapper" :class="{ 'with-sidebar': showSidebar }">
+    <div class="content-wrapper" :class="{ 'with-sidebar': showSidebar }" :style="showSidebar ? { marginLeft: sidebarMargin } : {}">
       <Header v-if="showSidebar" />
       <main class="main-content">
         <router-view />
@@ -13,13 +13,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useSidebarStore } from './stores/sidebar'
 import Navigation from './components/Navigation.vue'
 import Header from './layouts/Header.vue'
 
 const route = useRoute()
+const sidebar = useSidebarStore()
 
 const publicPages = ['login']
 const showSidebar = computed(() => !publicPages.includes(String(route.name)))
+
+const sidebarMargin = computed(() =>
+  sidebar.collapsed ? sidebar.SIDEBAR_COLLAPSED_WIDTH + 'px' : sidebar.SIDEBAR_WIDTH + 'px'
+)
 </script>
 
 <style>
@@ -43,11 +49,9 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.content-wrapper.with-sidebar {
-  margin-left: 220px;
-}
 
 .main-content {
   flex: 1;
