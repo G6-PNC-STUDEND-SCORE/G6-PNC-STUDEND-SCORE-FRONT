@@ -23,6 +23,27 @@
                 {{ error }}
               </div>
 
+              <!-- Student Number (read-only) -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-upc-scan me-1"></i>
+                  Student Number
+                </label>
+                <div class="input-wrapper">
+                  <div class="student-number-display">
+                    <template v-if="isEdit && studentNumber">
+                      <span class="sn-badge">{{ studentNumber }}</span>
+                    </template>
+                    <template v-else-if="isEdit">
+                      <span class="sn-empty">Not assigned yet</span>
+                    </template>
+                    <template v-else>
+                      <span class="sn-auto">Auto-generated after creation</span>
+                    </template>
+                  </div>
+                </div>
+              </div>
+
               <!-- Full Name -->
               <div class="form-group">
                 <label class="form-label">
@@ -41,10 +62,65 @@
                 </div>
               </div>
 
+              <!-- Email -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-envelope-fill me-1"></i>
+                  Email
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    :value="email"
+                    @input="$emit('update:email', ($event.target as HTMLInputElement).value)"
+                    type="email"
+                    class="modern-input"
+                    placeholder="e.g. john.smith@student.edu"
+                    :required="!isEdit"
+                  />
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-lock-fill me-1"></i>
+                  {{ isEdit ? 'New Password (leave blank to keep current)' : 'Password' }}
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    :value="password"
+                    @input="$emit('update:password', ($event.target as HTMLInputElement).value)"
+                    type="password"
+                    class="modern-input"
+                    placeholder="Min. 6 characters"
+                    :required="!isEdit"
+                    minlength="6"
+                  />
+                </div>
+              </div>
+
+              <!-- Generation -->
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-calendar-event-fill me-1"></i>
+                  Generation
+                </label>
+                <div class="input-wrapper">
+                  <select
+                    :value="generationId"
+                    @change="$emit('update:generationId', ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+                    class="modern-input"
+                  >
+                    <option :value="null as any">— Select generation —</option>
+                    <option v-for="gen in generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
+                  </select>
+                </div>
+              </div>
+
               <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-gender-ambiguous me-1"></i>
+                  <i class="bi bi-person-heart me-1"></i>
                   Gender
                 </label>
                 <div class="gender-toggle">
@@ -80,7 +156,7 @@
               <!-- Class -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-building me-1"></i>
+                  <i class="bi bi-mortarboard-fill me-1"></i>
                   Assign to Class
                 </label>
                 <div class="input-wrapper">
@@ -160,16 +236,21 @@
 </template>
 
 <script setup lang="ts">
-import type { SchoolClass } from '@/services/studentService'
+import type { SchoolClass, Generation } from '@/services/studentService'
 
 defineProps<{
   show: boolean
   isEdit: boolean
+  studentNumber: string
   name: string
+  email: string
+  password: string
   gender: 'Male' | 'Female'
+  generationId: number | null
   classId: number | null
   status: 'active' | 'inactive'
   classes: SchoolClass[]
+  generations: Generation[]
   submitting: boolean
   error: string | null
 }>()
@@ -178,7 +259,10 @@ defineEmits<{
   close: []
   submit: []
   'update:name': [value: string]
+  'update:email': [value: string]
+  'update:password': [value: string]
   'update:gender': [value: 'Male' | 'Female']
+  'update:generationId': [value: number | null]
   'update:classId': [value: number | null]
   'update:status': [value: 'active' | 'inactive']
 }>()
@@ -205,7 +289,7 @@ defineEmits<{
   max-width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px ba80px rgba(0, 0, 0, 0.2);
   animation: modalBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
@@ -469,6 +553,60 @@ select.modern-input {
 
 .status-text {
   font-size: 0.8125rem;
+}
+
+/* ==================== Student Number Display ==================== */
+.student-number-display {
+  padding: 0.65rem 0.875rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+.sn-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  color: #1e40af;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+.sn-empty {
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: #94a3b8;
+}
+
+.sn-auto {
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sn-auto::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
 /* ==================== Error Alert ==================== */

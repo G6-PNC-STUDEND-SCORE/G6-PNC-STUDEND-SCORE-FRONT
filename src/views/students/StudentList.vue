@@ -9,22 +9,26 @@
           @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
           type="text"
           class="search-input"
-          placeholder="Search by name..."
+          placeholder="Search by name, ID, class..."
         />
       </div>
 
       <div class="filter-group">
         <label class="filter-label">
-          <i class="bi bi-gender-ambiguous"></i>
-          <span>Gender</span>
+          <i class="bi bi-funnel-fill"></i>
+          <span>Filter</span>
           <select
-            :value="genderFilter"
-            @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
+            :value="combinedFilter"
+            @change="$emit('update:combinedFilter', ($event.target as HTMLSelectElement).value)"
             class="filter-select"
           >
             <option value="">All</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="male_active">Active Male</option>
+            <option value="male_inactive">Inactive Male</option>
+            <option value="female_active">Active Female</option>
+            <option value="female_inactive">Inactive Female</option>
           </select>
         </label>
       </div>
@@ -33,6 +37,30 @@
         {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
       </span>
     </div>
+
+    <!-- Bulk Action Bar -->
+    <Transition name="bulk-slide">
+      <div v-if="selectedIds.length > 0" class="bulk-bar">
+        <div class="bulk-left">
+          <div class="bulk-check-icon">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+          <span class="bulk-count">
+            <strong>{{ selectedIds.length }}</strong> student{{ selectedIds.length !== 1 ? 's' : '' }} selected
+          </span>
+        </div>
+        <div class="bulk-right">
+          <button class="bulk-btn bulk-delete" @click="handleBulkDeleteClick">
+            <i class="bi bi-trash3"></i>
+            <span>Delete Selected</span>
+          </button>
+          <button class="bulk-btn bulk-cancel" @click="clearSelection">
+            <i class="bi bi-x-lg"></i>
+            <span>Cancel</span>
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Table -->
     <div class="table-wrap">
@@ -61,14 +89,18 @@
           <tr v-if="students.length === 0">
               <td colspan="7" class="empty-state">
               <i class="bi bi-people fs-1 d-block mb-2"></i>
-              No students found
+              <span class="empty-text">No students found</span>
             </td>
           </tr>
           <tr
             v-for="student in paginatedStudents"
             :key="student.id"
             class="student-row"
-            :class="(student.user?.gender || '') === 'Male' ? 'row-male' : 'row-female'"
+            :class="{
+              'row-male': (student.user?.gender || '') === 'Male',
+              'row-female': (student.user?.gender || '') === 'Female',
+              'row-selected': selectedIds.includes(student.id)
+            }"
           >
             <td class="col-check">
               <input
@@ -79,13 +111,15 @@
                 :aria-label="`Select ${student.user?.name || student.id}`"
               />
             </td>
-            <td class="col-index">{{ student.id }}</td>
+            <td class="col-index">
+              <span class="id-label">#{{ student.id }}</span>
+            </td>
             <td>
-              <div class="student-cell">
-                <div class="avatar">
-                  {{ getInitials(student.user?.name || '') }}
-                </div>
+              <div class="student-info">
                 <span class="student-name">{{ student.user?.name }}</span>
+                <span v-if="student.studentNumberSequence?.student_number" class="student-number">
+                  {{ student.studentNumberSequence.student_number }}
+                </span>
               </div>
             </td>
             <td>
@@ -106,7 +140,7 @@
                 Not assigned
               </span>
             </td>
-            <td class="py-3">
+            <td>
               <span
                 class="status-badge"
                 :class="(student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'"
@@ -130,7 +164,7 @@
                       <span>View Details</span>
                     </button>
                     <button class="action-item edit" @click="$emit('edit', student); openDropdownId = null">
-                      <i class="bi bi-pencil"></i>
+                      <i class="bi bi-pencil-square"></i>
                       <span>Edit</span>
                     </button>
                     <button class="action-item assign" @click="$emit('assign', student); openDropdownId = null">
@@ -214,14 +248,13 @@ import type { Student } from '@/services/studentService'
 const openDropdownId = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
-const pageSizeOptions = [10, 25, 50]
+const pageSizeOptions = [10, 25]
 const selectedIds = ref<number[]>([])
 
 const props = defineProps<{
   students: Student[]
   searchQuery: string
-  genderFilter: string
-  getInitials: (name: string) => string
+  combinedFilter: string
 }>()
 
 const totalPages = computed(() => Math.max(1, Math.ceil(props.students.length / pageSize.value)))
@@ -287,6 +320,16 @@ function toggleDropdown(id: number) {
 }
 
 // Close dropdown when clicking outside
+function clearSelection() {
+  selectedIds.value = []
+}
+
+function handleBulkDeleteClick() {
+  const ids = [...selectedIds.value]
+  selectedIds.value = []
+  emit('deleteSelected', ids)
+}
+
 function handleClickOutside() {
   openDropdownId.value = null
 }
@@ -296,13 +339,14 @@ onUnmounted(() => {
   window.removeEventListener('click', handleClickOutside)
 })
 
-defineEmits<{
+const emit = defineEmits<{
   'update:searchQuery': [value: string]
-  'update:genderFilter': [value: string]
+  'update:combinedFilter': [value: string]
   view: [student: Student]
   edit: [student: Student]
   assign: [student: Student]
   delete: [student: Student]
+  deleteSelected: [ids: number[]]
 }>()
 </script>
 
@@ -445,9 +489,7 @@ defineEmits<{
 }
 
 .col-index {
-  width: 64px;
-  color: #94a3b8;
-  font-weight: 600;
+  width: 72px;
 }
 
 .col-check {
@@ -464,9 +506,10 @@ defineEmits<{
   vertical-align: middle;
 }
 
-.col-actions {
-  text-align: right;
-  padding-right: 20px !important;
+thead th.col-actions,
+tbody td.col-actions {
+  text-align: center;
+  width: 60px;
 }
 
 .col-check {
@@ -492,34 +535,39 @@ defineEmits<{
 
 .empty-state {
   text-align: center;
-  padding: 48px 16px !important;
-  color: #9ca3af;
+  padding: 56px 16px !important;
+  color: #94a3b8;
 }
 
-.student-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+.empty-text {
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .student-name {
   font-weight: 600;
   color: #0f172a;
+  line-height: 1.3;
+}
+
+.student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-number {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+
+.id-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
 }
 
 .class-cell {
@@ -527,6 +575,7 @@ defineEmits<{
   align-items: center;
   gap: 6px;
   color: #374151;
+  font-size: 0.8125rem;
 }
 
 .class-empty {
@@ -535,7 +584,103 @@ defineEmits<{
   gap: 6px;
   font-style: italic;
   color: #9ca3af;
+  font-size: 0.8125rem;
 }
+
+/* ==================== Bulk Action Bar ==================== */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border-bottom: 1px solid #bfdbfe;
+  gap: 12px;
+  flex-wrap: wrap;
+  animation: bulkFadeIn 0.25s ease-out;
+}
+
+@keyframes bulkFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-check-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.bulk-count {
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.bulk-count strong {
+  font-weight: 700;
+}
+
+.bulk-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bulk-delete {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.bulk-delete:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.bulk-cancel {
+  background: #fff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.bulk-cancel:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.bulk-slide-enter-active { transition: all 0.25s ease-out; }
+.bulk-slide-leave-active { transition: all 0.15s ease-in; }
+.bulk-slide-enter-from { opacity: 0; transform: translateY(-10px); }
+.bulk-slide-leave-to { opacity: 0; transform: translateY(-8px); }
 
 /* ==================== Rows ==================== */
 .student-row {
@@ -543,10 +688,19 @@ defineEmits<{
   border-left: 3px solid transparent;
 }
 
-.row-male:hover,
-.row-female:hover {
+.row-male:hover {
   background: #eff6ff;
-  border-left-color: #2563eb;
+  border-left-color: #3b82f6;
+}
+
+.row-female:hover {
+  background: #fdf2f8;
+  border-left-color: #ec4899;
+}
+
+.row-selected {
+  background: #eff6ff !important;
+  border-left-color: #2563eb !important;
 }
 
 /* ==================== Gender Badge ==================== */
@@ -582,6 +736,10 @@ defineEmits<{
 
 .badge-male::before {
   background: #3b82f6;
+}
+
+.badge-female::before {
+  background: #ec4899;
 }
 
 /* ==================== Status Badge ==================== */
@@ -631,36 +789,37 @@ defineEmits<{
 }
 
 .action-trigger {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  background: #f3f4f6;
-  color: #6b7280;
-  border-radius: 8px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #94a3b8;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 1rem;
+  font-size: 1.05rem;
 }
 
 .action-trigger:hover {
-  background: #eef2ff;
+  border-color: #bfdbfe;
+  background: #eff6ff;
   color: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
 }
 
 .action-menu {
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
-  min-width: 190px;
+  top: calc(100% + 8px);
+  min-width: 200px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-  padding: 6px;
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.14);
+  padding: 8px;
   z-index: 100;
   animation: dropIn 0.18s ease-out;
   transform-origin: top right;
@@ -697,10 +856,10 @@ defineEmits<{
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 500;
@@ -711,8 +870,8 @@ defineEmits<{
 }
 
 .action-item i {
-  font-size: 1rem;
-  width: 18px;
+  font-size: 1.05rem;
+  width: 20px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -740,7 +899,7 @@ defineEmits<{
 .dropdown-divider {
   height: 1px;
   background: #e5e7eb;
-  margin: 4px 8px;
+  margin: 6px 8px;
 }
 
 /* ==================== Pagination ==================== */
@@ -891,8 +1050,8 @@ defineEmits<{
 /* ==================== Responsive ==================== */
 @media (max-width: 768px) {
   .action-trigger {
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     font-size: 0.875rem;
   }
 

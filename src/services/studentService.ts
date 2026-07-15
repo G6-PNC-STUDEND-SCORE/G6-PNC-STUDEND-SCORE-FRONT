@@ -34,6 +34,7 @@ export interface Student {
   } | null
   generation?: {
     id: number
+    year?: number
     name: string
   } | null
   studentNumberSequence?: {
@@ -45,6 +46,12 @@ export interface Student {
 
 export interface SchoolClass {
   id: number
+  name: string
+}
+
+export interface Generation {
+  id: number
+  year: number
   name: string
 }
 
@@ -60,6 +67,11 @@ export interface ClassesResponse {
   classes: SchoolClass[]
 }
 
+export interface GenerationsResponse {
+  success: boolean
+  data: Generation[]
+}
+
 export async function getStudents(): Promise<StudentsResponse> {
   const res = await http.get<StudentsResponse>('/students')
   return res.data
@@ -70,18 +82,19 @@ export async function getStudent(id: number): Promise<StudentResponse> {
   return res.data
 }
 
+export async function getGenerations(): Promise<GenerationsResponse> {
+  const res = await http.get<GenerationsResponse>('/generations')
+  return res.data
+}
+
 export async function createStudent(data: {
-  user_id: number
-  student_number: string
-  intake_year: number
-  sequence_number: number
-  name?: string
+  name: string
+  email: string
+  password: string
   gender?: string
   status?: string
   generation_id?: number | null
   class_id?: number | null
-  academic_year_id?: number | null
-  enrollment_date?: string | null
 }): Promise<StudentResponse> {
   const res = await http.post<StudentResponse>('/students', data)
   return res.data
@@ -91,12 +104,12 @@ export async function updateStudent(
   id: number,
   data: {
     name?: string
+    email?: string
+    password?: string
     gender?: string
     status?: string
     generation_id?: number | null
     class_id?: number | null
-    academic_year_id?: number | null
-    enrollment_date?: string | null
   }
 ): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}`, data)
