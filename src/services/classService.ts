@@ -18,6 +18,13 @@ export interface SchoolClass {
     id: number
     name: string
   } | null
+  generation?: {
+    id: number
+    year: string
+    name: string
+  } | null
+  room?: string | null
+  students?: number | null
 }
 
 export interface ClassResponse {
@@ -27,9 +34,60 @@ export interface ClassResponse {
   errors?: Record<string, string[]>
 }
 
+export interface Teacher {
+  id: number
+  name: string
+}
+
 export const classService = {
   async getClasses(): Promise<ClassResponse> {
     const response = await http.get('/classes')
+    return response.data
+  },
+
+  async getTeachers(): Promise<ClassResponse> {
+    const response = await http.get('/teachers')
+    return response.data
+  },
+
+  async createClass(classData: {
+    name: string
+    generation: string
+    teacher_id: number | null
+    room: string
+    students: number
+    status: 'Active' | 'Inactive'
+  }): Promise<ClassResponse> {
+    const response = await http.post('/classes', {
+      name: classData.name,
+      generation_id: classData.generation ? parseInt(classData.generation) : null,
+      teacher_id: classData.teacher_id,
+      description: classData.room || null,
+      is_active: classData.status === 'Active',
+    })
+    return response.data
+  },
+
+  async updateClass(classId: number, classData: {
+    name: string
+    generation: string
+    teacher_id: number | null
+    room: string
+    students: number
+    status: 'Active' | 'Inactive'
+  }): Promise<ClassResponse> {
+    const response = await http.put(`/classes/${classId}`, {
+      name: classData.name,
+      generation_id: classData.generation ? parseInt(classData.generation) : null,
+      teacher_id: classData.teacher_id,
+      description: classData.room || null,
+      is_active: classData.status === 'Active',
+    })
+    return response.data
+  },
+
+  async deleteClass(classId: number): Promise<ClassResponse> {
+    const response = await http.delete(`/classes/${classId}`)
     return response.data
   },
 }
