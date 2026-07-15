@@ -1,0 +1,12 @@
+0000000000000000000000000000000000000000 1c81cb7a3c6a61899ee5f127fd9a9b2197d60751 Roeurn Rors <roeurngithub26@gmail.com> 1783645843 +0700	branch: Created from HEAD
+1c81cb7a3c6a61899ee5f127fd9a9b2197d60751 da5adff1d7dd8ea507f42c012e7ee003296fb4fb Roeurn Rors <roeurngithub26@gmail.com> 1783649986 +0700	commit (merge): fix: Update all migrations table
+da5adff1d7dd8ea507f42c012e7ee003296fb4fb 02e9741c0deaf3ace89a223b0405409a8faf7be3 Roeurn Rors <roeurngithub26@gmail.com> 1783684823 +0700	commit: Release version 1.0.0
+02e9741c0deaf3ace89a223b0405409a8faf7be3 025a259ec62ec9d52d3e5ed65b1487d213bc0b5d Roeurn Rors <roeurngithub26@gmail.com> 1783690934 +0700	commit: fix: students list and update seeder
+025a259ec62ec9d52d3e5ed65b1487d213bc0b5d f6cda29e8fc2ffd5509a09de196055e2258e57c5 Roeurn Rors <roeurngithub26@gmail.com> 1783776102 +0700	pull origin feature/login-page: Fast-forward
+f6cda29e8fc2ffd5509a09de196055e2258e57c5 f6cda29e8fc2ffd5509a09de196055e2258e57c5 Roeurn Rors <roeurngithub26@gmail.com> 1783912069 +0700	Branch: renamed refs/heads/fix to refs/heads/develop
+f6cda29e8fc2ffd5509a09de196055e2258e57c5 2f7a714627b59ef1f7770da653c5690dab9f8268 Roeurn Rors <roeurngithub26@gmail.com> 1783912099 +0700	commit: fix: Update migrations
+2f7a714627b59ef1f7770da653c5690dab9f8268 2c1eb90b613cd1068d971ef4929f858bd83ec17c Roeurn Rors <roeurngithub26@gmail.com> 1783916723 +0700	commit: fix: update migrations
+2c1eb90b613cd1068d971ef4929f858bd83ec17c 32672b057a18c85fc3ca3a2b2eb93855dfba4a4e Roeurn Rors <roeurngithub26@gmail.com> 1783993375 +0700	commit: merge resolve conflict
+32672b057a18c85fc3ca3a2b2eb93855dfba4a4e d943a862b0abdc33c51dcc418bf234b7adb9c2f0 Roeurn Rors <roeurngithub26@gmail.com> 1783993382 +0700	pull origin develop: Merge made by the 'ort' strategy.
+d943a862b0abdc33c51dcc418bf234b7adb9c2f0 785e007124ec190121647019bd0a9f41e0a12571 Roeurn Rors <roeurngithub26@gmail.com> 1784009248 +0700	commit: fix: Update relational and migrations
+785e007124ec190121647019bd0a9f41e0a12571 eaa2b4d567c81fc485078b741a5814c3e0de2608 Roeurn Rors <roeurngithub26@gmail.com> 1784022643 +0700	pull origin fix: Fast-forward

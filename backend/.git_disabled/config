@@ -1,0 +1,29 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[remote "origin"]
+	url = https://github.com/G6-PNC-STUDEND-SCORE/G6-PNC-STUDEND-SCORE-BACK.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+	vscode-merge-base = origin/main
+[branch "feature/login-page"]
+	vscode-merge-base = origin/develop
+	remote = origin
+	merge = refs/heads/feature/login-page
+[branch "develop"]
+	vscode-merge-base = origin/develop
+	vscode-merge-base = origin/main
+	remote = origin
+	merge = refs/heads/develop
+[branch "fix"]
+	remote = origin
+	merge = refs/heads/fix
+	vscode-merge-base = origin/fix
+[branch "feature/users"]
+	vscode-merge-base = origin/develop
