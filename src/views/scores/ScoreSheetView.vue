@@ -99,6 +99,7 @@
                 :class="{
                   'cell-editing': editingRow === rowIndex && editingCol === col.id,
                   'cell-selected': editingRow === null && selectedRowIndex === rowIndex && selectedCol === col.id,
+                  'cell-invalid': isCellInvalid(rowIndex, col.id),
                   'cell-excellent': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! >= 90,
                   'cell-average': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! >= 70 && getCellMark(row, col.id)! < 90,
                   'cell-low': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! < 70,
@@ -270,6 +271,24 @@ const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
+
+const invalidCells = reactive<Set<string>>(new Set())
+
+function markCellInvalid(rowIdx: number, colId: number) {
+  invalidCells.add(`${rowIdx}-${colId}`)
+}
+
+function markCellValid(rowIdx: number, colId: number) {
+  invalidCells.delete(`${rowIdx}-${colId}`)
+}
+
+function isCellInvalid(rowIdx: number, colId: number): boolean {
+  return invalidCells.has(`${rowIdx}-${colId}`)
+}
+
+function clearAllInvalid() {
+  invalidCells.clear()
+}
 
 const maxUndo = 50
 const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
@@ -488,6 +507,9 @@ function refocusSheet() {
 }
 
 function cancelEdit() {
+  if (editingRow.value !== null && editingCol.value !== null) {
+    markCellValid(editingRow.value, editingCol.value)
+  }
   editingRow.value = null
   editingCol.value = null
   editValue.value = ''
@@ -730,7 +752,35 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 
 function onEditInput() {
-  // Live validation could go here
+  if (editingRow.value === null || editingCol.value === null) return
+
+  let raw = editValue.value
+  let filtered = ''
+  let decimalSeen = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (ch >= '0' && ch <= '9') {
+      filtered += ch
+    } else if (ch === '.' && !decimalSeen) {
+      filtered += ch
+      decimalSeen = true
+    } else if (ch === '-' && filtered.length === 0) {
+      filtered += ch
+    }
+  }
+
+  if (filtered !== raw) {
+    editValue.value = filtered
+  }
+
+  const num = filtered === '' || filtered === '-' ? null : parseFloat(filtered)
+  if (num === null) {
+    markCellValid(editingRow.value, editingCol.value)
+  } else if (isNaN(num) || num < 0 || num > 100) {
+    markCellInvalid(editingRow.value, editingCol.value)
+  } else {
+    markCellValid(editingRow.value, editingCol.value)
+  }
 }
 
 function scrollToCell(rowIdx: number, colIdx: number) {
@@ -966,6 +1016,7 @@ function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
       if (saveStatus.value === status) saveStatus.value = 'idle'
     }, 3000)
   }
+  clearAllInvalid()
 }
 
 onMounted(() => {
@@ -1317,6 +1368,27 @@ watch([subjectId, termId], () => {
 .cell-excellent { background: #dcfce7 !important; color: #16a34a; font-weight: 600; }
 .cell-average { background: #fef9c3 !important; color: #b45309; }
 .cell-low { background: #fee2e2 !important; color: #dc2626; }
+
+.cell-invalid {
+  outline: 2px solid #dc2626 !important;
+  outline-offset: -1px;
+  background: #fef2f2 !important;
+  z-index: 6;
+  position: relative;
+  animation: cell-invalid-shake 0.3s ease-in-out;
+}
+
+.cell-invalid .cell-editor {
+  background: #fef2f2 !important;
+}
+
+@keyframes cell-invalid-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
 
 .cell-editor-wrapper { width: 100%; height: 100%; }
 
