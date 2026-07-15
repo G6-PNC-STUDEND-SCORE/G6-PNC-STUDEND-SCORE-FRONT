@@ -318,8 +318,15 @@ const passRate = computed(() => {
 })
 
 const topStudent = computed(() => {
-  const sorted = [...filteredRows.value].filter(r => r.total !== null).sort((a, b) => (b.total || 0) - (a.total || 0))
-  return sorted.length ? sorted[0].student_name : '-'
+  let top: { total: number; student_name: string } | null = null
+  for (const r of filteredRows.value) {
+    if (r.total === null) continue
+    const t = r.total || 0
+    if (!top || t > top.total) {
+      top = { total: t, student_name: r.student_name }
+    }
+  }
+  return top ? top.student_name : '-'
 })
 
 const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + (v || 0), 0))
