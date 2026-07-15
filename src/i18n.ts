@@ -2,7 +2,6 @@ import { createI18n } from 'vue-i18n'
 import en from './locales/en.json'
 import km from './locales/km.json'
 
-// Migrate 'kh' to 'km' if exists in localStorage
 const savedLang = localStorage.getItem('language')
 if (savedLang === 'kh') {
   localStorage.setItem('language', 'km')

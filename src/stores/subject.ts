@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { subjectService } from '@/services/subjectService'
 import type { Subject, SubjectPayload } from '@/services/subjectService'
 
-const CACHE_TTL = 30_000 // 30 seconds
+const CACHE_TTL = 30_000
 
 export const useSubjectStore = defineStore('subject', () => {
   const subjects = ref<Subject[]>([])

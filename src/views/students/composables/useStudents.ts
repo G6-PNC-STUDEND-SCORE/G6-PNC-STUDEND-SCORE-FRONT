@@ -14,19 +14,17 @@ import {
 
 import { classService } from '@/services/classService'
 
-// ── Module-level cache (shared across component instances) ──
 let cachedStudents: Student[] | null = null
 let cachedClasses: SchoolClass[] | null = null
 let studentCacheTime = 0
 let classCacheTime = 0
-const CACHE_TTL = 30_000 // 30 seconds
+const CACHE_TTL = 30_000
 
 function isCacheStale(cacheTime: number): boolean {
   return Date.now() - cacheTime > CACHE_TTL
 }
 
 export function useStudents() {
-  // ==================== Data ====================
   const students = ref<Student[]>(cachedStudents ?? [])
   const classes = ref<SchoolClass[]>(cachedClasses ?? [])
   const loading = ref(true)
@@ -37,7 +35,6 @@ export function useStudents() {
 
   const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-  // ==================== Modal State ====================
   const showCreateModal = ref(false)
   const showEditModal = ref(false)
   const showDeleteModal = ref(false)
@@ -45,7 +42,6 @@ export function useStudents() {
   const showDetailsModal = ref(false)
   const selectedStudent = ref<Student | null>(null)
 
-  // ==================== Form State ====================
   const genderFilter = ref('')
 
   const initialCreateForm = () => ({
@@ -73,7 +69,6 @@ export function useStudents() {
   
   const assignForm = ref({ class_id: null as number | null })
 
-  // ==================== Computed ====================
   const filteredStudents = computed(() => {
     return students.value.filter((s) => {
       const studentName = s.user?.name || ''
@@ -83,7 +78,6 @@ export function useStudents() {
     })
   })
 
-  // ==================== Helpers ====================
   function getInitials(name: string): string {
     const safeName = name || ''
     const parts = safeName.split(' ').filter(Boolean)
@@ -108,7 +102,6 @@ export function useStudents() {
     setTimeout(() => { toast.value.show = false }, 3000)
   }
 
-  // ==================== API Calls with Cache ====================
   async function loadStudents() {
     if (cachedStudents && !isCacheStale(studentCacheTime)) {
       students.value = cachedStudents
@@ -141,7 +134,7 @@ export function useStudents() {
         classes.value = cachedClasses
       }
     } catch {
-      // Silently fail
+      // Non-critical; silently ignore
     }
   }
 
@@ -150,13 +143,11 @@ export function useStudents() {
     await Promise.all([loadStudents(), loadClasses()])
   }
 
-  // Invalidate cache on mutations so next visit re-fetches
   function invalidateStudentCache() {
     cachedStudents = null
     studentCacheTime = 0
   }
 
-  // ==================== Create ====================
   function openCreateModal() {
     createForm.value = initialCreateForm()
     formError.value = null
@@ -196,11 +187,9 @@ export function useStudents() {
     }
   }
 
-  // ==================== Photo ====================
   const photoFile = ref<File | null>(null)
   const removePhotoFlag = ref(false)
 
-  // ==================== Edit ====================
   function openEditModal(student: Student) {
     selectedStudent.value = student
     editForm.value = {
@@ -239,11 +228,9 @@ export function useStudents() {
     formSubmitting.value = true
     formError.value = null
     try {
-      // Update student info first
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
       let updatedStudent = res.student
 
-      // Upload photo if selected
       if (photoFile.value) {
         const photoRes = await uploadStudentPhoto(selectedStudent.value.id, photoFile.value)
         updatedStudent = photoRes.student
@@ -265,7 +252,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== Delete ====================
   function openDeleteModal(student: Student) {
     selectedStudent.value = student
     showDeleteModal.value = true
@@ -293,7 +279,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== Assign ====================
   function openAssignModal(student: Student) {
     selectedStudent.value = student
     assignForm.value = { class_id: student.class_id ?? null }
@@ -323,7 +308,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== View Details ====================
   function viewDetails(student: Student) {
     selectedStudent.value = student
     showDetailsModal.value = true
@@ -334,9 +318,7 @@ export function useStudents() {
     selectedStudent.value = null
   }
 
-  // ==================== Return ====================
   return {
-    // Data
     students,
     classes,
     loading,
@@ -345,27 +327,22 @@ export function useStudents() {
     formSubmitting,
     formError,
     toast,
-    // Modal state
     showCreateModal,
     showEditModal,
     showDeleteModal,
     showAssignModal,
     showDetailsModal,
     selectedStudent,
-    // Form state
     genderFilter,
     createForm,
     editForm,
     assignForm,
     photoFile,
     existingPhotoUrl: computed(() => selectedStudent.value?.profile_photo_url ?? null),
-    // Computed
     filteredStudents,
-    // Helpers
     getInitials,
     formatDate,
     showToast,
-    // Actions
     init,
     invalidateStudentCache,
     openCreateModal,
