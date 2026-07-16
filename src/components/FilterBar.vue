@@ -2,7 +2,6 @@
   <div :class="['filter-bar', 'card', 'border-0', { 'dark-mode': isDark }]">
     <div class="card-body py-2 px-3">
       <div class="d-flex flex-wrap align-items-center gap-2">
-        <!-- Generation Filter -->
         <div class="filter-group">
           <label class="filter-label">Generation</label>
           <select
@@ -21,7 +20,6 @@
           </select>
         </div>
 
-        <!-- Term Filter -->
         <div class="filter-group">
           <label class="filter-label">Term</label>
           <select
@@ -40,7 +38,6 @@
           </select>
         </div>
 
-        <!-- Class Filter -->
         <div class="filter-group">
           <label class="filter-label">Class</label>
           <select
@@ -59,7 +56,6 @@
           </select>
         </div>
 
-        <!-- Department Filter -->
         <div class="filter-group">
           <label class="filter-label">Department</label>
           <select
@@ -78,7 +74,6 @@
           </select>
         </div>
 
-        <!-- Teacher Filter -->
         <div class="filter-group">
           <label class="filter-label">Teacher</label>
           <select
@@ -97,7 +92,6 @@
           </select>
         </div>
 
-        <!-- Clear Filters -->
         <button
           v-if="store.activeFilterCount > 0"
           class="btn btn-sm btn-outline-danger clear-btn"

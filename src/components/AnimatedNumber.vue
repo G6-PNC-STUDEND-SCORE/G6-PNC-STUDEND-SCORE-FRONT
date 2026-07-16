@@ -25,7 +25,6 @@ function animate() {
   function step(currentTime: number) {
     const elapsed = currentTime - startTime
     const progress = Math.min(elapsed / dur, 1)
-    // Ease-out cubic for smooth deceleration
     const eased = 1 - Math.pow(1 - progress, 3)
     const current = startValue + (endValue - startValue) * eased
 

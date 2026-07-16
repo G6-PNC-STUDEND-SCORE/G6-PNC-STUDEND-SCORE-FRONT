@@ -1,7 +1,6 @@
 <template>
   <Header />
   <div class="px-4 py-4 dashboard-page">
-    <!-- Dismissible Welcome Banner -->
     <div v-if="showWelcome" class="welcome-card">
       <div class="welcome-bg-shapes">
         <div class="shape shape-1"></div>
@@ -23,7 +22,6 @@
       </div>
     </div>
 
-    <!-- Error Banner -->
     <div
       v-if="dashboard.error"
       class="error-banner"
@@ -35,10 +33,8 @@
       </button>
     </div>
 
-    <!-- Filters -->
     <FilterBar class="mb-3" />
 
-    <!-- Stats Grid -->
     <div v-if="dashboard.loading" class="stats-grid mb-3">
       <div v-for="i in 8" :key="i" class="skeleton-card">
         <div class="skeleton-pulse" style="height: 44px; width: 44px; border-radius: 14px; margin-bottom: 0.85rem;"></div>
@@ -100,7 +96,6 @@
       />
     </section>
 
-    <!-- Tab Bar -->
     <div :class="['tab-bar', { 'dark-mode': theme.isDark }]">
       <button
         v-for="tab in tabs"
@@ -114,7 +109,6 @@
       <div class="tab-indicator" :style="tabIndicatorStyle"></div>
     </div>
 
-    <!-- Overview Charts -->
     <section v-if="activeSection === 'overview'" class="charts-grid mb-3">
       <div class="chart-card">
         <div class="chart-head">
@@ -177,7 +171,6 @@
       </div>
     </section>
 
-    <!-- Performance Charts -->
     <section v-if="activeSection === 'performance'" class="charts-grid mb-3">
       <div class="chart-card">
         <div class="chart-head">
@@ -268,7 +261,6 @@
       </div>
     </section>
 
-    <!-- Activity Tables -->
     <section v-if="activeSection === 'activity'" class="charts-grid mb-3">
       <div class="chart-card">
         <DataTable
@@ -390,7 +382,6 @@ function dismissWelcome() {
   localStorage.setItem('dashboard_welcome_dismissed', 'true')
 }
 
-// ── Column Definitions ────────────────────────────────────────────────
 const academicActivityColumns = [
   { key: 'student_name', label: 'Student' },
   { key: 'action', label: 'Action' },
@@ -422,7 +413,6 @@ const transcriptColumns = [
   { key: 'status', label: 'Status' }
 ]
 
-// ── Computed Helpers ──────────────────────────────────────────────────
 const studentActivityRate = computed(() => {
   if (!dashboard.kpi.total_students) return '0'
   return String(((dashboard.kpi.active_students / dashboard.kpi.total_students) * 100).toFixed(1))
@@ -451,7 +441,6 @@ function getStatusBadgeClass(status: string): string {
   return map[status] || 'stat-default'
 }
 
-// ── Chart Options ─────────────────────────────────────────────────────
 const studentGrowthChartOption = computed<EChartsOption>(() => {
   const data = dashboard.charts.student_growth
   return {
@@ -635,7 +624,6 @@ const lowestSubjectsChartOption = computed<EChartsOption>(() => {
   }
 })
 
-// ── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(() => {
   dashboard.initialize()
   updateLastUpdated()
@@ -661,7 +649,6 @@ function updateLastUpdated() {
   padding-bottom: 2rem !important;
 }
 
-/* ── Welcome Card ────────────────────────── */
 .welcome-card {
   position: relative;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
@@ -786,7 +773,6 @@ function updateLastUpdated() {
   color: #e2e8f0;
 }
 
-/* ── Error Banner ────────────────────────── */
 .error-banner {
   display: flex;
   align-items: center;
@@ -820,7 +806,6 @@ function updateLastUpdated() {
 
 .error-retry:hover { background: #dc2626; }
 
-/* ── Stats Grid ──────────────────────────── */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -835,7 +820,6 @@ function updateLastUpdated() {
   min-height: 140px;
 }
 
-/* ── Tab Bar ─────────────────────────────── */
 .tab-bar {
   display: inline-flex;
   position: relative;
@@ -894,7 +878,6 @@ function updateLastUpdated() {
 .tab-bar.dark-mode .tab-btn.active { color: #111827; }
 .tab-bar.dark-mode .tab-indicator { background: #e5e7eb; }
 
-/* ── Charts Grid ─────────────────────────── */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -974,7 +957,6 @@ function updateLastUpdated() {
 .dark-mode .chart-title { color: #f1f5f9; }
 .dark-mode .chart-desc { color: #94a3b8; }
 
-/* ── Badges ──────────────────────────────── */
 .grade-badge, .action-badge, .status-badge {
   font-size: 0.72rem;
   font-weight: 700;
@@ -1003,7 +985,6 @@ function updateLastUpdated() {
 .stat-fail { background: rgba(239,68,68,0.1); color: #ef4444; }
 .stat-default { background: rgba(148,163,184,0.1); color: #94a3b8; }
 
-/* ── Skeleton ────────────────────────────── */
 .skeleton-pulse {
   background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
   background-size: 200% 100%;
@@ -1020,7 +1001,7 @@ function updateLastUpdated() {
   100% { background-position: -200% 0; }
 }
 
-/* ── Responsive ──────────────────────────── */
+
 @media (max-width: 1199.98px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }

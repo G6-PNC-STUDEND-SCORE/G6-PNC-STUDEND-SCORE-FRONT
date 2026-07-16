@@ -1,13 +1,11 @@
 <template>
   <div class="login-page">
-    <!-- Decorative blurred shapes -->
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
 
     <div class="login-card-wrapper">
       <div class="login-card">
-        <!-- Logo -->
         <div class="text-center mb-2">
           <img
             src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png"
@@ -16,24 +14,16 @@
           />
         </div>
 
-        <!-- Welcome heading -->
         <h1 class="welcome-heading">Student Score Management System</h1>
 
-        <!-- Error alert -->
         <div v-if="auth.error" class="alert-custom alert-error">
           <i class="bi bi-exclamation-triangle-fill"></i>
           <span>{{ auth.error }}</span>
         </div>
 
-        <!-- Success alert -->
-        <div v-if="loginSuccess" class="alert-custom alert-success">
-          <i class="bi bi-check-circle-fill"></i>
-          <span>Login successful! Welcome back.</span>
-        </div>
 
-        <!-- Login form -->
+
         <form @submit.prevent="onSubmit" class="login-form">
-          <!-- Email field -->
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
             <div class="input-wrapper">
@@ -50,7 +40,6 @@
             </div>
           </div>
 
-          <!-- Password field -->
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
             <div class="input-wrapper">
@@ -76,7 +65,6 @@
             </div>
           </div>
 
-          <!-- Remember me -->
           <div class="form-options">
             <label class="checkbox-label">
               <input type="checkbox" class="checkbox-input" checked />
@@ -87,11 +75,10 @@
             </label>
           </div>
 
-          <!-- Submit button -->
           <button
             type="submit"
             class="btn-submit"
-            :disabled="auth.loading || loginSuccess"
+            :disabled="auth.loading"
           >
             <template v-if="auth.loading">
               <span class="spinner"></span>
@@ -104,7 +91,6 @@
           </button>
         </form>
 
-        <!-- Google Sign-In -->
         <div class="google-divider">
           <span class="google-divider-line"></span>
           <span class="google-divider-text">or continue with</span>
@@ -112,7 +98,6 @@
         </div>
         <div ref="googleButtonRef" class="google-btn-wrapper"></div>
 
-        <!-- Footer -->
         <p class="copyright">&copy; 2026 Passerelles Numériques Cambodia</p>
       </div>
     </div>
@@ -125,7 +110,6 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { initGoogleClientId } from '@/services/googleAuthService'
 
-// Extend Window type for Google Identity Services
 declare global {
   interface Window {
     google?: {
@@ -161,16 +145,13 @@ const auth = useAuthStore()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
-const loginSuccess = ref(false)
 const googleButtonRef = ref<HTMLElement | null>(null)
 let retryTimeout: ReturnType<typeof setTimeout> | undefined
 
 async function onSubmit() {
   const success = await auth.login(email.value, password.value)
   if (success) {
-    await new Promise(resolve => setTimeout(resolve, 1000))
     await router.push('/dashboard')
-    loginSuccess.value = false
   }
 }
 
@@ -185,8 +166,6 @@ function handleGoogleCredential(response: { credential: string }) {
 }
 
 onMounted(() => {
-  // The GSI script loads asynchronously from index.html, so we retry
-  // until window.google is available (up to ~6 seconds)
   let retries = 0
   const maxRetries = 20
 
@@ -210,7 +189,6 @@ onMounted(() => {
         })
       }
 
-      // Show One Tap dialog
       window.google.accounts.id.prompt()
     } else if (retries < maxRetries) {
       retries++
@@ -229,9 +207,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ==========================================
-   Page Layout & Background
-   ========================================== */
 .login-page {
   position: relative;
   min-height: 100vh;
@@ -244,9 +219,6 @@ onUnmounted(() => {
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-/* ==========================================
-   Decorative Blurred Shapes
-   ========================================== */
 .blob {
   position: absolute;
   border-radius: 50%;
@@ -297,9 +269,6 @@ onUnmounted(() => {
   }
 }
 
-/* ==========================================
-   Card Wrapper & Card
-   ========================================== */
 .login-card-wrapper {
   position: relative;
   width: 100%;
@@ -342,9 +311,6 @@ onUnmounted(() => {
   }
 }
 
-/* ==========================================
-   Logo & Branding
-   ========================================== */
 .pnc-logo {
   height: 62px;
   width: auto;
@@ -357,9 +323,6 @@ onUnmounted(() => {
 }
 
 
-/* ==========================================
-   Welcome Heading
-   ========================================== */
 .welcome-heading {
   font-size: 1rem;
   font-weight: 800;
@@ -369,10 +332,6 @@ onUnmounted(() => {
   line-height: 1.3;
 }
 
-
-/* ==========================================
-   Alert Messages
-   ========================================== */
 .alert-custom {
   display: flex;
   align-items: center;
@@ -417,9 +376,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* ==========================================
-   Form Layout
-   ========================================== */
 .login-form {
   display: flex;
   flex-direction: column;
@@ -439,9 +395,6 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* ==========================================
-   Input Fields
-   ========================================== */
 .input-wrapper {
   position: relative;
   display: flex;
@@ -508,9 +461,6 @@ onUnmounted(() => {
   padding-right: 3rem;
 }
 
-/* ==========================================
-   Password Toggle
-   ========================================== */
 .password-toggle {
   position: absolute;
   right: 0.5rem;
@@ -542,9 +492,6 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
-/* ==========================================
-   Form Options (Remember Me & Forgot Password)
-   ========================================== */
 .form-options {
   display: flex;
   align-items: center;
@@ -623,9 +570,6 @@ onUnmounted(() => {
   text-decoration: underline;
 }
 
-/* ==========================================
-   Submit Button
-   ========================================== */
 .btn-submit {
   width: 100%;
   padding: 0.6rem 1.5rem;
@@ -700,9 +644,6 @@ onUnmounted(() => {
   }
 }
 
-/* ==========================================
-   Google Sign-In Button
-   ========================================== */
 .google-divider {
   display: flex;
   align-items: center;
@@ -736,9 +677,6 @@ onUnmounted(() => {
   width: 100% !important;
 }
 
-/* ==========================================
-   Copyright Footer
-   ========================================== */
 .copyright {
   font-size: 0.75rem;
   color: #9ca3af;
@@ -748,9 +686,7 @@ onUnmounted(() => {
   border-top: 1px solid #f3f4f6;
 }
 
-/* ==========================================
-   Responsive Design
-   ========================================== */
+
 @media (max-width: 480px) {
   .login-page {
     padding: 1rem;

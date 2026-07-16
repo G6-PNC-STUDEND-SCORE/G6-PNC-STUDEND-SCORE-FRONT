@@ -99,6 +99,7 @@
                 :class="{
                   'cell-editing': editingRow === rowIndex && editingCol === col.id,
                   'cell-selected': editingRow === null && selectedRowIndex === rowIndex && selectedCol === col.id,
+                  'cell-invalid': isCellInvalid(rowIndex, col.id),
                   'cell-excellent': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! >= 90,
                   'cell-average': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! >= 70 && getCellMark(row, col.id)! < 90,
                   'cell-low': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! < 70,
@@ -109,12 +110,14 @@
                   <input
                     ref="cellEditor"
                     v-model="editValue"
-                    type="number"
-                    step="any"
+                    type="text"
+                    inputmode="decimal"
                     class="cell-editor"
-                    @keydown="onEditKeydown"
+                    @keydown.stop="onEditKeydown"
                     @blur="saveEdit()"
                     @input="onEditInput"
+                    @focus="selectCellText($event)"
+                    @mouseup.prevent="selectCellText($event)"
                   />
                 </div>
                 <span v-else class="cell-value" :title="getCellTitle(col, row)">{{ formatCellValue(getCellMark(row, col.id)) }}</span>
@@ -140,7 +143,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header"><h5>Rename Column</h5><button class="modal-close" @click="renamingColumn = null">&times;</button></div>
         <div class="modal-body">
-          <div class="form-group"><label>New Label</label><input v-model="renameValue" class="form-input" ref="renameInput" @keydown.enter="doRenameColumn" /></div>
+          <div class="form-group"><label>New Label</label><input v-model="renameValue" class="form-input" ref="renameInput" @keydown.enter="doRenameColumn" @keydown.esc="renamingColumn = null" /></div>
         </div>
         <div class="modal-footer"><button class="btn btn-secondary" @click="renamingColumn = null">Cancel</button><button class="btn btn-primary" @click="doRenameColumn">Rename</button></div>
       </div>
@@ -241,7 +244,6 @@ const route = useRoute()
 const subjectId = computed(() => Number(route.params.subjectId))
 const termId = computed(() => Number(route.params.termId))
 
-// ─── Core State ──────────────────────────────────────────────────────
 const data = ref<SpreadsheetResponse | null>(null)
 const loading = ref(false)
 const syncing = ref(false)
@@ -249,7 +251,6 @@ const searchQuery = ref('')
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
 
-// ─── Navigation & Editing State ──────────────────────────────────────
 const selectedRowIndex = ref(0)    // Currently focused row (0-based)
 const selectedCol = ref<number | null>(null)  // detailId of focused column
 const editingRow = ref<number | null>(null)   // row being edited
@@ -257,15 +258,18 @@ const editingCol = ref<number | null>(null)   // col detailId being edited
 const editValue = ref('')
 const cellEditor = ref<HTMLInputElement | null>(null)
 
-// ─── Modal State ─────────────────────────────────────────────────────
+function getActualDetailId(detailId: number, row: SpreadsheetRow): number {
+  return row.detail_ids?.[detailId] ?? detailId
+}
+
 const showAddColumn = ref(false)
 const showWeights = ref(false)
 const showImport = ref(false)
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
+const renameInput = ref<HTMLInputElement | null>(null)
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
 
-// ─── Form State ──────────────────────────────────────────────────────
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
@@ -274,8 +278,28 @@ const assessments = ref<AssessmentTypeWeight[]>([])
   const maxUndo = 50
   const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null; newValue: number | null }>>([])
   const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null; newValue: number | null }>>([])
+const invalidCells = reactive<Set<string>>(new Set())
 
-// ─── Computed ────────────────────────────────────────────────────────
+function markCellInvalid(rowIdx: number, colId: number) {
+  invalidCells.add(`${rowIdx}-${colId}`)
+}
+
+function markCellValid(rowIdx: number, colId: number) {
+  invalidCells.delete(`${rowIdx}-${colId}`)
+}
+
+function isCellInvalid(rowIdx: number, colId: number): boolean {
+  return invalidCells.has(`${rowIdx}-${colId}`)
+}
+
+function clearAllInvalid() {
+  invalidCells.clear()
+}
+
+const maxUndo = 50
+const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
+const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
+
 const columns = computed(() => data.value?.columns || [])
 const rows = computed(() => data.value?.rows || [])
 
@@ -327,7 +351,13 @@ const saveStatusText = computed(() => ({
   idle: '',
 }[saveStatus.value]))
 
-// ─── Helper Functions ────────────────────────────────────────────────
+function selectCellText(event: FocusEvent | MouseEvent) {
+  const input = event.target as HTMLInputElement
+  // Use setSelectionRange which is more reliable than .select() across browsers
+  const len = input.value.length
+  input.setSelectionRange(0, len)
+}
+
 function getCellMark(row: SpreadsheetRow, detailId: number): number | null {
   const m = row.details[detailId]
   return m !== undefined ? m : null
@@ -355,7 +385,6 @@ function isEditing(rowIdx: number, colId: number): boolean {
   return editingRow.value === rowIdx && editingCol.value === colId
 }
 
-// ─── Navigation ──────────────────────────────────────────────────────
 function focusCell(rowIdx: number, colId: number) {
   if (editingRow.value !== null) {
     saveEdit()  // Save any pending edit first
@@ -376,19 +405,20 @@ function startEditing(rowIdx: number, detailId: number) {
   const row = filteredRows.value[rowIdx]
   if (!row) return
 
-  const oldValue = getCellMark(row, detailId)
-  
   // Use the filtered row index for editing
+  const oldValue = getCellMark(row, detailId)
   editingRow.value = rowIdx
   editingCol.value = detailId
   selectedRowIndex.value = rowIdx
   selectedCol.value = detailId
+  // Show the existing value — it will be auto-selected via @focus so typing replaces it
   editValue.value = oldValue !== null ? String(oldValue) : ''
 
   nextTick(() => {
     if (cellEditor.value) {
       cellEditor.value.focus()
-      cellEditor.value.select()
+      // setSelectionRange is more reliable than .select() across browsers
+      cellEditor.value.setSelectionRange(0, cellEditor.value.value.length)
     }
   })
 }
@@ -418,6 +448,9 @@ function saveEdit() {
   // Update local state immediately
   actualRow.details[detailId] = newValue
 
+  // Get the ACTUAL detail ID for this specific student (not the canonical column ID)
+  const actualDetailId = getActualDetailId(detailId, actualRow)
+
   // Save to undo stack
   undoStack.value.push({ enrollmentId: filteredRow.enrollment_id, detailId, oldValue, newValue })
   redoStack.value = []
@@ -426,8 +459,8 @@ function saveEdit() {
   cancelEdit()
   showSaveStatus('saving')
 
-  // Save to backend
-  updateCellMark(subjectId.value, termId.value, detailId, newValue)
+  // Save to backend using the actual detail ID for this student
+  updateCellMark(subjectId.value, termId.value, actualDetailId, newValue)
     .then(() => {
       showSaveStatus('saved')
       // Don't refresh data immediately - it causes the row to jump
@@ -478,17 +511,36 @@ function recalculateRowTotal(row: SpreadsheetRow) {
   row.pass_fail = average >= 60 ? 'Pass' : 'Fail'
 }
 
+// Refocus the sheet container after any keyboard action that exits editing,
+// so keydown events (@keydown="onGlobalKeydown") continue to be caught.
+function refocusSheet() {
+  nextTick(() => {
+    if (sheetContainer.value) {
+      sheetContainer.value.focus()
+    }
+  })
+}
+
 function cancelEdit() {
+  if (editingRow.value !== null && editingCol.value !== null) {
+    markCellValid(editingRow.value, editingCol.value)
+  }
   editingRow.value = null
   editingCol.value = null
   editValue.value = ''
 }
 
-// ─── Keyboard Navigation (like Google Sheets) ────────────────────────
 function onGlobalKeydown(event: KeyboardEvent) {
   // If editing, handle edit keys
   if (editingRow.value !== null && editingCol.value !== null) {
     onEditKeydown(event)
+    // Catch printable characters that arrive before the input element has
+    // rendered (in the gap between startEditing() setting state and the
+    // nextTick that creates/focuses the input). The input's @keydown.stop
+    // prevents this from double-firing when the input IS focused.
+    if (!event.defaultPrevented && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      editValue.value += event.key
+    }
     return
   }
 
@@ -554,9 +606,14 @@ function onGlobalKeydown(event: KeyboardEvent) {
         }
       }
       scrollToCell(currentRow, currentColIdx)
+      // Tab in navigation mode: start editing on the moved-to cell
+      if (selectedCol.value && selectedCol.value > 0) {
+        startEditing(selectedRowIndex.value, selectedCol.value)
+      }
       break
     case 'Enter':
       event.preventDefault()
+      // Enter in navigation mode: start editing the selected cell
       if (selectedCol.value && selectedCol.value > 0) {
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
@@ -579,9 +636,13 @@ function onGlobalKeydown(event: KeyboardEvent) {
             const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
             if (actualRow) actualRow.details[selectedCol.value] = null
             undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue, newValue: null })
+            if (!actualRow) break
+            actualRow.details[selectedCol.value] = null
+            const actualDetailId = getActualDetailId(selectedCol.value, actualRow)
+            undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
             redoStack.value = []
             showSaveStatus('saving')
-            updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
+            updateCellMark(subjectId.value, termId.value, actualDetailId, null)
               .then(() => { showSaveStatus('saved'); refreshData() })
               .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value] = oldValue })
           }
@@ -603,70 +664,105 @@ function onGlobalKeydown(event: KeyboardEvent) {
         redo()
       }
       break
+    default:
+      // Printable character pressed on a selected cell → auto-start editing
+      // with that character (like Google Sheets: select + type = edit)
+      if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        event.preventDefault()
+        if (selectedCol.value && selectedCol.value > 0) {
+          startEditing(selectedRowIndex.value, selectedCol.value)
+          // Replace the pre-filled existing value with the pressed key
+          editValue.value = event.key
+          // Position cursor at end so the next character appends (not replaces)
+          nextTick(() => {
+            if (cellEditor.value) {
+              const len = editValue.value.length
+              cellEditor.value.setSelectionRange(len, len)
+            }
+          })
+        }
+      }
+      break
   }
 }
 
 function onEditKeydown(event: KeyboardEvent) {
+  // Helper: save the current cell and move the selection to (targetRow, targetColId).
+  // The target cell is selected (blue outline) but NOT auto-opened for editing.
+  // Typing a number will start editing (handled by onGlobalKeydown's default case).
+  // The blur event from the old input fires after Vue re-renders (microtask),
+  // but by then editValue already matches the new cell's existing value, so
+  // saveEdit() returns early (oldValue === newValue) — no double-save issues.
+  function navigateAfterSave(targetRow: number, targetColId: number | null) {
+    saveEdit()
+    selectedRowIndex.value = Math.max(0, Math.min(targetRow, filteredRows.value.length - 1))
+    if (targetColId && targetColId > 0) {
+      selectedCol.value = targetColId
+    }
+    const colIdx = selectedCol.value ? columns.value.findIndex(c => c.id === selectedCol.value) : 0
+    scrollToCell(selectedRowIndex.value, Math.max(0, colIdx))
+    // Refocus sheet container so keyboard events continue to work
+    refocusSheet()
+  }
+
   switch (event.key) {
     case 'Enter':
       event.preventDefault()
-      saveEdit()
-      // Move to cell below
-      if (selectedRowIndex.value < filteredRows.value.length - 1) {
-        selectedRowIndex.value++
-      }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
-      }
+      // Save + select the cell below
+      navigateAfterSave(selectedRowIndex.value + 1, selectedCol.value)
       break
     case 'Tab':
       event.preventDefault()
-      saveEdit()
       if (event.shiftKey) {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
         if (idx > 0) {
-          selectedCol.value = cols[idx - 1].id
+          navigateAfterSave(selectedRowIndex.value, cols[idx - 1].id)
         } else if (selectedRowIndex.value > 0) {
-          selectedRowIndex.value--
-          selectedCol.value = cols[cols.length - 1].id
+          navigateAfterSave(selectedRowIndex.value - 1, cols[cols.length - 1]?.id ?? null)
         }
       } else {
         const cols = columns.value
         const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
         if (idx < cols.length - 1) {
-          selectedCol.value = cols[idx + 1].id
+          navigateAfterSave(selectedRowIndex.value, cols[idx + 1].id)
         } else if (selectedRowIndex.value < filteredRows.value.length - 1) {
-          selectedRowIndex.value++
-          selectedCol.value = cols[0].id
+          navigateAfterSave(selectedRowIndex.value + 1, cols[0]?.id ?? null)
         }
-      }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
       }
       break
     case 'Escape':
       event.preventDefault()
       cancelEdit()
+      // Refocus sheet container for keyboard navigation
+      refocusSheet()
       break
     case 'ArrowUp':
       event.preventDefault()
-      saveEdit()
-      if (selectedRowIndex.value > 0) {
-        selectedRowIndex.value--
-      }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
-      }
+      navigateAfterSave(selectedRowIndex.value - 1, selectedCol.value)
       break
     case 'ArrowDown':
       event.preventDefault()
-      saveEdit()
-      if (selectedRowIndex.value < filteredRows.value.length - 1) {
-        selectedRowIndex.value++
+      navigateAfterSave(selectedRowIndex.value + 1, selectedCol.value)
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      {
+        const cols = columns.value
+        const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
+        if (idx > 0) {
+          navigateAfterSave(selectedRowIndex.value, cols[idx - 1].id)
+        }
       }
-      if (selectedCol.value && selectedCol.value > 0) {
-        nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      {
+        const cols = columns.value
+        const idx = selectedCol.value ? cols.findIndex(c => c.id === selectedCol.value) : 0
+        if (idx < cols.length - 1) {
+          navigateAfterSave(selectedRowIndex.value, cols[idx + 1].id)
+        }
       }
       break
     case 'z':
@@ -688,7 +784,35 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 
 function onEditInput() {
-  // Live validation could go here
+  if (editingRow.value === null || editingCol.value === null) return
+
+  let raw = editValue.value
+  let filtered = ''
+  let decimalSeen = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (ch >= '0' && ch <= '9') {
+      filtered += ch
+    } else if (ch === '.' && !decimalSeen) {
+      filtered += ch
+      decimalSeen = true
+    } else if (ch === '-' && filtered.length === 0) {
+      filtered += ch
+    }
+  }
+
+  if (filtered !== raw) {
+    editValue.value = filtered
+  }
+
+  const num = filtered === '' || filtered === '-' ? null : parseFloat(filtered)
+  if (num === null) {
+    markCellValid(editingRow.value, editingCol.value)
+  } else if (isNaN(num) || num < 0 || num > 100) {
+    markCellInvalid(editingRow.value, editingCol.value)
+  } else {
+    markCellValid(editingRow.value, editingCol.value)
+  }
 }
 
 function scrollToCell(rowIdx: number, colIdx: number) {
@@ -698,10 +822,25 @@ function scrollToCell(rowIdx: number, colIdx: number) {
   const rowCells = scrollEl.querySelectorAll('tbody tr')
   if (rowIdx >= 0 && rowIdx < rowCells.length) {
     rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  const container = sheetContainer.value?.querySelector('.sheet-scroll')
+  if (!container) return
+
+  // Scroll to keep the row visible vertically
+  const rowCells = container.querySelectorAll('tbody tr')
+  if (rowCells[rowIdx]) {
+    rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'auto' })
+  }
+
+  // Scroll to keep the column visible horizontally
+  if (colIdx >= 0 && rowCells[rowIdx]) {
+    const scoreCells = rowCells[rowIdx].querySelectorAll('.cell-score')
+    const targetCell = scoreCells[colIdx] as HTMLElement | undefined
+    if (targetCell) {
+      targetCell.scrollIntoView({ inline: 'nearest', behavior: 'auto' })
+    }
   }
 }
 
-// ─── Undo / Redo ─────────────────────────────────────────────────────
 function undo() {
   const action = undoStack.value.pop()
   if (!action) return
@@ -710,7 +849,8 @@ function undo() {
   row.details[action.detailId] = action.oldValue
   redoStack.value.push(action)
 
-  updateCellMark(subjectId.value, termId.value, action.detailId, action.oldValue)
+  const actualDetailId = getActualDetailId(action.detailId, row)
+  updateCellMark(subjectId.value, termId.value, actualDetailId, action.oldValue)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -724,11 +864,12 @@ function redo() {
   row.details[action.detailId] = action.newValue
 
   updateCellMark(subjectId.value, termId.value, action.detailId, action.newValue)
+  const actualDetailId = getActualDetailId(action.detailId, row)
+  updateCellMark(subjectId.value, termId.value, actualDetailId, row.details[action.detailId])
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
 
-// ─── Data Loading ────────────────────────────────────────────────────
 function goBack() { router.push('/scores') }
 
 async function refreshData() {
@@ -741,17 +882,22 @@ async function refreshData() {
     // Reset selection
     selectedRowIndex.value = 0
     selectedCol.value = columns.value.length > 0 ? columns.value[0].id : null
+    // Auto-start editing the very first cell so you can type immediately
+    if (selectedCol.value && selectedCol.value > 0 && filteredRows.value.length > 0) {
+      nextTick(() => startEditing(0, selectedCol.value!))
+    }
   } catch { showSaveStatus('failed') }
   finally { loading.value = false }
 }
 
-// ─── Column Management ───────────────────────────────────────────────
 function startRenameColumn(col: SpreadsheetColumn) {
   renamingColumn.value = col
   renameValue.value = col.label
   nextTick(() => {
-    const input = document.querySelector('.modal-overlay .form-input') as HTMLInputElement
-    if (input) input.focus()
+    if (renameInput.value) {
+      renameInput.value.focus()
+      renameInput.value.setSelectionRange(0, renameInput.value.value.length)
+    }
   })
 }
 
@@ -805,7 +951,6 @@ async function doUpdateWeights() {
   } catch { showSaveStatus('failed') }
 }
 
-// ─── Google Sheets Two-Way Sync ──────────────────────────────────────
 async function syncToGoogle() {
   syncing.value = true
   try {
@@ -876,7 +1021,6 @@ function importCSV(event: Event) {
   input.value = ''
 }
 
-// ─── Export ──────────────────────────────────────────────────────────
 function exportCSV() {
   if (!data.value) return
   const cols = columns.value
@@ -901,7 +1045,6 @@ function exportCSV() {
   showSaveStatus('saved')
 }
 
-// ─── Status ──────────────────────────────────────────────────────────
 function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
   saveStatus.value = status
   if (status !== 'saving') {
@@ -909,17 +1052,18 @@ function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
       if (saveStatus.value === status) saveStatus.value = 'idle'
     }, 3000)
   }
+  clearAllInvalid()
 }
 
-// ─── Lifecycle ───────────────────────────────────────────────────────
 onMounted(() => {
   refreshData()
   // Add global keyboard listener for undo/redo (works even when input is focused)
   window.addEventListener('keydown', handleGlobalUndoRedo)
   // Focus the sheet container for keyboard events
   nextTick(() => {
-    const container = document.querySelector('.sheet-wrapper') as HTMLElement
-    if (container) container.focus()
+    if (sheetContainer.value) {
+      sheetContainer.value.focus()
+    }
   })
 })
 
@@ -967,7 +1111,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
 </script>
 
 <style scoped>
-/* ─── Layout ────────────────────────────────────────────────────────── */
 .score-sheet {
   position: relative;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
@@ -978,7 +1121,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   background: #fff;
 }
 
-/* ─── Toolbar - all buttons on LEFT side ───────────────────────────── */
 .sheet-toolbar {
   display: flex;
   align-items: center;
@@ -1030,7 +1172,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   margin-right: 4px;
 }
 
-/* ─── Buttons ──────────────────────────────────────────────────────── */
 .tb-btn {
   display: inline-flex;
   align-items: center;
@@ -1066,7 +1207,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   flex-wrap: wrap;
 }
 
-/* ─── Search Box ───────────────────────────────────────────────────── */
 .search-box {
   display: flex;
   align-items: center;
@@ -1092,7 +1232,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   font-size: 0.78rem;
 }
 
-/* ─── Save Status ──────────────────────────────────────────────────── */
 .save-status {
   font-size: 0.7rem;
   display: flex;
@@ -1108,7 +1247,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
 .status-failed { color: #dc2626; background: #fee2e2; }
 .status-idle { color: transparent; }
 
-/* ─── Stats Bar ────────────────────────────────────────────────────── */
 .stats-bar {
   display: flex;
   gap: 16px;
@@ -1129,7 +1267,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
 .stat-label { color: #64748b; font-weight: 500; }
 .stat-value { font-weight: 700; color: #0f172a; }
 
-/* ─── Sheet Wrapper ────────────────────────────────────────────────── */
 .sheet-wrapper {
   flex: 1;
   overflow: hidden;
@@ -1147,7 +1284,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   max-height: 100%;
 }
 
-/* ─── Table ────────────────────────────────────────────────────────── */
 .sheet-table {
   border-collapse: collapse;
   width: max-content;
@@ -1155,7 +1291,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   font-size: 0.8rem;
 }
 
-/* ─── Header ───────────────────────────────────────────────────────── */
 .sheet-table thead { position: sticky; top: 0; z-index: 10; }
 
 .cell-header {
@@ -1267,7 +1402,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   background: #fee2e2 !important;
 }
 
-/* ─── Cells ────────────────────────────────────────────────────────── */
 .cell {
   border: 1px solid #e2e8f0;
   padding: 3px 6px;
@@ -1295,6 +1429,7 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   background: #eff6ff !important;
   z-index: 5;
   position: relative;
+  animation: cell-select-pop 0.15s ease-out;
 }
 
 .cell-editing {
@@ -1303,14 +1438,47 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   outline-offset: -1px;
   z-index: 5;
   position: relative;
+  animation: cell-select-pop 0.15s ease-out;
 }
 
-/* ─── Cell Colors ──────────────────────────────────────────────────── */
+@keyframes cell-select-pop {
+  0% {
+    outline-width: 4px;
+    outline-color: #60a5fa;
+    transform: scale(1.02);
+  }
+  100% {
+    outline-width: 2px;
+    outline-color: #3b82f6;
+    transform: scale(1);
+  }
+}
+
 .cell-excellent { background: #dcfce7 !important; color: #16a34a; font-weight: 600; }
 .cell-average { background: #fef9c3 !important; color: #b45309; }
 .cell-low { background: #fee2e2 !important; color: #dc2626; }
 
-/* ─── Cell Editor ──────────────────────────────────────────────────── */
+.cell-invalid {
+  outline: 2px solid #dc2626 !important;
+  outline-offset: -1px;
+  background: #fef2f2 !important;
+  z-index: 6;
+  position: relative;
+  animation: cell-invalid-shake 0.3s ease-in-out;
+}
+
+.cell-invalid .cell-editor {
+  background: #fef2f2 !important;
+}
+
+@keyframes cell-invalid-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
 .cell-editor-wrapper { width: 100%; height: 100%; }
 
 .cell-editor {
@@ -1332,12 +1500,10 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   padding: 3px 0;
 }
 
-/* ─── Row States ───────────────────────────────────────────────────── */
 .row-even .cell { background-color: #fafafa; }
 .row-selected .cell { background-color: #f0f4ff; }
 .row-selected .cell.frozen { background-color: #e8effb; }
 
-/* ─── Grade Colors ─────────────────────────────────────────────────── */
 .grade-a { color: #16a34a !important; font-weight: 700 !important; }
 .grade-b-plus { color: #2563eb !important; font-weight: 700 !important; }
 .grade-b { color: #2563eb !important; font-weight: 700 !important; }
@@ -1347,7 +1513,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
 .grade-f { color: #dc2626 !important; font-weight: 700 !important; }
 .grade-none { color: #94a3b8 !important; }
 
-/* ─── Loading ──────────────────────────────────────────────────────── */
 .loading-overlay {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(255,255,255,0.85);
@@ -1367,7 +1532,6 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinning { animation: spin 0.7s linear infinite; }
 
-/* ─── Modal ────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(15, 23, 42, 0.5);
@@ -1431,7 +1595,6 @@ select.form-input { appearance: auto; }
 
 .btn-block { width: 100%; justify-content: center; }
 
-/* ─── Weight Table ─────────────────────────────────────────────────── */
 .weight-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .weight-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; font-size: 0.72rem; text-transform: uppercase; }
 .weight-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
@@ -1447,12 +1610,10 @@ select.form-input { appearance: auto; }
 .weight-ok { background: #dcfce7; color: #16a34a; }
 .weight-warn { background: #fef3c7; color: #d97706; }
 
-/* ─── Import Steps ─────────────────────────────────────────────────── */
 .import-desc { font-size: 0.8rem; color: #475569; margin-bottom: 10px; }
 .import-steps { font-size: 0.78rem; color: #64748b; padding-left: 18px; margin-bottom: 14px; }
 .import-steps li { margin-bottom: 4px; }
 
-/* ─── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sheet-toolbar { flex-direction: column; align-items: flex-start; }
   .toolbar-actions { width: 100%; }
