@@ -18,8 +18,6 @@ app.use(i18n)
 
 const authStore = useAuthStore()
 
-// Wait for auth initialization (load user from token) before mounting the app
-// This prevents the router guard from redirecting to /login before init() completes
 authStore.init().finally(() => {
   app.mount('#app')
 })

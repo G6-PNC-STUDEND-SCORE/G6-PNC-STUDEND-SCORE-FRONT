@@ -99,6 +99,7 @@
                 :class="{
                   'cell-editing': editingRow === rowIndex && editingCol === col.id,
                   'cell-selected': editingRow === null && selectedRowIndex === rowIndex && selectedCol === col.id,
+                  'cell-invalid': isCellInvalid(rowIndex, col.id),
                   'cell-excellent': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! >= 90,
                   'cell-average': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! >= 70 && getCellMark(row, col.id)! < 90,
                   'cell-low': !isEditing(rowIndex, col.id) && getCellMark(row, col.id) !== null && getCellMark(row, col.id)! < 70,
@@ -241,7 +242,6 @@ const route = useRoute()
 const subjectId = computed(() => Number(route.params.subjectId))
 const termId = computed(() => Number(route.params.termId))
 
-// ─── Core State ──────────────────────────────────────────────────────
 const data = ref<SpreadsheetResponse | null>(null)
 const loading = ref(false)
 const syncing = ref(false)
@@ -249,7 +249,6 @@ const searchQuery = ref('')
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
 
-// ─── Navigation & Editing State ──────────────────────────────────────
 const selectedRowIndex = ref(0)    // Currently focused row (0-based)
 const selectedCol = ref<number | null>(null)  // detailId of focused column
 const editingRow = ref<number | null>(null)   // row being edited
@@ -257,12 +256,10 @@ const editingCol = ref<number | null>(null)   // col detailId being edited
 const editValue = ref('')
 const cellEditor = ref<HTMLInputElement | null>(null)
 
-// Helper: given a canonical column ID and a row, return the ACTUAL detail ID for that student
 function getActualDetailId(detailId: number, row: SpreadsheetRow): number {
   return row.detail_ids?.[detailId] ?? detailId
 }
 
-// ─── Modal State ─────────────────────────────────────────────────────
 const showAddColumn = ref(false)
 const showWeights = ref(false)
 const showImport = ref(false)
@@ -271,17 +268,32 @@ const renameValue = ref('')
 const renameInput = ref<HTMLInputElement | null>(null)
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
 
-// ─── Form State ──────────────────────────────────────────────────────
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
 
-// ─── Undo/Redo ───────────────────────────────────────────────────────
+const invalidCells = reactive<Set<string>>(new Set())
+
+function markCellInvalid(rowIdx: number, colId: number) {
+  invalidCells.add(`${rowIdx}-${colId}`)
+}
+
+function markCellValid(rowIdx: number, colId: number) {
+  invalidCells.delete(`${rowIdx}-${colId}`)
+}
+
+function isCellInvalid(rowIdx: number, colId: number): boolean {
+  return invalidCells.has(`${rowIdx}-${colId}`)
+}
+
+function clearAllInvalid() {
+  invalidCells.clear()
+}
+
 const maxUndo = 50
 const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
 const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
 
-// ─── Computed ────────────────────────────────────────────────────────
 const columns = computed(() => data.value?.columns || [])
 const rows = computed(() => data.value?.rows || [])
 
@@ -333,7 +345,6 @@ const saveStatusText = computed(() => ({
   idle: '',
 }[saveStatus.value]))
 
-// ─── Helper Functions ────────────────────────────────────────────────
 function selectCellText(event: FocusEvent | MouseEvent) {
   const input = event.target as HTMLInputElement
   // Use setSelectionRange which is more reliable than .select() across browsers
@@ -368,7 +379,6 @@ function isEditing(rowIdx: number, colId: number): boolean {
   return editingRow.value === rowIdx && editingCol.value === colId
 }
 
-// ─── Navigation ──────────────────────────────────────────────────────
 function focusCell(rowIdx: number, colId: number) {
   if (editingRow.value !== null) {
     saveEdit()  // Save any pending edit first
@@ -497,12 +507,14 @@ function refocusSheet() {
 }
 
 function cancelEdit() {
+  if (editingRow.value !== null && editingCol.value !== null) {
+    markCellValid(editingRow.value, editingCol.value)
+  }
   editingRow.value = null
   editingCol.value = null
   editValue.value = ''
 }
 
-// ─── Keyboard Navigation (like Google Sheets) ────────────────────────
 function onGlobalKeydown(event: KeyboardEvent) {
   // If editing, handle edit keys
   if (editingRow.value !== null && editingCol.value !== null) {
@@ -740,7 +752,35 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 
 function onEditInput() {
-  // Live validation could go here
+  if (editingRow.value === null || editingCol.value === null) return
+
+  let raw = editValue.value
+  let filtered = ''
+  let decimalSeen = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (ch >= '0' && ch <= '9') {
+      filtered += ch
+    } else if (ch === '.' && !decimalSeen) {
+      filtered += ch
+      decimalSeen = true
+    } else if (ch === '-' && filtered.length === 0) {
+      filtered += ch
+    }
+  }
+
+  if (filtered !== raw) {
+    editValue.value = filtered
+  }
+
+  const num = filtered === '' || filtered === '-' ? null : parseFloat(filtered)
+  if (num === null) {
+    markCellValid(editingRow.value, editingCol.value)
+  } else if (isNaN(num) || num < 0 || num > 100) {
+    markCellInvalid(editingRow.value, editingCol.value)
+  } else {
+    markCellValid(editingRow.value, editingCol.value)
+  }
 }
 
 function scrollToCell(rowIdx: number, colIdx: number) {
@@ -764,7 +804,6 @@ function scrollToCell(rowIdx: number, colIdx: number) {
   }
 }
 
-// ─── Undo / Redo ─────────────────────────────────────────────────────
 function undo() {
   const action = undoStack.value.pop()
   if (!action) return
@@ -795,7 +834,6 @@ function redo() {
     .catch(() => showSaveStatus('failed'))
 }
 
-// ─── Data Loading ────────────────────────────────────────────────────
 function goBack() { router.push('/scores') }
 
 async function refreshData() {
@@ -816,7 +854,6 @@ async function refreshData() {
   finally { loading.value = false }
 }
 
-// ─── Column Management ───────────────────────────────────────────────
 function startRenameColumn(col: SpreadsheetColumn) {
   renamingColumn.value = col
   renameValue.value = col.label
@@ -878,7 +915,6 @@ async function doUpdateWeights() {
   } catch { showSaveStatus('failed') }
 }
 
-// ─── Google Sheets Two-Way Sync ──────────────────────────────────────
 async function syncToGoogle() {
   syncing.value = true
   try {
@@ -949,7 +985,6 @@ function importCSV(event: Event) {
   input.value = ''
 }
 
-// ─── Export ──────────────────────────────────────────────────────────
 function exportCSV() {
   if (!data.value) return
   const cols = columns.value
@@ -974,7 +1009,6 @@ function exportCSV() {
   showSaveStatus('saved')
 }
 
-// ─── Status ──────────────────────────────────────────────────────────
 function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
   saveStatus.value = status
   if (status !== 'saving') {
@@ -982,9 +1016,9 @@ function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
       if (saveStatus.value === status) saveStatus.value = 'idle'
     }, 3000)
   }
+  clearAllInvalid()
 }
 
-// ─── Lifecycle ───────────────────────────────────────────────────────
 onMounted(() => {
   refreshData()
   // Focus the sheet container for keyboard events
@@ -1001,7 +1035,6 @@ watch([subjectId, termId], () => {
 </script>
 
 <style scoped>
-/* ─── Layout ────────────────────────────────────────────────────────── */
 .score-sheet {
   position: relative;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
@@ -1012,7 +1045,6 @@ watch([subjectId, termId], () => {
   background: #fff;
 }
 
-/* ─── Toolbar - all buttons on LEFT side ───────────────────────────── */
 .sheet-toolbar {
   display: flex;
   align-items: center;
@@ -1064,7 +1096,6 @@ watch([subjectId, termId], () => {
   margin-right: 4px;
 }
 
-/* ─── Buttons ──────────────────────────────────────────────────────── */
 .tb-btn {
   display: inline-flex;
   align-items: center;
@@ -1100,7 +1131,6 @@ watch([subjectId, termId], () => {
   flex-wrap: wrap;
 }
 
-/* ─── Search Box ───────────────────────────────────────────────────── */
 .search-box {
   display: flex;
   align-items: center;
@@ -1126,7 +1156,6 @@ watch([subjectId, termId], () => {
   font-size: 0.78rem;
 }
 
-/* ─── Save Status ──────────────────────────────────────────────────── */
 .save-status {
   font-size: 0.7rem;
   display: flex;
@@ -1142,7 +1171,6 @@ watch([subjectId, termId], () => {
 .status-failed { color: #dc2626; background: #fee2e2; }
 .status-idle { color: transparent; }
 
-/* ─── Stats Bar ────────────────────────────────────────────────────── */
 .stats-bar {
   display: flex;
   gap: 16px;
@@ -1163,7 +1191,6 @@ watch([subjectId, termId], () => {
 .stat-label { color: #64748b; font-weight: 500; }
 .stat-value { font-weight: 700; color: #0f172a; }
 
-/* ─── Sheet Wrapper ────────────────────────────────────────────────── */
 .sheet-wrapper {
   flex: 1;
   overflow: hidden;
@@ -1181,7 +1208,6 @@ watch([subjectId, termId], () => {
   max-height: 100%;
 }
 
-/* ─── Table ────────────────────────────────────────────────────────── */
 .sheet-table {
   border-collapse: collapse;
   width: max-content;
@@ -1189,7 +1215,6 @@ watch([subjectId, termId], () => {
   font-size: 0.8rem;
 }
 
-/* ─── Header ───────────────────────────────────────────────────────── */
 .sheet-table thead { position: sticky; top: 0; z-index: 10; }
 
 .cell-header {
@@ -1288,7 +1313,6 @@ watch([subjectId, termId], () => {
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
 
-/* ─── Cells ────────────────────────────────────────────────────────── */
 .cell {
   border: 1px solid #e2e8f0;
   padding: 3px 6px;
@@ -1310,7 +1334,6 @@ watch([subjectId, termId], () => {
   background: #f8fafc;
 }
 
-/* ─── Cell Selection Animation ───────────────────────────────────── */
 .cell-selected {
   outline: 2px solid #3b82f6;
   outline-offset: -1px;
@@ -1342,12 +1365,31 @@ watch([subjectId, termId], () => {
   }
 }
 
-/* ─── Cell Colors ──────────────────────────────────────────────────── */
 .cell-excellent { background: #dcfce7 !important; color: #16a34a; font-weight: 600; }
 .cell-average { background: #fef9c3 !important; color: #b45309; }
 .cell-low { background: #fee2e2 !important; color: #dc2626; }
 
-/* ─── Cell Editor ──────────────────────────────────────────────────── */
+.cell-invalid {
+  outline: 2px solid #dc2626 !important;
+  outline-offset: -1px;
+  background: #fef2f2 !important;
+  z-index: 6;
+  position: relative;
+  animation: cell-invalid-shake 0.3s ease-in-out;
+}
+
+.cell-invalid .cell-editor {
+  background: #fef2f2 !important;
+}
+
+@keyframes cell-invalid-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
 .cell-editor-wrapper { width: 100%; height: 100%; }
 
 .cell-editor {
@@ -1369,12 +1411,10 @@ watch([subjectId, termId], () => {
   padding: 3px 0;
 }
 
-/* ─── Row States ───────────────────────────────────────────────────── */
 .row-even .cell { background-color: #fafafa; }
 .row-selected .cell { background-color: #f0f4ff; }
 .row-selected .cell.frozen { background-color: #e8effb; }
 
-/* ─── Grade Colors ─────────────────────────────────────────────────── */
 .grade-a { color: #16a34a !important; font-weight: 700 !important; }
 .grade-b-plus { color: #2563eb !important; font-weight: 700 !important; }
 .grade-b { color: #2563eb !important; font-weight: 700 !important; }
@@ -1384,7 +1424,6 @@ watch([subjectId, termId], () => {
 .grade-f { color: #dc2626 !important; font-weight: 700 !important; }
 .grade-none { color: #94a3b8 !important; }
 
-/* ─── Loading ──────────────────────────────────────────────────────── */
 .loading-overlay {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(255,255,255,0.85);
@@ -1404,7 +1443,6 @@ watch([subjectId, termId], () => {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinning { animation: spin 0.7s linear infinite; }
 
-/* ─── Modal ────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(15, 23, 42, 0.5);
@@ -1468,7 +1506,6 @@ select.form-input { appearance: auto; }
 
 .btn-block { width: 100%; justify-content: center; }
 
-/* ─── Weight Table ─────────────────────────────────────────────────── */
 .weight-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .weight-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; font-size: 0.72rem; text-transform: uppercase; }
 .weight-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
@@ -1484,12 +1521,10 @@ select.form-input { appearance: auto; }
 .weight-ok { background: #dcfce7; color: #16a34a; }
 .weight-warn { background: #fef3c7; color: #d97706; }
 
-/* ─── Import Steps ─────────────────────────────────────────────────── */
 .import-desc { font-size: 0.8rem; color: #475569; margin-bottom: 10px; }
 .import-steps { font-size: 0.78rem; color: #64748b; padding-left: 18px; margin-bottom: 14px; }
 .import-steps li { margin-bottom: 4px; }
 
-/* ─── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sheet-toolbar { flex-direction: column; align-items: flex-start; }
   .toolbar-actions { width: 100%; }

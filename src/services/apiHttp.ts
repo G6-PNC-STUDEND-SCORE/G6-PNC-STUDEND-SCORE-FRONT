@@ -3,7 +3,6 @@ import axios from 'axios'
 const baseURL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 if (!baseURL) {
-  // Helps developers catch misconfigured .env quickly
   // eslint-disable-next-line no-console
   console.warn('VITE_API_BASE_URL is not set. Please create frontend/.env')
 }
@@ -15,14 +14,12 @@ export const http = axios.create({
   },
 })
 
-// 401 response interceptor — automatically logs out and redirects to login
-// when the backend rejects the token as invalid/expired.
+// Hard redirect to reset Vue/Pinia state on expired tokens
 http.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      // Hard redirect to reset all Vue/Pinia state
       window.location.href = '/login'
     }
     return Promise.reject(error)
