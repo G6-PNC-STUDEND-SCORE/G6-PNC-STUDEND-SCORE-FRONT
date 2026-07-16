@@ -1902,8 +1902,8 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
 
-.search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 120px; }
-.search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 100px; color: #1e293b; }
+.search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 220px; }
+.search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 200px; color: #1e293b; }
 .search-box i { color: #94a3b8; font-size: 0.78rem; }
 
 .save-status { font-size: 0.7rem; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }

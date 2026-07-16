@@ -109,14 +109,14 @@ import ClassList from './ClassList.vue'
 import ClassFormModal from './ClassFormModal.vue'
 import ClassDeleteModal from './ClassDeleteModal.vue'
 import ClassDetailsModal from './ClassDetailsModal.vue'
-import { classService, type Class } from '@/services/classService'
+import { classService, type SchoolClass } from '@/services/classService'
 
 // Search and Filter
 const searchQuery = ref('')
 const statusFilter = ref('')
 
 // Data
-const classes = ref<Class[]>([])
+const classes = ref<SchoolClass[]>([])
 const teachers = ref<{ id: number; name: string }[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -127,7 +127,7 @@ const showModal = ref(false)
 const showViewModal = ref(false)
 const showDeleteModal = ref(false)
 const isEditMode = ref(false)
-const classToDelete = ref<Class | null>(null)
+const classToDelete = ref<SchoolClass | null>(null)
 const viewData = ref({
   id: 0,
   name: '',
@@ -203,7 +203,7 @@ async function loadClasses() {
       statusFilter.value || undefined
     )
     if (response.success) {
-      classes.value = response.data as Class[]
+      classes.value = response.data as SchoolClass[]
     }
   } catch (err) {
     error.value = 'Failed to load classes'
@@ -230,7 +230,7 @@ function openCreateModal() {
   showModal.value = true
 }
 
-function openEditModal(classItem: Class) {
+function openEditModal(classItem: SchoolClass) {
   isEditMode.value = true
   Object.assign(formData, {
     id: classItem.id,
@@ -244,7 +244,7 @@ function openEditModal(classItem: Class) {
   showModal.value = true
 }
 
-function viewClass(classItem: Class) {
+function viewClass(classItem: SchoolClass) {
   viewData.value = {
     id: classItem.id,
     name: classItem.name,
@@ -372,7 +372,7 @@ async function handleSubmit() {
   }
 }
 
-function confirmDelete(classItem: Class) {
+function confirmDelete(classItem: SchoolClass) {
   classToDelete.value = classItem
   showDeleteModal.value = true
 }
