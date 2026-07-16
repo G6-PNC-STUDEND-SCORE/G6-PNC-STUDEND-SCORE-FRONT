@@ -1,16 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-import LoginView from '../views/LoginView.vue'
-import DashboardView from '../views/DashboardView.vue'
-import ClassesView from '../views/ClassesView.vue'
-import SubjectsView from '../views/SubjectsView.vue'
-import StudentsView from '../views/StudentsView.vue'
-import ScoresView from '../views/ScoresView.vue'
-import ReportsView from '../views/ReportsView.vue'
-import ProfileView from '../views/ProfileView.vue'
-import UsersView from '../views/UsersView.vue'
-import RolesView from '../views/RolesView.vue'
-
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -19,102 +8,66 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
-    component: LoginView,
-    meta: {
-      title: 'Login',
-      showInSidebar: false,
-    },
+    component: () => import('@/views/auth/LoginPage.vue'),
   },
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: DashboardView,
-    meta: {
-      title: 'Dashboard',
-      icon: 'bi bi-grid-fill',
-      showInSidebar: true,
-    },
+    component: () => import('@/views/DashboardView.vue'),
   },
   {
     path: '/classes',
     name: 'classes',
-    component: ClassesView,
-    meta: {
-      title: 'Classes',
-      icon: 'bi bi-people-fill',
-      showInSidebar: true,
-    },
+    component: () => import('@/views/classes/ClassPage.vue'),
   },
   {
     path: '/subjects',
-    name: 'subjects',
-    component: SubjectsView,
-    meta: {
-      title: 'Subjects',
-      icon: 'bi bi-book-fill',
-      showInSidebar: true,
-    },
+    name: 'subject',
+    component: () => import('@/views/SubjectPage.vue'),
+  },
+  {
+    path: '/teachers',
+    name: 'teachers',
+    component: () => import('@/views/teachers/TeacherPage.vue'),
   },
   {
     path: '/students',
-    name: 'students',
-    component: StudentsView,
-    meta: {
-      title: 'Students',
-      icon: 'bi bi-person-badge-fill',
-      showInSidebar: true,
-    },
+    name: 'student',
+    component: () => import('@/views/students/StudentPage.vue'),
   },
   {
     path: '/scores',
     name: 'scores',
-    component: ScoresView,
-    meta: {
-      title: 'Scores',
-      icon: 'bi bi-clipboard-data-fill',
-      showInSidebar: true,
-    },
+    component: () => import('@/views/scores/ScorePage.vue'),
+  },
+  {
+    path: '/scores/term/:termId',
+    name: 'scores-term-subjects',
+    component: () => import('@/views/scores/TermSubjectsView.vue'),
+  },
+  {
+    path: '/scores/subject/:subjectId/term/:termId',
+    name: 'score-sheet',
+    component: () => import('@/views/scores/ScoreSheetView.vue'),
   },
   {
     path: '/reports',
     name: 'reports',
-    component: ReportsView,
-    meta: {
-      title: 'Reports',
-      icon: 'bi bi-file-earmark-bar-graph-fill',
-      showInSidebar: true,
-    },
-  },
-  {
-    path: '/profile',
-    name: 'profile',
-    component: ProfileView,
-    meta: {
-      title: 'Profile',
-      icon: 'bi bi-person-circle',
-      showInSidebar: true,
-    },
+    component: () => import('@/views/reports/ReportPage.vue'),
   },
   {
     path: '/users',
     name: 'users',
-    component: UsersView,
-    meta: {
-      title: 'Users',
-      icon: 'bi bi-person-fill',
-      showInSidebar: true,
-      parent: 'settings',
-    },
+    component: () => import('@/views/users/UsersPage.vue'),
   },
   {
     path: '/roles',
     name: 'roles',
-    component: RolesView,
-    meta: {
-      title: 'Roles & Permissions',
-      icon: 'bi bi-shield-lock-fill',
-      showInSidebar: true,
-      parent: 'settings',
-    },
+    component: () => import('@/views/roles/RolesPage.vue'),
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/UserProfile.vue'),
   },
 ]

@@ -1,394 +1,567 @@
- <template>
-    <aside :class="['sidebar', 'd-flex', 'flex-column', { 'dark-mode': theme.isDark }]">
-        <div class="logo d-flex align-items-center">
-            <div class="logo-icon me-2">
-                <img src="/images/images.png" alt="PNCStudentScore" class="logo-img">
-            </div>
-            <div class="logo-text">
-                <h5 class="mb-0 fw-bold">PNCScore</h5>
-                <small class="text-secondary">Student Score Management</small>
-            </div>
+<template>
+  <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
+    <!-- Logo / Brand -->
+    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 64px">
+      <div class="sidebar-logo-wrap">
+        <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
+      </div>
+      <div class="sidebar-brand-text">
+        <span class="brand-name">Passerelles</span>
+        <span class="brand-name">Numériques</span>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="px-2 py-2 flex-grow-1">
+      <RouterLink
+        v-for="link in navLinks"
+        :key="link.to"
+        :to="link.to"
+        :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
+        :title="sidebar.collapsed ? link.label : ''"
+      >
+        <component :is="link.icon" :size="20" />
+        <span class="sidebar-link-text">{{ link.label }}</span>
+      </RouterLink>
+
+      <h6 class="menu-title mt-3 mb-2">Settings</h6>
+
+      <RouterLink
+        v-for="link in settingsLinks"
+        :key="link.to"
+        :to="link.to"
+        :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
+        :title="sidebar.collapsed ? link.label : ''"
+      >
+        <component :is="link.icon" :size="20" />
+        <span class="sidebar-link-text">{{ link.label }}</span>
+      </RouterLink>
+    </nav>
+
+    <!-- Toggle Button -->
+    <div class="toggle-section border-top">
+      <button
+        :class="['toggle-sidebar-btn', { collapsed: sidebar.collapsed }]"
+        @click="sidebar.toggle()"
+        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <PanelLeftClose :size="18" :class="{ 'rotated': sidebar.collapsed }" />
+        <span class="toggle-label">Collapse</span>
+      </button>
+    </div>
+
+    <!-- User Section & Logout -->
+    <div class="border-top">
+      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'px-3 py-2']">
+        <div
+          class="user d-flex align-items-center"
+          :class="{ 'justify-content-center': sidebar.collapsed }"
+          @click="goToProfile"
+          @keydown.enter.prevent="goToProfile"
+          role="button"
+          tabindex="0"
+          :title="sidebar.collapsed ? 'Profile' : ''"
+        >
+          <div class="avatar">
+            <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
+            <span v-else class="initials">{{ getUserInitials() }}</span>
+          </div>
+          <div class="ms-2 user-text">
+            <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name }}</h6>
+            <small class="text-secondary">{{ auth.user?.role }}</small>
+          </div>
         </div>
-        <nav class="px-2 py-2 flex-grow-1">
-            <RouterLink 
-                v-for="route in sidebarRoutes" 
-                :key="route.path" 
-                :to="route.path" 
-                class="sidebar-link"
-                :class="{ 'submenu-item': route.meta?.parent }"
-            >
-                <i :class="route.meta?.icon || 'bi bi-link'"></i>
-                {{ getRouteTitle(route) }}
-            </RouterLink>
+        <button class="logout-icon-btn" @click="showLogoutModal = true" title="Logout">
+          <LogOut :size="18" />
+        </button>
+      </div>
+    </div>
 
-            <h6 v-if="hasSettingsRoutes" class="menu-title mt-3 mb-2">{{ t('nav.administration') }}</h6>
+  </aside>
 
-            <div 
-                v-if="hasSettingsRoutes" 
-                class="menu-parent" 
-                @click="toggleSettings" 
-                @keydown.enter.prevent="toggleSettings" 
-                role="button"
-                tabindex="0"
-            >
-                <i class="bi bi-gear-fill me-2"></i>
-                {{ t('nav.settings') }}
-                <i class="bi ms-auto chevron-icon" :class="settingsOpen ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+  <!-- Logout Confirmation Modal -->
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+        <div class="modal-dialog-custom">
+          <div class="modal-header-custom">
+            <div class="modal-icon">
+              <LogOut :size="24" />
             </div>
-
-            <Transition name="slide">
-                <div v-if="settingsOpen" class="submenu">
-                    <RouterLink 
-                        v-for="route in settingsRoutes" 
-                        :key="route.path" 
-                        :to="route.path" 
-                        class="sidebar-link submenu-item"
-                    >
-                        <i :class="route.meta?.icon || 'bi bi-link'"></i>
-                        {{ getRouteTitle(route) }}
-                    </RouterLink>
-                </div>
-            </Transition>
-
-        </nav>
-        <div class="user d-flex align-items-center border-top px-3 py-2">
-            <div class="avatar">
-                SV
-            </div>
-            <div class="ms-2">
-                <h6 class="mb-0 fw-bold">Sreyvik Von</h6>
-                <small class="text-secondary">Admin</small>
-            </div>
+            <h5 class="mb-1">Confirm Logout</h5>
+            <p class="mb-0 text-secondary">Are you sure you want to log out?</p>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-cancel" @click="showLogoutModal = false">
+              <X :size="16" class="me-1" />
+              Cancel
+            </button>
+            <button class="btn-logout" @click="handleLogout">
+              <LogOut :size="16" class="me-1" />
+              Logout
+            </button>
+          </div>
         </div>
-
-    </aside>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { useThemeStore } from '@/stores/theme'
-import { routes } from '@/router/routes'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useSidebarStore } from '@/stores/sidebar'
+import { storageUrl } from '@/services/apiHttp'
+import {
+  LayoutDashboard, Users, BookOpen, UserCheck,
+  GraduationCap, ClipboardList, FileText,
+  User, Shield, LogOut, X, PanelLeftClose,
+} from '@lucide/vue'
+import type { Component } from 'vue'
 
-const { t } = useI18n()
-const theme = useThemeStore()
-const settingsOpen = ref(false)
+const router = useRouter()
+const auth = useAuthStore()
+const sidebar = useSidebarStore()
 
-const sidebarRoutes = computed(() => {
-  return routes.filter(route => 
-    route.meta?.showInSidebar === true && 
-    route.meta?.parent !== 'settings' &&
-    route.path !== '/login'
-  )
-})
+const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
+const showLogoutModal = ref(false)
 
-const settingsRoutes = computed(() => {
-  return routes.filter(route => 
-    route.meta?.showInSidebar === true && 
-    route.meta?.parent === 'settings'
-  )
-})
-
-const hasSettingsRoutes = computed(() => settingsRoutes.value.length > 0)
-
-function toggleSettings() {
-    settingsOpen.value = !settingsOpen.value
+interface NavLink {
+  to: string
+  label: string
+  icon: Component
 }
 
-function getRouteTitle(route: any) {
-  const metaTitle = route.meta?.title
-  if (metaTitle) {
-    const translationKey = metaTitle.toLowerCase().replace(/\s+/g, '')
-    const translated = t(`nav.${translationKey}`)
-    return translated !== `nav.${translationKey}` ? translated : metaTitle
+const navLinks: NavLink[] = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/classes', label: 'Classes', icon: Users },
+  { to: '/subjects', label: 'Subjects', icon: BookOpen },
+  { to: '/teachers', label: 'Teachers', icon: UserCheck },
+  { to: '/students', label: 'Students', icon: GraduationCap },
+  { to: '/scores', label: 'Scores', icon: ClipboardList },
+  { to: '/reports', label: 'Reports', icon: FileText },
+]
+
+const settingsLinks: NavLink[] = [
+  { to: '/users', label: 'Users', icon: User },
+  { to: '/roles', label: 'Roles & Permissions', icon: Shield },
+]
+
+function getUserInitials(): string {
+  const name = auth.user?.name || ''
+  if (!name) return 'U'
+  const parts = name.split(' ').filter(Boolean)
+  if (parts.length >= 2) {
+    return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
   }
-  return route.name || 'Unknown'
+  return name.substring(0, 2).toUpperCase()
+}
+
+function handleLogout() {
+  showLogoutModal.value = false
+  auth.logout()
+  router.push('/login')
+}
+
+function goToProfile() {
+  router.push('/profile')
 }
 </script>
 
 <style scoped>
+/* ── Sidebar Base ── */
 .sidebar {
-    width: 220px;
-    height: 100vh;
-    background: #fff;
-    border-right: 1px solid #e9ecef;
-    display: flex;
-    flex-direction: column;
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+  width: 240px;
+  height: 100vh;
+  background: #fff;
+  border-right: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
-.sidebar.dark-mode {
-    background: #1e293b;
-    border-right-color: #334155;
+.sidebar.collapsed {
+  width: 72px;
 }
 
-.logo-icon {
-    width: 40px;
-    height: 40px;
+/* ── Logo ── */.sidebar-logo-wrap {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
     overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.logo-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.sidebar-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: left center;
+  transition: transform 0.3s ease;
 }
 
-.logo {
-    height: 56px;
-    padding: 0 16px;
-    border-bottom: 2px solid #e9ecef;
-    transition: border-color 0.3s ease;
+.sidebar-logo-wrap:hover .sidebar-logo {
+  transform: scale(1.08);
 }
 
-.sidebar.dark-mode .logo {
-    border-bottom-color: #334155;
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform-origin: left;
 }
 
-.logo-text h5 {
-    color: #253858;
-    font-size: 0.95rem;
-    line-height: 1.2;
-    transition: color 0.3s ease;
+.sidebar.collapsed .sidebar-brand-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  width: 0;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.sidebar.dark-mode .logo-text h5 {
-    color: #f1f5f9;
-}
-
-.logo-text small {
-    font-size: 0.65rem;
-    color: #64748b;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .logo-text small {
-    color: #94a3b8;
+.brand-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e3a5f;
+  white-space: nowrap;
 }
 
 .menu-title {
-    color: #94a3b8;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 0 12px;
-    transition: color 0.3s ease;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 0 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.sidebar.dark-mode .menu-title {
-    color: #64748b;
+.sidebar.collapsed .menu-title {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
 }
 
+/* ── Nav Links ── */
 .sidebar-link {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    color: #556987;
-    padding: 8px 12px;
-    margin-bottom: 2px;
-    border-radius: 10px;
-    transition: all 0.2s ease;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #556987;
+  padding: 10px 14px;
+  margin-bottom: 3px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-.sidebar.dark-mode .sidebar-link {
-    color: #cbd5e1;
-}
-
-.sidebar-link i {
-    font-size: 1.05rem;
-    width: 20px;
-    text-align: center;
-    flex-shrink: 0;
+.sidebar-link.collapsed {
+  justify-content: center;
+  padding: 10px 0;
+  margin-left: 4px;
+  margin-right: 4px;
 }
 
 .sidebar-link:hover {
-    background: #eef2ff;
-    color: #2563eb;
-}
-
-.sidebar.dark-mode .sidebar-link:hover {
-    background: #334155;
-    color: #60a5fa;
+  background: #eef2ff;
+  color: #2563eb;
 }
 
 .sidebar-link.router-link-active {
-    background: #e8f1ff;
-    color: #2563eb;
-    font-weight: 600;
+  background: #e8f1ff;
+  color: #2563eb;
+  font-weight: 600;
 }
 
-.sidebar.dark-mode .sidebar-link.router-link-active {
-    background: #1e40af;
-    color: #60a5fa;
+.sidebar-link-text {
+  margin-left: 10px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.sidebar-link.router-link-active i {
-    color: #2563eb;
+.sidebar.collapsed .sidebar-link-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
-.menu-parent {
-    display: flex;
-    align-items: center;
-    font-weight: 600;
-    color: #4b5563;
-    padding: 8px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 13px;
-    user-select: none;
-    outline: none;
+/* ── Toggle Button ── */
+.toggle-section {
+  padding: 0;
 }
 
-.sidebar.dark-mode .menu-parent {
-    color: #cbd5e1;
+.toggle-sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.menu-parent:focus-visible {
-    box-shadow: 0 0 0 2px #2563eb;
+.toggle-sidebar-btn.collapsed {
+  justify-content: center;
+  padding: 10px 0;
 }
 
-.menu-parent i:first-child {
-    font-size: 1.05rem;
-    width: 20px;
-    text-align: center;
-    flex-shrink: 0;
+.toggle-sidebar-btn:hover {
+  background: #f8fafc;
+  color: #2563eb;
 }
 
-.menu-parent i.chevron-icon {
-    font-size: 0.75rem;
-    color: #94a3b8;
-    transition: color 0.2s ease;
+.toggle-sidebar-btn:active {
+  transform: scale(0.97);
 }
 
-.menu-parent:hover {
-    background: #eef2ff;
-    color: #2563eb;
+.toggle-sidebar-btn .rotated {
+  transform: rotate(180deg);
 }
 
-.sidebar.dark-mode .menu-parent:hover {
-    background: #334155;
-    color: #60a5fa;
+.toggle-label {
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.menu-parent:hover i.chevron-icon {
-    color: #2563eb;
+.sidebar.collapsed .toggle-label {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
 }
 
-.submenu {
-    padding-left: 6px;
-    margin-top: 1px;
-    margin-bottom: 2px;
-    border-left: 2px solid #e2e8f0;
-    margin-left: 22px;
-    transition: border-color 0.3s ease;
-}
-
-.sidebar.dark-mode .submenu {
-    border-left-color: #334155;
-}
-
-.submenu-item {
-    font-size: 12px;
-    padding: 6px 12px;
-}
-
-.submenu-item i {
-    font-size: 0.9rem;
-    width: 18px;
+/* ── User Section ── */
+.user-section {
+  background: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .user {
-    background: white;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.sidebar.dark-mode .user {
-    background: #0f172a;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-radius: 8px;
+  padding: 4px 8px;
+  overflow: hidden;
 }
 
 .user:hover {
-    background: #f8fafc;
-}
-
-.sidebar.dark-mode .user:hover {
-    background: #1e293b;
+  background: #f8fafc;
 }
 
 .avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: white;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    font-size: 0.75rem;
-    flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.user-text {
+  overflow: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar.collapsed .user-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.sidebar.collapsed .logout-icon-btn {
+  display: none;
 }
 
 .user h6 {
-    font-size: 0.8rem;
-    color: #253858;
-    transition: color 0.3s ease;
-}
-
-.sidebar.dark-mode .user h6 {
-    color: #f1f5f9;
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 700;
 }
 
 .user small {
-    font-size: 0.65rem;
-    color: #64748b;
-    transition: color 0.3s ease;
+  font-size: 0.8rem;
+  color: #64748b;
 }
 
-.sidebar.dark-mode .user small {
-    color: #94a3b8;
+.logout-icon-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-
-.slide-enter-active {
-    transition: all 0.25s ease-out;
+.logout-icon-btn:hover {
+  background: #f1f5f9;
+  color: #ef4444;
 }
 
-.slide-leave-active {
-    transition: all 0.2s ease-in;
+/* ── Logout Modal ── */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
 }
 
-.slide-enter-from {
+.modal-dialog-custom {
+  background: #fff;
+  border-radius: 16px;
+  width: 360px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  animation: modalBounce 0.3s ease-out;
+}
+
+@keyframes modalBounce {
+  0% {
+    transform: scale(0.9);
     opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-}
-
-.slide-enter-to {
+  }
+  100% {
+    transform: scale(1);
     opacity: 1;
-    max-height: 120px;
-    overflow: hidden;
+  }
 }
 
-.slide-leave-from {
-    opacity: 1;
-    max-height: 120px;
-    overflow: hidden;
+.modal-header-custom {
+  padding: 28px 28px 16px;
+  text-align: center;
 }
 
-.slide-leave-to {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
+.modal-header-custom h5 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.modal-header-custom p {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #fef2f2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin: 0 auto 12px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 28px 28px;
+}
+
+.modal-actions button {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+}
+
+.btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.btn-logout {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-logout:hover {
+  background: #dc2626;
+}
+
+.modal-enter-active {
+  transition: all 0.2s ease-out;
+}
+
+.modal-leave-active {
+  transition: all 0.15s ease-in;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-dialog-custom,
+.modal-leave-to .modal-dialog-custom {
+  transform: scale(0.9);
 }
 </style>
