@@ -943,14 +943,6 @@ function recalculateRowTotal(row: SpreadsheetRow) {
       typeGroups[type].push(mark)
     }
   })
-
-  // Get weights from assessments
-  const assessmentsList = assessments.value ?? []
-  const assessments_map = new Map(assessmentsList.map(a => [a.code ?? 'unknown', a.weight_percent]))
-
-  Object.entries(typeGroups).forEach(([type, marks]) => {
-    const avg = marks.reduce((a, b) => a + b, 0) / marks.length
-    const weight = assessments_map.has(type) ? (assessments_map.get(type) || 0) / 100 : 0
   const assessmentMap = new Map(assessments.value.map(a => [a.code, a.weight_percent]))
   Object.entries(typeGroups).forEach(([type, marks]) => {
     const avg = marks.reduce((a, b) => a + b, 0) / marks.length
@@ -1884,11 +1876,6 @@ async function doRenameColumn() {
   } catch { showSaveStatus('failed') }
 }
 
-function confirmDeleteColumn(col: SpreadsheetColumn | undefined) {
-  if (!col) return
-  const label = col.label ?? ''
-  deleteConfirm.value = { col: col, label: label || 'this column' }
-}
 function confirmDeleteColumn(col: SpreadsheetColumn) { deleteConfirm.value = { col, label: col.label } }
 
 async function doDeleteColumn() {
@@ -2527,8 +2514,6 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 
 /* ─── Row States ───────────────────────────────────────────────────── */
 .row-even .cell { background-color: #fafafa; }
-.row-selected .cell { background-color: #f0f4ff; }
-.row-selected .cell.cell-frozen { background-color: #e8effb; }
 .row-selected .cell { background-color: #f0fff4; }
 .row-selected .cell.frozen { background-color: #e8f5e9; }
 
