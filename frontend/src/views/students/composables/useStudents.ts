@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
 import {
   getStudents,
-  getStudent,
   createStudent,
   updateStudent,
   deleteStudent,
@@ -20,6 +19,9 @@ const CLASSES_CACHE_KEY = 'classes-data'
 
 export function useStudents() {
   // ==================== Data ====================
+  const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
+  const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
+
   const students = ref<Student[]>(cachedStudents ?? [])
   const classes = ref<SchoolClass[]>(cachedClasses ?? [])
   const loading = ref(true)

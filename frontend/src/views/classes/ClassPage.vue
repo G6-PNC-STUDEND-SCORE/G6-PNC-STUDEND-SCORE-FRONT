@@ -46,8 +46,30 @@
       <span>Loading classes…</span>
     </div>
 
-    <!-- ── Table ── -->
-    <div v-else class="table-wrap">
+    <!-- ── Content (toolbar + table) ── -->
+    <template v-else>
+      <div class="toolbar">
+        <div class="tb-search">
+          <Search :size="16" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search classes..."
+          />
+          <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
+            <X :size="14" />
+          </button>
+        </div>
+        <div class="tb-filter">
+          <select v-model="statusFilter">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
       <table class="tbl">
         <thead>
           <tr>
@@ -68,7 +90,7 @@
               </div>
             </td>
           </tr>
-          <tr v-for="cls in filteredClasses" :key="cls.id">
+          <tr v-for="cls in paginatedClasses" :key="cls.id">
             <td class="td-name" @click="openEditModal(cls)">
               <div class="cls-avatar" :style="{ background: classIconBg() }">
                 <Users :size="16" />
@@ -97,7 +119,62 @@
           </tr>
         </TransitionGroup>
       </table>
+
+      <!-- Pagination -->
+      <div class="pagination-bar">
+        <div class="pagination-info">
+          <span class="rows-label">Rows per page:</span>
+          <div class="rows-selector">
+            <button
+              v-for="size in pageSizeOptions"
+              :key="size"
+              class="rows-btn"
+              :class="{ active: pageSize === size }"
+              @click="pageSize = size; currentPage = 1"
+            >
+              {{ size }}
+            </button>
+          </div>
+        </div>
+
+        <div class="pagination-pages">
+          <button
+            class="page-nav"
+            :disabled="currentPage <= 1"
+            @click="currentPage--"
+            aria-label="Previous page"
+          >
+            <ChevronLeft :size="16" />
+          </button>
+
+          <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
+            <button
+              v-if="page !== '...'"
+              class="page-btn"
+              :class="{ active: currentPage === page }"
+              @click="currentPage = page as number"
+            >
+              {{ page }}
+            </button>
+            <span v-else class="page-dots">…</span>
+          </template>
+
+          <button
+            class="page-nav"
+            :disabled="currentPage >= totalPages"
+            @click="currentPage++"
+            aria-label="Next page"
+          >
+            <ChevronRight :size="16" />
+          </button>
+        </div>
+
+        <div class="pagination-total">
+          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredClasses.length) }} of {{ filteredClasses.length }}
+        </div>
+      </div>
     </div>
+    </template>
 
     <!-- ── Add / Edit Modal ── -->
     <Teleport to="body">
@@ -190,16 +267,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive } from 'vue'
+import { ref, onMounted, computed, reactive, watch } from 'vue'
+
+const currentPage = ref(1)
+const pageSize = ref(10)
+const pageSizeOptions = [10, 25, 50]
 import { useClassStore } from '@/stores/class'
 import type { SchoolClass } from '@/services/classService'
 import { getAcademicYears } from '@/services/academicYearService'
 import {
   Users, Plus, AlertTriangle, CheckCircle, Inbox, Pencil, Trash2, SquarePen, CirclePlus,
+  ChevronLeft, ChevronRight, Search, X,
 } from '@lucide/vue'
 
 const store = useClassStore()
 const searchQuery = ref('')
+const statusFilter = ref('')
 const showModal = ref(false)
 const showDeleteModal = ref(false)
 const isEditMode = ref(false)
@@ -224,7 +307,37 @@ const filteredClasses = computed(() => {
     const q = searchQuery.value.toLowerCase()
     list = list.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
   }
+  if (statusFilter.value === 'Active') list = list.filter((c) => c.is_active)
+  if (statusFilter.value === 'Inactive') list = list.filter((c) => !c.is_active)
   return list
+})
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredClasses.value.length / pageSize.value)))
+
+const paginatedClasses = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredClasses.value.slice(start, end)
+})
+
+const visiblePages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
 })
 
 function validateForm() {
@@ -294,6 +407,11 @@ function showToast(msg: string, type: 'success' | 'error' = 'success') {
   toast.show = true
   setTimeout(() => { toast.show = false }, 3000)
 }
+
+// ─── Reset page on search / filter ────────────────────────────
+watch([searchQuery, statusFilter], () => {
+  currentPage.value = 1
+})
 
 onMounted(async () => {
   await Promise.all([store.fetchClasses(), loadAcademicYears()])
@@ -383,6 +501,32 @@ function classIconBg() {
 .btn-danger { background: #ef4444; color: #fff; }
 .btn-danger:hover { background: #dc2626; }
 
+.toolbar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px; flex-wrap: wrap;
+}
+.tb-search {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 14px; height: 38px;
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  min-width: 200px; flex: 1; max-width: 320px;
+  transition: border-color 0.2s;
+}
+.tb-search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+.tb-search svg { color: #94a3b8; flex-shrink: 0; }
+.tb-search input {
+  border: none; background: transparent; outline: none;
+  width: 100%; font-size: 0.85rem; color: #1e293b; font-family: inherit;
+}
+.tb-search input::placeholder { color: #94a3b8; }
+.tb-clear { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; }
+.tb-filter select {
+  height: 38px; padding: 0 12px; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; background: #fff; font-size: 0.85rem;
+  color: #475569; cursor: pointer; outline: none; font-family: inherit;
+}
+.tb-filter select:focus { border-color: #93c5fd; }
+
 .toast-bar { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 400px; }
 .toast-bar.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
 .toast-bar.error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
@@ -396,4 +540,43 @@ function classIconBg() {
 .row-enter-active, .row-leave-active { transition: all 0.3s ease; }
 .row-enter-from { opacity: 0; transform: translateX(-20px); }
 .row-leave-to { opacity: 0; transform: translateX(20px); }
+
+/* ══════════════════════════════════════════════════════════════
+   PAGINATION
+   ══════════════════════════════════════════════════════════════ */
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; border-top: 1px solid #e5e7eb;
+  background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
+  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+}
+.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
+.rows-label { font-weight: 500; white-space: nowrap; }
+.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+.rows-btn {
+  padding: 4px 10px; border: none; background: transparent;
+  color: #64748b; border-radius: 6px; cursor: pointer;
+  font-size: 0.75rem; font-weight: 600; font-family: inherit;
+  transition: all 0.15s ease;
+}
+.rows-btn:hover { color: #334155; }
+.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.pagination-pages { display: flex; align-items: center; gap: 2px; }
+.page-nav {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
+}
+.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
+.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn {
+  min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #475569;
+  border-radius: 8px; cursor: pointer; font-size: 0.8125rem;
+  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
+}
+.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
+.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
+.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
+.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 </style>

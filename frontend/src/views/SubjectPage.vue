@@ -132,7 +132,7 @@
               </div>
             </td>
           </tr>
-          <tr v-for="subject in filteredSubjects" :key="subject.id">
+          <tr v-for="subject in paginatedSubjects" :key="subject.id">
             <!-- Subject -->
             <td class="td-subject" @click="openEditModal(subject)">
               <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
@@ -192,6 +192,60 @@
           </tr>
         </TransitionGroup>
       </table>
+
+      <!-- Pagination -->
+      <div class="pagination-bar">
+        <div class="pagination-info">
+          <span class="rows-label">Rows per page:</span>
+          <div class="rows-selector">
+            <button
+              v-for="size in pageSizeOptions"
+              :key="size"
+              class="rows-btn"
+              :class="{ active: pageSize === size }"
+              @click="pageSize = size; currentPage = 1"
+            >
+              {{ size }}
+            </button>
+          </div>
+        </div>
+
+        <div class="pagination-pages">
+          <button
+            class="page-nav"
+            :disabled="currentPage <= 1"
+            @click="currentPage--"
+            aria-label="Previous page"
+          >
+            <ChevronLeft :size="16" />
+          </button>
+
+          <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
+            <button
+              v-if="page !== '...'"
+              class="page-btn"
+              :class="{ active: currentPage === page }"
+              @click="currentPage = page as number"
+            >
+              {{ page }}
+            </button>
+            <span v-else class="page-dots">…</span>
+          </template>
+
+          <button
+            class="page-nav"
+            :disabled="currentPage >= totalPages"
+            @click="currentPage++"
+            aria-label="Next page"
+          >
+            <ChevronRight :size="16" />
+          </button>
+        </div>
+
+        <div class="pagination-total">
+          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} of {{ filteredSubjects.length }}
+        </div>
+      </div>
     </div>
 
     <!-- ── Add / Edit Modal ── -->
@@ -329,7 +383,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed, type Component } from 'vue'
+import { ref, onMounted, reactive, computed, watch, type Component } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
 import type { Subject } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
@@ -354,10 +408,43 @@ import {
   Circle,
   SquarePen,
   CirclePlus,
+  ChevronLeft,
+  ChevronRight,
 } from '@lucide/vue'
 import { cacheService } from '@/services/cacheService'
 
 const CACHE_KEY = 'subject-terms'
+
+// ─── Pagination ───────────────────────────────────────────────────
+const currentPage = ref(1)
+const pageSize = ref(10)
+const pageSizeOptions = [10, 25, 50]
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredSubjects.value.length / pageSize.value)))
+
+const paginatedSubjects = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredSubjects.value.slice(start, end)
+})
+
+const visiblePages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
 
 // ─── Store ─────────────────────────────────────────────────────────
 const store = useSubjectStore()
@@ -508,6 +595,11 @@ async function saveAll() {
     saving.value = false
   }
 }
+
+// ─── Reset page on filter change ───────────────────────────────
+watch([searchQuery, statusFilter, activeTermFilter], () => {
+  currentPage.value = 1
+})
 
 // ─── CRUD ──────────────────────────────────────────────────────────
 function handleSearch() {}
@@ -1034,5 +1126,46 @@ onMounted(async () => {
   .tb-search { max-width: 100%; }
   .term-strip { grid-template-columns: repeat(2, 1fr); }
   .row-2 { grid-template-columns: 1fr; }
+  .pagination-bar { flex-direction: column; align-items: center; gap: 8px; }
+  .pagination-info { width: 100%; justify-content: center; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   PAGINATION
+   ══════════════════════════════════════════════════════════════ */
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; border-top: 1px solid #e5e7eb;
+  background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
+  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+}
+.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
+.rows-label { font-weight: 500; white-space: nowrap; }
+.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+.rows-btn {
+  padding: 4px 10px; border: none; background: transparent;
+  color: #64748b; border-radius: 6px; cursor: pointer;
+  font-size: 0.75rem; font-weight: 600; font-family: inherit;
+  transition: all 0.15s ease;
+}
+.rows-btn:hover { color: #334155; }
+.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.pagination-pages { display: flex; align-items: center; gap: 2px; }
+.page-nav {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
+}
+.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
+.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn {
+  min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #475569;
+  border-radius: 8px; cursor: pointer; font-size: 0.8125rem;
+  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
+}
+.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
+.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
+.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
+.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 </style>

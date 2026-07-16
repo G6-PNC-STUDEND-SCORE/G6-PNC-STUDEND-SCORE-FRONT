@@ -1,8 +1,0 @@
-0000000000000000000000000000000000000000 c75aa6bb416f620133c6ebc9b519901b16c27ce8 Roeurn Rors <roeurngithub26@gmail.com> 1783320673 +0700	branch: Created from HEAD
-c75aa6bb416f620133c6ebc9b519901b16c27ce8 57735a412bd13dd55a284e21b68629a987395871 Roeurn Rors <roeurngithub26@gmail.com> 1783324742 +0700	commit: feat(auth): implement login API with Sanctum authentication #S1-07
-57735a412bd13dd55a284e21b68629a987395871 5923115aea2263c829ccde00d66601413ba4d175 Roeurn Rors <roeurngithub26@gmail.com> 1783385327 +0700	commit: Fix: Feature login page
-5923115aea2263c829ccde00d66601413ba4d175 f3c7719a337d41e94516fd37a0ea1c7d2b1c1f85 Roeurn Rors <roeurngithub26@gmail.com> 1783410240 +0700	pull: Fast-forward
-f3c7719a337d41e94516fd37a0ea1c7d2b1c1f85 f7542a03706e9b1b87ccc91179ca15031dd2ce6a Roeurn Rors <roeurngithub26@gmail.com> 1783507054 +0700	commit: Update Google login
-f7542a03706e9b1b87ccc91179ca15031dd2ce6a 050562a1b73d83014a10c8b7c349390ef65bdbfe Roeurn Rors <roeurngithub26@gmail.com> 1783645417 +0700	commit: fix: table activitly log
-050562a1b73d83014a10c8b7c349390ef65bdbfe bbf61f59f9d35eb7558d51a60074fade9476b5e0 Roeurn Rors <roeurngithub26@gmail.com> 1783766825 +0700	commit (merge): fix: login feature migration
-bbf61f59f9d35eb7558d51a60074fade9476b5e0 f6cda29e8fc2ffd5509a09de196055e2258e57c5 Roeurn Rors <roeurngithub26@gmail.com> 1783775874 +0700	commit (merge): fix: Update migraitons
