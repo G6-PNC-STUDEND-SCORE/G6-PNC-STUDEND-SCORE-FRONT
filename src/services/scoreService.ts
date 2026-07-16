@@ -18,7 +18,9 @@ export interface SpreadsheetRow {
   student_number: string
   offering_id: number
   total: number | null
+  average: number | null
   grade: string | null
+  pass_fail: string | null
   details: Record<number, number | null>
 }
 

@@ -7,6 +7,7 @@
         <p class="page-subtitle">Manage your institutional profile and security preferences.</p>
       </div>
     </header>
+    
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
@@ -17,7 +18,7 @@
     </div>
 
     <!-- Error State -->
-    <div v-else-if="fetchError" class="error-state">
+    <div v-else-if="fetchError" class="error-state">          
       <i class="bi bi-exclamation-triangle-fill"></i>
       <p>{{ fetchError }}</p>
       <button class="btn btn-primary" @click="loadProfile">Retry</button>

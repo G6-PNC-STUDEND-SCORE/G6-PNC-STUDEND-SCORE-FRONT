@@ -126,7 +126,9 @@
                   'cell-average': row.total !== null && row.total >= 70 && row.total < 90,
                   'cell-low': row.total !== null && row.total < 70
                 }">{{ row.total !== null ? row.total.toFixed(2) : '-' }}</td>
+              <td class="cell cell-average">{{ row.average !== null ? row.average.toFixed(2) : '-' }}</td>
               <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
+              <td class="cell cell-pass-fail" :class="row.pass_fail === 'Pass' ? 'pass-status' : 'fail-status'">{{ row.pass_fail || '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -439,18 +441,20 @@ function saveEdit() {
 }
 
 function recalculateRowTotal(row: SpreadsheetRow) {
-  // Simple local recalculation of total and grade for display
+  // Simple local recalculation of total, average, grade and pass/fail for display
   const columns_list = columns.value
   if (!columns_list.length) return
 
   let total = 0
   const typeGroups: Record<string, number[]> = {}
+  const allMarks: number[] = []
 
   columns_list.forEach(col => {
     const mark = row.details[col.id]
     if (mark !== null && mark !== undefined) {
       if (!typeGroups[col.type]) typeGroups[col.type] = []
       typeGroups[col.type].push(mark)
+      allMarks.push(mark)
     }
   })
 
@@ -463,8 +467,15 @@ function recalculateRowTotal(row: SpreadsheetRow) {
     total += avg * weight
   })
 
+  // Calculate average (simple average of all marks)
+  const average = allMarks.length > 0 
+    ? allMarks.reduce((a, b) => a + b, 0) / allMarks.length 
+    : 0
+
   row.total = Math.round(total * 100) / 100
+  row.average = Math.round(average * 100) / 100
   row.grade = total >= 90 ? 'A' : total >= 80 ? 'B+' : total >= 75 ? 'B' : total >= 70 ? 'C+' : total >= 60 ? 'C' : total >= 50 ? 'D' : 'F'
+  row.pass_fail = average >= 60 ? 'Pass' : 'Fail'
 }
 
 function cancelEdit() {
@@ -1240,8 +1251,21 @@ function handleGlobalUndoRedo(event: KeyboardEvent) {
   margin-top: 1px;
 }
 
-.cell-total, .cell-grade { background: #fafafa; }
-.cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
+.cell-total, .cell-grade, .cell-average, .cell-pass-fail { background: #fafafa; }
+.cell-total.cell-header, .cell-grade.cell-header, .cell-average.cell-header, .cell-pass-fail.cell-header { background: #e2e8f0; }
+
+/* ─── Pass/Fail Status ─────────────────────────────────────────────── */
+.pass-status { 
+  color: #16a34a !important; 
+  font-weight: 700 !important; 
+  background: #dcfce7 !important;
+}
+
+.fail-status { 
+  color: #dc2626 !important; 
+  font-weight: 700 !important; 
+  background: #fee2e2 !important;
+}
 
 /* ─── Cells ────────────────────────────────────────────────────────── */
 .cell {
