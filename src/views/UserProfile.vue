@@ -197,11 +197,11 @@ import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
+import { http } from '@/services/api'
 
-// ── Module-level profile cache ──
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
-const PROFILE_CACHE_TTL = 30_000 // 30 seconds
+const PROFILE_CACHE_TTL = 30_000
 
 function isProfileCacheStale(): boolean {
   return Date.now() - profileCacheTime > PROFILE_CACHE_TTL
@@ -412,7 +412,7 @@ function triggerUpload() {
   }
 }
 
-function updatePassword() {
+async function updatePassword() {
   passwordMessage.value = ''
   passwordStatus.value = ''
 
@@ -436,15 +436,25 @@ function updatePassword() {
 
   passwordSaving.value = true
 
-  // Simulate password update for now (backend endpoint to be added)
-  setTimeout(() => {
-    passwordMessage.value = 'Password changed successfully'
+  try {
+    const response = await http.patch('/change-password', {
+      current_password: password.current,
+      new_password: password.new,
+      new_password_confirmation: password.confirm,
+    })
+    
+    passwordMessage.value = response.data.message || 'Password changed successfully'
     passwordStatus.value = 'success'
     password.current = ''
     password.new = ''
     password.confirm = ''
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    passwordMessage.value = err.response?.data?.message || err.message || 'Failed to change password'
+    passwordStatus.value = 'error'
+  } finally {
     passwordSaving.value = false
-  }, 1000)
+  }
 }
 
 function resetPassword() {
@@ -518,7 +528,6 @@ onUnmounted(() => {
   margin-bottom: 16px;
 }
 
-/* Profile Card */
 .profile-card {
   max-width: 1200px;
   margin: 0 auto 28px;
@@ -638,7 +647,6 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* Bottom */
 .content-grid {
   max-width: 1200px;
   margin: 0 auto;

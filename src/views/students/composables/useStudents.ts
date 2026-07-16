@@ -6,25 +6,25 @@ import {
   updateStudent,
   deleteStudent,
   assignStudentToClass,
+  uploadStudentPhoto,
+  deleteStudentPhoto,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
 
 import { classService } from '@/services/classService'
 
-// ── Module-level cache (shared across component instances) ──
 let cachedStudents: Student[] | null = null
 let cachedClasses: SchoolClass[] | null = null
 let studentCacheTime = 0
 let classCacheTime = 0
-const CACHE_TTL = 30_000 // 30 seconds
+const CACHE_TTL = 30_000
 
 function isCacheStale(cacheTime: number): boolean {
   return Date.now() - cacheTime > CACHE_TTL
 }
 
 export function useStudents() {
-  // ==================== Data ====================
   const students = ref<Student[]>(cachedStudents ?? [])
   const classes = ref<SchoolClass[]>(cachedClasses ?? [])
   const loading = ref(true)
@@ -35,7 +35,6 @@ export function useStudents() {
 
   const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-  // ==================== Modal State ====================
   const showCreateModal = ref(false)
   const showEditModal = ref(false)
   const showDeleteModal = ref(false)
@@ -43,20 +42,16 @@ export function useStudents() {
   const showDetailsModal = ref(false)
   const selectedStudent = ref<Student | null>(null)
 
-  // ==================== Form State ====================
   const genderFilter = ref('')
 
   const initialCreateForm = () => ({
-    user_id: 0,
-    student_number: '',
-    intake_year: new Date().getFullYear(),
-    sequence_number: 0,
     name: '',
+    email: '',
+    password: '',
     gender: 'Male' as 'Male' | 'Female',
     status: 'active' as 'active' | 'inactive',
     class_id: null as number | null,
-    academic_year_id: null as number | null,
-    enrollment_date: null as string | null,
+    generation_id: null as number | null,
   })
 
   const createForm = ref(initialCreateForm())
@@ -74,7 +69,6 @@ export function useStudents() {
   
   const assignForm = ref({ class_id: null as number | null })
 
-  // ==================== Computed ====================
   const filteredStudents = computed(() => {
     return students.value.filter((s) => {
       const studentName = s.user?.name || ''
@@ -84,7 +78,6 @@ export function useStudents() {
     })
   })
 
-  // ==================== Helpers ====================
   function getInitials(name: string): string {
     const safeName = name || ''
     const parts = safeName.split(' ').filter(Boolean)
@@ -109,7 +102,6 @@ export function useStudents() {
     setTimeout(() => { toast.value.show = false }, 3000)
   }
 
-  // ==================== API Calls with Cache ====================
   async function loadStudents() {
     if (cachedStudents && !isCacheStale(studentCacheTime)) {
       students.value = cachedStudents
@@ -142,7 +134,7 @@ export function useStudents() {
         classes.value = cachedClasses
       }
     } catch {
-      // Silently fail
+      // Non-critical; silently ignore
     }
   }
 
@@ -151,13 +143,11 @@ export function useStudents() {
     await Promise.all([loadStudents(), loadClasses()])
   }
 
-  // Invalidate cache on mutations so next visit re-fetches
   function invalidateStudentCache() {
     cachedStudents = null
     studentCacheTime = 0
   }
 
-  // ==================== Create ====================
   function openCreateModal() {
     createForm.value = initialCreateForm()
     formError.value = null
@@ -169,8 +159,16 @@ export function useStudents() {
   }
 
   async function handleCreate() {
-    if (!createForm.value.student_number.trim()) {
-      formError.value = 'Student number is required'
+    if (!createForm.value.name.trim()) {
+      formError.value = 'Student name is required'
+      return
+    }
+    if (!createForm.value.email.trim()) {
+      formError.value = 'Email address is required'
+      return
+    }
+    if (!createForm.value.password || createForm.value.password.length < 8) {
+      formError.value = 'Password must be at least 8 characters'
       return
     }
     formSubmitting.value = true
@@ -189,7 +187,9 @@ export function useStudents() {
     }
   }
 
-  // ==================== Edit ====================
+  const photoFile = ref<File | null>(null)
+  const removePhotoFlag = ref(false)
+
   function openEditModal(student: Student) {
     selectedStudent.value = student
     editForm.value = {
@@ -199,12 +199,28 @@ export function useStudents() {
       enrollment_date: student.enrollment_date ?? null,
     }
     formError.value = null
+    photoFile.value = null
+    removePhotoFlag.value = false
     showEditModal.value = true
   }
 
   function closeEditModal() {
     showEditModal.value = false
     selectedStudent.value = null
+    photoFile.value = null
+    removePhotoFlag.value = false
+  }
+
+  function onEditPhotoSelected(file: File | null) {
+    photoFile.value = file
+    if (file) {
+      removePhotoFlag.value = false
+    }
+  }
+
+  function onEditRemovePhoto() {
+    photoFile.value = null
+    removePhotoFlag.value = true
   }
 
   async function handleEdit() {
@@ -213,8 +229,18 @@ export function useStudents() {
     formError.value = null
     try {
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
+      let updatedStudent = res.student
+
+      if (photoFile.value) {
+        const photoRes = await uploadStudentPhoto(selectedStudent.value.id, photoFile.value)
+        updatedStudent = photoRes.student
+      } else if (removePhotoFlag.value) {
+        const photoRes = await deleteStudentPhoto(selectedStudent.value.id)
+        updatedStudent = photoRes.student
+      }
+
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
-      if (index !== -1) students.value[index] = res.student
+      if (index !== -1) students.value[index] = updatedStudent
       invalidateStudentCache()
       closeEditModal()
       showToast('Student updated successfully')
@@ -226,7 +252,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== Delete ====================
   function openDeleteModal(student: Student) {
     selectedStudent.value = student
     showDeleteModal.value = true
@@ -254,7 +279,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== Assign ====================
   function openAssignModal(student: Student) {
     selectedStudent.value = student
     assignForm.value = { class_id: student.class_id ?? null }
@@ -284,7 +308,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== View Details ====================
   function viewDetails(student: Student) {
     selectedStudent.value = student
     showDetailsModal.value = true
@@ -295,9 +318,7 @@ export function useStudents() {
     selectedStudent.value = null
   }
 
-  // ==================== Return ====================
   return {
-    // Data
     students,
     classes,
     loading,
@@ -306,25 +327,22 @@ export function useStudents() {
     formSubmitting,
     formError,
     toast,
-    // Modal state
     showCreateModal,
     showEditModal,
     showDeleteModal,
     showAssignModal,
     showDetailsModal,
     selectedStudent,
-    // Form state
     genderFilter,
     createForm,
     editForm,
     assignForm,
-    // Computed
+    photoFile,
+    existingPhotoUrl: computed(() => selectedStudent.value?.profile_photo_url ?? null),
     filteredStudents,
-    // Helpers
     getInitials,
     formatDate,
     showToast,
-    // Actions
     init,
     invalidateStudentCache,
     openCreateModal,
@@ -333,6 +351,8 @@ export function useStudents() {
     openEditModal,
     closeEditModal,
     handleEdit,
+    onEditPhotoSelected,
+    onEditRemovePhoto,
     openDeleteModal,
     closeDeleteModal,
     handleDelete,
