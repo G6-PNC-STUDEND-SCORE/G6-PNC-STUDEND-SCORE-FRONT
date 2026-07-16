@@ -72,8 +72,23 @@
               <th class="cell-header cell-frozen row-num-header">#</th>
               <th class="cell-header cell-frozen student-name-header">Student Name</th>
               <th class="cell-header cell-frozen student-id-header">ID</th>
-              <th v-for="col in columns" :key="col.id" class="cell-header" :class="getColumnTypeClass(col.type)" :style="{ minWidth: '80px' }">
+              <th v-for="col in columns" :key="col.id"
+                draggable="true"
+                :class="[
+                  'cell-header',
+                  'cell-header-draggable',
+                  getColumnTypeClass(col.type),
+                  { 'col-drag-over': dragState.overId === col.id && dragState.dragging?.id !== col.id }
+                ]"
+                :style="{ minWidth: '80px' }"
+                @dragstart="startDrag(col, $event)"
+                @dragover.prevent="onDragOver(col)"
+                @dragenter.prevent="() => {}"
+                @dragleave="onDragLeave"
+                @drop.prevent="onDrop(col)"
+                @dragend="endDrag">
                 <div class="header-content column-header-content">
+                  <i class="bi bi-grip-vertical drag-handle"></i>
                   <span class="column-label" :title="col.label" @dblclick.stop="startRenameColumn(col)">{{ col.label }}</span>
                   <span class="column-type-badge">{{ col.type }}</span>
                   <div class="column-actions">
@@ -226,6 +241,7 @@ import {
   addColumn,
   deleteColumn,
   renameColumn,
+  reorderColumns,
   updateWeights,
   syncToGoogleSheets,
   createGoogleSheet,
@@ -271,6 +287,67 @@ const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
+
+const dragState = reactive<{ dragging: SpreadsheetColumn | null; overId: number | null }>({ dragging: null, overId: null })
+
+function startDrag(col: SpreadsheetColumn, event: DragEvent) {
+  dragState.dragging = col
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', String(col.id))
+  }
+}
+
+function onDragOver(col: SpreadsheetColumn) {
+  if (dragState.dragging && dragState.dragging.id !== col.id) {
+    dragState.overId = col.id
+  }
+}
+
+function onDragLeave() {
+  dragState.overId = null
+}
+
+function onDrop(col: SpreadsheetColumn) {
+  if (!dragState.dragging || dragState.dragging.id === col.id) {
+    dragState.dragging = null
+    dragState.overId = null
+    return
+  }
+
+  const cols = [...columns.value]
+  const fromIdx = cols.findIndex(c => c.id === dragState.dragging!.id)
+  const toIdx = cols.findIndex(c => c.id === col.id)
+  if (fromIdx === -1 || toIdx === -1) {
+    dragState.dragging = null
+    dragState.overId = null
+    return
+  }
+
+  cols.splice(fromIdx, 1)
+  cols.splice(toIdx, 0, dragState.dragging)
+
+  if (data.value) {
+    data.value.columns = cols
+  }
+
+  const reorderPayload = cols.map((c, i) => ({ id: c.id, order_number: i + 1 }))
+  showSaveStatus('saving')
+  reorderColumns(subjectId.value, termId.value, reorderPayload)
+    .then(() => showSaveStatus('saved'))
+    .catch(() => {
+      showSaveStatus('failed')
+      refreshData()
+    })
+
+  dragState.dragging = null
+  dragState.overId = null
+}
+
+function endDrag() {
+  dragState.dragging = null
+  dragState.overId = null
+}
 
 const invalidCells = reactive<Set<string>>(new Set())
 
@@ -1233,6 +1310,44 @@ watch([subjectId, termId], () => {
   white-space: nowrap;
   min-width: 80px;
   user-select: none;
+}
+
+.cell-header-draggable {
+  cursor: grab;
+}
+
+.cell-header-draggable:active {
+  cursor: grabbing;
+}
+
+.cell-header-draggable .column-label {
+  pointer-events: auto;
+}
+
+.cell-header-draggable .column-actions {
+  pointer-events: auto;
+}
+
+.col-drag-over {
+  border-left: 3px solid #3b82f6 !important;
+  background: #eff6ff !important;
+  opacity: 0.9;
+}
+
+.drag-handle {
+  font-size: 0.6rem;
+  color: #94a3b8;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.cell-header:hover .drag-handle {
+  opacity: 0.6;
+}
+
+.cell-header:hover .drag-handle:hover {
+  opacity: 1;
 }
 
 .cell-frozen {
