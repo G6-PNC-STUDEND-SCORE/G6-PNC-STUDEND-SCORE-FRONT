@@ -732,7 +732,7 @@ defineEmits<{
   font-weight: 500;
   font-family: "Inter", "Noto Sans Khmer", sans-serif;
   transition: all 0.15s ease;
-  text-align: left;
+  text-align: center;
   color: #374151;
 }
 
