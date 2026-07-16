@@ -903,7 +903,9 @@ function saveEdit() {
   cancelEdit()
   showSaveStatus('saving')
 
-  updateCellMark(subjectId.value, termId.value, detailId, newValue)
+  // Resolve the actual detail ID for this student before saving
+  const actualDetailId = actualRow.detail_ids?.[detailId] ?? detailId
+  updateCellMark(subjectId.value, termId.value, actualDetailId, newValue)
     .then(() => {
       showSaveStatus('saved')
       recalculateRowTotal(actualRow)
@@ -1143,7 +1145,8 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[srcColId] = nextValue
       recalculateRowTotal(targetRow)
-      updateCellMark(subjectId.value, termId.value, srcColId, nextValue).catch(() => {})
+      const resolvedSrcId = targetRow.detail_ids?.[srcColId] ?? srcColId
+      updateCellMark(subjectId.value, termId.value, resolvedSrcId, nextValue).catch(() => {})
     })
   } else {
     // Horizontal fill: continue the pattern across columns.
@@ -1180,7 +1183,8 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[cols[ci].id] = nextValue
       recalculateRowTotal(targetRow)
-      updateCellMark(subjectId.value, termId.value, cols[ci].id, nextValue).catch(() => {})
+      const resolvedColId = targetRow.detail_ids?.[cols[ci].id] ?? cols[ci].id
+      updateCellMark(subjectId.value, termId.value, resolvedColId, nextValue).catch(() => {})
     })
   }
 
@@ -1440,7 +1444,8 @@ function clearSingleCell() {
   undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value!, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  updateCellMark(subjectId.value, termId.value, selectedCol.value!, null)
+  const resolvedDelId = actualRow?.detail_ids?.[selectedCol.value!] ?? selectedCol.value!
+  updateCellMark(subjectId.value, termId.value, resolvedDelId, null)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value!] = oldValue })
 }
@@ -1461,7 +1466,8 @@ function clearRangeSelection() {
       const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
       if (actualRow) actualRow.details[c] = null
       undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: c, oldValue })
-      updateCellMark(subjectId.value, termId.value, c, null).catch(() => {})
+      const resolvedPasteId = actualRow?.detail_ids?.[c] ?? c
+      updateCellMark(subjectId.value, termId.value, resolvedPasteId, null).catch(() => {})
     }
   }
   redoStack.value = []
@@ -1604,7 +1610,8 @@ function cutSelection() {
   undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
+  const resolvedCutId = actualRow?.detail_ids?.[selectedCol.value] ?? selectedCol.value
+  updateCellMark(subjectId.value, termId.value, resolvedCutId, null)
     .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow!) })
     .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value] = oldValue })
 }
@@ -1626,7 +1633,8 @@ function onPaste(event: ClipboardEvent) {
   undoStack.value.push({ enrollmentId: row.enrollment_id, detailId, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  updateCellMark(subjectId.value, termId.value, detailId, numValue)
+  const resolvedPasteDetailId = actualRow.detail_ids?.[detailId] ?? detailId
+  updateCellMark(subjectId.value, termId.value, resolvedPasteDetailId, numValue)
     .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow) })
     .catch(() => { showSaveStatus('failed'); actualRow.details[detailId] = oldValue })
 }
@@ -1650,7 +1658,8 @@ function undo() {
   if (!row) return
   row.details[action.detailId] = action.oldValue
   redoStack.value.push(action)
-  updateCellMark(subjectId.value, termId.value, action.detailId, action.oldValue)
+  const resolvedUndoId = row.detail_ids?.[action.detailId] ?? action.detailId
+  updateCellMark(subjectId.value, termId.value, resolvedUndoId, action.oldValue)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -1663,7 +1672,8 @@ function redo() {
   if (!row) return
   const current = row.details[action.detailId]
   row.details[action.detailId] = current === null ? action.oldValue : null
-  updateCellMark(subjectId.value, termId.value, action.detailId, row.details[action.detailId])
+  const resolvedRedoId = row.detail_ids?.[action.detailId] ?? action.detailId
+  updateCellMark(subjectId.value, termId.value, resolvedRedoId, row.details[action.detailId])
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }

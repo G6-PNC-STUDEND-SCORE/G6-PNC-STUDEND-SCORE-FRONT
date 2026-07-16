@@ -18,6 +18,17 @@
             <!-- Student Avatar & Name -->
             <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light">
               <div
+                v-if="student.profile_photo_url"
+                class="avatar-img-details"
+              >
+                <img
+                  :src="student.profile_photo_url"
+                  :alt="student.user?.name || 'Student'"
+                  class="photo-img-details"
+                />
+              </div>
+              <div
+                v-else
                 class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0 shadow-sm"
                 style="width: 54px; height: 54px; font-size: 1.125rem; background: linear-gradient(135deg, #6366f1, #4f46e5);"
               >
@@ -27,7 +38,7 @@
                 <h6 class="mb-1 fw-bold text-dark">{{ student.user?.name }}</h6>
                 <span
                   class="badge rounded-pill"
-                  :class="student.gender === 'Male' ? 'bg-primary-subtle text-primary' : 'bg-danger-subtle text-danger'"
+                  :class="(student.user?.gender || '') === 'Male' ? 'bg-primary-subtle text-primary' : 'bg-danger-subtle text-danger'"
                 >
                   <i :class="(student.user?.gender || '') === 'Male' ? 'bi bi-gender-male me-1' : 'bi bi-gender-female me-1'"></i>
                   {{ student.user?.gender || '—' }}
@@ -111,6 +122,22 @@ defineEmits<{
   justify-content: center;
   z-index: 9999;
   backdrop-filter: blur(6px);
+}
+
+.avatar-img-details {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.photo-img-details {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .modal-content-panel {
