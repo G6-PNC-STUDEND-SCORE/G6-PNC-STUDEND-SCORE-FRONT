@@ -10,7 +10,7 @@
         <span class="text-muted">
           <span class="term-badge">{{ data?.term?.name }}</span>
           <template v-if="data?.offerings?.length">
-            · {{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}
+            - {{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}
           </template>
         </span>
       </div>
@@ -43,7 +43,7 @@
       <div class="stat-item"><span class="stat-label">Top</span><span class="stat-value">{{ topStudent }}</span></div>
       <div class="stat-item" v-if="data.offerings?.length">
         <span class="stat-label">Teachers</span>
-        <span class="stat-value">{{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}</span>
+        <span class="stat-value">- {{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}</span>
       </div>
     </div>
 
@@ -58,15 +58,10 @@
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
               <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ minWidth: '80px' }">
                 <div class="header-content column-header-content">
-                  <span class="column-label" :title="col.label" @lclick.stop="startRenameColumn(col)">{{ col.label }}</span>
-                  <select v-model="columnTypes[col.id]" @change="onColumnTypeChange(col, $event)" class="column-type-select" @click.stop @mousedown.stop>
-                <option value="quiz">Quiz</option>
-                <option value="assignment">Assignment</option>
-                <option value="project">Project</option>
-                <option value="midterm">Midterm</option>
-                <option value="final">Final</option>
-                <option value="custom">Custom</option>
-              </select>
+                  <span class="column-label" :title="col.label" @click.stop="startRenameColumn(col)">{{ col.label }}</span>
+                  <select v-model="columnTypes[col.id]" @change="onColumnTypeChange(col)" class="column-type-select" @click.stop @mousedown.stop>
+                    <option v-for="option in SCORE_COLUMN_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+                  </select>
                   <div class="column-actions">
                     <button class="col-action-btn" @click="startRenameColumn(col)" title="Rename"><i class="bi bi-pencil"></i></button>
                     <button class="col-action-btn text-danger" @click="confirmDeleteColumn(col)" title="Delete"><i class="bi bi-trash3"></i></button>
@@ -81,12 +76,7 @@
                 <div v-if="showInlineAddColumn" class="inline-add-col" @click.stop>
                   <input v-model="inlineColName" placeholder="Column name" class="inline-input" @keydown.enter="doAddColumnInline" />
                   <select v-model="inlineColType" class="inline-select" @keydown.enter.prevent>
-                    <option value="quiz">Quiz</option>
-                    <option value="assignment">Assignment</option>
-                    <option value="project">Project</option>
-                    <option value="midterm">Midterm</option>
-                    <option value="final">Final</option>
-                    <option value="custom">Custom</option>
+                    <option v-for="option in SCORE_COLUMN_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
                   </select>
                   <input v-model.number="inlineColMax" type="number" class="inline-input" placeholder="Max" @keydown.enter="doAddColumnInline" />
                   <button class="inline-btn" @click="doAddColumnInline">Add</button>
@@ -157,7 +147,7 @@
               </td>
 
               <td class="cell cell-total" :class="getTotalCellClass(row)">{{ row.total !== null ? row.total.toFixed(2) : '-' }}</td>
-              <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
+              <td class="cell cell-grade" :class="getGradeClass(row.grade)">{{ row.grade || '-' }}</td>
             </tr>
             <tr class="add-row-row" @click="doAddRow">
               <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
@@ -202,7 +192,12 @@
       <div class="modal-content modal-sm">
         <div class="modal-header"><h5>Add New Column</h5><button class="modal-close" @click="showAddColumn = false">&times;</button></div>
         <div class="modal-body">
-          <div class="form-group"><label>Type</label><select v-model="newColumn.type" class="form-input"><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="project">Project</option><option value="midterm">Midterm</option><option value="final">Final</option></select></div>
+          <div class="form-group">
+            <label>Type</label>
+            <select v-model="newColumn.type" class="form-input">
+              <option v-for="option in SCORE_COLUMN_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+            </select>
+          </div>
           <div class="form-group"><label>Label</label><input v-model="newColumn.label" class="form-input" placeholder="e.g. Quiz 1" /></div>
           <div class="form-group"><label>Max Score</label><input v-model.number="newColumn.max_score" type="number" min="1" class="form-input" placeholder="100" /></div>
         </div>
@@ -222,7 +217,7 @@
               </tr>
             </tbody>
           </table>
-          <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">Total: {{ totalWeight.toFixed(1) }}% {{ totalWeight === 100 ? '✓' : '(must be 100%)' }}</div>
+          <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">Total: {{ totalWeight.toFixed(1) }}% {{ totalWeight === 100 ? 'OK' : '(must be 100%)' }}</div>
         </div>
         <div class="modal-footer"><button class="btn btn-secondary" @click="showWeights = false">Cancel</button><button class="btn btn-primary" :disabled="totalWeight !== 100" @click="doUpdateWeights">Save & Recalculate</button></div>
       </div>
@@ -238,7 +233,7 @@
       <div class="modal-content modal-sm">
         <div class="modal-header"><h5>Import from Google Sheets</h5><button class="modal-close" @click="showImport = false">&times;</button></div>
         <div class="modal-body">
-          <div class="import-notice"><i class="bi bi-info-circle"></i><div><strong>How to sync with Google Sheets:</strong><ol class="import-steps"><li>Click <strong>"Google Sheets"</strong> button to export data</li><li>In Google Sheets, edit scores as needed</li><li>Go to <strong>File → Download → CSV</strong></li><li>Upload the downloaded CSV file here</li></ol></div></div>
+          <div class="import-notice"><i class="bi bi-info-circle"></i><div><strong>How to sync with Google Sheets:</strong><ol class="import-steps"><li>Click <strong>"Google Sheets"</strong> button to export data</li><li>In Google Sheets, edit scores as needed</li><li>Go to <strong>File -&gt; Download -&gt; CSV</strong></li><li>Upload the downloaded CSV file here</li></ol></div></div>
           <label class="btn btn-primary btn-block"><i class="bi bi-upload"></i> Choose CSV File<input type="file" accept=".csv" hidden @change="importCSV" /></label>
         </div>
         <div class="modal-footer"><button class="btn btn-secondary" @click="showImport = false">Close</button></div>
@@ -256,8 +251,14 @@ import {
   renameColumn, updateWeights, syncToGoogleSheets, createGoogleSheet,
   importFromGoogleSheetsCSV, addEnrollment, updateStudentInfo,
   changeColumnType, getStudentNumbers,
-  type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
+  type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse, type ScoreColumnType,
 } from '@/services/scoreService'
+import {
+  buildScoreCsv,
+  DEFAULT_SCORE_COLUMN_TYPE,
+  getGradeClass,
+  SCORE_COLUMN_OPTIONS,
+} from './scoreSheet.helpers'
 
 const router = useRouter()
 const route = useRoute()
@@ -299,18 +300,18 @@ const fillDrag = ref<{
 const showAddColumn = ref(false)
 const showInlineAddColumn = ref(false)
 const inlineColName = ref('')
-const inlineColType = ref('quiz')
+const inlineColType = ref<ScoreColumnType>(DEFAULT_SCORE_COLUMN_TYPE)
 const inlineColMax = ref<number | null>(100)
 const showWeights = ref(false)
 const showImport = ref(false)
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
-const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
+const newColumn = reactive({ type: DEFAULT_SCORE_COLUMN_TYPE as ScoreColumnType, label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
 const studentNumbers = ref<string[]>([])
-const columnTypes = reactive<Record<number, string>>({})
+const columnTypes = reactive<Record<number, ScoreColumnType>>({})
 
 // ─── Auto-fill next student ID ───────────────────────────────────────
 type StudentNumberSequence = {
@@ -534,7 +535,7 @@ function getCellTitle(col: SpreadsheetColumn, row: SpreadsheetRow): string {
   return `${col.label}: ${mark !== null ? mark : '-'}`
 }
 
-function getColumnTypeClass(type: string): string { return `col-type-${type}` }
+function getColumnTypeClass(type: ScoreColumnType): string { return `col-type-${type}` }
 function isPassing(grade: string): boolean { return !['F', 'D'].includes(grade) }
 function cellKey(rowIdx: number, colId: number): string { return `${rowIdx}:${colId}` }
 function isSelectableColumn(colId: number): boolean { return colId === -1 || colId === 0 || colId > 0 }
@@ -1725,7 +1726,7 @@ async function doAddColumn() {
   if (!newColumn.label.trim()) return
   try {
     await addColumn(subjectId.value, termId.value, { type: newColumn.type, label: newColumn.label.trim(), max_score: newColumn.max_score })
-    showAddColumn.value = false; newColumn.label = ''; newColumn.max_score = null
+    showAddColumn.value = false; newColumn.type = DEFAULT_SCORE_COLUMN_TYPE; newColumn.label = ''; newColumn.max_score = null
     showSaveStatus('saved'); refreshData()
   } catch { showSaveStatus('failed') }
 }
@@ -1734,7 +1735,7 @@ async function doAddColumnInline() {
   if (!inlineColName.value.trim()) return
   try {
     await addColumn(subjectId.value, termId.value, { type: inlineColType.value, label: inlineColName.value.trim(), max_score: inlineColMax.value })
-    inlineColName.value = ''; inlineColType.value = 'quiz'; inlineColMax.value = 100
+    inlineColName.value = ''; inlineColType.value = DEFAULT_SCORE_COLUMN_TYPE; inlineColMax.value = 100
     showInlineAddColumn.value = false; showSaveStatus('saved'); refreshData()
   } catch { showSaveStatus('failed') }
 }
@@ -1809,15 +1810,7 @@ function importCSV(event: Event) {
 // ─── Export ──────────────────────────────────────────────────────────
 function exportCSV() {
   if (!data.value) return
-  const cols = columns.value
-  let csv = 'Student Name,Student ID'
-  cols.forEach(c => { csv += `,${c.label} (${c.type})` })
-  csv += ',Total,Grade\n'
-  rows.value.forEach(r => {
-    csv += `${r.student_name.replace(/,/g, ' ')},${r.student_number}`
-    cols.forEach(c => { const m = getCellMark(r, c.id); csv += `,${m !== null ? m : ''}` })
-    csv += `,${r.total !== null ? r.total : ''},${r.grade || ''}\n`
-  })
+  const csv = buildScoreCsv(data.value)
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
@@ -1834,20 +1827,19 @@ function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────
-function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
-  const newType = (event.target as HTMLSelectElement).value
-  if (newType === col.type) return
+async function onColumnTypeChange(col: SpreadsheetColumn) {
+  const newType = columnTypes[col.id]
+  if (!newType || newType === col.type) return
   const oldType = col.type
   showSaveStatus('saving')
-  changeColumnType(subjectId.value, termId.value, col.label, oldType, newType)
-    .then(() => {
-      showSaveStatus('saved')
-      refreshData()
-    })
-    .catch(() => {
-      showSaveStatus('failed')
-      columnTypes[col.id] = oldType // revert
-    })
+  try {
+    await changeColumnType(subjectId.value, termId.value, col.label, oldType, newType)
+    showSaveStatus('saved')
+    refreshData()
+  } catch {
+    showSaveStatus('failed')
+    columnTypes[col.id] = oldType
+  }
 }
 
 onMounted(() => {

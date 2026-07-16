@@ -14,7 +14,7 @@
         </div>
         <div class="page-header-right">
           <select v-model="selectedTermId" class="term-select" @change="loadSubjects">
-            <option value="">All Terms</option>
+            <option :value="null">All Terms</option>
             <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.name }}</option>
           </select>
         </div>
@@ -61,7 +61,7 @@
               <span class="term-name">{{ term.term_name }}</span>
               <span class="term-meta">
                 {{ term.enrollment_count }} students
-                <template v-if="term.teachers.length"> · {{ term.teachers.join(', ') }}</template>
+                <template v-if="term.teachers.length"> - {{ term.teachers.join(', ') }}</template>
               </span>
             </div>
           </div>
@@ -81,24 +81,19 @@ const router = useRouter()
 
 const subjects = ref<SubjectItem[]>([])
 const terms = ref<Array<{ id: number; name: string }>>([])
-const selectedTermId = ref<number | ''>('')
+const selectedTermId = ref<number | null>(null)
 const loading = ref(false)
 
 const filteredSubjects = computed(() => {
-  if (!selectedTermId.value) return subjects.value
+  if (selectedTermId.value === null) return subjects.value
   return subjects.value.filter(
     (s) => s.terms.some((t) => t.term_id === selectedTermId.value)
   )
 })
 
 function goToSheet(subject: SubjectItem) {
-  // Go to the first term available
-  if (subject.terms.length > 0) {
-    const firstTerm = subject.terms[0]
-    if (firstTerm) {
-      goToSheetWithTerm(subject, firstTerm)
-    }
-  }
+  const firstTerm = subject.terms[0]
+  if (firstTerm) goToSheetWithTerm(subject, firstTerm)
 }
 
 function goToSheetWithTerm(subject: SubjectItem, term: SubjectItem['terms'][number]) {
@@ -124,7 +119,7 @@ function getSubjectColor(code: string): string {
   for (let i = 0; i < code.length; i++) {
     hash = code.charCodeAt(i) + ((hash << 5) - hash)
   }
-  return colors[Math.abs(hash) % colors.length]
+  return colors[Math.abs(hash) % colors.length]!
 }
 
 onMounted(loadSubjects)

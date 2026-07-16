@@ -1,10 +1,12 @@
 import { http } from './api'
 
+export type ScoreColumnType = 'quiz' | 'assignment' | 'project' | 'midterm' | 'final'
+
 export interface SpreadsheetColumn {
   id: number
   score_id: number
   label: string
-  type: string
+  type: ScoreColumnType
   order_number: number
   max_score: number | null
   assessment_type_id: number
@@ -25,7 +27,7 @@ export interface SpreadsheetRow {
 
 export interface AssessmentTypeWeight {
   id: number
-  code: string
+  code: ScoreColumnType
   name: string
   weight_percent: number
 }
@@ -79,7 +81,7 @@ export async function renameColumn(subjectId: number, termId: number, detailId: 
 }
 
 export async function addColumn(subjectId: number, termId: number, data: {
-  type: string
+  type: ScoreColumnType
   label: string
   max_score?: number | null
   order_number?: number
@@ -91,7 +93,7 @@ export async function deleteColumn(subjectId: number, termId: number, detailId: 
   await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}`)
 }
 
-export async function changeColumnType(subjectId: number, termId: number, label: string, oldType: string, newType: string): Promise<{ updated_count: number }> {
+export async function changeColumnType(subjectId: number, termId: number, label: string, oldType: ScoreColumnType, newType: ScoreColumnType): Promise<{ updated_count: number }> {
   const res = await http.patch(`/spreadsheet/subject/${subjectId}/term/${termId}/details/change-type`, { label, old_type: oldType, new_type: newType })
   return res.data.data
 }
