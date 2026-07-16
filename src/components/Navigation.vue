@@ -59,7 +59,6 @@
 
         </nav>
 
-        <!-- User Section & Logout -->
         <div class="border-top">
             <div class="user d-flex align-items-center px-3 py-2" @click="goToProfile"
                 @keydown.enter.prevent="goToProfile" role="button" tabindex="0">
@@ -78,7 +77,7 @@
             </button>
         </div>
 
-    </aside><!-- Logout Confirmation Modal -->
+    </aside>
     <Teleport to="body">
         <Transition name="modal">
             <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">

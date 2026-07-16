@@ -41,7 +41,6 @@ import {
 import type { EChartsOption } from 'echarts'
 import { useThemeStore } from '@/stores/theme'
 
-// Register ECharts components
 use([
   CanvasRenderer,
   LineChart,

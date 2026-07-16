@@ -1,4 +1,3 @@
-// ── KPI Cards ──────────────────────────────────────────────────────
 export interface KpiData {
   total_students: number
   active_students: number
@@ -17,7 +16,6 @@ export interface KpiData {
   report_card_coverage: number
 }
 
-// ── Charts ──────────────────────────────────────────────────────────
 export interface StudentGrowth {
   months: string[]
   counts: number[]
@@ -131,7 +129,6 @@ export interface RecentTranscript {
   generated_at: string
 }
 
-// ── Chart Data Container ────────────────────────────────────────────
 export interface ChartsData {
   student_growth: StudentGrowth
   students_by_generation: StudentsByGeneration
@@ -149,13 +146,11 @@ export interface ChartsData {
   recent_transcripts: RecentTranscript[]
 }
 
-// ── Full Dashboard Response ─────────────────────────────────────────
 export interface DashboardData {
   kpi: KpiData
   charts: ChartsData
 }
 
-// ── Filter Options ──────────────────────────────────────────────────
 export interface GenerationOption {
   id: number
   year: number
@@ -195,7 +190,6 @@ export interface FilterOptions {
   teachers: TeacherOption[]
 }
 
-// ── Dashboard Filters (for API params) ──────────────────────────────
 export interface DashboardFilters {
   generation_id?: number | null
   term_id?: number | null

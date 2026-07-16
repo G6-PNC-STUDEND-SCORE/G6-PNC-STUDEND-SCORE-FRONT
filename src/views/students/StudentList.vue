@@ -82,7 +82,17 @@
             <td class="col-index">{{ student.id }}</td>
             <td>
               <div class="student-cell">
-                <div class="avatar">
+                <div
+                  v-if="student.profile_photo_url"
+                  class="avatar-img"
+                >
+                  <img
+                    :src="student.profile_photo_url"
+                    :alt="student.user?.name || 'Student'"
+                    class="photo-img"
+                  />
+                </div>
+                <div v-else class="avatar">
                   {{ getInitials(student.user?.name || '') }}
                 </div>
                 <span class="student-name">{{ student.user?.name }}</span>
@@ -335,8 +345,8 @@ defineEmits<{
 
 .search-box {
   position: relative;
-  flex: 1 1 260px;
-  max-width: 340px;
+  flex: 1 1 320px;
+  max-width: 520px;
 }
 
 .search-icon {
@@ -515,6 +525,22 @@ defineEmits<{
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.avatar-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .student-name {

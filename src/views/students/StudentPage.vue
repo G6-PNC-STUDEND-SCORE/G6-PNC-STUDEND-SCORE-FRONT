@@ -58,6 +58,8 @@
       :show="showCreateModal"
       :is-edit="false"
       :name="createForm.name"
+      :email="createForm.email"
+      :password="createForm.password"
       :gender="createForm.gender"
       :class-id="createForm.class_id"
       :status="createForm.status"
@@ -67,6 +69,8 @@
       @close="closeCreateModal"
       @submit="handleCreate"
       @update:name="createForm.name = $event"
+      @update:email="createForm.email = $event"
+      @update:password="createForm.password = $event"
       @update:gender="createForm.gender = $event"
       @update:class-id="createForm.class_id = $event"
       @update:status="createForm.status = $event"
@@ -83,12 +87,15 @@
       :classes="classes"
       :submitting="formSubmitting"
       :error="formError"
+      :existing-photo-url="existingPhotoUrl"
       @close="closeEditModal"
       @submit="handleEdit"
       @update:name="editForm.name = $event"
       @update:gender="editForm.gender = $event"
       @update:class-id="editForm.class_id = $event"
       @update:status="editForm.status = $event"
+      @update:photo="onEditPhotoSelected"
+      @remove-photo="onEditRemovePhoto"
     />
 
     <!-- Delete Modal -->
@@ -164,6 +171,10 @@ const {
   createForm,
   editForm,
   assignForm,
+  // Photo state
+  existingPhotoUrl,
+  onEditPhotoSelected,
+  onEditRemovePhoto,
   // Other data
   classes,
   // Computed

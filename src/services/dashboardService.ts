@@ -6,10 +6,6 @@ import type {
 } from '@/types/dashboard'
 
 export const dashboardService = {
-  /**
-   * Fetch ALL dashboard data (KPI + Charts) in a single API call.
-   * Filters are passed as query parameters.
-   */
   async getDashboardData(filters: DashboardFilters = {}): Promise<DashboardData> {
     const params: Record<string, string | number> = {}
     if (filters.generation_id) params.generation_id = filters.generation_id
@@ -22,9 +18,6 @@ export const dashboardService = {
     return response.data.data
   },
 
-  /**
-   * Fetch filter dropdown options.
-   */
   async getFilterOptions(): Promise<FilterOptions> {
     const response = await http.get('/dashboard/filters')
     return response.data.data
