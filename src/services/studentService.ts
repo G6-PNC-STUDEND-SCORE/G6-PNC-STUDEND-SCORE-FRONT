@@ -95,7 +95,7 @@ export async function updateStudent(
     class_id?: number | null
     academic_year_id?: number | null
     enrollment_date?: string | null
-  }
+  },
 ): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}`, data)
   return res.data
@@ -106,20 +106,19 @@ export async function deleteStudent(id: number): Promise<{ message: string }> {
   return res.data
 }
 
-export async function assignStudentToClass(
-  id: number,
-  classId: number
-): Promise<StudentResponse> {
+export async function deleteStudents(ids: number[]): Promise<{ message: string }> {
+  const res = await http.post<{ message: string }>('/students/bulk-delete', { ids })
+  return res.data
+}
+
+export async function assignStudentToClass(id: number, classId: number): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}/assign-class`, {
     class_id: classId,
   })
   return res.data
 }
 
-export async function uploadStudentPhoto(
-  id: number,
-  file: File
-): Promise<StudentResponse> {
+export async function uploadStudentPhoto(id: number, file: File): Promise<StudentResponse> {
   const formData = new FormData()
   formData.append('profile_photo', file)
 
@@ -132,9 +131,7 @@ export async function uploadStudentPhoto(
   return res.data
 }
 
-export async function deleteStudentPhoto(
-  id: number
-): Promise<StudentResponse> {
+export async function deleteStudentPhoto(id: number): Promise<StudentResponse> {
   const res = await http.delete<StudentResponse>(`/students/${id}/photo`)
   return res.data
 }

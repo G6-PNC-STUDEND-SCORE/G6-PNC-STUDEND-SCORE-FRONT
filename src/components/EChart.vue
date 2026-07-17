@@ -54,21 +54,24 @@ use([
   DataZoomComponent,
 ])
 
-const props = withDefaults(defineProps<{
-  option: EChartsOption
-  height?: string
-  showExport?: boolean
-  loading?: boolean
-}>(), {
-  height: '300px',
-  showExport: true,
-  loading: false,
-})
+const props = withDefaults(
+  defineProps<{
+    option: EChartsOption
+    height?: string
+    showExport?: boolean
+    loading?: boolean
+  }>(),
+  {
+    height: '300px',
+    showExport: true,
+    loading: false,
+  },
+)
 
 const themeStore = useThemeStore()
 const chartRef = ref<InstanceType<typeof VChart> | null>(null)
 const ready = computed(() => !props.loading && props.option?.series != null)
-const chartTheme = computed(() => themeStore.isDark ? 'dark' : '')
+const chartTheme = computed(() => (themeStore.isDark ? 'dark' : ''))
 
 const chartOption = computed<EChartsOption>(() => ({
   ...props.option,
@@ -145,13 +148,25 @@ function exportPng() {
   width: 100%;
 }
 
-.skeleton-bar:nth-child(1) { width: 85%; }
-.skeleton-bar:nth-child(2) { width: 70%; }
-.skeleton-bar:nth-child(3) { width: 55%; }
-.skeleton-bar:nth-child(4) { width: 40%; }
+.skeleton-bar:nth-child(1) {
+  width: 85%;
+}
+.skeleton-bar:nth-child(2) {
+  width: 70%;
+}
+.skeleton-bar:nth-child(3) {
+  width: 55%;
+}
+.skeleton-bar:nth-child(4) {
+  width: 40%;
+}
 
 @keyframes pulse {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

@@ -1,6 +1,5 @@
 import { http } from './api'
 
-
 export type LoginPayload = {
   email: string
   password: string
@@ -26,4 +25,3 @@ export async function me(): Promise<{ user: unknown }> {
   const res = await http.get<{ user: unknown }>('/user')
   return res.data
 }
-

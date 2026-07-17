@@ -68,14 +68,17 @@ export const classService = {
     return response.data
   },
 
-  async updateClass(classId: number, classData: {
-    name: string
-    generation: string
-    teacher_id: number | null
-    room: string
-    students: number
-    status: 'Active' | 'Inactive'
-  }): Promise<ClassResponse> {
+  async updateClass(
+    classId: number,
+    classData: {
+      name: string
+      generation: string
+      teacher_id: number | null
+      room: string
+      students: number
+      status: 'Active' | 'Inactive'
+    },
+  ): Promise<ClassResponse> {
     const response = await http.put(`/classes/${classId}`, {
       name: classData.name,
       generation_id: classData.generation ? parseInt(classData.generation) : null,
@@ -88,6 +91,11 @@ export const classService = {
 
   async deleteClass(classId: number): Promise<ClassResponse> {
     const response = await http.delete(`/classes/${classId}`)
+    return response.data
+  },
+
+  async deleteClasses(ids: number[]): Promise<ClassResponse> {
+    const response = await http.post('/classes/bulk-delete', { ids })
     return response.data
   },
 }

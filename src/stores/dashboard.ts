@@ -85,7 +85,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   })
 
   async function fetchFilterOptions() {
-    const hasOptions = filterOptions.value.generations.length > 0 ||
+    const hasOptions =
+      filterOptions.value.generations.length > 0 ||
       filterOptions.value.terms.length > 0 ||
       filterOptions.value.classes.length > 0 ||
       filterOptions.value.departments.length > 0 ||
@@ -104,14 +105,16 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   async function fetchDashboardData() {
     const cacheKey = JSON.stringify(filters.value)
-    const hasFreshData = cacheKey === lastCacheKey.value && Date.now() - lastFetchedAt.value < CACHE_TTL
+    const hasFreshData =
+      cacheKey === lastCacheKey.value && Date.now() - lastFetchedAt.value < CACHE_TTL
     if (hasFreshData && hasData.value) return
     if (pendingDashboardRequest) return pendingDashboardRequest
 
     loading.value = true
     error.value = null
 
-    pendingDashboardRequest = dashboardService.getDashboardData(filters.value)
+    pendingDashboardRequest = dashboardService
+      .getDashboardData(filters.value)
       .then((data: DashboardData) => {
         kpi.value = data.kpi
         charts.value = data.charts
@@ -154,10 +157,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   async function initialize() {
-    await Promise.all([
-      fetchFilterOptions(),
-      fetchDashboardData(),
-    ])
+    await Promise.all([fetchFilterOptions(), fetchDashboardData()])
   }
 
   return {

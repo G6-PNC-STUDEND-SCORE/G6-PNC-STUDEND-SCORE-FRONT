@@ -3,7 +3,7 @@ import axios from 'axios'
 const baseURL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 if (!baseURL) {
-  // eslint-disable-next-line no-console
+   
   console.warn('VITE_API_BASE_URL is not set. Please create frontend/.env')
 }
 
@@ -23,7 +23,7 @@ http.interceptors.response.use(
       window.location.href = '/login'
     }
     return Promise.reject(error)
-  }
+  },
 )
 
 export function setAuthToken(token: string | null) {
@@ -43,4 +43,3 @@ export function storageUrl(path?: string | null): string {
   const base = (http.defaults.baseURL || '').replace(/\/api\/?$/, '')
   return base + '/storage/' + path.replace(/^\//, '')
 }
-

@@ -34,6 +34,19 @@
       </span>
     </div>
 
+    <!-- Floating Delete Button -->
+    <Transition name="fab">
+      <button
+        v-if="selectedIds.length > 0"
+        class="fab-delete"
+        @click="$emit('bulk-delete', [...selectedIds])"
+        :title="`Delete ${selectedIds.length} selected`"
+      >
+        <i class="bi bi-trash3-fill"></i>
+        <span class="fab-badge">{{ selectedIds.length }}</span>
+      </button>
+    </Transition>
+
     <!-- Table -->
     <div class="table-wrap">
       <table class="student-table">
@@ -59,7 +72,7 @@
         </thead>
         <tbody>
           <tr v-if="students.length === 0">
-              <td colspan="7" class="empty-state">
+            <td colspan="7" class="empty-state">
               <i class="bi bi-people fs-1 d-block mb-2"></i>
               No students found
             </td>
@@ -82,10 +95,7 @@
             <td class="col-index">{{ student.id }}</td>
             <td>
               <div class="student-cell">
-                <div
-                  v-if="student.profile_photo_url"
-                  class="avatar-img"
-                >
+                <div v-if="student.profile_photo_url" class="avatar-img">
                   <img
                     :src="student.profile_photo_url"
                     :alt="student.user?.name || 'Student'"
@@ -119,7 +129,9 @@
             <td class="py-3">
               <span
                 class="status-badge"
-                :class="(student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'"
+                :class="
+                  (student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'
+                "
               >
                 {{ (student.user?.status || '') === 'active' ? 'Active' : 'Inactive' }}
               </span>
@@ -135,21 +147,45 @@
                 </button>
                 <Transition name="dropdown">
                   <div v-if="openDropdownId === student.id" class="action-menu">
-                    <button class="action-item view" @click="$emit('view', student); openDropdownId = null">
+                    <button
+                      class="action-item view"
+                      @click="
+                        $emit('view', student)
+                        openDropdownId = null
+                      "
+                    >
                       <i class="bi bi-eye"></i>
                       <span>View Details</span>
                     </button>
-                    <button class="action-item edit" @click="$emit('edit', student); openDropdownId = null">
+                    <button
+                      class="action-item edit"
+                      @click="
+                        $emit('edit', student)
+                        openDropdownId = null
+                      "
+                    >
                       <i class="bi bi-pencil"></i>
                       <span>Edit</span>
                     </button>
-                    <button class="action-item assign" @click="$emit('assign', student); openDropdownId = null">
+                    <button
+                      class="action-item assign"
+                      @click="
+                        $emit('assign', student)
+                        openDropdownId = null
+                      "
+                    >
                       <i class="bi bi-box-arrow-in-right"></i>
                       <span>Assign Class</span>
                     </button>
                     <div class="dropdown-divider"></div>
-                    <button class="action-item delete" @click="$emit('delete', student); openDropdownId = null">
-                      <i class="bi bi-trash"></i>
+                    <button
+                      class="action-item delete"
+                      @click="
+                        $emit('delete', student)
+                        openDropdownId = null
+                      "
+                    >
+                      <i class="bi bi-trash3"></i>
                       <span>Delete</span>
                     </button>
                   </div>
@@ -171,7 +207,10 @@
             :key="size"
             class="rows-btn"
             :class="{ active: pageSize === size }"
-            @click="pageSize = size; currentPage = 1"
+            @click="
+              pageSize = size
+              currentPage = 1
+            "
           >
             {{ size }}
           </button>
@@ -211,7 +250,10 @@
       </div>
 
       <div class="pagination-total">
-        {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, students.length) }} of {{ students.length }}
+        {{ (currentPage - 1) * pageSize + 1 }}-{{
+          Math.min(currentPage * pageSize, students.length)
+        }}
+        of {{ students.length }}
       </div>
     </div>
   </div>
@@ -242,9 +284,10 @@ const paginatedStudents = computed(() => {
   return props.students.slice(start, end)
 })
 
-const allSelected = computed(() =>
-  paginatedStudents.value.length > 0 &&
-  paginatedStudents.value.every((s) => selectedIds.value.includes(s.id))
+const allSelected = computed(
+  () =>
+    paginatedStudents.value.length > 0 &&
+    paginatedStudents.value.every((s) => selectedIds.value.includes(s.id)),
 )
 
 const someSelected = computed(() => selectedIds.value.length > 0)
@@ -258,7 +301,7 @@ function toggleRow(id: number) {
 function toggleAll() {
   if (allSelected.value) {
     selectedIds.value = selectedIds.value.filter(
-      (id) => !paginatedStudents.value.some((s) => s.id === id)
+      (id) => !paginatedStudents.value.some((s) => s.id === id),
     )
   } else {
     const ids = paginatedStudents.value.map((s) => s.id)
@@ -306,6 +349,12 @@ onUnmounted(() => {
   window.removeEventListener('click', handleClickOutside)
 })
 
+function clearSelection() {
+  selectedIds.value = []
+}
+
+defineExpose({ clearSelection })
+
 defineEmits<{
   'update:searchQuery': [value: string]
   'update:genderFilter': [value: string]
@@ -313,6 +362,7 @@ defineEmits<{
   edit: [student: Student]
   assign: [student: Student]
   delete: [student: Student]
+  'bulk-delete': [ids: number[]]
 }>()
 </script>
 
@@ -372,16 +422,23 @@ defineEmits<{
   transition: all 0.2s ease;
 }
 
-.search-input::placeholder { color: #9ca3af; }
+.search-input::placeholder {
+  color: #9ca3af;
+}
 
-.search-input:hover { border-color: #cbd5e1; }
+.search-input:hover {
+  border-color: #cbd5e1;
+}
 
 .search-input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
-.filter-group { display: flex; align-items: center; }
+.filter-group {
+  display: flex;
+  align-items: center;
+}
 
 .filter-label {
   display: inline-flex;
@@ -397,9 +454,14 @@ defineEmits<{
   transition: all 0.2s ease;
 }
 
-.filter-label:hover { border-color: #cbd5e1; }
+.filter-label:hover {
+  border-color: #cbd5e1;
+}
 
-.filter-label i { font-size: 0.85rem; color: #94a3b8; }
+.filter-label i {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
 
 .filter-select {
   border: none;
@@ -498,7 +560,9 @@ defineEmits<{
   vertical-align: middle;
 }
 
-.student-table tbody tr:last-child td { border-bottom: none; }
+.student-table tbody tr:last-child td {
+  border-bottom: none;
+}
 
 .empty-state {
   text-align: center;
@@ -565,7 +629,9 @@ defineEmits<{
 
 /* ==================== Rows ==================== */
 .student-row {
-  transition: background 0.2s ease, border-left 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-left 0.2s ease;
   border-left: 3px solid transparent;
 }
 
@@ -730,7 +796,7 @@ defineEmits<{
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 500;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   transition: all 0.15s ease;
   text-align: left;
   color: #374151;
@@ -911,6 +977,88 @@ defineEmits<{
   .pagination-info {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ==================== Floating Delete Button ==================== */
+.fab-delete {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 6px 20px rgba(37, 99, 235, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+  transition: all 0.2s ease;
+  font-size: 1.4rem;
+}
+
+.fab-delete:hover {
+  background: #1d4ed8;
+  transform: scale(1.08);
+  box-shadow: 0 8px 28px rgba(37, 99, 235, 0.5);
+}
+
+.fab-delete:active {
+  transform: scale(0.95);
+}
+
+.fab-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  line-height: 1;
+}
+
+.fab-enter-active {
+  animation: fabIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.fab-leave-active {
+  animation: fabOut 0.2s ease-in;
+}
+
+@keyframes fabIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fabOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
   }
 }
 

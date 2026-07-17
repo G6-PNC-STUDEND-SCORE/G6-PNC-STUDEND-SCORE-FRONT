@@ -10,11 +10,7 @@
             @change="onFilterChange('generation_id', ($event.target as HTMLSelectElement).value)"
           >
             <option value="">All Generations</option>
-            <option
-              v-for="gen in store.filterOptions.generations"
-              :key="gen.id"
-              :value="gen.id"
-            >
+            <option v-for="gen in store.filterOptions.generations" :key="gen.id" :value="gen.id">
               {{ gen.name || `Generation ${gen.year}` }}
             </option>
           </select>
@@ -28,11 +24,7 @@
             @change="onFilterChange('term_id', ($event.target as HTMLSelectElement).value)"
           >
             <option value="">All Terms</option>
-            <option
-              v-for="term in store.filterOptions.terms"
-              :key="term.id"
-              :value="term.id"
-            >
+            <option v-for="term in store.filterOptions.terms" :key="term.id" :value="term.id">
               {{ term.name }}
             </option>
           </select>
@@ -46,11 +38,7 @@
             @change="onFilterChange('class_id', ($event.target as HTMLSelectElement).value)"
           >
             <option value="">All Classes</option>
-            <option
-              v-for="cls in store.filterOptions.classes"
-              :key="cls.id"
-              :value="cls.id"
-            >
+            <option v-for="cls in store.filterOptions.classes" :key="cls.id" :value="cls.id">
               {{ cls.name }}
             </option>
           </select>
@@ -64,11 +52,7 @@
             @change="onFilterChange('department_id', ($event.target as HTMLSelectElement).value)"
           >
             <option value="">All Departments</option>
-            <option
-              v-for="dept in store.filterOptions.departments"
-              :key="dept.id"
-              :value="dept.id"
-            >
+            <option v-for="dept in store.filterOptions.departments" :key="dept.id" :value="dept.id">
               {{ dept.name }}
             </option>
           </select>
@@ -125,7 +109,9 @@ function onFilterChange(key: keyof DashboardFilters, value: string) {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .filter-bar.dark-mode {

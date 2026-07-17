@@ -1,5 +1,13 @@
 <template>
-  <header :class="['app-header', 'd-flex', 'align-items-center', 'justify-content-between', { 'dark-mode': theme.isDark }]">
+  <header
+    :class="[
+      'app-header',
+      'd-flex',
+      'align-items-center',
+      'justify-content-between',
+      { 'dark-mode': theme.isDark },
+    ]"
+  >
     <div class="d-flex align-items-center gap-2">
       <span class="welcome-text">
         <strong>Student Score Management System</strong>
@@ -39,7 +47,9 @@ const theme = useThemeStore()
   position: sticky;
   top: 0;
   z-index: 10;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .app-header.dark-mode {
@@ -53,9 +63,6 @@ const theme = useThemeStore()
   line-height: 56px;
   transition: color 0.3s ease;
 }
-
-
-
 
 .app-header.dark-mode .welcome-text {
   color: #cbd5e1;

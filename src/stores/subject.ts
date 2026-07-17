@@ -16,8 +16,10 @@ export const useSubjectStore = defineStore('subject', () => {
   let lastStatus = ''
 
   const totalSubjects = computed(() => subjects.value.length)
-  const activeSubjects = computed(() => subjects.value.filter(s => s.status === 'Active').length)
-  const inactiveSubjects = computed(() => subjects.value.filter(s => s.status === 'Inactive').length)
+  const activeSubjects = computed(() => subjects.value.filter((s) => s.status === 'Active').length)
+  const inactiveSubjects = computed(
+    () => subjects.value.filter((s) => s.status === 'Inactive').length,
+  )
 
   function clearMessages() {
     error.value = null
@@ -25,9 +27,13 @@ export const useSubjectStore = defineStore('subject', () => {
   }
 
   async function fetchSubjects(search?: string, status?: string) {
-    const cacheKey = `${search ?? ''}_${status ?? ''}`
     const now = Date.now()
-    if (search === lastSearch && status === lastStatus && subjects.value.length > 0 && (now - subjectsCacheTime) < CACHE_TTL) {
+    if (
+      search === lastSearch &&
+      status === lastStatus &&
+      subjects.value.length > 0 &&
+      now - subjectsCacheTime < CACHE_TTL
+    ) {
       return
     }
 
@@ -99,7 +105,10 @@ export const useSubjectStore = defineStore('subject', () => {
         return false
       }
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string; status?: number } }; message?: string }
+      const err = e as {
+        response?: { data?: { message?: string; status?: number } }
+        message?: string
+      }
       if (err.response?.data?.status === 401) {
         error.value = 'Please login to create subjects'
       } else {
@@ -119,7 +128,7 @@ export const useSubjectStore = defineStore('subject', () => {
     try {
       const response = await subjectService.updateSubject(id, subjectData)
       if (response.success) {
-        const index = subjects.value.findIndex(s => s.id === id)
+        const index = subjects.value.findIndex((s) => s.id === id)
         if (index !== -1) {
           subjects.value[index] = response.data as Subject
         }
@@ -147,7 +156,7 @@ export const useSubjectStore = defineStore('subject', () => {
     try {
       const response = await subjectService.deleteSubject(id)
       if (response.success) {
-        subjects.value = subjects.value.filter(s => s.id !== id)
+        subjects.value = subjects.value.filter((s) => s.id !== id)
         invalidateCache()
         successMessage.value = response.message || 'Subject deleted successfully'
         return true

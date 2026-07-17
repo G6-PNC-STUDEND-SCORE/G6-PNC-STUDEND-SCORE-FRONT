@@ -20,7 +20,7 @@ export interface SpreadsheetRow {
   total: number | null
   grade: string | null
   details: Record<number, number | null>
-  detail_ids: Record<number, number | null>  // Canonical col ID -> actual detail ID for this student
+  detail_ids: Record<number, number | null> // Canonical col ID -> actual detail ID for this student
 }
 
 export interface AssessmentTypeWeight {
@@ -65,34 +65,66 @@ export async function getSpreadsheetSubjects(): Promise<SubjectsResponse> {
   return res.data.data
 }
 
-export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number): Promise<SpreadsheetResponse> {
+export async function getSpreadsheetBySubjectAndTerm(
+  subjectId: number,
+  termId: number,
+): Promise<SpreadsheetResponse> {
   const res = await http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
   return res.data.data
 }
 
-export async function updateCellMark(subjectId: number, termId: number, detailId: number, mark: number | null): Promise<void> {
+export async function updateCellMark(
+  subjectId: number,
+  termId: number,
+  detailId: number,
+  mark: number | null,
+): Promise<void> {
   await http.put(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}`, { mark })
 }
 
-export async function renameColumn(subjectId: number, termId: number, detailId: number, label: string): Promise<void> {
-  await http.patch(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}/rename`, { label })
+export async function renameColumn(
+  subjectId: number,
+  termId: number,
+  detailId: number,
+  label: string,
+): Promise<void> {
+  await http.patch(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}/rename`, {
+    label,
+  })
 }
 
-export async function addColumn(subjectId: number, termId: number, data: {
-  type: string
-  label: string
-  max_score?: number | null
-  order_number?: number
-}): Promise<void> {
+export async function addColumn(
+  subjectId: number,
+  termId: number,
+  data: {
+    type: string
+    label: string
+    max_score?: number | null
+    order_number?: number
+  },
+): Promise<void> {
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/details`, data)
 }
 
-export async function deleteColumn(subjectId: number, termId: number, detailId: number): Promise<void> {
+export async function deleteColumn(
+  subjectId: number,
+  termId: number,
+  detailId: number,
+): Promise<void> {
   await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}`)
 }
 
-export async function changeColumnType(subjectId: number, termId: number, label: string, oldType: string, newType: string): Promise<{ updated_count: number }> {
-  const res = await http.patch(`/spreadsheet/subject/${subjectId}/term/${termId}/details/change-type`, { label, old_type: oldType, new_type: newType })
+export async function changeColumnType(
+  subjectId: number,
+  termId: number,
+  label: string,
+  oldType: string,
+  newType: string,
+): Promise<{ updated_count: number }> {
+  const res = await http.patch(
+    `/spreadsheet/subject/${subjectId}/term/${termId}/details/change-type`,
+    { label, old_type: oldType, new_type: newType },
+  )
   return res.data.data
 }
 
@@ -101,15 +133,24 @@ export async function getStudentNumbers(): Promise<string[]> {
   return res.data.data
 }
 
-export async function reorderColumns(subjectId: number, termId: number, columns: { id: number; order_number: number }[]): Promise<void> {
+export async function reorderColumns(
+  subjectId: number,
+  termId: number,
+  columns: { id: number; order_number: number }[],
+): Promise<void> {
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/reorder`, { columns })
 }
 
-export async function updateWeights(weights: { id: number; weight_percent: number }[]): Promise<void> {
+export async function updateWeights(
+  weights: { id: number; weight_percent: number }[],
+): Promise<void> {
   await http.put('/spreadsheet/weights', { weights })
 }
 
-export async function syncToGoogleSheets(subjectId: number, termId: number): Promise<{
+export async function syncToGoogleSheets(
+  subjectId: number,
+  termId: number,
+): Promise<{
   csv_content: string
   google_sheets_url: string
   download_url: string
@@ -118,7 +159,11 @@ export async function syncToGoogleSheets(subjectId: number, termId: number): Pro
   return res.data.data
 }
 
-export async function createGoogleSheet(subjectId: number, termId: number, accessToken: string): Promise<{
+export async function createGoogleSheet(
+  subjectId: number,
+  termId: number,
+  accessToken: string,
+): Promise<{
   spreadsheet_id: string
   url: string
   name: string
@@ -131,7 +176,12 @@ export async function createGoogleSheet(subjectId: number, termId: number, acces
   return res.data.data
 }
 
-export async function importFromGoogleSheets(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<void> {
+export async function importFromGoogleSheets(
+  subjectId: number,
+  termId: number,
+  spreadsheetId: string,
+  accessToken: string,
+): Promise<void> {
   await http.post('/google-sheets/import', {
     subject_id: subjectId,
     term_id: termId,
@@ -140,23 +190,89 @@ export async function importFromGoogleSheets(subjectId: number, termId: number, 
   })
 }
 
-export async function importFromGoogleSheetsCSV(subjectId: number, termId: number, csvContent: string): Promise<void> {
-  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
+export async function importFromGoogleSheetsCSV(
+  subjectId: number,
+  termId: number,
+  csvContent: string,
+): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, {
+    csv_content: csvContent,
+  })
 }
 
-export async function addEnrollment(subjectId: number, termId: number, studentId: number | null): Promise<void> {
-  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId })
+export async function addEnrollment(
+  subjectId: number,
+  termId: number,
+  studentId: number | null,
+): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, {
+    student_id: studentId,
+  })
 }
 
-export async function updateStudentInfo(subjectId: number, termId: number, enrollmentId: number, data: {
-  student_name?: string
-  student_number?: string
-}): Promise<{ student_name: string; student_number: string }> {
-  const res = await http.put(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`, data)
+export async function insertRow(
+  subjectId: number,
+  termId: number,
+  options: {
+    student_id?: number | null
+    reference_enrollment_id?: number | null
+    position?: 'above' | 'below'
+  },
+): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/insert`, {
+    student_id: options.student_id ?? null,
+    reference_enrollment_id: options.reference_enrollment_id ?? null,
+    position: options.position ?? 'above',
+  })
+}
+
+export async function deleteEnrollment(
+  subjectId: number,
+  termId: number,
+  enrollmentId: number,
+): Promise<void> {
+  await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`)
+}
+
+export async function insertColumn(
+  subjectId: number,
+  termId: number,
+  options: {
+    type: string
+    label: string
+    max_score?: number | null
+    reference_detail_id?: number | null
+    position?: 'left' | 'right'
+  },
+): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/details/insert`, {
+    type: options.type,
+    label: options.label,
+    max_score: options.max_score ?? null,
+    reference_detail_id: options.reference_detail_id ?? null,
+    position: options.position ?? 'left',
+  })
+}
+
+export async function updateStudentInfo(
+  subjectId: number,
+  termId: number,
+  enrollmentId: number,
+  data: {
+    student_name?: string
+    student_number?: string
+  },
+): Promise<{ student_name: string; student_number: string }> {
+  const res = await http.put(
+    `/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`,
+    data,
+  )
   return res.data.data
 }
 
-export async function getStudents(): Promise<Array<{ id: number; name: string; student_number: string }>> {
+export async function getStudents(): Promise<
+  Array<{ id: number; name: string; student_number: string }>
+> {
   const res = await http.get('/students')
   return res.data.data
 }

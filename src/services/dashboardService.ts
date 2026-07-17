@@ -1,9 +1,5 @@
 import { http } from './apiHttp'
-import type {
-  DashboardData,
-  FilterOptions,
-  DashboardFilters,
-} from '@/types/dashboard'
+import type { DashboardData, FilterOptions, DashboardFilters } from '@/types/dashboard'
 
 export const dashboardService = {
   async getDashboardData(filters: DashboardFilters = {}): Promise<DashboardData> {

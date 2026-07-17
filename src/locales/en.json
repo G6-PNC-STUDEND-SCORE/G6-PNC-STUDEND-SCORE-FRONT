@@ -29,8 +29,8 @@
   "pass": "Pass",
   "fail": "Fail",
   "retry": "Retry",
-"retrying": "Retrying...",
-"welcome": "Welcome",
+  "retrying": "Retrying...",
+  "welcome": "Welcome",
   "nav": {
     "classes": "Classes",
     "subjects": "Subjects",

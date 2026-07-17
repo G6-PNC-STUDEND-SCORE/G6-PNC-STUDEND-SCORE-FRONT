@@ -25,7 +25,8 @@ const showSidebar = computed(() => !publicPages.includes(String(route.name)))
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
 }
 

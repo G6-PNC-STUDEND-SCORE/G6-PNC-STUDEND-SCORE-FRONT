@@ -94,6 +94,11 @@ export const subjectService = {
     return response.data
   },
 
+  async deleteSubjects(ids: number[]): Promise<SubjectResponse> {
+    const response = await http.post('/subjects/bulk-delete', { ids })
+    return response.data
+  },
+
   async getTeachers(): Promise<{ success: boolean; data: { id: number; name: string }[] }> {
     const response = await http.get('/teachers')
     return response.data

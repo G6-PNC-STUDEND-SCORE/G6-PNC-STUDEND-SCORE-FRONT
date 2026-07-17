@@ -1,10 +1,10 @@
 import { ref, computed } from 'vue'
 import {
   getStudents,
-  getStudent,
   createStudent,
   updateStudent,
   deleteStudent,
+  deleteStudents,
   assignStudentToClass,
   uploadStudentPhoto,
   deleteStudentPhoto,
@@ -38,6 +38,7 @@ export function useStudents() {
   const showCreateModal = ref(false)
   const showEditModal = ref(false)
   const showDeleteModal = ref(false)
+  const showBulkDeleteModal = ref(false)
   const showAssignModal = ref(false)
   const showDetailsModal = ref(false)
   const selectedStudent = ref<Student | null>(null)
@@ -55,7 +56,7 @@ export function useStudents() {
   })
 
   const createForm = ref(initialCreateForm())
-  
+
   const initialEditForm = () => ({
     name: '',
     gender: 'Male' as 'Male' | 'Female',
@@ -66,14 +67,20 @@ export function useStudents() {
   })
 
   const editForm = ref(initialEditForm())
-  
+
   const assignForm = ref({ class_id: null as number | null })
+
+  const bulkDeleteIds = ref<number[]>([])
+  const bulkDeleteNames = ref<string[]>([])
+  const bulkDeleting = ref(false)
 
   const filteredStudents = computed(() => {
     return students.value.filter((s) => {
       const studentName = s.user?.name || ''
       const matchesSearch = studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchesStudentNumber = (s.studentNumberSequence?.student_number || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      const matchesStudentNumber = (s.studentNumberSequence?.student_number || '')
+        .toLowerCase()
+        .includes(searchQuery.value.toLowerCase())
       return matchesSearch || matchesStudentNumber
     })
   })
@@ -99,7 +106,9 @@ export function useStudents() {
 
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     toast.value = { show: true, message, type }
-    setTimeout(() => { toast.value.show = false }, 3000)
+    setTimeout(() => {
+      toast.value.show = false
+    }, 3000)
   }
 
   async function loadStudents() {
@@ -129,7 +138,9 @@ export function useStudents() {
     try {
       const response = await classService.getClasses()
       if (response.success) {
-        cachedClasses = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
+        cachedClasses = Array.isArray(response.data)
+          ? response.data
+          : ([response.data].filter(Boolean) as SchoolClass[])
         classCacheTime = Date.now()
         classes.value = cachedClasses
       }
@@ -318,6 +329,38 @@ export function useStudents() {
     selectedStudent.value = null
   }
 
+  function openBulkDeleteModal(ids: number[]) {
+    bulkDeleteIds.value = ids
+    bulkDeleteNames.value = ids.map((id) => {
+      const s = students.value.find((st) => st.id === id)
+      return s?.user?.name || `Student #${id}`
+    })
+    showBulkDeleteModal.value = true
+  }
+
+  function closeBulkDeleteModal() {
+    showBulkDeleteModal.value = false
+    bulkDeleteIds.value = []
+    bulkDeleteNames.value = []
+  }
+
+  async function handleBulkDelete() {
+    if (bulkDeleteIds.value.length === 0) return
+    bulkDeleting.value = true
+    try {
+      await deleteStudents(bulkDeleteIds.value)
+      students.value = students.value.filter((s) => !bulkDeleteIds.value.includes(s.id))
+      invalidateStudentCache()
+      closeBulkDeleteModal()
+      showToast(`${bulkDeleteIds.value.length} student(s) deleted successfully`)
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
+    } finally {
+      bulkDeleting.value = false
+    }
+  }
+
   return {
     students,
     classes,
@@ -330,6 +373,7 @@ export function useStudents() {
     showCreateModal,
     showEditModal,
     showDeleteModal,
+    showBulkDeleteModal,
     showAssignModal,
     showDetailsModal,
     selectedStudent,
@@ -356,6 +400,12 @@ export function useStudents() {
     openDeleteModal,
     closeDeleteModal,
     handleDelete,
+    openBulkDeleteModal,
+    closeBulkDeleteModal,
+    handleBulkDelete,
+    bulkDeleteIds,
+    bulkDeleteNames,
+    bulkDeleting,
     openAssignModal,
     closeAssignModal,
     handleAssign,

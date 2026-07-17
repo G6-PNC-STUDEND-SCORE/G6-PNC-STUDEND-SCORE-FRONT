@@ -1,55 +1,64 @@
 <template>
   <Header />
   <div class="px-4 py-4">
-      <!-- Header -->
-      <div class="page-header">
-        <div class="page-header-left">
-          <div class="page-header-icon">
-            <i class="bi bi-journal-bookmark-fill"></i>
-          </div>
-          <div>
-            <h2 class="page-title">Classes</h2>
-            <p class="page-subtitle">
-              Manage classes, teachers, and student assignments
-            </p>
-          </div>
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-header-icon">
+          <i class="bi bi-journal-bookmark-fill"></i>
         </div>
-        <button
-          class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
-          style="border-radius: 0.625rem; background: #2563eb; padding: 0.5rem 1.125rem; font-size: 0.875rem;"
-          @click="openCreateModal"
-        >
-          <i class="bi bi-plus-lg"></i>
-          Add Class
-        </button>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-          <span class="visually-hidden">Loading...</span>
+        <div>
+          <h2 class="page-title">Classes</h2>
+          <p class="page-subtitle">Manage classes, teachers, and student assignments</p>
         </div>
-        <p class="mt-2" style="color: #6b7280;">Loading classes...</p>
       </div>
+      <button
+        class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+        style="
+          border-radius: 0.625rem;
+          background: #2563eb;
+          padding: 0.5rem 1.125rem;
+          font-size: 0.875rem;
+        "
+        @click="openCreateModal"
+      >
+        <i class="bi bi-plus-lg"></i>
+        Add Class
+      </button>
+    </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        {{ error }}
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <p class="mt-2" style="color: #6b7280">Loading classes...</p>
+    </div>
 
-      <!-- Class List Table -->
-      <ClassList
-        v-else
-        :classes="filteredClasses"
-        :search-query="searchQuery"
-        :status-filter="statusFilter"
-        @update:search-query="searchQuery = $event"
-        @update:status-filter="statusFilter = $event"
-        @view="viewClass"
-        @edit="openEditModal"
-        @delete="confirmDelete"
-      />
+    <!-- Error State -->
+    <div
+      v-else-if="error"
+      class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle"
+      style="font-size: 0.875rem"
+    >
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      {{ error }}
+    </div>
+
+    <!-- Class List Table -->
+    <ClassList
+      ref="classListRef"
+      v-else
+      :classes="filteredClasses"
+      :search-query="searchQuery"
+      :status-filter="statusFilter"
+      @update:search-query="searchQuery = $event"
+      @update:status-filter="statusFilter = $event"
+      @view="viewClass"
+      @edit="openEditModal"
+      @delete="confirmDelete"
+      @bulk-delete="confirmBulkDelete"
+    />
 
     <!-- Create/Edit Modal -->
     <ClassFormModal
@@ -83,18 +92,30 @@
       @confirm="handleDelete"
     />
 
-    <!-- View Class Modal -->
-    <ClassDetailsModal
-      :show="showViewModal"
-      :class-data="viewData"
-      @close="closeViewModal"
+    <!-- Bulk Delete Modal -->
+    <BulkDeleteModal
+      :show="showBulkDeleteModal"
+      :selected-count="bulkDeleteIds.length"
+      :selected-names="bulkDeleteNames"
+      item-label="class"
+      :submitting="bulkDeleting"
+      @close="closeBulkDeleteModal"
+      @confirm="handleBulkDelete"
     />
+
+    <!-- View Class Modal -->
+    <ClassDetailsModal :show="showViewModal" :class-data="viewData" @close="closeViewModal" />
 
     <!-- Toast Notification -->
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="toast.show" class="toast-notification" :class="toast.type">
-          <i :class="toast.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'" class="me-2"></i>
+          <i
+            :class="
+              toast.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'
+            "
+            class="me-2"
+          ></i>
           {{ toast.message }}
         </div>
       </Transition>
@@ -109,6 +130,7 @@ import ClassList from './ClassList.vue'
 import ClassFormModal from './ClassFormModal.vue'
 import ClassDeleteModal from './ClassDeleteModal.vue'
 import ClassDetailsModal from './ClassDetailsModal.vue'
+import BulkDeleteModal from '@/views/components/BulkDeleteModal.vue'
 import { classService, type SchoolClass } from '@/services/classService'
 
 // Search and Filter
@@ -126,8 +148,13 @@ const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'er
 const showModal = ref(false)
 const showViewModal = ref(false)
 const showDeleteModal = ref(false)
+const showBulkDeleteModal = ref(false)
 const isEditMode = ref(false)
 const classToDelete = ref<SchoolClass | null>(null)
+const bulkDeleteIds = ref<number[]>([])
+const bulkDeleteNames = ref<string[]>([])
+const bulkDeleting = ref(false)
+const classListRef = ref<InstanceType<typeof ClassList> | null>(null)
 const viewData = ref({
   id: 0,
   name: '',
@@ -172,14 +199,16 @@ const errors = reactive({
 const filteredClasses = computed(() => {
   const query = searchQuery.value.toLowerCase()
 
-  return classes.value.filter(classItem => {
-    const matchesSearch = !query ||
+  return classes.value.filter((classItem) => {
+    const matchesSearch =
+      !query ||
       classItem.name.toLowerCase().includes(query) ||
       (classItem.generation?.year || '').toString().toLowerCase().includes(query) ||
       (classItem.room || '').toLowerCase().includes(query) ||
       (classItem.teacher?.name || '').toLowerCase().includes(query)
 
-    const matchesStatus = !statusFilter.value ||
+    const matchesStatus =
+      !statusFilter.value ||
       (statusFilter.value === 'Active' ? classItem.is_active : !classItem.is_active)
 
     return matchesSearch && matchesStatus
@@ -200,7 +229,7 @@ async function loadClasses() {
   try {
     const response = await classService.getClasses(
       searchQuery.value || undefined,
-      statusFilter.value || undefined
+      statusFilter.value || undefined,
     )
     if (response.success) {
       classes.value = response.data as SchoolClass[]
@@ -274,7 +303,7 @@ function resetForm() {
   formData.students = 0
   formData.room = ''
   formData.status = 'Active'
-  Object.keys(errors).forEach(key => {
+  Object.keys(errors).forEach((key) => {
     errors[key as keyof typeof errors] = ''
   })
 }
@@ -364,7 +393,8 @@ async function handleSubmit() {
     }
   } catch (err) {
     const axiosError = err as { response?: { data?: { message?: string } }; message?: string }
-    const errorMessage = axiosError?.response?.data?.message || axiosError?.message || 'Failed to save class'
+    const errorMessage =
+      axiosError?.response?.data?.message || axiosError?.message || 'Failed to save class'
     error.value = errorMessage
     console.error('Error saving class:', err)
   } finally {
@@ -408,6 +438,41 @@ onMounted(() => {
   loadClasses()
   loadTeachers()
 })
+function confirmBulkDelete(ids: number[]) {
+  bulkDeleteIds.value = ids
+  bulkDeleteNames.value = ids.map((id) => {
+    const cls = classes.value.find((c) => c.id === id)
+    return cls?.name || `Class #${id}`
+  })
+  showBulkDeleteModal.value = true
+}
+
+function closeBulkDeleteModal() {
+  showBulkDeleteModal.value = false
+  bulkDeleteIds.value = []
+  bulkDeleteNames.value = []
+}
+
+async function handleBulkDelete() {
+  if (bulkDeleteIds.value.length === 0) return
+  bulkDeleting.value = true
+  try {
+    const response = await classService.deleteClasses(bulkDeleteIds.value)
+    if (response.success) {
+      showToast(response.message || `${bulkDeleteIds.value.length} class(es) deleted successfully`)
+      closeBulkDeleteModal()
+      classListRef.value?.clearSelection()
+      await loadClasses()
+    } else {
+      error.value = response.message || 'Failed to delete classes'
+    }
+  } catch (err) {
+    error.value = 'Failed to delete classes'
+    console.error(err)
+  } finally {
+    bulkDeleting.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -482,11 +547,25 @@ onMounted(() => {
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.toast-enter-active { transition: all 0.3s ease-out; }
-.toast-leave-active { transition: all 0.2s ease-in; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
+.toast-enter-active {
+  transition: all 0.3s ease-out;
+}
+.toast-leave-active {
+  transition: all 0.2s ease-in;
+}
+.toast-enter-from,
+.toast-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
 </style>

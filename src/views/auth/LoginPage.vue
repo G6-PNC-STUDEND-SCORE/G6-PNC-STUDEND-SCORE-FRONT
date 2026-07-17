@@ -21,8 +21,6 @@
           <span>{{ auth.error }}</span>
         </div>
 
-
-
         <form @submit.prevent="onSubmit" class="login-form">
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
@@ -75,11 +73,7 @@
             </label>
           </div>
 
-          <button
-            type="submit"
-            class="btn-submit"
-            :disabled="auth.loading"
-          >
+          <button type="submit" class="btn-submit" :disabled="auth.loading">
             <template v-if="auth.loading">
               <span class="spinner"></span>
               <span>Signing in...</span>
@@ -130,9 +124,15 @@ declare global {
               text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin'
               width?: number
               logo_alignment?: 'left' | 'center'
-            }
+            },
           ) => void
-          prompt: (momentListener?: (notification: { isNotDisplayed: () => string; isSkippedMoment: () => string; getMomentType: () => string }) => void) => void
+          prompt: (
+            momentListener?: (notification: {
+              isNotDisplayed: () => string
+              isSkippedMoment: () => string
+              getMomentType: () => string
+            }) => void,
+          ) => void
         }
       }
     }
@@ -157,7 +157,7 @@ async function onSubmit() {
 
 function handleGoogleCredential(response: { credential: string }) {
   if (response.credential) {
-    auth.loginWithGoogle(response.credential).then(success => {
+    auth.loginWithGoogle(response.credential).then((success) => {
       if (success) {
         setTimeout(() => router.push('/dashboard'), 500)
       }
@@ -216,7 +216,12 @@ onUnmounted(() => {
   padding: 1.5rem;
   background: linear-gradient(135deg, #e8f0fe 0%, #f0f5ff 40%, #f8faff 70%, #eef4fb 100%);
   overflow: hidden;
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family:
+    'Inter',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 .blob {
@@ -258,7 +263,8 @@ onUnmounted(() => {
 }
 
 @keyframes blobFloat {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
   }
   33% {
@@ -321,7 +327,6 @@ onUnmounted(() => {
 .pnc-logo:hover {
   transform: scale(1.03);
 }
-
 
 .welcome-heading {
   font-size: 1rem;
@@ -456,8 +461,8 @@ onUnmounted(() => {
 }
 
 /* Password with extra padding for toggle button */
-.form-input[type="password"],
-.form-input[type="text"]#password {
+.form-input[type='password'],
+.form-input[type='text']#password {
   padding-right: 3rem;
 }
 
@@ -685,7 +690,6 @@ onUnmounted(() => {
   padding-top: 1rem;
   border-top: 1px solid #f3f4f6;
 }
-
 
 @media (max-width: 480px) {
   .login-page {

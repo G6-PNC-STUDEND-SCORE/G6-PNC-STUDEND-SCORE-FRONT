@@ -9,16 +9,16 @@ const router = createRouter({
 
 router.beforeEach((to, _from) => {
   const authStore = useAuthStore()
-  
+
   const publicRoutes = ['/login']
-  
+
   if (publicRoutes.includes(to.path)) {
     if (authStore.isAuthenticated) {
       return '/dashboard'
     }
     return true
   }
-  
+
   if (!authStore.isAuthenticated) {
     return '/login'
   }

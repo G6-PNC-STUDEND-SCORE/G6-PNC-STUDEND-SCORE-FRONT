@@ -1,57 +1,66 @@
 <template>
   <Header />
   <div class="px-4 py-4">
-      <!-- Header -->
-      <div class="page-header">
-        <div class="page-header-left">
-          <div class="page-header-icon">
-            <i class="bi bi-person-badge-fill"></i>
-          </div>
-          <div>
-            <h2 class="page-title">Students</h2>
-            <p class="page-subtitle">
-              Manage student profiles, classes, and information
-            </p>
-          </div>
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-header-icon">
+          <i class="bi bi-person-badge-fill"></i>
         </div>
-        <button
-          class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
-          style="border-radius: 0.625rem; background: #2563eb; padding: 0.5rem 1.125rem; font-size: 0.875rem;"
-          @click="openCreateModal"
-        >
-          <i class="bi bi-plus-lg"></i>
-          Add Student
-        </button>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-          <span class="visually-hidden">Loading...</span>
+        <div>
+          <h2 class="page-title">Students</h2>
+          <p class="page-subtitle">Manage student profiles, classes, and information</p>
         </div>
-        <p class="mt-2" style="color: #6b7280;">Loading students...</p>
       </div>
+      <button
+        class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+        style="
+          border-radius: 0.625rem;
+          background: #2563eb;
+          padding: 0.5rem 1.125rem;
+          font-size: 0.875rem;
+        "
+        @click="openCreateModal"
+      >
+        <i class="bi bi-plus-lg"></i>
+        Add Student
+      </button>
+    </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        {{ error }}
+    <!-- Loading State -->
+    <div v-if="loading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem">
+        <span class="visually-hidden">Loading...</span>
       </div>
+      <p class="mt-2" style="color: #6b7280">Loading students...</p>
+    </div>
 
-      <!-- Student List Table -->
-      <StudentList
-        v-else
-        :students="filteredStudents"
-        :search-query="searchQuery"
-        :gender-filter="genderFilter"
-        :get-initials="getInitials"
-        @update:search-query="searchQuery = $event"
-        @update:gender-filter="genderFilter = $event"
-        @view="viewDetails"
-        @edit="openEditModal"
-        @assign="openAssignModal"
-        @delete="openDeleteModal"
-      />
+    <!-- Error State -->
+    <div
+      v-else-if="error"
+      class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle"
+      style="font-size: 0.875rem"
+    >
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      {{ error }}
+    </div>
+
+    <!-- Student List Table -->
+    <StudentList
+      ref="studentListRef"
+      v-else
+      :students="filteredStudents"
+      :search-query="searchQuery"
+      :gender-filter="genderFilter"
+      :get-initials="getInitials"
+      @update:search-query="searchQuery = $event"
+      @update:gender-filter="genderFilter = $event"
+      @view="viewDetails"
+      @edit="openEditModal"
+      @assign="openAssignModal"
+      @delete="openDeleteModal"
+      @bulk-delete="openBulkDeleteModal"
+    />
 
     <!-- Create Modal -->
     <StudentFormModal
@@ -107,6 +116,17 @@
       @confirm="handleDelete"
     />
 
+    <!-- Bulk Delete Modal -->
+    <BulkDeleteModal
+      :show="showBulkDeleteModal"
+      :selected-count="bulkDeleteIds.length"
+      :selected-names="bulkDeleteNames"
+      item-label="student"
+      :submitting="bulkDeleting"
+      @close="closeBulkDeleteModal"
+      @confirm="handleBulkDelete"
+    />
+
     <!-- Assign Modal -->
     <StudentAssignModal
       :show="showAssignModal"
@@ -132,7 +152,12 @@
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="toast.show" class="toast-notification" :class="toast.type">
-          <i :class="toast.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'" class="me-2"></i>
+          <i
+            :class="
+              toast.type === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'
+            "
+            class="me-2"
+          ></i>
           {{ toast.message }}
         </div>
       </Transition>
@@ -142,14 +167,16 @@
 
 <script setup lang="ts">
 import Header from '@/layouts/Header.vue'
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
 import StudentDeleteModal from './StudentDeleteModal.vue'
 import StudentAssignModal from './StudentAssignModal.vue'
 import StudentDetailsModal from './StudentDetailsModal.vue'
+import BulkDeleteModal from '@/views/components/BulkDeleteModal.vue'
 import { useStudents } from './composables/useStudents'
 
+const studentListRef = ref<InstanceType<typeof StudentList> | null>(null)
 
 const {
   // Data
@@ -164,6 +191,7 @@ const {
   showCreateModal,
   showEditModal,
   showDeleteModal,
+  showBulkDeleteModal,
   showAssignModal,
   showDetailsModal,
   selectedStudent,
@@ -193,6 +221,12 @@ const {
   openDeleteModal,
   closeDeleteModal,
   handleDelete,
+  openBulkDeleteModal,
+  closeBulkDeleteModal,
+  handleBulkDelete,
+  bulkDeleteIds,
+  bulkDeleteNames,
+  bulkDeleting,
   openAssignModal,
   closeAssignModal,
   handleAssign,
@@ -277,11 +311,25 @@ onMounted(() => {
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.toast-enter-active { transition: all 0.3s ease-out; }
-.toast-leave-active { transition: all 0.2s ease-in; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
+.toast-enter-active {
+  transition: all 0.3s ease-out;
+}
+.toast-leave-active {
+  transition: all 0.2s ease-in;
+}
+.toast-enter-from,
+.toast-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
 </style>

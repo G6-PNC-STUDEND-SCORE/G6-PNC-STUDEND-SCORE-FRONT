@@ -2,14 +2,15 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
-        <div class="modal-content-panel" style="max-width: 400px;">
+        <div class="modal-content-panel" style="max-width: 400px">
           <div class="modal-header-custom">
-            <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
-              <i class="bi bi-trash-fill"></i>
+            <div class="modal-icon" style="background: #fef2f2; color: #ef4444">
+              <i class="bi bi-trash3"></i>
             </div>
-            <h5 class="mb-1 fw-bold" style="color: #1a1a2e;">Delete Student</h5>
-            <p class="mb-0" style="font-size: 0.8125rem; color: #6b7280;">
-              Are you sure you want to delete <strong>{{ studentName }}</strong>? This action cannot be undone.
+            <h5 class="mb-1 fw-bold" style="color: #1a1a2e">Delete Student</h5>
+            <p class="mb-0" style="font-size: 0.8125rem; color: #6b7280">
+              Are you sure you want to delete <strong>{{ studentName }}</strong
+              >? This action cannot be undone.
             </p>
           </div>
           <div class="modal-footer-custom">
@@ -18,7 +19,7 @@
               type="button"
               class="btn-submit"
               :disabled="submitting"
-              style="background: #ef4444;"
+              style="background: #ef4444"
               @click="$emit('confirm')"
             >
               <template v-if="submitting">
@@ -26,7 +27,7 @@
                 Deleting...
               </template>
               <template v-else>
-                <i class="bi bi-trash me-1"></i>
+                <i class="bi bi-trash3 me-1"></i>
                 Delete
               </template>
             </button>
@@ -75,14 +76,26 @@ defineEmits<{
 }
 
 @keyframes modalBounce {
-  0% { transform: scale(0.9); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-.modal-header-custom { padding: 28px 28px 16px; text-align: center; }
-.modal-header-custom h5 { font-size: 1.1rem; }
+.modal-header-custom {
+  padding: 28px 28px 16px;
+  text-align: center;
+}
+.modal-header-custom h5 {
+  font-size: 1.1rem;
+}
 .modal-icon {
-  width: 56px; height: 56px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -110,18 +123,39 @@ defineEmits<{
   justify-content: center;
   gap: 6px;
   border: none;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.btn-cancel { background: #f3f4f6; color: #374151; }
-.btn-cancel:hover { background: #e5e7eb; }
-.btn-submit { color: white; }
-.btn-submit:hover { opacity: 0.9; }
-.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-cancel {
+  background: #f3f4f6;
+  color: #374151;
+}
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+.btn-submit {
+  color: white;
+}
+.btn-submit:hover {
+  opacity: 0.9;
+}
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
-.modal-enter-active { transition: all 0.2s ease-out; }
-.modal-leave-active { transition: all 0.15s ease-in; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-active {
+  transition: all 0.2s ease-out;
+}
+.modal-leave-active {
+  transition: all 0.15s ease-in;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
 .modal-enter-from .modal-content-panel,
-.modal-leave-to .modal-content-panel { transform: scale(0.9); }
+.modal-leave-to .modal-content-panel {
+  transform: scale(0.9);
+}
 </style>

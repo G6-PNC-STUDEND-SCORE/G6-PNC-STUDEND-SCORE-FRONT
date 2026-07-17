@@ -1,4 +1,3 @@
-
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
@@ -21,4 +20,3 @@ const authStore = useAuthStore()
 authStore.init().finally(() => {
   app.mount('#app')
 })
-

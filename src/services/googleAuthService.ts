@@ -12,5 +12,8 @@ export async function googleLogin(credential: string): Promise<GoogleLoginRespon
 }
 
 export function initGoogleClientId(): string {
-  return import.meta.env.VITE_GOOGLE_CLIENT_ID || '213370047582-omlbf5s59ccocfseu1ruib12i2rhuuvv.apps.googleusercontent.com'
+  return (
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    '213370047582-omlbf5s59ccocfseu1ruib12i2rhuuvv.apps.googleusercontent.com'
+  )
 }

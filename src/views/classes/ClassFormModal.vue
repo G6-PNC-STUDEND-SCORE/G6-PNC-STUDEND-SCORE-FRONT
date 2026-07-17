@@ -12,7 +12,9 @@
               <i :class="isEdit ? 'bi bi-pencil-square' : 'bi bi-journal-plus'"></i>
             </div>
             <h5 class="mb-1 fw-bold">{{ isEdit ? 'Edit Class' : 'Add New Class' }}</h5>
-            <p class="modal-subtitle">{{ isEdit ? 'Update class information' : 'Fill in the class details' }}</p>
+            <p class="modal-subtitle">
+              {{ isEdit ? 'Update class information' : 'Fill in the class details' }}
+            </p>
           </div>
 
           <form @submit.prevent="$emit('submit')">
@@ -68,7 +70,14 @@
                 <div class="input-wrapper">
                   <select
                     :value="teacherId"
-                    @change="$emit('update:teacherId', ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+                    @change="
+                      $emit(
+                        'update:teacherId',
+                        ($event.target as HTMLSelectElement).value
+                          ? Number(($event.target as HTMLSelectElement).value)
+                          : null,
+                      )
+                    "
                     class="modern-input"
                   >
                     <option :value="null">— Select Teacher —</option>
@@ -106,7 +115,9 @@
                 <div class="input-wrapper">
                   <input
                     :value="students"
-                    @input="$emit('update:students', Number(($event.target as HTMLInputElement).value))"
+                    @input="
+                      $emit('update:students', Number(($event.target as HTMLInputElement).value))
+                    "
                     type="number"
                     class="modern-input"
                     placeholder="0"
@@ -155,14 +166,8 @@
 
             <!-- Footer -->
             <div class="modal-footer-custom">
-              <button type="button" class="btn-outline" @click="$emit('close')">
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn-primary-custom"
-                :disabled="submitting"
-              >
+              <button type="button" class="btn-outline" @click="$emit('close')">Cancel</button>
+              <button type="submit" class="btn-primary-custom" :disabled="submitting">
                 <template v-if="submitting">
                   <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                   {{ isEdit ? 'Saving...' : 'Creating...' }}
@@ -421,8 +426,12 @@ select.modern-input {
   flex-shrink: 0;
 }
 
-.status-dot.active { background: #22c55e; }
-.status-dot.inactive { background: #94a3b8; }
+.status-dot.active {
+  background: #22c55e;
+}
+.status-dot.inactive {
+  background: #94a3b8;
+}
 
 .status-text {
   font-size: 0.8125rem;
@@ -459,7 +468,7 @@ select.modern-input {
   justify-content: center;
   gap: 6px;
   border: none;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
 .btn-outline {
@@ -491,16 +500,27 @@ select.modern-input {
   box-shadow: none;
 }
 
-.modal-enter-active { transition: all 0.25s ease-out; }
-.modal-leave-active { transition: all 0.15s ease-in; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-active {
+  transition: all 0.25s ease-out;
+}
+.modal-leave-active {
+  transition: all 0.15s ease-in;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
 .modal-enter-from .modal-content-panel,
 .modal-leave-to .modal-content-panel {
   transform: scale(0.92) translateY(12px);
 }
 
-.modal-content-panel::-webkit-scrollbar { width: 4px; }
-.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
+.modal-content-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.modal-content-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
 .modal-content-panel::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 2px;

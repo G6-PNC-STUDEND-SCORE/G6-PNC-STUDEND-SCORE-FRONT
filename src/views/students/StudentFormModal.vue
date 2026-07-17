@@ -12,7 +12,9 @@
               <i :class="isEdit ? 'bi bi-pencil-square' : 'bi bi-person-plus-fill'"></i>
             </div>
             <h5 class="mb-1 fw-bold">{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h5>
-            <p class="modal-subtitle">{{ isEdit ? 'Update student information' : 'Fill in the student details' }}</p>
+            <p class="modal-subtitle">
+              {{ isEdit ? 'Update student information' : 'Fill in the student details' }}
+            </p>
           </div>
 
           <form @submit.prevent="$emit('submit')">
@@ -59,7 +61,7 @@
                       class="photo-remove-btn"
                       @click="onRemovePhoto"
                     >
-                      <i class="bi bi-trash3 me-1"></i>
+                      <i class="bi bi-x-circle me-1"></i>
                       Remove
                     </button>
                   </div>
@@ -126,8 +128,6 @@
                 </div>
               </div>
 
-
-
               <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
@@ -173,11 +173,20 @@
                 <div class="input-wrapper">
                   <select
                     :value="classId"
-                    @change="$emit('update:classId', ($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+                    @change="
+                      $emit(
+                        'update:classId',
+                        ($event.target as HTMLSelectElement).value
+                          ? Number(($event.target as HTMLSelectElement).value)
+                          : null,
+                      )
+                    "
                     class="modern-input"
                   >
                     <option :value="null as any">— Not assigned —</option>
-                    <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
+                    <option v-for="cls in classes" :key="cls.id" :value="cls.id">
+                      {{ cls.name }}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -221,14 +230,8 @@
 
             <!-- Footer -->
             <div class="modal-footer-custom">
-              <button type="button" class="btn-outline" @click="$emit('close')">
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="btn-primary-custom"
-                :disabled="submitting"
-              >
+              <button type="button" class="btn-outline" @click="$emit('close')">Cancel</button>
+              <button type="submit" class="btn-primary-custom" :disabled="submitting">
                 <template v-if="submitting">
                   <span class="spinner-border spinner-border-sm me-1" role="status"></span>
                   {{ isEdit ? 'Saving...' : 'Creating...' }}
@@ -283,18 +286,24 @@ const photoPreview = ref<string | null>(null)
 const photoError = ref<string | null>(null)
 
 // Reset photo preview when modal opens
-watch(() => props.show, (newVal) => {
-  if (newVal) {
-    photoPreview.value = null
-    photoError.value = null
-  }
-})
+watch(
+  () => props.show,
+  (newVal) => {
+    if (newVal) {
+      photoPreview.value = null
+      photoError.value = null
+    }
+  },
+)
 
 // Watch for existingPhotoUrl changes (when editing different students)
-watch(() => props.existingPhotoUrl, () => {
-  photoPreview.value = null
-  photoError.value = null
-})
+watch(
+  () => props.existingPhotoUrl,
+  () => {
+    photoPreview.value = null
+    photoError.value = null
+  },
+)
 
 function onPhotoSelected(event: Event) {
   const target = event.target as HTMLInputElement
@@ -557,8 +566,12 @@ select.modern-input {
   flex-shrink: 0;
 }
 
-.gender-dot.male { background: #3b82f6; }
-.gender-dot.female { background: #ec4899; }
+.gender-dot.male {
+  background: #3b82f6;
+}
+.gender-dot.female {
+  background: #ec4899;
+}
 
 .gender-text {
   font-size: 0.8125rem;
@@ -618,8 +631,12 @@ select.modern-input {
   flex-shrink: 0;
 }
 
-.status-dot.active { background: #22c55e; }
-.status-dot.inactive { background: #94a3b8; }
+.status-dot.active {
+  background: #22c55e;
+}
+.status-dot.inactive {
+  background: #94a3b8;
+}
 
 .status-text {
   font-size: 0.8125rem;
@@ -807,17 +824,28 @@ select.modern-input {
 }
 
 /* ==================== Transitions ==================== */
-.modal-enter-active { transition: all 0.25s ease-out; }
-.modal-leave-active { transition: all 0.15s ease-in; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-active {
+  transition: all 0.25s ease-out;
+}
+.modal-leave-active {
+  transition: all 0.15s ease-in;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
 .modal-enter-from .modal-content-panel,
 .modal-leave-to .modal-content-panel {
   transform: scale(0.92) translateY(12px);
 }
 
 /* ==================== Scrollbar ==================== */
-.modal-content-panel::-webkit-scrollbar { width: 4px; }
-.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
+.modal-content-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.modal-content-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
 .modal-content-panel::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 2px;

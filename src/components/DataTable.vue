@@ -5,7 +5,7 @@
         <h3 class="table-title">{{ title }}</h3>
       </slot>
     </div>
-    
+
     <div class="table-responsive">
       <table class="table table-hover data-table mb-0">
         <thead>
@@ -31,7 +31,7 @@
         </tbody>
       </table>
     </div>
-    
+
     <div class="table-footer" v-if="$slots.footer">
       <slot name="footer" />
     </div>
@@ -68,7 +68,9 @@ defineOptions({
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   border: 1px solid #e9ecef;
   overflow: hidden;
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .data-table-wrapper.dark-mode {

@@ -25,14 +25,27 @@
 
     <template v-else>
       <!-- Success Message -->
-      <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
+      <div
+        v-if="successMessage"
+        class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show"
+        role="alert"
+      >
         <i class="bi bi-check-circle-fill"></i>
         {{ successMessage }}
-        <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
+        <button
+          type="button"
+          class="btn-close"
+          @click="successMessage = ''"
+          aria-label="Close"
+        ></button>
       </div>
 
       <!-- Error Message -->
-      <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
+      <div
+        v-if="saveError"
+        class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show"
+        role="alert"
+      >
         <i class="bi bi-exclamation-triangle-fill"></i>
         {{ saveError }}
         <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
@@ -41,7 +54,14 @@
       <!-- Profile Card -->
       <div class="profile-card">
         <div class="profile-body">
-          <div class="avatar-wrap" @click="triggerUpload" role="button" tabindex="0" @keydown.enter.prevent="triggerUpload" :title="avatarUploading ? 'Uploading...' : 'Click to change photo'">
+          <div
+            class="avatar-wrap"
+            @click="triggerUpload"
+            role="button"
+            tabindex="0"
+            @keydown.enter.prevent="triggerUpload"
+            :title="avatarUploading ? 'Uploading...' : 'Click to change photo'"
+          >
             <div class="avatar">
               <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="avatar" />
               <div v-else class="avatar-fallback">{{ initials }}</div>
@@ -51,17 +71,13 @@
                 <span class="spinner-border spinner-border-sm" role="status"></span>
                 Uploading...
               </template>
-              <template v-else>
-                <i class="bi bi-camera-fill me-1"></i> Change photo
-              </template>
+              <template v-else> <i class="bi bi-camera-fill me-1"></i> Change photo </template>
             </span>
           </div>
 
           <div class="profile-meta">
             <h2 class="profile-name">{{ form.name || 'User' }}</h2>
             <p class="profile-role">{{ form.role || 'N/A' }}</p>
-
-
           </div>
         </div>
 
@@ -109,7 +125,11 @@
             </div>
             <div class="field">
               <label>Department</label>
-              <input type="text" v-model="form.department" placeholder="e.g. Information Technology" />
+              <input
+                type="text"
+                v-model="form.department"
+                placeholder="e.g. Information Technology"
+              />
             </div>
             <div class="field">
               <label>School</label>
@@ -121,12 +141,14 @@
             </div>
           </div>
 
-
-
           <div class="card-actions">
             <button class="btn btn-ghost" @click="resetForm" :disabled="saving">Reset</button>
             <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
-              <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <span
+                v-if="saving"
+                class="spinner-border spinner-border-sm me-1"
+                role="status"
+              ></span>
               <i v-else class="bi bi-check-lg me-1"></i>
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
@@ -141,8 +163,17 @@
             <div class="field">
               <label>Current Password</label>
               <div class="password-input">
-                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
-                <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
+                <input
+                  :type="showCurrent ? 'text' : 'password'"
+                  v-model="password.current"
+                  placeholder="Enter current password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="showCurrent ? 'Hide password' : 'Show password'"
+                  @click="showCurrent = !showCurrent"
+                >
                   <i :class="showCurrent ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
                 </button>
               </div>
@@ -150,8 +181,18 @@
             <div class="field">
               <label>New Password</label>
               <div class="password-input">
-                <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
-                <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
+                <input
+                  :type="showNew ? 'text' : 'password'"
+                  v-model="password.new"
+                  placeholder="Enter new password (min 8 chars)"
+                  minlength="8"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="showNew ? 'Hide password' : 'Show password'"
+                  @click="showNew = !showNew"
+                >
                   <i :class="showNew ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
                 </button>
               </div>
@@ -159,8 +200,17 @@
             <div class="field">
               <label>Confirm Password</label>
               <div class="password-input">
-                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
-                <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
+                <input
+                  :type="showConfirm ? 'text' : 'password'"
+                  v-model="password.confirm"
+                  placeholder="Confirm new password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="showConfirm ? 'Hide password' : 'Show password'"
+                  @click="showConfirm = !showConfirm"
+                >
                   <i :class="showConfirm ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
                 </button>
               </div>
@@ -170,7 +220,11 @@
           <div class="card-actions">
             <button class="btn btn-ghost" @click="resetPassword">Clear</button>
             <button class="btn btn-primary" @click="updatePassword" :disabled="passwordSaving">
-              <span v-if="passwordSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <span
+                v-if="passwordSaving"
+                class="spinner-border spinner-border-sm me-1"
+                role="status"
+              ></span>
               <i v-else class="bi bi-lock me-1"></i>
               {{ passwordSaving ? 'Updating...' : 'Update Password' }}
             </button>
@@ -195,7 +249,12 @@
 import Header from '@/layouts/Header.vue'
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
+import {
+  getProfile,
+  updateProfile,
+  uploadAvatar,
+  type UserProfile,
+} from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/api'
 
@@ -213,7 +272,7 @@ function invalidateProfileCache() {
 }
 
 const auth = useAuthStore()
-let objectUrl: string | null = null
+const objectUrl: string | null = null
 
 const loading = ref(!cachedProfile || isProfileCacheStale())
 const saving = ref(false)
@@ -261,7 +320,7 @@ const initials = computed(() => {
   if (!form.name) return 'U'
   return form.name
     .split(' ')
-    .map(n => n[0])
+    .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
@@ -273,8 +332,6 @@ const formattedDate = computed(() => {
   if (isNaN(d.getTime())) return ''
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 })
-
-
 
 function applyProfile(profile: UserProfile) {
   form.name = profile.name || ''
@@ -337,9 +394,14 @@ async function saveProfile() {
     profileCacheTime = Date.now()
     applyProfile(updated)
     successMessage.value = 'Profile updated successfully!'
-    setTimeout(() => { successMessage.value = '' }, 4000)
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 4000)
   } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
+    const err = e as {
+      response?: { data?: { message?: string; errors?: Record<string, string[]> } }
+      message?: string
+    }
     saveError.value = err.response?.data?.message || err.message || 'Failed to save profile'
     if (err.response?.data?.errors) {
       const errorMessages = Object.values(err.response.data.errors).flat()
@@ -389,9 +451,14 @@ async function onFileChange(event: Event) {
       auth.user.avatar = result.avatar
     }
     successMessage.value = 'Avatar uploaded successfully!'
-    setTimeout(() => { successMessage.value = '' }, 4000)
+    setTimeout(() => {
+      successMessage.value = ''
+    }, 4000)
   } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
+    const err = e as {
+      response?: { data?: { message?: string; errors?: Record<string, string[]> } }
+      message?: string
+    }
     saveError.value = err.response?.data?.message || err.message || 'Failed to upload avatar'
     if (err.response?.data?.errors) {
       const errorMessages = Object.values(err.response.data.errors).flat()
@@ -442,7 +509,7 @@ async function updatePassword() {
       new_password: password.new,
       new_password_confirmation: password.confirm,
     })
-    
+
     passwordMessage.value = response.data.message || 'Password changed successfully'
     passwordStatus.value = 'success'
     password.current = ''
@@ -450,7 +517,8 @@ async function updatePassword() {
     password.confirm = ''
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    passwordMessage.value = err.response?.data?.message || err.message || 'Failed to change password'
+    passwordMessage.value =
+      err.response?.data?.message || err.message || 'Failed to change password'
     passwordStatus.value = 'error'
   } finally {
     passwordSaving.value = false
@@ -479,7 +547,14 @@ onUnmounted(() => {
 <style scoped>
 * {
   box-sizing: border-box;
-  font-family: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  font-family:
+    'Segoe UI',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    Roboto,
+    sans-serif;
 }
 
 .admin-profile-page {
@@ -535,7 +610,9 @@ onUnmounted(() => {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 28px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .profile-body {
@@ -568,7 +645,9 @@ onUnmounted(() => {
   justify-content: center;
   box-shadow: 0 10px 26px rgba(21, 101, 216, 0.25);
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .avatar-wrap:hover .avatar {
@@ -660,7 +739,9 @@ onUnmounted(() => {
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 28px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .card-header {
@@ -728,7 +809,10 @@ onUnmounted(() => {
   line-height: 1;
   cursor: pointer;
   border-radius: 10px;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .password-toggle:hover {
@@ -891,6 +975,5 @@ select:focus {
     flex-direction: column;
     text-align: center;
   }
-
 }
 </style>

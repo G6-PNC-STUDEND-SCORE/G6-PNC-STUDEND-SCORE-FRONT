@@ -2,16 +2,27 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
-        <div class="modal-content-panel" style="max-width: 400px">
+        <div class="modal-content-panel" style="max-width: 420px">
           <div class="modal-header-custom">
             <div class="modal-icon" style="background: #fef2f2; color: #ef4444">
               <i class="bi bi-trash3"></i>
             </div>
-            <h5 class="mb-1 fw-bold" style="color: #1a1a2e">Delete Class</h5>
+            <h5 class="mb-1 fw-bold" style="color: #1a1a2e">
+              Delete {{ selectedCount }} {{ itemLabel }}{{ selectedCount !== 1 ? 's' : '' }}
+            </h5>
             <p class="mb-0" style="font-size: 0.8125rem; color: #6b7280">
-              Are you sure you want to delete <strong>{{ className }}</strong
-              >? This action cannot be undone.
+              Are you sure you want to delete <strong>{{ selectedCount }}</strong> {{ itemLabel
+              }}{{ selectedCount !== 1 ? 's' : '' }}? This action cannot be undone.
             </p>
+          </div>
+          <div v-if="selectedNames && selectedNames.length > 0" class="selected-names-list">
+            <div v-for="name in selectedNames.slice(0, 5)" :key="name" class="selected-name-item">
+              <i class="bi bi-dash-circle me-2" style="color: #ef4444; font-size: 0.7rem"></i>
+              {{ name }}
+            </div>
+            <div v-if="selectedNames.length > 5" class="selected-name-more">
+              +{{ selectedNames.length - 5 }} more
+            </div>
           </div>
           <div class="modal-footer-custom">
             <button type="button" class="btn-cancel" @click="$emit('close')">Cancel</button>
@@ -28,7 +39,7 @@
               </template>
               <template v-else>
                 <i class="bi bi-trash3 me-1"></i>
-                Delete
+                Delete {{ selectedCount }}
               </template>
             </button>
           </div>
@@ -41,7 +52,9 @@
 <script setup lang="ts">
 defineProps<{
   show: boolean
-  className: string
+  selectedCount: number
+  selectedNames?: string[]
+  itemLabel: string
   submitting: boolean
 }>()
 
@@ -87,7 +100,7 @@ defineEmits<{
 }
 
 .modal-header-custom {
-  padding: 28px 28px 16px;
+  padding: 28px 28px 8px;
   text-align: center;
 }
 .modal-header-custom h5 {
@@ -104,10 +117,30 @@ defineEmits<{
   margin: 0 auto 12px;
 }
 
+.selected-names-list {
+  padding: 4px 28px 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.selected-name-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: #4b5563;
+  padding: 3px 0;
+}
+
+.selected-name-more {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  padding: 3px 0 3px 20px;
+}
+
 .modal-footer-custom {
   display: flex;
   gap: 8px;
-  padding: 12px 28px 28px;
+  padding: 8px 28px 28px;
 }
 
 .modal-footer-custom button {
