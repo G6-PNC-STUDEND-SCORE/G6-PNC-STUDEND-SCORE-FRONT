@@ -93,11 +93,15 @@ export async function updateStudent(
     status?: string
     generation_id?: number | null
     class_id?: number | null
-    academic_year_id?: number | null
-    enrollment_date?: string | null
   }
 ): Promise<StudentResponse> {
-  const res = await http.put<StudentResponse>(`/students/${id}`, data)
+  const payload: Record<string, unknown> = {}
+  if (data.name !== undefined) payload.name = data.name
+  if (data.gender !== undefined) payload.gender = data.gender
+  if (data.status !== undefined) payload.status = data.status
+  if (data.generation_id !== undefined) payload.generation_id = data.generation_id
+  if (data.class_id !== undefined) payload.class_id = data.class_id
+  const res = await http.put<StudentResponse>(`/students/${id}`, payload)
   return res.data
 }
 

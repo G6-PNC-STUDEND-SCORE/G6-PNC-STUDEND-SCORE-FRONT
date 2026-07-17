@@ -55,6 +55,7 @@
             <tr>
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
               <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
+              <th class="cell-header cell-frozen student-class-header">Class</th>
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
               <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ minWidth: '80px' }">
                 <div class="header-content column-header-content">
@@ -121,6 +122,10 @@
                 </div>
               </td>
 
+              <td class="cell cell-frozen cell-student-class">
+                <span class="cell-value" :title="row.class_name">{{ row.class_name || '-' }}</span>
+              </td>
+
               <td class="cell cell-frozen cell-student-id"
                 :class="getStudentIdCellClass(rowIndex)"
                 :data-row-idx="rowIndex"
@@ -161,7 +166,7 @@
               <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
-              <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
+              <td :colspan="4 + columns.length + 2" class="cell-frozen add-row-cell">
                 <i class="bi bi-plus-lg"></i> Add Student Row
               </td>
             </tr>
@@ -1224,7 +1229,8 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[srcColId] = nextValue
       recalculateRowTotal(targetRow)
-      updateCellMark(subjectId.value, termId.value, srcColId, nextValue).catch(() => {})
+      const actualDetailId = getActualDetailId(targetRow, srcColId)
+      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {})
     })
   } else {
     // Horizontal fill: continue the pattern across columns.
@@ -1261,7 +1267,8 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[cols[ci].id] = nextValue
       recalculateRowTotal(targetRow)
-      updateCellMark(subjectId.value, termId.value, cols[ci].id, nextValue).catch(() => {})
+      const actualDetailId = getActualDetailId(targetRow, cols[ci].id)
+      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {})
     })
   }
 
@@ -1573,39 +1580,53 @@ function onGlobalKeydown(event: KeyboardEvent) {
 function clearSingleCell() {
   const row = filteredRows.value[selectedRowIndex.value]
   if (!row) return
-  const oldValue = getCellMark(row, selectedCol.value!)
+  const colId = selectedCol.value!
+  const oldValue = getCellMark(row, colId)
   if (oldValue === null) return
   const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-  if (actualRow) { actualRow.details[selectedCol.value!] = null; triggerRef(data) }
-  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value!, oldValue })
+  if (actualRow) { actualRow.details[colId] = null; triggerRef(data) }
+  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  updateCellMark(subjectId.value, termId.value, selectedCol.value!, null)
-    .then(() => { showSaveStatus('saved'); refreshData() })
-    .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value!] = oldValue })
+  const actualDetailId = actualRow ? getActualDetailId(actualRow, colId) : colId
+  updateCellMark(subjectId.value, termId.value, actualDetailId, null)
+    .then(() => { showSaveStatus('saved'); if (actualRow) recalculateRowTotal(actualRow) })
+    .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[colId] = oldValue })
 }
 
 function clearRangeSelection() {
-  const r1 = Math.min(selectionStartRow.value, selectedRowIndex.value)
-  const r2 = Math.max(selectionStartRow.value, selectedRowIndex.value)
-  const c1 = Math.min(selectionStartCol.value!, selectedCol.value!)
-  const c2 = Math.max(selectionStartCol.value!, selectedCol.value!)
-  for (let r = r1; r <= r2; r++) {
-    for (let c = c1; c <= c2; c++) {
+  if (selectionStartRow.value === null || selectionStartCol.value === null || selectedCol.value === null) return
+  const bounds = getSelectionBounds()
+  if (!bounds) return
+  const columnsInSelection = getSelectableColumnIds()
+  const promises: Promise<void>[] = []
+  const clearedRows: SpreadsheetRow[] = []
+  for (let r = bounds.r1; r <= bounds.r2; r++) {
+    for (let c = bounds.c1; c <= bounds.c2; c++) {
+      const colId = columnsInSelection[c]
+      if (colId === undefined || colId <= 0) continue
       const row = filteredRows.value[r]
       if (!row) continue
-      const col = columns.value.find(co => co.id === c)
-      if (!col) continue
-      const oldValue = getCellMark(row, c)
-      if (oldValue === null) continue
       const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
-      if (actualRow) actualRow.details[c] = null
-      undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: c, oldValue })
-      updateCellMark(subjectId.value, termId.value, c, null).catch(() => {})
+      if (!actualRow) continue
+      const oldValue = getCellMark(row, colId)
+      if (oldValue === null) continue
+      actualRow.details[colId] = null
+      undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
+      if (!clearedRows.includes(actualRow)) clearedRows.push(actualRow)
+      const actualDetailId = getActualDetailId(actualRow, colId)
+      promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
     }
   }
   redoStack.value = []
-  showSaveStatus('saved')
+  triggerRef(data)
+  clearedRows.forEach(r => recalculateRowTotal(r))
+  if (promises.length) {
+    showSaveStatus('saving')
+    Promise.all(promises)
+      .then(() => showSaveStatus('saved'))
+      .catch(() => showSaveStatus('failed'))
+  }
   isRangeSelecting.value = false
 }
 
@@ -1751,16 +1772,18 @@ function cutSelection() {
   copySelection()
   const row = filteredRows.value[selectedRowIndex.value]
   if (!row) return
-  const oldValue = getCellMark(row, selectedCol.value)
+  const colId = selectedCol.value
+  const oldValue = getCellMark(row, colId)
   if (oldValue === null) return
   const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-  if (actualRow) actualRow.details[selectedCol.value] = null
-  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
+  if (actualRow) { actualRow.details[colId] = null; triggerRef(data) }
+  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
-    .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow!) })
-    .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value] = oldValue })
+  const actualDetailId = actualRow ? getActualDetailId(actualRow, colId) : colId
+  updateCellMark(subjectId.value, termId.value, actualDetailId, null)
+    .then(() => { showSaveStatus('saved'); if (actualRow) recalculateRowTotal(actualRow) })
+    .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[colId] = oldValue })
 }
 
 async function onPaste(event: ClipboardEvent) {
@@ -1894,24 +1917,33 @@ function undo() {
   if (!action) return
   const row = rows.value.find(r => r.enrollment_id === action.enrollmentId)
   if (!row) return
+  const prevValue = getCellMark(row, action.detailId)  // save current for redo
   row.details[action.detailId] = action.oldValue
-  redoStack.value.push(action)
-  updateCellMark(subjectId.value, termId.value, action.detailId, action.oldValue)
-    .then(() => { showSaveStatus('saved'); refreshData() })
-    .catch(() => showSaveStatus('failed'))
+  triggerRef(data)
+  recalculateRowTotal(row)
+  redoStack.value.push({ ...action, oldValue: prevValue })  // redo restores current
+  showSaveStatus('saving')
+  const actualDetailId = getActualDetailId(row, action.detailId)
+  updateCellMark(subjectId.value, termId.value, actualDetailId, action.oldValue)
+    .then(() => showSaveStatus('saved'))
+    .catch(() => { showSaveStatus('failed'); row.details[action.detailId] = prevValue; triggerRef(data) })
 }
 
 function redo() {
   const action = redoStack.value.pop()
   if (!action) return
-  undoStack.value.push(action)
   const row = rows.value.find(r => r.enrollment_id === action.enrollmentId)
   if (!row) return
-  const current = row.details[action.detailId]
-  row.details[action.detailId] = current === null ? action.oldValue : null
-  updateCellMark(subjectId.value, termId.value, action.detailId, row.details[action.detailId])
-    .then(() => { showSaveStatus('saved'); refreshData() })
-    .catch(() => showSaveStatus('failed'))
+  const prevValue = getCellMark(row, action.detailId)  // save current for undo
+  row.details[action.detailId] = action.oldValue
+  triggerRef(data)
+  recalculateRowTotal(row)
+  undoStack.value.push({ ...action, oldValue: prevValue })  // undo restores current
+  showSaveStatus('saving')
+  const actualDetailId = getActualDetailId(row, action.detailId)
+  updateCellMark(subjectId.value, termId.value, actualDetailId, action.oldValue)
+    .then(() => showSaveStatus('saved'))
+    .catch(() => { showSaveStatus('failed'); row.details[action.detailId] = prevValue; triggerRef(data) })
 }
 
 // ─── Data Loading ────────────────────────────────────────────────────
@@ -2418,7 +2450,8 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 
 .row-num-header, .row-num { left: 0; width: 36px; min-width: 36px; max-width: 36px; text-align: center; z-index: 30; }
 .student-name-header, .cell-student-name { left: 36px; min-width: 160px; z-index: 25; }
-.student-id-header, .cell-student-id { left: 196px; min-width: 90px; z-index: 25; }
+.student-class-header, .cell-student-class { left: 196px; min-width: 100px; max-width: 120px; z-index: 25; }
+.student-id-header, .cell-student-id { left: 296px; min-width: 90px; z-index: 25; }
 
 /* ─── Enhanced Header Highlight ─────────────────────────────────────── */
 .header-highlighted {
@@ -2620,6 +2653,19 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   min-width: 90px;
   max-width: 90px;
   width: 90px;
+}
+.cell-student-class {
+  min-width: 100px;
+  max-width: 120px;
+  width: 110px;
+}
+.cell-student-class .cell-value {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .student-id-cell-inner {
   position: relative;

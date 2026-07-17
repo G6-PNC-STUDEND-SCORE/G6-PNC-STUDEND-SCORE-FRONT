@@ -16,6 +16,7 @@ export interface SpreadsheetRow {
   student_id: number
   student_name: string
   student_number: string
+  class_name: string
   offering_id: number
   total: number | null
   grade: string | null
@@ -33,6 +34,8 @@ export interface AssessmentTypeWeight {
 export interface SubjectTerm {
   term_id: number
   term_name: string
+  academic_year_id: number
+  academic_year: string | number | null
   teachers: string[]
   classes: string[]
   offering_ids: number[]

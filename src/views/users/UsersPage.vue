@@ -253,7 +253,7 @@
                 <!-- Full Name -->
                 <div class="form-group">
                   <label class="form-label">
-                    <User :size="14" class="me-1" />
+                    <UserIcon :size="14" class="me-1" />
                     Full Name <span class="text-danger">*</span>
                   </label>
                   <div class="input-wrapper">
@@ -545,7 +545,7 @@
 </template>
 
 <script setup lang="ts">
-import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User, Mail, Lock, Phone, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle } from '@lucide/vue'
+import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, Phone, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, type Component } from 'vue'
 import {
   getUsers,
@@ -577,13 +577,13 @@ let searchTimeout: ReturnType<typeof setTimeout> | null = null
 function onSearchInput() {
   if (searchTimeout) clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    currentPage = 1
+    currentPage.value = 1
     loadUsers()
   }, 400)
 }
 
 function applyFilters() {
-  currentPage = 1
+  currentPage.value = 1
   loadUsers()
 }
 

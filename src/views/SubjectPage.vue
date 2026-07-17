@@ -156,7 +156,17 @@
             </td>
             <!-- Class -->
             <td class="td-meta" @click="openEditModal(subject)">
-              <span class="meta-val">{{ subject.class?.name || '—' }}</span>
+              <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
+              <div v-else class="teacher-stack">
+                <span class="meta-val">{{ classNamesForSubject(subject).slice(0, 2).join(', ') }}</span>
+                <span
+                  v-if="classNamesForSubject(subject).length > 2"
+                  class="teacher-more-chip"
+                  :title="classNamesForSubject(subject).join(', ')"
+                >
+                  +{{ classNamesForSubject(subject).length - 2 }} more
+                </span>
+              </div>
             </td>
             <!-- Term Toggles -->
             <td class="td-terms">
@@ -301,13 +311,29 @@
                 </p>
               </div>
               <div class="row-2">
-                <!-- Class -->
+                <!-- Classes (multi-select via checkbox list) -->
                 <div class="field">
-                  <label>Class <span class="opt">(optional)</span></label>
-                  <select v-model.number="formData.class_id" :class="{ err: errors.class_id }">
-                    <option :value="null">No class assigned</option>
-                    <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }}</option>
-                  </select>
+                  <label>Classes <span class="opt">(optional — pick one or more)</span></label>
+                  <div v-if="classes.length" class="teacher-checklist">
+                    <label
+                      v-for="c in classes"
+                      :key="c.id"
+                      class="teacher-check"
+                      :class="{ 'teacher-check-on': formData.class_ids.includes(c.id) }"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="c.id"
+                        :checked="formData.class_ids.includes(c.id)"
+                        @change="toggleFormClass(c.id)"
+                      />
+                      <span class="teacher-check-name">{{ c.name }}</span>
+                    </label>
+                  </div>
+                  <p v-else class="field-hint">No classes available yet.</p>
+                  <p v-if="formData.class_ids.length" class="field-hint">
+                    {{ formData.class_ids.length }} class{{ formData.class_ids.length > 1 ? 'es' : '' }} selected
+                  </p>
                 </div>
                 <!-- Status -->
                 <div class="field">
@@ -481,12 +507,12 @@ const subjectToDelete = ref<Subject | null>(null)
 const formData = reactive({
   name: '',
   teacher_ids: [] as number[],
-  class_id: null as number | null,
+  class_ids: [] as number[],
   status: 'Active' as 'Active' | 'Inactive',
   term_ids: [] as number[],
 })
 
-const errors = reactive({ name: '', class_id: '' })
+const errors = reactive({ name: '', class_ids: '' })
 
 // ─── Teacher list helpers ──────────────────────────────────────────
 function teacherName(t: { id: number; user?: { name?: string | null } | null }): string {
@@ -500,6 +526,20 @@ function teacherNamesForSubject(subj: SubjectWithTerms): string[] {
   // Fallback to old single teacher shape for compatibility.
   const single = subj.teacher?.user?.name
   return single ? [single] : []
+}
+
+function classNamesForSubject(subj: SubjectWithTerms): string[] {
+  const classNames: string[] = []
+  if (subj.offerings && subj.offerings.length) {
+    for (const o of subj.offerings) {
+      const name = (o as any).class?.name
+      if (name && !classNames.includes(name)) classNames.push(name)
+    }
+  }
+  if (classNames.length === 0 && (subj as any).class?.name) {
+    classNames.push((subj as any).class.name)
+  }
+  return classNames
 }
 
 // ─── Computed ──────────────────────────────────────────────────────
@@ -556,6 +596,11 @@ function toggleFormTeacher(tid: number) {
   i >= 0 ? formData.teacher_ids.splice(i, 1) : formData.teacher_ids.push(tid)
 }
 
+function toggleFormClass(cid: number) {
+  const i = formData.class_ids.indexOf(cid)
+  i >= 0 ? formData.class_ids.splice(i, 1) : formData.class_ids.push(cid)
+}
+
 function debouncedSave(sid: number) {
   if (debounceTimers.has(sid)) clearTimeout(debounceTimers.get(sid))
   debounceTimers.set(
@@ -607,8 +652,8 @@ function handleFilter() {}
 
 function openAddModal() {
   isEditMode.value = false
-  Object.assign(formData, { name: '', teacher_ids: [], class_id: null, status: 'Active', term_ids: [] })
-  errors.name = ''; errors.class_id = ''
+  Object.assign(formData, { name: '', teacher_ids: [], class_ids: [], status: 'Active', term_ids: [] })
+  errors.name = ''; errors.class_ids = ''
   showModal.value = true
 }
 
@@ -620,7 +665,13 @@ function openEditModal(s: any) {
     Array.isArray(s.teacher_ids) ? [...s.teacher_ids] :
     Array.isArray(s.teachers) ? s.teachers.map((t: { id: number }) => t.id) :
     s.teacher_id ? [s.teacher_id] : []
-  formData.class_id = s.class_id ?? s.offerings?.[0]?.class_id ?? null
+  // Collect all unique class IDs from offerings (supports multi-class)
+  const offeringClassIds = (s.offerings || [])
+    .map((o: any) => o.class_id)
+    .filter((id: any) => id != null)
+  formData.class_ids = offeringClassIds.length
+    ? [...new Set(offeringClassIds)]
+    : s.class_id ? [s.class_id] : []
   formData.status = s.status
   showModal.value = true
 }
@@ -630,7 +681,7 @@ function closeModal() { showModal.value = false }
 function validateForm() {
   let v = true
   if (!formData.name.trim()) { errors.name = 'Name is required'; v = false } else errors.name = ''
-  errors.class_id = ''
+  errors.class_ids = ''
   return v
 }
 
@@ -639,7 +690,7 @@ async function handleSubmit() {
   if (isEditMode.value && store.currentSubject) {
     await store.updateSubject(store.currentSubject.id, {
       name: formData.name,
-      class_id: formData.class_id,
+      class_ids: formData.class_ids,
       status: formData.status,
       teacher_ids: formData.teacher_ids,
     })
@@ -650,7 +701,7 @@ async function handleSubmit() {
   } else {
     await store.createSubject({
       name: formData.name,
-      class_id: formData.class_id,
+      class_ids: formData.class_ids,
       status: formData.status,
       teacher_ids: formData.teacher_ids,
     })

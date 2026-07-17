@@ -195,7 +195,10 @@ const selectedBulkIds = ref<number[]>([])
     selectedStudent.value = student
     editForm.value = {
       ...initialEditForm(),
-      class_id: student.class_id ?? null,
+      name: student.user?.name ?? '',
+      gender: (student.user?.gender as 'Male' | 'Female') ?? 'Male',
+      status: (student.user?.status as 'active' | 'inactive') ?? 'active',
+      class_id: student.class_id ?? student.classHistories?.find((h: any) => h.status === 'active')?.class_id ?? null,
       academic_year_id: student.academic_year_id ?? null,
       enrollment_date: student.enrollment_date ?? null,
     }
