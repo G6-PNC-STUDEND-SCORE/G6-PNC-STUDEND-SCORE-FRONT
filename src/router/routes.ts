@@ -41,6 +41,11 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/scores/ScorePage.vue'),
   },
   {
+    path: '/scores/term/:termId',
+    name: 'scores-term-subjects',
+    component: () => import('@/views/scores/TermSubjectsView.vue'),
+  },
+  {
     path: '/scores/subject/:subjectId/term/:termId',
     name: 'score-sheet',
     component: () => import('@/views/scores/ScoreSheetView.vue'),
@@ -64,5 +69,10 @@ export const routes: RouteRecordRaw[] = [
     path: '/profile',
     name: 'profile',
     component: () => import('@/views/UserProfile.vue'),
+  },
+  {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/SettingsPage.vue'),
   },
 ]

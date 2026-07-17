@@ -17,7 +17,7 @@
         <h1 class="welcome-heading">Student Score Management System</h1>
 
         <div v-if="auth.error" class="alert-custom alert-error">
-          <i class="bi bi-exclamation-triangle-fill"></i>
+          <AlertTriangle :size="16" />
           <span>{{ auth.error }}</span>
         </div>
 
@@ -27,7 +27,7 @@
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
             <div class="input-wrapper">
-              <i class="bi bi-envelope-fill input-icon"></i>
+              <Mail :size="16" class="input-icon" />
               <input
                 id="email"
                 v-model="email"
@@ -43,7 +43,7 @@
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
             <div class="input-wrapper">
-              <i class="bi bi-lock-fill input-icon"></i>
+              <Lock :size="16" class="input-icon" />
               <input
                 id="password"
                 v-model="password"
@@ -60,7 +60,8 @@
                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
                 @click="showPassword = !showPassword"
               >
-                <i :class="showPassword ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                <EyeOff v-if="showPassword" :size="18" />
+                <Eye v-else :size="18" />
               </button>
             </div>
           </div>
@@ -69,7 +70,7 @@
             <label class="checkbox-label">
               <input type="checkbox" class="checkbox-input" checked />
               <span class="checkbox-custom">
-                <i class="bi bi-check-lg"></i>
+                <Check :size="12" />
               </span>
               <span class="checkbox-text">Remember me</span>
             </label>
@@ -85,7 +86,7 @@
               <span>Signing in...</span>
             </template>
             <template v-else>
-              <i class="bi bi-box-arrow-in-right"></i>
+              <LogIn :size="18" />
               <span>Sign In</span>
             </template>
           </button>
@@ -109,6 +110,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { initGoogleClientId } from '@/services/googleAuthService'
+import { AlertTriangle, Mail, Lock, EyeOff, Eye, Check, LogIn } from '@lucide/vue'
 
 declare global {
   interface Window {
@@ -360,8 +362,7 @@ onUnmounted(() => {
   border: 1px solid #fecaca;
 }
 
-.alert-error i {
-  font-size: 1rem;
+.alert-error :deep(svg) {
   flex-shrink: 0;
 }
 
@@ -371,11 +372,9 @@ onUnmounted(() => {
   border: 1px solid #bbf7d0;
 }
 
-.alert-success i {
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
+/* ==========================================
+   Form Layout
+   ========================================== */
 .login-form {
   display: flex;
   flex-direction: column;
@@ -407,7 +406,6 @@ onUnmounted(() => {
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
-  font-size: 1rem;
   pointer-events: none;
   transition: color 0.2s ease;
   z-index: 2;
@@ -441,16 +439,6 @@ onUnmounted(() => {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
-.form-input:focus ~ .input-icon,
-.form-input:focus + .password-toggle + .input-icon {
-  color: #3b82f6;
-}
-
-.form-input:focus + .password-toggle i,
-.form-input:focus ~ .input-icon {
-  color: #3b82f6;
-}
-
 .input-wrapper:focus-within .input-icon {
   color: #3b82f6;
 }
@@ -474,7 +462,6 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   color: #9ca3af;
-  font-size: 1.125rem;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -527,8 +514,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.checkbox-custom i {
-  font-size: 0.65rem;
+.checkbox-custom :deep(svg) {
   color: transparent;
   transition: color 0.15s ease;
 }
@@ -538,7 +524,7 @@ onUnmounted(() => {
   border-color: #3b82f6;
 }
 
-.checkbox-input:checked + .checkbox-custom i {
+.checkbox-input:checked + .checkbox-custom :deep(svg) {
   color: #ffffff;
 }
 
@@ -620,7 +606,7 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.btn-submit i,
+.btn-submit :deep(svg),
 .btn-submit span {
   position: relative;
   z-index: 1;

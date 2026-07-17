@@ -47,14 +47,21 @@ export interface Subject {
     name: string
   } | null
   offerings?: SubjectOffering[]
+  teachers?: Array<{
+    id: number
+    user?: { name?: string | null } | null
+  }>
+  teacher_ids?: number[]
 }
 
 export interface SubjectPayload {
   subject_code?: string
   name: string
-  teacher_id: number | null
-  class_id: number | null
+  teacher_id?: number | null
+  class_id?: number | null
+  class_ids?: number[]
   status: 'Active' | 'Inactive'
+  teacher_ids?: number[]
 }
 
 export interface SubjectResponse {

@@ -20,7 +20,7 @@
       title="Export as PNG"
       @click="exportPng"
     >
-      <i class="bi bi-download" />
+      <Download :size="14" />
     </button>
   </div>
 </template>
@@ -40,6 +40,7 @@ import {
 } from 'echarts/components'
 import type { EChartsOption } from 'echarts'
 import { useThemeStore } from '@/stores/theme'
+import { Download } from '@lucide/vue'
 
 use([
   CanvasRenderer,

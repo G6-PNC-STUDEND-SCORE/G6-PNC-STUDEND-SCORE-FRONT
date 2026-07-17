@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { dashboardService } from '@/services/dashboardService'
+import { cacheService } from '@/services/cacheService'
 import type {
   DashboardData,
   DashboardFilters,
@@ -11,6 +12,7 @@ import type {
 
 const DEBOUNCE_MS = 400
 const CACHE_TTL = 60_000
+const DASHBOARD_CACHE_KEY = 'dashboard-data'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const kpi = ref<KpiData>({
@@ -102,19 +104,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  async function fetchDashboardData() {
+  async function fetchDashboardData(silent = false) {
     const cacheKey = JSON.stringify(filters.value)
     const hasFreshData = cacheKey === lastCacheKey.value && Date.now() - lastFetchedAt.value < CACHE_TTL
     if (hasFreshData && hasData.value) return
     if (pendingDashboardRequest) return pendingDashboardRequest
 
-    loading.value = true
+    if (!silent) loading.value = true
     error.value = null
 
     pendingDashboardRequest = dashboardService.getDashboardData(filters.value)
       .then((data: DashboardData) => {
         kpi.value = data.kpi
         charts.value = data.charts
+        cacheService.set(DASHBOARD_CACHE_KEY, data, 24 * 60 * 60_000)
         lastCacheKey.value = cacheKey
         lastFetchedAt.value = Date.now()
       })
@@ -154,9 +157,19 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   async function initialize() {
+    // 1. Show cached data INSTANTLY (skeleton stays hidden if cache exists)
+    const cached = cacheService.get<DashboardData>(DASHBOARD_CACHE_KEY)
+    if (cached) {
+      kpi.value = cached.kpi
+      charts.value = cached.charts
+      // loading stays false — cached data visible instantly
+    } else {
+      loading.value = true // show skeleton on first visit only
+    }
+    // 2. Refresh from API in background (silent — no skeleton flash)
     await Promise.all([
       fetchFilterOptions(),
-      fetchDashboardData(),
+      fetchDashboardData(true),
     ])
   }
 

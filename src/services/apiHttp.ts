@@ -1,4 +1,5 @@
 import axios from 'axios'
+import router from '@/router'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
@@ -20,7 +21,12 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      clearAuthToken()
+      // Force full page reload to completely reset Pinia state
+      // (router.push alone leaves stale token.value in the Pinia store)
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }

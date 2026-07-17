@@ -97,7 +97,7 @@
           class="btn btn-sm btn-outline-danger clear-btn"
           @click="store.clearFilters()"
         >
-          <i class="bi bi-x-circle me-1" />
+          <XCircle :size="14" class="me-1" />
           Clear ({{ store.activeFilterCount }})
         </button>
       </div>
@@ -110,6 +110,7 @@ import { computed } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 import { useDashboardStore } from '@/stores/dashboard'
 import type { DashboardFilters } from '@/types/dashboard'
+import { XCircle } from '@lucide/vue'
 
 const themeStore = useThemeStore()
 const store = useDashboardStore()

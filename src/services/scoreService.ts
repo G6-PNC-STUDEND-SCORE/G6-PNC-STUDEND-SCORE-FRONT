@@ -16,6 +16,7 @@ export interface SpreadsheetRow {
   student_id: number
   student_name: string
   student_number: string
+  class_name: string
   offering_id: number
   total: number | null
   grade: string | null
@@ -33,6 +34,8 @@ export interface AssessmentTypeWeight {
 export interface SubjectTerm {
   term_id: number
   term_name: string
+  academic_year_id: number
+  academic_year: string | number | null
   teachers: string[]
   classes: string[]
   offering_ids: number[]
@@ -144,8 +147,13 @@ export async function importFromGoogleSheetsCSV(subjectId: number, termId: numbe
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
 }
 
-export async function addEnrollment(subjectId: number, termId: number, studentId: number | null): Promise<void> {
-  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId })
+export async function addEnrollment(subjectId: number, termId: number, studentId: number | null): Promise<{ id: number; student_id: number; student_number: string }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId })
+  return res.data.data
+}
+
+export async function deleteEnrollment(subjectId: number, termId: number, enrollmentId: number): Promise<void> {
+  await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`)
 }
 
 export async function updateStudentInfo(subjectId: number, termId: number, enrollmentId: number, data: {
@@ -153,6 +161,17 @@ export async function updateStudentInfo(subjectId: number, termId: number, enrol
   student_number?: string
 }): Promise<{ student_name: string; student_number: string }> {
   const res = await http.put(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`, data)
+  return res.data.data
+}
+
+export async function importFile(subjectId: number, termId: number, data: {
+  rows: Array<{
+    student_name: string
+    student_number?: string
+    marks?: Record<string, number>
+  }>
+}): Promise<{ imported_count: number }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-file`, data)
   return res.data.data
 }
 

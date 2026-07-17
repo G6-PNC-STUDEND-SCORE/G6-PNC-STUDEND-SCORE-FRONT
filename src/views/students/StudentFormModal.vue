@@ -6,10 +6,11 @@
           <!-- Header -->
           <div class="modal-header-custom">
             <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
-              <i class="bi bi-x-lg"></i>
+              <X :size="14" />
             </button>
             <div class="modal-icon" :class="isEdit ? 'icon-edit' : 'icon-create'">
-              <i :class="isEdit ? 'bi bi-pencil-square' : 'bi bi-person-plus-fill'"></i>
+              <SquarePen v-if="isEdit" :size="22" />
+              <UserPlus v-else :size="22" />
             </div>
             <h5 class="mb-1 fw-bold">{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h5>
             <p class="modal-subtitle">{{ isEdit ? 'Update student information' : 'Fill in the student details' }}</p>
@@ -19,14 +20,14 @@
             <div class="modal-body-custom">
               <!-- Error Alert -->
               <div v-if="error" class="error-alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <AlertTriangle :size="16" class="me-2" />
                 {{ error }}
               </div>
 
               <!-- Profile Photo (Edit mode only) -->
               <div v-if="isEdit" class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-camera-fill me-1"></i>
+                  <Camera :size="14" class="me-1" />
                   Profile Photo
                 </label>
                 <div class="photo-upload-area">
@@ -39,12 +40,12 @@
                       <img :src="existingPhotoUrl" alt="Current photo" class="preview-img" />
                     </div>
                     <div v-else class="photo-placeholder">
-                      <i class="bi bi-person-fill"></i>
+                      <User :size="32" />
                     </div>
                   </div>
                   <div class="photo-actions">
                     <label class="photo-upload-btn">
-                      <i class="bi bi-cloud-arrow-up me-1"></i>
+                      <CloudUpload :size="14" class="me-1" />
                       {{ existingPhotoUrl || photoPreview ? 'Change Photo' : 'Upload Photo' }}
                       <input
                         type="file"
@@ -59,12 +60,12 @@
                       class="photo-remove-btn"
                       @click="onRemovePhoto"
                     >
-                      <i class="bi bi-trash3 me-1"></i>
+                      <Trash2 :size="14" class="me-1" />
                       Remove
                     </button>
                   </div>
                   <p v-if="photoError" class="photo-error">
-                    <i class="bi bi-exclamation-circle me-1"></i>
+                    <AlertCircle :size="14" class="me-1" />
                     {{ photoError }}
                   </p>
                   <p v-else class="photo-hint">JPEG, PNG, JPG, GIF, or WebP. Max 2MB.</p>
@@ -74,7 +75,7 @@
               <!-- Full Name -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-person-fill me-1"></i>
+                  <User :size="14" class="me-1" />
                   Full Name
                 </label>
                 <div class="input-wrapper">
@@ -92,7 +93,7 @@
               <!-- Email (Create mode only) -->
               <div v-if="!isEdit" class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-envelope-fill me-1"></i>
+                  <Mail :size="14" class="me-1" />
                   Email Address
                 </label>
                 <div class="input-wrapper">
@@ -110,7 +111,7 @@
               <!-- Password (Create mode only) -->
               <div v-if="!isEdit" class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-lock-fill me-1"></i>
+                  <Lock :size="14" class="me-1" />
                   Password
                 </label>
                 <div class="input-wrapper">
@@ -131,7 +132,7 @@
               <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-gender-ambiguous me-1"></i>
+                  <VenusAndMars :size="14" class="me-1" />
                   Gender
                 </label>
                 <div class="gender-toggle">
@@ -167,7 +168,7 @@
               <!-- Class -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-building me-1"></i>
+                  <Building2 :size="14" class="me-1" />
                   Assign to Class
                 </label>
                 <div class="input-wrapper">
@@ -185,7 +186,7 @@
               <!-- Status -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-toggle-on me-1"></i>
+                  <ToggleLeft :size="14" class="me-1" />
                   Status
                 </label>
                 <div class="status-toggle">
@@ -234,7 +235,7 @@
                   {{ isEdit ? 'Saving...' : 'Creating...' }}
                 </template>
                 <template v-else>
-                  <i class="bi bi-check-lg me-1"></i>
+                  <Check :size="16" class="me-1" />
                   {{ isEdit ? 'Save Changes' : 'Create Student' }}
                 </template>
               </button>
@@ -249,6 +250,23 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { SchoolClass } from '@/services/studentService'
+import {
+  X,
+  SquarePen,
+  UserPlus,
+  AlertTriangle,
+  Camera,
+  User,
+  CloudUpload,
+  Trash2,
+  AlertCircle,
+  Mail,
+  Lock,
+  VenusAndMars,
+  Building2,
+  ToggleLeft,
+  Check,
+} from '@lucide/vue'
 
 const props = defineProps<{
   show: boolean
@@ -397,7 +415,6 @@ function onRemovePhoto() {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.75rem;
 }
 
 .modal-close-btn:hover {
@@ -413,7 +430,6 @@ function onRemovePhoto() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
   margin: 0 auto 16px;
 }
 
@@ -456,8 +472,7 @@ function onRemovePhoto() {
   margin-bottom: 6px;
 }
 
-.form-label i {
-  font-size: 0.75rem;
+.form-label :deep(svg) {
   color: #94a3b8;
 }
 
@@ -532,10 +547,6 @@ select.modern-input {
   border-color: #cbd5e1;
 }
 
-.gender-option.active {
-  border-color: #2563eb;
-}
-
 .gender-option.active.male-active {
   background: #eff6ff;
   color: #1d4ed8;
@@ -591,10 +602,6 @@ select.modern-input {
 .status-option:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
-}
-
-.status-option.active {
-  border-color: #2563eb;
 }
 
 .status-option.active.active-on {
@@ -737,7 +744,6 @@ select.modern-input {
   justify-content: center;
   background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
   color: #94a3b8;
-  font-size: 2rem;
 }
 
 .photo-actions {
@@ -806,7 +812,6 @@ select.modern-input {
   gap: 4px;
 }
 
-/* ==================== Transitions ==================== */
 .modal-enter-active { transition: all 0.25s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
@@ -815,7 +820,6 @@ select.modern-input {
   transform: scale(0.92) translateY(12px);
 }
 
-/* ==================== Scrollbar ==================== */
 .modal-content-panel::-webkit-scrollbar { width: 4px; }
 .modal-content-panel::-webkit-scrollbar-track { background: transparent; }
 .modal-content-panel::-webkit-scrollbar-thumb {

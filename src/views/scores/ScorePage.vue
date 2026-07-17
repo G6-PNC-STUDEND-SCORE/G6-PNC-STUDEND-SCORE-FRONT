@@ -1,72 +1,58 @@
 <template>
   <div>
-    <Header />
     <div class="px-4 py-4">
       <div class="page-header">
-        <div class="page-header-left">
-          <div class="page-header-icon">
-            <i class="bi bi-clipboard-data-fill"></i>
-          </div>
-          <div>
-            <h2 class="page-title">Score Sheet</h2>
-            <p class="page-subtitle">Select a subject to manage scores and grading</p>
-          </div>
-        </div>
-        <div class="page-header-right">
-          <select v-model="selectedTermId" class="term-select" @change="loadSubjects">
-            <option value="">All Terms</option>
-            <option v-for="t in terms" :key="t.id" :value="t.id">{{ t.name }}</option>
-          </select>
-        </div>
+        <h2 class="page-title">Score Sheet</h2>
       </div>
 
-      <!-- Subjects grid -->
+      <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="spinner-sm"></div>
-        <span>Loading subjects...</span>
+        <span>Loading terms...</span>
       </div>
 
-      <div v-else-if="filteredSubjects.length === 0" class="empty-state">
-        <div class="empty-state-icon">
-          <i class="bi bi-inbox"></i>
+      <template v-else>
+        <!-- Generation Tabs -->
+        <div v-if="generations.length > 0" class="generation-tabs">
+          <button
+            v-for="gen in generations"
+            :key="gen"
+            class="gen-tab"
+            :class="{ 'gen-tab-active': selectedGeneration === gen }"
+            @click="selectedGeneration = gen"
+          >
+            <GraduationCap :size="16" />
+            <span>{{ gen }}</span>
+          </button>
         </div>
-        <h5>No Subjects Found</h5>
-        <p class="text-secondary">No subjects with active offerings available.</p>
-      </div>
 
-      <div v-else class="subjects-grid">
-        <div
-          v-for="subject in filteredSubjects"
-          :key="subject.id"
-          class="subject-card"
-        >
-          <div class="card-header" @click="goToSheet(subject)">
-            <div class="card-icon" :class="getSubjectColor(subject.code || '')">
-              <i class="bi bi-book"></i>
-            </div>
-            <div class="card-info">
-              <h4 class="card-title">{{ subject.name }}</h4>
-              <span class="card-code">{{ subject.code }}</span>
-            </div>
-            <i class="bi bi-chevron-right card-arrow"></i>
+        <!-- Terms Grid -->
+        <div v-if="filteredTerms.length === 0" class="empty-state">
+          <div class="empty-state-icon">
+            <Inbox :size="24" />
           </div>
-          <div class="card-body">
-            <div
-              v-for="term in subject.terms"
-              :key="term.term_id"
-              class="term-chip"
-              :class="{ 'term-active': selectedTermId && selectedTermId === term.term_id }"
-              @click="goToSheetWithTerm(subject, term)"
-            >
-              <span class="term-name">{{ term.term_name }}</span>
-              <span class="term-meta">
-                {{ term.enrollment_count }} students
-                <template v-if="term.teachers.length"> · {{ term.teachers.join(', ') }}</template>
-              </span>
+          <h5>No Terms Found</h5>
+          <p class="text-secondary">No terms available for this generation.</p>
+        </div>
+
+        <div v-else class="terms-grid">
+          <div
+            v-for="term in filteredTerms"
+            :key="term.id"
+            class="term-card"
+            @click="goToTermSubjects(term.id)"
+          >
+            <div class="term-card-icon">
+              <Calendar :size="22" />
             </div>
+            <div class="term-card-info">
+              <h3 class="term-name">{{ term.name }}</h3>
+              <p class="term-subtitle">Click to view subjects</p>
+            </div>
+            <ChevronRight :size="18" class="term-arrow" />
           </div>
         </div>
-      </div>
+      </template>
     </div>
   </div>
 </template>
@@ -74,60 +60,78 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Header from '@/layouts/Header.vue'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
+import { cacheService } from '@/services/cacheService'
+import { Inbox, Calendar, ChevronRight, GraduationCap } from '@lucide/vue'
+
+const CACHE_KEY = 'scores-subjects'
 
 const router = useRouter()
 
-const subjects = ref<SubjectItem[]>([])
-const terms = ref<Array<{ id: number; name: string }>>([])
-const selectedTermId = ref<number | ''>('')
+const terms = ref<Array<{ id: number; name: string; academic_year: string | number | null }>>([])
 const loading = ref(false)
+const selectedGeneration = ref<string | number | null>(null)
 
-const filteredSubjects = computed(() => {
-  if (!selectedTermId.value) return subjects.value
-  return subjects.value.filter(
-    (s) => s.terms.some((t) => t.term_id === selectedTermId.value)
-  )
+const generations = computed(() => {
+  const genSet = new Set<string | number>()
+  terms.value.forEach((t) => {
+    if (t.academic_year) genSet.add(t.academic_year)
+  })
+  return Array.from(genSet).sort((a, b) => Number(a) - Number(b))
 })
 
-function goToSheet(subject: SubjectItem) {
-  // Go to the first term available
-  if (subject.terms.length > 0) {
-    const firstTerm = subject.terms[0]
-    if (firstTerm) {
-      goToSheetWithTerm(subject, firstTerm)
-    }
-  }
+const filteredTerms = computed(() => {
+  if (!selectedGeneration.value) return terms.value
+  return terms.value.filter((t) => t.academic_year === selectedGeneration.value)
+})
+
+function goToTermSubjects(termId: number) {
+  router.push(`/scores/term/${termId}`)
 }
 
-function goToSheetWithTerm(subject: SubjectItem, term: SubjectItem['terms'][number]) {
-  router.push(`/scores/subject/${subject.id}/term/${term.term_id}`)
+function extractTerms(data: { subjects: SubjectItem[] }) {
+  const termsMap = new Map<number, { id: number; name: string; academic_year: string | number | null }>()
+  data.subjects.forEach((subject: SubjectItem) => {
+    subject.terms.forEach((term) => {
+      if (!termsMap.has(term.term_id)) {
+        termsMap.set(term.term_id, {
+          id: term.term_id,
+          name: term.term_name,
+          academic_year: term.academic_year ?? null,
+        })
+      }
+    })
+  })
+  terms.value = Array.from(termsMap.values()).sort((a, b) => a.id - b.id)
+
+  // Auto-select the latest generation if none selected
+  if (!selectedGeneration.value && generations.value.length > 0) {
+    selectedGeneration.value = generations.value[generations.value.length - 1]
+  }
 }
 
 async function loadSubjects() {
-  loading.value = true
   try {
     const data = await getSpreadsheetSubjects()
-    subjects.value = data.subjects
-    terms.value = data.terms
+    extractTerms(data)
+    cacheService.set(CACHE_KEY, data, 24 * 60 * 60_000) // cache 24h
   } catch (err) {
-    console.error('Failed to load subjects:', err)
-  } finally {
-    loading.value = false
+    console.error('Failed to load terms:', err)
   }
 }
 
-function getSubjectColor(code: string): string {
-  const colors = ['blue', 'green', 'purple', 'orange', 'red', 'teal']
-  let hash = 0
-  for (let i = 0; i < code.length; i++) {
-    hash = code.charCodeAt(i) + ((hash << 5) - hash)
+onMounted(async () => {
+  // 1. Show cached data INSTANTLY
+  const cached = cacheService.get<{ subjects: SubjectItem[] }>(CACHE_KEY)
+  if (cached) {
+    extractTerms(cached)
+  } else {
+    loading.value = true
   }
-  return colors[Math.abs(hash) % colors.length]
-}
-
-onMounted(loadSubjects)
+  // 2. Refresh from API in background (loading stays false if cache existed)
+  await loadSubjects()
+  loading.value = false
+})
 </script>
 
 <style scoped>
@@ -142,107 +146,104 @@ onMounted(loadSubjects)
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.page-header-left { display: flex; align-items: center; gap: 14px; }
-
-.page-header-icon {
-  width: 44px; height: 44px;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #dbeafe);
-  color: #2563eb; border-radius: 12px; font-size: 1.2rem; flex-shrink: 0;
-}
-
 .page-title { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin-bottom: 2px; letter-spacing: -0.02em; }
-.page-subtitle { font-size: 0.8125rem; color: #64748b; margin: 0; font-weight: 400; }
 
-.term-select {
-  padding: 8px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+/* Generation Tabs */
+.generation-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.gen-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
   background: #fff;
-  color: #1e293b;
-  outline: none;
-  min-width: 160px;
+  color: #475569;
+  font-size: 0.875rem;
+  font-weight: 600;
   cursor: pointer;
-}
-.term-select:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  transition: all 0.2s;
 }
 
-.subjects-grid {
+.gen-tab:hover {
+  border-color: #93c5fd;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.gen-tab-active {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.gen-tab-active:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #fff;
+}
+
+.terms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
 }
 
-.subject-card {
+.term-card {
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  overflow: hidden;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
   transition: all 0.2s;
 }
-.subject-card:hover {
+
+.term-card:hover {
   border-color: #93c5fd;
   box-shadow: 0 4px 12px rgba(59,130,246,0.1);
+  transform: translateY(-2px);
 }
 
-.card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px 16px 12px;
-  cursor: pointer;
-}
-
-.card-icon {
-  width: 40px; height: 40px;
-  border-radius: 10px;
+.term-card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #2563eb;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 1rem; flex-shrink: 0;
-}
-.card-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.card-icon.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
-.card-icon.purple { background: linear-gradient(135deg, #a855f7, #7c3aed); }
-.card-icon.orange { background: linear-gradient(135deg, #f97316, #ea580c); }
-.card-icon.red { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.card-icon.teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
-
-.card-info { flex: 1; min-width: 0; }
-.card-title { font-size: 0.9375rem; font-weight: 700; color: #0f172a; margin: 0 0 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.card-code { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
-.card-arrow { color: #cbd5e1; font-size: 0.875rem; margin-top: 4px; }
-
-.card-body {
-  padding: 0 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-shrink: 0;
 }
 
-.term-chip {
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.term-chip:hover {
-  background: #eff6ff;
-  border-color: #93c5fd;
-}
-.term-chip.term-active {
-  background: #eff6ff;
-  border-color: #3b82f6;
+.term-card-info { flex: 1; min-width: 0; }
+
+.term-name { 
+  font-size: 1rem; 
+  font-weight: 700; 
+  color: #0f172a; 
+  margin: 0 0 4px 0;
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
 }
 
-.term-name { font-size: 0.8125rem; font-weight: 600; color: #0f172a; }
-.term-meta { font-size: 0.75rem; color: #64748b; }
+.term-subtitle { 
+  font-size: 0.8125rem; 
+  color: #64748b; 
+  margin: 0;
+  font-weight: 400;
+}
+
+.term-arrow {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
 
 .loading-state {
   display: flex; align-items: center; justify-content: center;
@@ -267,7 +268,7 @@ onMounted(loadSubjects)
   width: 56px; height: 56px; border-radius: 16px;
   background: #eef2ff; color: #2563eb;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem; margin-bottom: 1rem;
+  margin-bottom: 1rem;
 }
 .empty-state h5 { font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
 .empty-state p { font-size: 0.875rem; }
