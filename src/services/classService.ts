@@ -20,6 +20,13 @@ export interface SchoolClass {
     id: number
     name: string
   } | null
+  generation?: {
+    id: number
+    year: string
+    name: string
+  } | null
+  room?: string | null
+  students?: number | null
 }
 
 export interface ClassResponse {
@@ -27,6 +34,11 @@ export interface ClassResponse {
   message?: string
   data: SchoolClass | SchoolClass[]
   errors?: Record<string, string[]>
+}
+
+export interface Teacher {
+  id: number
+  name: string
 }
 
 const CACHE_KEY = 'classes_cache'
@@ -87,5 +99,10 @@ export const classService = {
       if (Array.isArray(list)) { writeCache(list.filter(c => c.id !== id)) }
     }
     return data
+  },
+
+  async getTeachers(): Promise<ClassResponse> {
+    const response = await http.get('/teachers')
+    return response.data
   },
 }

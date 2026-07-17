@@ -44,6 +44,7 @@
     <!-- ── Student List ── -->
     <StudentList
       v-else
+      ref="studentListRef"
       :students="filteredStudents"
       :search-query="searchQuery"
       :gender-filter="genderFilter"
@@ -54,6 +55,7 @@
       @edit="openEditModal"
       @assign="openAssignModal"
       @delete="openDeleteModal"
+      @bulk-delete="openBulkDeleteModal"
     />
 
     <!-- ── Create & Edit Modals (StudentFormModal handles its own overlay) ── -->
@@ -124,6 +126,38 @@
                 <span v-if="formSubmitting" class="spinner-sm"></span>
                 <Trash2 v-else :size="16" />
                 <span>Delete</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── Bulk Delete Modal ── -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showBulkDeleteModal" class="overlay" @click.self="closeBulkDeleteModal">
+          <div class="modal-card modal-sm">
+            <div class="modal-head">
+              <div class="modal-icon icon-danger">
+                <AlertTriangle :size="20" />
+              </div>
+              <div>
+                <h3>Delete Students</h3>
+                <p>This action cannot be undone.</p>
+              </div>
+              <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="del-text">Are you sure you want to delete <strong>{{ selectedBulkIds.length }} student{{ selectedBulkIds.length !== 1 ? 's' : '' }}</strong>?</p>
+              <p class="del-text" style="margin-top: 8px;">All scores, enrollments, and related data will be permanently removed.</p>
+            </div>
+            <div class="modal-foot">
+              <button class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
+              <button class="btn btn-danger" @click="handleBulkDelete" :disabled="formSubmitting">
+                <span v-if="formSubmitting" class="spinner-sm"></span>
+                <Trash2 v-else :size="16" />
+                <span>Delete {{ selectedBulkIds.length }} student{{ selectedBulkIds.length !== 1 ? 's' : '' }}</span>
               </button>
             </div>
           </div>
@@ -251,17 +285,19 @@ import { onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
 import { GraduationCap, Plus, AlertTriangle, CheckCircle, AlertCircle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
-import { useStudents } from './composables/useStudents'
+import { useStudents } from './composables/useStudents.ts'
 
 const {
   loading, error, searchQuery, genderFilter, formSubmitting, formError, toast,
-  showCreateModal, showEditModal, showDeleteModal, showAssignModal, showDetailsModal,
-  selectedStudent, createForm, editForm, assignForm, existingPhotoUrl, onEditPhotoSelected, onEditRemovePhoto,
+  showCreateModal, showEditModal, showDeleteModal, showBulkDeleteModal, showAssignModal, showDetailsModal,
+  selectedStudent, selectedBulkIds, createForm, editForm, assignForm, existingPhotoUrl, onEditPhotoSelected, onEditRemovePhoto,
   classes, filteredStudents, getInitials,
   init, openCreateModal, closeCreateModal, handleCreate,
   openEditModal, closeEditModal, handleEdit,
   openDeleteModal, closeDeleteModal, handleDelete,
+  openBulkDeleteModal, closeBulkDeleteModal,
   openAssignModal, closeAssignModal, handleAssign,
+  handleBulkDelete,
   viewDetails, closeDetailsModal,
 } = useStudents()
 

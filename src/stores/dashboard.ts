@@ -15,7 +15,6 @@ const CACHE_TTL = 60_000
 const DASHBOARD_CACHE_KEY = 'dashboard-data'
 
 export const useDashboardStore = defineStore('dashboard', () => {
-  // ── Data ──────────────────────────────────────────────────────
   const kpi = ref<KpiData>({
     total_students: 0,
     active_students: 0,
@@ -51,7 +50,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     recent_transcripts: [],
   })
 
-  // ── Filters ────────────────────────────────────────────────────
   const filters = ref<DashboardFilters>({
     generation_id: null,
     term_id: null,
@@ -68,18 +66,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
     teachers: [],
   })
 
-  // ── Loading & Error ────────────────────────────────────────────
   const loading = ref(false)
   const filtersLoading = ref(false)
   const error = ref<string | null>(null)
   const lastFetchedAt = ref(0)
   const lastCacheKey = ref('')
 
-  // ── Debounce timer ─────────────────────────────────────────────
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
   let pendingDashboardRequest: Promise<void> | null = null
 
-  // ── Computed ───────────────────────────────────────────────────
   const hasData = computed(() => kpi.value.total_students > 0)
   const activeFilterCount = computed(() => {
     let count = 0
@@ -91,7 +86,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return count
   })
 
-  // ── Actions ────────────────────────────────────────────────────
   async function fetchFilterOptions() {
     const hasOptions = filterOptions.value.generations.length > 0 ||
       filterOptions.value.terms.length > 0 ||
@@ -104,7 +98,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       filterOptions.value = await dashboardService.getFilterOptions()
     } catch {
-      // Silently fail — filters are non-critical
+      // Filters are non-critical; silently ignore
     } finally {
       filtersLoading.value = false
     }
@@ -139,9 +133,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return pendingDashboardRequest
   }
 
-  /**
-   * Called when a filter changes. Debounces multiple rapid changes.
-   */
   function onFilterChange() {
     if (debounceTimer) clearTimeout(debounceTimer)
     debounceTimer = setTimeout(() => {
@@ -149,17 +140,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }, DEBOUNCE_MS)
   }
 
-  /**
-   * Set a single filter value and trigger debounced refresh.
-   */
   function setFilter(key: keyof DashboardFilters, value: number | null) {
     filters.value[key] = value
     onFilterChange()
   }
 
-  /**
-   * Clear all filters and refresh.
-   */
   function clearFilters() {
     filters.value = {
       generation_id: null,
@@ -171,9 +156,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     onFilterChange()
   }
 
-  /**
-   * Initialize the store: fetch filter options + initial dashboard data.
-   */
   async function initialize() {
     // 1. Show cached data INSTANTLY (skeleton stays hidden if cache exists)
     const cached = cacheService.get<DashboardData>(DASHBOARD_CACHE_KEY)
@@ -192,7 +174,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   return {
-    // State
     kpi,
     charts,
     filters,
@@ -200,10 +181,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     loading,
     filtersLoading,
     error,
-    // Computed
     hasData,
     activeFilterCount,
-    // Actions
     initialize,
     fetchDashboardData,
     fetchFilterOptions,

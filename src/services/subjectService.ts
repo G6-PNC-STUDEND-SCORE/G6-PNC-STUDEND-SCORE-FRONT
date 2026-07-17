@@ -59,6 +59,7 @@ export interface SubjectPayload {
   name: string
   teacher_id?: number | null
   class_id?: number | null
+  class_ids?: number[]
   status: 'Active' | 'Inactive'
   teacher_ids?: number[]
 }

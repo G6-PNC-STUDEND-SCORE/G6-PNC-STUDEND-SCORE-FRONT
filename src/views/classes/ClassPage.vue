@@ -172,6 +172,7 @@
         <div class="pagination-total">
           {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredClasses.length) }} of {{ filteredClasses.length }}
         </div>
+        <p class="mt-2" style="color: #6b7280;">Loading classes...</p>
       </div>
     </div>
     </template>

@@ -4,6 +4,7 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  bulkDeleteStudents,
   assignStudentToClass,
   uploadStudentPhoto,
   deleteStudentPhoto,
@@ -30,17 +31,17 @@ export function useStudents() {
   const formSubmitting = ref(false)
   const formError = ref<string | null>(null)
 
-  const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
+const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-  // ==================== Modal State ====================
-  const showCreateModal = ref(false)
-  const showEditModal = ref(false)
-  const showDeleteModal = ref(false)
-  const showAssignModal = ref(false)
-  const showDetailsModal = ref(false)
-  const selectedStudent = ref<Student | null>(null)
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const showBulkDeleteModal = ref(false)
+const showAssignModal = ref(false)
+const showDetailsModal = ref(false)
+const selectedStudent = ref<Student | null>(null)
+const selectedBulkIds = ref<number[]>([])
 
-  // ==================== Form State ====================
   const genderFilter = ref('')
 
   const initialCreateForm = () => ({
@@ -68,7 +69,6 @@ export function useStudents() {
   
   const assignForm = ref({ class_id: null as number | null })
 
-  // ==================== Computed ====================
   const filteredStudents = computed(() => {
     return students.value.filter((s) => {
       const studentName = s.user?.name || ''
@@ -78,7 +78,6 @@ export function useStudents() {
     })
   })
 
-  // ==================== Helpers ====================
   function getInitials(name: string): string {
     const safeName = name || ''
     const parts = safeName.split(' ').filter(Boolean)
@@ -103,12 +102,11 @@ export function useStudents() {
     setTimeout(() => { toast.value.show = false }, 3000)
   }
 
-  // ==================== API Calls with Cache ====================
   async function loadStudents() {
     try {
       const res = await getStudents()
-      students.value = res.students
-      cacheService.set(STUDENTS_CACHE_KEY, res.students, 24 * 60 * 60_000)
+      students.value = res.students.sort((a, b) => b.id - a.id)
+      cacheService.set(STUDENTS_CACHE_KEY, res.students.sort((a, b) => b.id - a.id), 24 * 60 * 60_000)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       error.value = err.response?.data?.message || err.message || 'Failed to load students'
@@ -126,7 +124,7 @@ export function useStudents() {
         cacheService.set(CLASSES_CACHE_KEY, data, 24 * 60 * 60_000)
       }
     } catch {
-      // Silently fail
+      // Non-critical; silently ignore
     }
   }
 
@@ -149,7 +147,6 @@ export function useStudents() {
     cacheService.remove(CLASSES_CACHE_KEY)
   }
 
-  // ==================== Create ====================
   function openCreateModal() {
     createForm.value = initialCreateForm()
     formError.value = null
@@ -173,32 +170,35 @@ export function useStudents() {
       formError.value = 'Password must be at least 8 characters'
       return
     }
-    formSubmitting.value = true
     formError.value = null
+    // Close modal immediately so user feels no delay
+    closeCreateModal()
+    // Save in background — show toast on success, or reopen modal on error
     try {
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
       invalidateStudentCache()
-      closeCreateModal()
       showToast('Student created successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to create student', 'error')
+      // Reopen the form with the error so user can retry
+      showCreateModal.value = true
       formError.value = err.response?.data?.message || err.message || 'Failed to create student'
-    } finally {
-      formSubmitting.value = false
     }
   }
 
-  // ==================== Photo ====================
   const photoFile = ref<File | null>(null)
   const removePhotoFlag = ref(false)
 
-  // ==================== Edit ====================
   function openEditModal(student: Student) {
     selectedStudent.value = student
     editForm.value = {
       ...initialEditForm(),
-      class_id: student.class_id ?? null,
+      name: student.user?.name ?? '',
+      gender: (student.user?.gender as 'Male' | 'Female') ?? 'Male',
+      status: (student.user?.status as 'active' | 'inactive') ?? 'active',
+      class_id: student.class_id ?? student.classHistories?.find((h: any) => h.status === 'active')?.class_id ?? null,
       academic_year_id: student.academic_year_id ?? null,
       enrollment_date: student.enrollment_date ?? null,
     }
@@ -232,11 +232,9 @@ export function useStudents() {
     formSubmitting.value = true
     formError.value = null
     try {
-      // Update student info first
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
       let updatedStudent = res.student
 
-      // Upload photo if selected
       if (photoFile.value) {
         const photoRes = await uploadStudentPhoto(selectedStudent.value.id, photoFile.value)
         updatedStudent = photoRes.student
@@ -258,7 +256,34 @@ export function useStudents() {
     }
   }
 
-  // ==================== Delete ====================
+  function openBulkDeleteModal(ids: number[]) {
+    selectedBulkIds.value = ids
+    showBulkDeleteModal.value = true
+  }
+
+  function closeBulkDeleteModal() {
+    showBulkDeleteModal.value = false
+    selectedBulkIds.value = []
+  }
+
+  async function handleBulkDelete() {
+    const ids = selectedBulkIds.value
+    if (!ids.length) return
+    formSubmitting.value = true
+    try {
+      await bulkDeleteStudents(ids)
+      students.value = students.value.filter((s) => !ids.includes(s.id))
+      invalidateStudentCache()
+      closeBulkDeleteModal()
+      showToast(`${ids.length} student(s) deleted successfully`)
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
+    } finally {
+      formSubmitting.value = false
+    }
+  }
+
   function openDeleteModal(student: Student) {
     selectedStudent.value = student
     showDeleteModal.value = true
@@ -286,7 +311,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== Assign ====================
   function openAssignModal(student: Student) {
     selectedStudent.value = student
     assignForm.value = { class_id: student.class_id ?? null }
@@ -316,7 +340,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== View Details ====================
   function viewDetails(student: Student) {
     selectedStudent.value = student
     showDetailsModal.value = true
@@ -327,9 +350,7 @@ export function useStudents() {
     selectedStudent.value = null
   }
 
-  // ==================== Return ====================
   return {
-    // Data
     students,
     classes,
     loading,
@@ -338,27 +359,24 @@ export function useStudents() {
     formSubmitting,
     formError,
     toast,
-    // Modal state
     showCreateModal,
     showEditModal,
     showDeleteModal,
+    showBulkDeleteModal,
     showAssignModal,
     showDetailsModal,
     selectedStudent,
-    // Form state
+    selectedBulkIds,
     genderFilter,
     createForm,
     editForm,
     assignForm,
     photoFile,
     existingPhotoUrl: computed(() => selectedStudent.value?.profile_photo_url ?? null),
-    // Computed
     filteredStudents,
-    // Helpers
     getInitials,
     formatDate,
     showToast,
-    // Actions
     init,
     invalidateStudentCache,
     openCreateModal,
@@ -372,6 +390,9 @@ export function useStudents() {
     openDeleteModal,
     closeDeleteModal,
     handleDelete,
+    openBulkDeleteModal,
+    closeBulkDeleteModal,
+    handleBulkDelete,
     openAssignModal,
     closeAssignModal,
     handleAssign,

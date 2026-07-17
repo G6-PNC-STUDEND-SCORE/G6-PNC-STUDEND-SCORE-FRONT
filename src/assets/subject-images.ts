@@ -1,6 +1,3 @@
-// Subject image assets - using book icons with colored backgrounds
-// Each subject type gets a consistent color
-
 export const subjectColors: Record<string, string> = {
   Mathematics: '#0d6efd',
   'English Literature': '#198754',

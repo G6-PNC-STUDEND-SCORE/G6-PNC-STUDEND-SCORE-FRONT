@@ -34,7 +34,30 @@
       </span>
     </div>
 
-    <!-- Table -->
+    <!-- Bulk Delete Bar (appears when rows are selected) -->
+    <Transition name="bulk-slide">
+      <div v-if="someSelected" class="bulk-bar">
+        <div class="bulk-left">
+          <div class="bulk-check-icon">
+            <CheckCheck :size="18" />
+          </div>
+          <span class="bulk-count-label">
+            <strong>{{ selectedIds.length }}</strong> selected
+          </span>
+        </div>
+        <div class="bulk-right">
+          <button class="bulk-btn bulk-btn-clear" @click="selectedIds = []" title="Clear selection">
+            <X :size="15" />
+            <span>Clear</span>
+          </button>
+          <button class="bulk-btn bulk-btn-delete" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" title="Delete selected students">
+            <Trash2 :size="15" />
+            <span>Delete Selected</span>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <div class="table-wrap">
       <table class="student-table">
         <thead>
@@ -49,7 +72,6 @@
                 aria-label="Select all"
               />
             </th>
-            <th class="col-index">ID</th>
             <th>Name</th>
             <th>Gender</th>
             <th>Class</th>
@@ -59,13 +81,13 @@
         </thead>
         <tbody>
           <tr v-if="students.length === 0">
-              <td colspan="7" class="empty-state">
+              <td colspan="6" class="empty-state">
               <Users :size="28" class="d-block mb-2" style="margin: 0 auto;" />
               No students found
             </td>
           </tr>
           <tr
-            v-for="student in paginatedStudents"
+            v-for="(student, index) in paginatedStudents"
             :key="student.id"
             class="student-row"
             :class="(student.user?.gender || '') === 'Male' ? 'row-male' : 'row-female'"
@@ -79,7 +101,6 @@
                 :aria-label="`Select ${student.user?.name || student.id}`"
               />
             </td>
-            <td class="col-index">{{ student.id }}</td>
             <td>
               <div class="student-cell">
                 <div
@@ -233,6 +254,8 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  CheckCheck,
+  X,
 } from '@lucide/vue'
 
 const openDropdownId = ref<number | null>(null)
@@ -262,6 +285,9 @@ const allSelected = computed(() =>
 )
 
 const someSelected = computed(() => selectedIds.value.length > 0)
+
+// Expose selectedIds for parent to read after bulk delete
+defineExpose({ selectedIds })
 
 function toggleRow(id: number) {
   const idx = selectedIds.value.indexOf(id)
@@ -326,7 +352,7 @@ defineEmits<{
   edit: [student: Student]
   assign: [student: Student]
   delete: [student: Student]
-}>()
+  bulkDelete: [ids: number[]]}>()
 </script>
 
 <style scoped>
@@ -358,8 +384,8 @@ defineEmits<{
 
 .search-box {
   position: relative;
-  flex: 1 1 260px;
-  max-width: 340px;
+  flex: 1 1 320px;
+  max-width: 520px;
 }
 
 .search-icon {
@@ -464,12 +490,6 @@ defineEmits<{
   padding: 14px 16px;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
-}
-
-.col-index {
-  width: 64px;
-  color: #94a3b8;
-  font-weight: 600;
 }
 
 .col-check {
@@ -756,6 +776,116 @@ defineEmits<{
   height: 1px;
   background: #e5e7eb;
   margin: 4px 8px;
+}
+
+/* ==================== Bulk Action Bar ==================== */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-check-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bulk-count-label {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.bulk-count-label strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bulk-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.bulk-btn-clear {
+  background: #fff;
+  color: #64748b;
+}
+
+.bulk-btn-clear:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.bulk-btn-delete {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.bulk-btn-delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Bulk bar slide transition */
+.bulk-slide-enter-active {
+  transition: all 0.25s ease-out;
+}
+.bulk-slide-leave-active {
+  transition: all 0.15s ease-in;
+}
+.bulk-slide-enter-from {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.bulk-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.bulk-slide-enter-from .bulk-check-icon,
+.bulk-slide-leave-to .bulk-check-icon {
+  transform: scale(0.5);
 }
 
 /* ==================== Pagination ==================== */

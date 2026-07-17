@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useSidebarStore } from './stores/sidebar'
+import { useSidebarStore } from './stores/sidebar.ts'
 import Navigation from './components/Navigation.vue'
 import Header from './layouts/Header.vue'
 

@@ -1,6 +1,6 @@
 <template>
   <div>
-    <Header />
+   
     <div class="px-4 py-4">
       <div class="page-header">
         <div class="page-header-left">
@@ -58,7 +58,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import Header from '@/layouts/Header.vue'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { cacheService } from '@/services/cacheService'
 import { ArrowLeft, Inbox, BookOpen, ChevronRight } from '@lucide/vue'

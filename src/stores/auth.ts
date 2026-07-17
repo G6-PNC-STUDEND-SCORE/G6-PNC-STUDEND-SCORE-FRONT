@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { login as loginApi, logout as logoutApi, me } from '@/services/authService'
 import { googleLogin as googleLoginApi } from '@/services/googleAuthService'
 import { setAuthToken, clearAuthToken } from '@/services/apiHttp'
+import router from '@/router'
 
 export interface User {
   id: number
@@ -18,10 +19,7 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Trust the token — on page refresh, if a token exists in localStorage,
-  // the user is considered authenticated. The /user API call is only for
-  // loading the user profile in the background; if it fails, we still
-  // let the user through (real API calls will 401 if the token is invalid).
+  // Trust the token; the 401 interceptor handles truly invalid tokens
   const isAuthenticated = computed(() => !!token.value)
 
   async function init() {
@@ -35,7 +33,12 @@ export const useAuthStore = defineStore('auth', () => {
         const response = await me()
         user.value = response.user as User
       } catch {
-        console.warn('Auth init: could not verify token with /user endpoint, proceeding anyway')
+        // Token is invalid/expired — clear everything and redirect to login
+        token.value = null
+        user.value = null
+        localStorage.removeItem('token')
+        clearAuthToken()
+        router.push('/login')
       }
     }
   }

@@ -42,7 +42,6 @@ import type { EChartsOption } from 'echarts'
 import { useThemeStore } from '@/stores/theme'
 import { Download } from '@lucide/vue'
 
-// Register ECharts components
 use([
   CanvasRenderer,
   LineChart,

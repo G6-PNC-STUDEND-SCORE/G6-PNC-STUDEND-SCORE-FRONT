@@ -16,6 +16,7 @@ export interface SpreadsheetRow {
   student_id: number
   student_name: string
   student_number: string
+  class_name: string
   offering_id: number
   total: number | null
   grade: string | null
@@ -33,6 +34,8 @@ export interface AssessmentTypeWeight {
 export interface SubjectTerm {
   term_id: number
   term_name: string
+  academic_year_id: number
+  academic_year: string | number | null
   teachers: string[]
   classes: string[]
   offering_ids: number[]
@@ -91,6 +94,16 @@ export async function deleteColumn(subjectId: number, termId: number, detailId: 
   await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/details/${detailId}`)
 }
 
+export async function changeColumnType(subjectId: number, termId: number, label: string, oldType: string, newType: string): Promise<{ updated_count: number }> {
+  const res = await http.patch(`/spreadsheet/subject/${subjectId}/term/${termId}/details/change-type`, { label, old_type: oldType, new_type: newType })
+  return res.data.data
+}
+
+export async function getStudentNumbers(): Promise<string[]> {
+  const res = await http.get('/spreadsheet/student-numbers')
+  return res.data.data
+}
+
 export async function reorderColumns(subjectId: number, termId: number, columns: { id: number; order_number: number }[]): Promise<void> {
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/reorder`, { columns })
 }
@@ -132,4 +145,37 @@ export async function importFromGoogleSheets(subjectId: number, termId: number, 
 
 export async function importFromGoogleSheetsCSV(subjectId: number, termId: number, csvContent: string): Promise<void> {
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
+}
+
+export async function addEnrollment(subjectId: number, termId: number, studentId: number | null): Promise<{ id: number; student_id: number; student_number: string }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId })
+  return res.data.data
+}
+
+export async function deleteEnrollment(subjectId: number, termId: number, enrollmentId: number): Promise<void> {
+  await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`)
+}
+
+export async function updateStudentInfo(subjectId: number, termId: number, enrollmentId: number, data: {
+  student_name?: string
+  student_number?: string
+}): Promise<{ student_name: string; student_number: string }> {
+  const res = await http.put(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`, data)
+  return res.data.data
+}
+
+export async function importFile(subjectId: number, termId: number, data: {
+  rows: Array<{
+    student_name: string
+    student_number?: string
+    marks?: Record<string, number>
+  }>
+}): Promise<{ imported_count: number }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-file`, data)
+  return res.data.data
+}
+
+export async function getStudents(): Promise<Array<{ id: number; name: string; student_number: string }>> {
+  const res = await http.get('/students')
+  return res.data.data
 }

@@ -209,7 +209,6 @@ const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
   color: #94a3b8;
 }
 
-/* ── Dark Mode ────────────────────────── */
 .kpi-card.dark-mode {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(30, 41, 59, 0.98));
   border-color: rgba(71, 85, 105, 0.4);
@@ -230,7 +229,6 @@ const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
   background: radial-gradient(circle, rgba(96, 165, 250, 0.08) 0%, transparent 70%);
 }
 
-/* ── Skeleton ─────────────────────────── */
 .skeleton-value {
   height: 1.75rem;
   width: 60%;
