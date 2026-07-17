@@ -18,7 +18,7 @@
         <tbody>
           <tr v-if="data.length === 0">
             <td :colspan="columns.length" class="text-center text-muted py-4">
-              <i class="bi bi-inbox me-1"></i> No data available
+              <Inbox :size="16" class="me-1" /> No data available
             </td>
           </tr>
           <tr v-for="(row, index) in data" :key="index">
@@ -47,6 +47,8 @@ defineProps<{
   columns: { key: string; label: string; width?: string }[]
   data: T[]
 }>()
+
+import { Inbox } from '@lucide/vue'
 
 const themeStore = useThemeStore()
 const isDark = computed(() => themeStore.isDark)

@@ -132,6 +132,11 @@ export async function uploadStudentPhoto(
   return res.data
 }
 
+export async function bulkDeleteStudents(ids: number[]): Promise<{ message: string; data: { deleted_count: number } }> {
+  const res = await http.post('/students/bulk-delete', { ids })
+  return res.data
+}
+
 export async function deleteStudentPhoto(
   id: number
 ): Promise<StudentResponse> {

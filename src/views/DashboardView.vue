@@ -1,5 +1,4 @@
 <template>
-  <Header />
   <div class="px-4 py-4 dashboard-page">
     <div v-if="showWelcome" class="welcome-card">
       <div class="welcome-bg-shapes">
@@ -9,7 +8,7 @@
       </div>
       <div class="welcome-content">
         <div class="welcome-icon-box">
-          <i class="bi bi-stars"></i>
+          <Stars :size="22" />
         </div>
         <div class="welcome-text">
           <span class="welcome-badge">Dashboard</span>
@@ -17,7 +16,7 @@
           <p>Your academic snapshot is ready — everything you need at a glance.</p>
         </div>
         <button class="welcome-close" @click="dismissWelcome" title="Dismiss">
-          <i class="bi bi-x-lg"></i>
+          <X :size="16" />
         </button>
       </div>
     </div>
@@ -26,10 +25,10 @@
       v-if="dashboard.error"
       class="error-banner"
     >
-      <i class="bi bi-exclamation-triangle-fill"></i>
+      <AlertTriangle :size="16" />
       <span>{{ dashboard.error }}</span>
       <button class="error-retry" @click="dashboard.fetchDashboardData">
-        <i class="bi bi-arrow-clockwise"></i> Retry
+        <RefreshCw :size="14" /> Retry
       </button>
     </div>
 
@@ -47,51 +46,51 @@
       <KpiCard
         label="Total Students"
         :value="dashboard.kpi.total_students"
-        icon="bi bi-mortarboard"
+        icon="mortarboard"
         iconClass="icon-blue"
         :subtitle="`${studentActivityRate}% active`"
       />
       <KpiCard
         label="Active Students"
         :value="dashboard.kpi.active_students"
-        icon="bi bi-person-check"
+        icon="person-check"
         iconClass="icon-green"
       />
       <KpiCard
         label="Total Teachers"
         :value="dashboard.kpi.total_teachers"
-        icon="bi bi-people"
+        icon="people"
         iconClass="icon-violet"
       />
       <KpiCard
         label="Average Score"
         :value="dashboard.kpi.average_score"
-        icon="bi bi-bar-chart"
+        icon="bar-chart"
         iconClass="icon-orange"
         :decimals="2"
       />
       <KpiCard
         label="Total Subjects"
         :value="dashboard.kpi.total_subjects"
-        icon="bi bi-book"
+        icon="book"
         iconClass="icon-sky"
       />
       <KpiCard
         label="Active Offerings"
         :value="dashboard.kpi.active_subject_offerings"
-        icon="bi bi-calendar-check"
+        icon="calendar-check"
         iconClass="icon-mint"
       />
       <KpiCard
         label="Total Enrollments"
         :value="dashboard.kpi.total_enrollments"
-        icon="bi bi-diagram-3"
+        icon="diagram-3"
         iconClass="icon-rose"
       />
       <KpiCard
         label="Total Classes"
         :value="dashboard.kpi.total_classes"
-        icon="bi bi-building"
+        icon="building"
         iconClass="icon-amber"
       />
     </section>
@@ -103,7 +102,7 @@
         :class="['tab-btn', { active: activeSection === tab.id }]"
         @click="activeSection = tab.id"
       >
-        <i :class="tab.icon"></i>
+        <component :is="tab.component" :size="16" />
         {{ tab.label }}
       </button>
       <div class="tab-indicator" :style="tabIndicatorStyle"></div>
@@ -341,7 +340,6 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useThemeStore } from '@/stores/theme'
 import { useDashboardStore } from '@/stores/dashboard'
-import Header from '@/layouts/Header.vue'
 import KpiCard from '@/components/KpiCard.vue'
 import FilterBar from '@/components/FilterBar.vue'
 import EChart from '@/components/EChart.vue'
@@ -354,6 +352,15 @@ import type {
   TopStudent,
   LowestPerformingSubject
 } from '@/types/dashboard'
+import {
+  Stars,
+  X,
+  AlertTriangle,
+  RefreshCw,
+  LayoutDashboard,
+  TrendingUp,
+  Activity,
+} from '@lucide/vue'
 
 const theme = useThemeStore()
 const dashboard = useDashboardStore()
@@ -364,9 +371,9 @@ const showWelcome = ref(localStorage.getItem('dashboard_welcome_dismissed') !== 
 let lastUpdatedTimer: ReturnType<typeof setInterval> | null = null
 
 const tabs = [
-  { id: 'overview' as const, label: 'Overview', icon: 'bi bi-grid-1x2' },
-  { id: 'performance' as const, label: 'Performance', icon: 'bi bi-graph-up-arrow' },
-  { id: 'activity' as const, label: 'Activity', icon: 'bi bi-activity' },
+  { id: 'overview' as const, label: 'Overview', component: LayoutDashboard },
+  { id: 'performance' as const, label: 'Performance', component: TrendingUp },
+  { id: 'activity' as const, label: 'Activity', component: Activity },
 ]
 
 const tabIndicatorStyle = computed(() => {
@@ -505,7 +512,7 @@ const gradeDistChartOption = computed<EChartsOption>(() => {
       radius: ['50%', '70%'],
       avoidLabelOverlap: false,
       itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
-      label: { show: true, fontSize: 11, formatter: '{b}\n{c} ({d}%)' },
+      label: { show: true, fontSize: 11, formatter: '{b}\\n{c} ({d}%)' },
       data: data.grades.map(g => ({
         value: g.count,
         name: g.label,
@@ -647,6 +654,7 @@ function updateLastUpdated() {
 .dashboard-page {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   padding-bottom: 2rem !important;
+  
 }
 
 .welcome-card {
@@ -713,10 +721,12 @@ function updateLastUpdated() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
-  color: #60a5fa;
   flex-shrink: 0;
   box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+}
+
+.welcome-icon-box :deep(svg) {
+  color: #60a5fa;
 }
 
 .welcome-text {
@@ -763,7 +773,6 @@ function updateLastUpdated() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 0.75rem;
   transition: all 0.2s;
   flex-shrink: 0;
 }
@@ -786,7 +795,7 @@ function updateLastUpdated() {
   color: #991b1b;
 }
 
-.error-banner i { color: #ef4444; font-size: 0.9rem; }
+.error-banner :deep(svg) { color: #ef4444; }
 
 .error-retry {
   margin-left: auto;

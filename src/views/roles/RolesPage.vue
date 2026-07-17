@@ -1,10 +1,9 @@
 <template>
-  <Header />
   <div class="px-4 py-4">
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">
-          <i class="bi bi-shield-lock-fill"></i>
+          <Shield :size="22" />
         </div>
         <div>
           <h2 class="page-title">Roles &amp; Permissions</h2>
@@ -14,7 +13,7 @@
     </div>
     <div class="empty-state">
       <div class="empty-state-icon">
-        <i class="bi bi-inbox"></i>
+        <Inbox :size="24" />
       </div>
       <h5>Roles &amp; Permissions</h5>
       <p class="text-secondary">Role management features coming soon.</p>
@@ -23,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import Header from '@/layouts/Header.vue'
+import { Shield, Inbox } from '@lucide/vue'
 </script>
 
 <style scoped>
@@ -84,7 +83,6 @@ import Header from '@/layouts/Header.vue'
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
   margin-bottom: 1rem;
 }
 .empty-state h5 {

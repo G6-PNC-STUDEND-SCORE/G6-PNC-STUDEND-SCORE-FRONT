@@ -1,5 +1,4 @@
 <template>
-  <Header />
   <div class="admin-profile-page">
     <header class="page-header">
       <div>
@@ -18,7 +17,7 @@
 
     <!-- Error State -->
     <div v-else-if="fetchError" class="error-state">
-      <i class="bi bi-exclamation-triangle-fill"></i>
+      <AlertTriangle :size="32" style="color: #dc2626; margin-bottom: 12px;" />
       <p>{{ fetchError }}</p>
       <button class="btn btn-primary" @click="loadProfile">Retry</button>
     </div>
@@ -26,14 +25,14 @@
     <template v-else>
       <!-- Success Message -->
       <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle-fill"></i>
+        <CheckCircle :size="18" />
         {{ successMessage }}
         <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
       </div>
 
       <!-- Error Message -->
       <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle-fill"></i>
+        <AlertTriangle :size="18" />
         {{ saveError }}
         <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
       </div>
@@ -52,7 +51,7 @@
                 Uploading...
               </template>
               <template v-else>
-                <i class="bi bi-camera-fill me-1"></i> Change photo
+                <Camera :size="14" class="me-1" /> Change photo
               </template>
             </span>
           </div>
@@ -127,7 +126,7 @@
             <button class="btn btn-ghost" @click="resetForm" :disabled="saving">Reset</button>
             <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
               <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-              <i v-else class="bi bi-check-lg me-1"></i>
+              <Check v-else :size="16" class="me-1" />
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
@@ -143,7 +142,8 @@
               <div class="password-input">
                 <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
                 <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
-                  <i :class="showCurrent ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                  <EyeOff v-if="showCurrent" :size="18" />
+                  <Eye v-else :size="18" />
                 </button>
               </div>
             </div>
@@ -152,7 +152,8 @@
               <div class="password-input">
                 <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
                 <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
-                  <i :class="showNew ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                  <EyeOff v-if="showNew" :size="18" />
+                  <Eye v-else :size="18" />
                 </button>
               </div>
             </div>
@@ -161,7 +162,8 @@
               <div class="password-input">
                 <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
                 <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
-                  <i :class="showConfirm ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+                  <EyeOff v-if="showConfirm" :size="18" />
+                  <Eye v-else :size="18" />
                 </button>
               </div>
             </div>
@@ -171,7 +173,7 @@
             <button class="btn btn-ghost" @click="resetPassword">Clear</button>
             <button class="btn btn-primary" @click="updatePassword" :disabled="passwordSaving">
               <span v-if="passwordSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-              <i v-else class="bi bi-lock me-1"></i>
+              <Lock v-else :size="16" class="me-1" />
               {{ passwordSaving ? 'Updating...' : 'Update Password' }}
             </button>
           </div>
@@ -192,12 +194,12 @@
 </template>
 
 <script setup lang="ts">
-import Header from '@/layouts/Header.vue'
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/api'
+import { AlertTriangle, CheckCircle, Camera, Check, EyeOff, Eye, Lock } from '@lucide/vue'
 
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
@@ -517,12 +519,6 @@ onUnmounted(() => {
   border: 1px solid #e2e8f0;
 }
 
-.error-state i {
-  font-size: 2rem;
-  color: #dc2626;
-  margin-bottom: 12px;
-}
-
 .error-state p {
   color: #64748b;
   margin-bottom: 16px;
@@ -724,7 +720,6 @@ onUnmounted(() => {
   outline: none;
   background: transparent;
   color: #94a3b8;
-  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
   border-radius: 10px;

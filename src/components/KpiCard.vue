@@ -7,7 +7,7 @@
     <div class="kpi-content">
       <div class="kpi-top">
         <div class="kpi-icon-wrap" :class="iconClass">
-          <i :class="icon" />
+          <component :is="resolvedIcon" :size="20" />
         </div>
         <span v-if="subtitle" class="kpi-badge">{{ subtitle }}</span>
       </div>
@@ -23,12 +23,22 @@
 <script setup lang="ts">
 import AnimatedNumber from './AnimatedNumber.vue'
 import { useThemeStore } from '@/stores/theme'
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
+import {
+  GraduationCap,
+  UserCheck,
+  Users,
+  BarChart3,
+  BookOpen,
+  CalendarCheck,
+  GitBranch,
+  Building2,
+} from '@lucide/vue'
 
 const themeStore = useThemeStore()
 const isDark = computed(() => themeStore.isDark)
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   label: string
   value: number
   icon: string
@@ -41,6 +51,19 @@ withDefaults(defineProps<{
   decimals: 0,
   loading: false,
 })
+
+const iconMap: Record<string, Component> = {
+  'mortarboard': GraduationCap,
+  'person-check': UserCheck,
+  'people': Users,
+  'bar-chart': BarChart3,
+  'book': BookOpen,
+  'calendar-check': CalendarCheck,
+  'diagram-3': GitBranch,
+  'building': Building2,
+}
+
+const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
 </script>
 
 <style scoped>
@@ -130,7 +153,6 @@ withDefaults(defineProps<{
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 

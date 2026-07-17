@@ -1,21 +1,31 @@
 <template>
   <div class="app-layout">
     <Navigation v-if="showSidebar" />
-    <main class="main-content" :class="{ 'with-sidebar': showSidebar }">
-      <router-view />
-    </main>
+    <div class="content-wrapper" :class="{ 'with-sidebar': showSidebar }" :style="showSidebar ? { marginLeft: sidebarMargin } : {}">
+      <Header v-if="showSidebar" />
+      <main class="main-content">
+        <router-view />
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useSidebarStore } from './stores/sidebar.ts'
 import Navigation from './components/Navigation.vue'
+import Header from './layouts/Header.vue'
 
 const route = useRoute()
+const sidebar = useSidebarStore()
 
 const publicPages = ['login']
 const showSidebar = computed(() => !publicPages.includes(String(route.name)))
+
+const sidebarMargin = computed(() =>
+  sidebar.collapsed ? sidebar.SIDEBAR_COLLAPSED_WIDTH + 'px' : sidebar.SIDEBAR_WIDTH + 'px'
+)
 </script>
 
 <style>
@@ -34,14 +44,19 @@ html, body {
   min-height: 100vh;
 }
 
-.main-content {
+.content-wrapper {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background: #f0f2f5;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.main-content.with-sidebar {
-  padding-left: 220px;
+
+.main-content {
+  flex: 1;
+  background: #f0f2f5;
+  padding: 20px;
 }
 
 .page-header {

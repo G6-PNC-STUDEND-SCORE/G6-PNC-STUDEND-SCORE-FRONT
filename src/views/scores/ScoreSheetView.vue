@@ -20,7 +20,7 @@
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
           <button class="tb-btn" @click="syncToGoogle" title="Export to Google Sheets" :disabled="syncing"><i :class="syncing ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ syncing ? 'Exporting...' : 'Google Sheets' }}</span></button>
-          <button class="tb-btn" @click="importFromGoogle" title="Import from Google Sheets CSV"><i class="bi bi-cloud-download"></i> <span>Import</span></button>
+          <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
           <button class="tb-btn" @click="exportCSV" title="Export CSV"><i class="bi bi-download"></i> <span>Export</span></button>
           <button class="tb-btn" @click="refreshData" title="Refresh"><i class="bi bi-arrow-clockwise" :class="{ spinning: loading }"></i></button>
         </div>
@@ -97,7 +97,8 @@
           </thead>
           <tbody>
             <tr v-for="(row, rowIndex) in visibleRows" :key="row.enrollment_id"
-              :class="{ 'row-selected': editingRow === null && isRowSelected(rowIndex) }">
+              :class="{ 'row-selected': editingRow === null && isRowSelected(rowIndex) }"
+              @contextmenu.prevent="showContextMenu($event, rowIndex)">
               <td class="cell cell-frozen row-num"
                 :class="{ 'row-num-highlighted': editingRow === null && isRowSelected(rowIndex) }"
                 @click.stop>{{ rowIndex + 1 }}</td>
@@ -159,13 +160,27 @@
               <td class="cell cell-total" :class="getTotalCellClass(row)">{{ row.total !== null ? row.total.toFixed(2) : '-' }}</td>
               <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
             </tr>
-            <tr class="add-row-row" @click="doAddRow">
+            <tr class="add-row-row" @click="showAddRowPopup = true">
               <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
                 <i class="bi bi-plus-lg"></i> Add Student Row
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Right-click Context Menu -->
+    <div v-if="contextMenu" class="context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
+      <div class="context-menu-item" @click="insertRowAbove(contextMenu.rowIdx)">
+        <i class="bi bi-plus-lg"></i> Insert Row Above
+      </div>
+      <div class="context-menu-item" @click="insertRowBelow(contextMenu.rowIdx)">
+        <i class="bi bi-plus-lg"></i> Insert Row Below
+      </div>
+      <div class="context-menu-separator"></div>
+      <div class="context-menu-item text-danger" @click="deleteRow(contextMenu.rowIdx)">
+        <i class="bi bi-trash3"></i> Delete Row
       </div>
     </div>
 
@@ -234,14 +249,45 @@
         <div class="modal-footer"><button class="btn btn-secondary" @click="deleteConfirm = null">Cancel</button><button class="btn btn-danger" @click="doDeleteColumn">Delete</button></div>
       </div>
     </div>
+    <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
+      <div class="modal-content modal-sm">
+        <div class="modal-header"><h5>Add Student Rows</h5><button class="modal-close" @click="showAddRowPopup = false">&times;</button></div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Number of rows to add:</label>
+            <input v-model.number="addRowCount" type="number" min="1" max="50" class="form-input" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showAddRowPopup = false">Cancel</button>
+          <button class="btn btn-primary" @click="doAddRows">Add {{ addRowCount }} Row{{ addRowCount > 1 ? 's' : '' }}</button>
+        </div>
+      </div>
+    </div>
     <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
       <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Import from Google Sheets</h5><button class="modal-close" @click="showImport = false">&times;</button></div>
+        <div class="modal-header"><h5>Import File</h5><button class="modal-close" @click="showImport = false">&times;</button></div>
         <div class="modal-body">
-          <div class="import-notice"><i class="bi bi-info-circle"></i><div><strong>How to sync with Google Sheets:</strong><ol class="import-steps"><li>Click <strong>"Google Sheets"</strong> button to export data</li><li>In Google Sheets, edit scores as needed</li><li>Go to <strong>File → Download → CSV</strong></li><li>Upload the downloaded CSV file here</li></ol></div></div>
-          <label class="btn btn-primary btn-block"><i class="bi bi-upload"></i> Choose CSV File<input type="file" accept=".csv" hidden @change="importCSV" /></label>
+          <div class="import-notice"><i class="bi bi-info-circle"></i><div><strong>Supported formats:</strong><ul class="import-steps" style="margin-top:6px;padding-left:18px"><li><strong>CSV</strong> — Comma-separated values</li><li><strong>Excel (.xlsx, .xls)</strong> — Microsoft Excel workbook</li><li><strong>PDF</strong> — Text-based PDF tables</li></ul><p style="font-size:0.8rem;color:#64748b;margin-top:6px">Your file should have columns: Student Name, Student ID, then score columns matching your assessment types.</p></div></div>
+          <div class="file-upload-area" @drop.prevent="onFileDrop" @dragover.prevent>
+            <i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:#3b82f6"></i>
+            <p style="margin:8px 0 4px;font-weight:600;color:#1e293b">Drop your file here</p>
+            <p style="margin:0;font-size:0.78rem;color:#94a3b8">or click to browse</p>
+            <input ref="fileInputRef" type="file" accept=".csv,.xlsx,.xls" hidden @change="onFileSelected" />
+            <button class="btn btn-primary btn-sm" style="margin-top:10px" @click="openFilePicker">
+              <i class="bi bi-folder2-open"></i> Choose File
+            </button>
+            <div v-if="selectedFileName" class="selected-file-name">
+              <i class="bi bi-check-circle-fill" style="color:#22c55e"></i> {{ selectedFileName }}
+            </div>
+          </div>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="showImport = false">Close</button></div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" @click="showImport = false; selectedFileName = ''">Cancel</button>
+          <button class="btn btn-primary" :disabled="!pendingFile" @click="processImportFile">
+            <i class="bi bi-upload"></i> Import
+          </button>
+        </div>
       </div>
     </div>
     <div v-if="loading" class="loading-overlay"><div class="spinner"></div><span>Loading scores...</span></div>
@@ -254,8 +300,8 @@ import { useRouter, useRoute } from 'vue-router'
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
   renameColumn, updateWeights, syncToGoogleSheets, createGoogleSheet,
-  importFromGoogleSheetsCSV, addEnrollment, updateStudentInfo,
-  changeColumnType, getStudentNumbers,
+  addEnrollment, deleteEnrollment, updateStudentInfo,
+  changeColumnType, getStudentNumbers, importFile,
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
 
@@ -306,6 +352,12 @@ const showImport = ref(false)
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
+const contextMenu = ref<{ x: number; y: number; rowIdx: number } | null>(null)
+
+// ─── Import File State ────────────────────────────────────────────────
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const selectedFileName = ref('')
+const pendingFile = ref<File | null>(null)
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
@@ -517,14 +569,42 @@ const saveStatusText = computed(() => ({
   saving: 'Saving...', saved: 'Saved', failed: 'Failed', idle: '',
 }[saveStatus.value]))
 
+// ─── Add Row Popup ──────────────────────────────────────────────────
+const showAddRowPopup = ref(false)
+const addRowCount = ref(1)
+
+async function doAddRows() {
+  const count = addRowCount.value
+  showAddRowPopup.value = false
+  showSaveStatus('saving')
+  try {
+    for (let i = 0; i < count; i++) {
+      await addEnrollment(subjectId.value, termId.value, null)
+    }
+    showSaveStatus('saved')
+    pageSize.value = 'all'
+    await refreshData()
+  } catch (err) {
+    showSaveStatus('failed')
+    console.error('Failed to add rows:', err)
+    alert('Error adding students. Check console for details.')
+  }
+  addRowCount.value = 1
+}
+
 // ─── Helper Functions ────────────────────────────────────────────────
+// Returns the student-specific ScoreDetail ID for a given canonical column ID
+function getActualDetailId(row: SpreadsheetRow, colId: number): number {
+  return row.detail_ids[colId] ?? colId
+}
+
 function getCellMark(row: SpreadsheetRow, detailId: number): number | null {
   const m = row.details[detailId]
   return m !== undefined ? m : null
 }
 
 function formatCellValue(value: number | null): string {
-  if (value === null || value === undefined) return '-'
+  if (value === null || value === undefined) return ''
   return value % 1 === 0 ? String(value) : value.toFixed(1)
 }
 
@@ -903,8 +983,7 @@ function saveEdit() {
   cancelEdit()
   showSaveStatus('saving')
 
-  // Resolve the actual detail ID for this student before saving
-  const actualDetailId = actualRow.detail_ids?.[detailId] ?? detailId
+  const actualDetailId = getActualDetailId(actualRow, detailId)
   updateCellMark(subjectId.value, termId.value, actualDetailId, newValue)
     .then(() => {
       showSaveStatus('saved')
@@ -1145,8 +1224,7 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[srcColId] = nextValue
       recalculateRowTotal(targetRow)
-      const resolvedSrcId = targetRow.detail_ids?.[srcColId] ?? srcColId
-      updateCellMark(subjectId.value, termId.value, resolvedSrcId, nextValue).catch(() => {})
+      updateCellMark(subjectId.value, termId.value, srcColId, nextValue).catch(() => {})
     })
   } else {
     // Horizontal fill: continue the pattern across columns.
@@ -1183,8 +1261,7 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[cols[ci].id] = nextValue
       recalculateRowTotal(targetRow)
-      const resolvedColId = targetRow.detail_ids?.[cols[ci].id] ?? cols[ci].id
-      updateCellMark(subjectId.value, termId.value, resolvedColId, nextValue).catch(() => {})
+      updateCellMark(subjectId.value, termId.value, cols[ci].id, nextValue).catch(() => {})
     })
   }
 
@@ -1223,6 +1300,65 @@ function onGlobalKeydown(event: KeyboardEvent) {
       case 's': event.preventDefault(); showSaveStatus('saved'); return
       case 'r': event.preventDefault(); return
     }
+  }
+
+  // Delete/Backspace: clear selected cell(s) in range or single selection
+  if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCol.value !== null) {
+    event.preventDefault()
+    if (isRangeSelecting.value) {
+      const bounds = getSelectionBounds()
+      if (!bounds) return
+      const columnsInSelection = getSelectableColumnIds()
+      showSaveStatus('saving')
+      const promises: Promise<void>[] = []
+      const clearedRows: SpreadsheetRow[] = []
+      for (let r = bounds.r1; r <= bounds.r2; r++) {
+        for (let c = bounds.c1; c <= bounds.c2; c++) {
+          const colId = columnsInSelection[c]
+          if (colId === undefined || colId === -1 || colId === 0) continue
+          const row = filteredRows.value[r]
+          if (!row) continue
+          const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
+          if (!actualRow) continue
+          const oldValue = getCellMark(row, colId)
+          if (oldValue === null) continue
+          actualRow.details[colId] = null
+          undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
+          redoStack.value = []
+          if (!clearedRows.includes(actualRow)) clearedRows.push(actualRow)
+          const actualDetailId = getActualDetailId(actualRow, colId)
+          promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
+        }
+      }
+      if (promises.length) {
+        Promise.all(promises)
+          .then(() => {
+            showSaveStatus('saved')
+            clearedRows.forEach(r => recalculateRowTotal(r))
+          })
+          .catch(() => showSaveStatus('failed'))
+      }
+      isRangeSelecting.value = false
+    } else {
+      // Single cell delete
+      const row = filteredRows.value[selectedRowIndex.value]
+      if (!row) return
+      const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
+      if (!actualRow) return
+      const colId = selectedCol.value
+      if (colId <= 0) return
+      const oldValue = getCellMark(row, colId)
+      if (oldValue === null) return
+      actualRow.details[colId] = null
+      undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
+      redoStack.value = []
+      showSaveStatus('saving')
+      const actualDetailId = getActualDetailId(actualRow, colId)
+      updateCellMark(subjectId.value, termId.value, actualDetailId, null)
+        .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow) })
+        .catch(() => { showSaveStatus('failed'); actualRow.details[colId] = oldValue })
+    }
+    return
   }
 
   // Printable character handling: type to start editing (Excel-like)
@@ -1444,8 +1580,7 @@ function clearSingleCell() {
   undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value!, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  const resolvedDelId = actualRow?.detail_ids?.[selectedCol.value!] ?? selectedCol.value!
-  updateCellMark(subjectId.value, termId.value, resolvedDelId, null)
+  updateCellMark(subjectId.value, termId.value, selectedCol.value!, null)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value!] = oldValue })
 }
@@ -1466,8 +1601,7 @@ function clearRangeSelection() {
       const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
       if (actualRow) actualRow.details[c] = null
       undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: c, oldValue })
-      const resolvedPasteId = actualRow?.detail_ids?.[c] ?? c
-      updateCellMark(subjectId.value, termId.value, resolvedPasteId, null).catch(() => {})
+      updateCellMark(subjectId.value, termId.value, c, null).catch(() => {})
     }
   }
   redoStack.value = []
@@ -1496,6 +1630,20 @@ function onEditKeydown(event: KeyboardEvent) {
         showSaveStatus('saved')
         return
     }
+  }
+
+  // Escape key: cancel editing without saving
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    cancelEdit()
+    return
+  }
+
+  // Enter/Tab: save and move to next cell
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    saveEdit()
+    return
   }
 
   // Let the native text field / datalist handle vertical navigation for
@@ -1610,33 +1758,123 @@ function cutSelection() {
   undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: selectedCol.value, oldValue })
   redoStack.value = []
   showSaveStatus('saving')
-  const resolvedCutId = actualRow?.detail_ids?.[selectedCol.value] ?? selectedCol.value
-  updateCellMark(subjectId.value, termId.value, resolvedCutId, null)
+  updateCellMark(subjectId.value, termId.value, selectedCol.value, null)
     .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow!) })
     .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[selectedCol.value] = oldValue })
 }
 
-function onPaste(event: ClipboardEvent) {
+async function onPaste(event: ClipboardEvent) {
   const text = event.clipboardData?.getData('text')
-  if (!text || !selectedCol.value || selectedCol.value <= 0) return
+  if (!text || selectedCol.value == null) return
   event.preventDefault()
+
+  const lines = text.split('\n').filter(r => r.trim() !== '')
+  const isMultiRow = lines.length > 1
+
+  if (isMultiRow) {
+    // Multi-cell paste: iterate over rows and columns
+    expandAllRowsForSelection()
+    const promises: Promise<void>[] = []
+    lines.forEach((line, rowOffset) => {
+      const cells = line.split('\t')
+      const targetRowIdx = selectedRowIndex.value + rowOffset
+      if (targetRowIdx >= filteredRows.value.length) return
+      const row = filteredRows.value[targetRowIdx]
+      if (!row) return
+
+      cells.forEach((cellText, colOffset) => {
+        const colIds = getSelectableColumnIds()
+        const startOrder = getSelectionColumnOrder(selectedCol.value!)
+        const targetOrder = startOrder + colOffset
+        if (targetOrder < 0 || targetOrder >= colIds.length) return
+        const targetColId = colIds[targetOrder]
+
+        const p = pasteValueToCell(row, targetColId, cellText.trim())
+        if (p) promises.push(p)
+      })
+    })
+
+    if (promises.length) {
+      showSaveStatus('saving')
+      try {
+        await Promise.all(promises)
+        showSaveStatus('saved')
+      } catch {
+        showSaveStatus('failed')
+      }
+    }
+    return
+  }
+
+  // Single cell paste
   const row = filteredRows.value[selectedRowIndex.value]
   if (!row) return
-  const numValue = parseFloat(text)
-  if (isNaN(numValue)) return
-  if (numValue < 0 || numValue > 100) return
-  const detailId = selectedCol.value
-  const oldValue = getCellMark(row, detailId)
-  const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-  if (!actualRow) return
-  actualRow.details[detailId] = numValue
-  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId, oldValue })
-  redoStack.value = []
+  const colId = selectedCol.value
   showSaveStatus('saving')
-  const resolvedPasteDetailId = actualRow.detail_ids?.[detailId] ?? detailId
-  updateCellMark(subjectId.value, termId.value, resolvedPasteDetailId, numValue)
-    .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow) })
-    .catch(() => { showSaveStatus('failed'); actualRow.details[detailId] = oldValue })
+  try {
+    await pasteValueToCell(row, colId, text.trim())
+    showSaveStatus('saved')
+  } catch {
+    showSaveStatus('failed')
+  }
+}
+
+function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Promise<void> | void {
+  if (!value) return
+
+  if (colId === -1) {
+    // Paste student name
+    const newName = value
+    if (!newName || newName === row.student_name) return
+    const oldName = row.student_name
+    row.student_name = newName
+    const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
+    if (actualRow) actualRow.student_name = newName
+    return updateStudentInfo(subjectId.value, termId.value, row.enrollment_id, { student_name: newName })
+      .then(() => {})
+      .catch(() => {
+        row.student_name = oldName
+        if (actualRow) actualRow.student_name = oldName
+        throw new Error('Failed to save student name')
+      })
+  }
+
+  if (colId === 0) {
+    // Paste student number
+    const newNumber = value
+    if (!newNumber || newNumber === row.student_number) return
+    const oldNumber = row.student_number
+    row.student_number = newNumber
+    const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
+    if (actualRow) actualRow.student_number = newNumber
+    return updateStudentInfo(subjectId.value, termId.value, row.enrollment_id, { student_number: newNumber })
+      .then(() => { syncStudentNumbersCache(oldNumber, newNumber) })
+      .catch(() => {
+        row.student_number = oldNumber
+        if (actualRow) actualRow.student_number = oldNumber
+        throw new Error('Failed to save student number')
+      })
+  }
+
+  // Score cell paste
+  if (colId > 0) {
+    const numValue = parseFloat(value)
+    if (isNaN(numValue)) return
+    if (numValue < 0 || numValue > 100) return
+    const detailId = colId
+    const oldValue = getCellMark(row, detailId)
+    const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
+    if (!actualRow) return
+    actualRow.details[detailId] = numValue
+    undoStack.value.push({ enrollmentId: row.enrollment_id, detailId, oldValue })
+    redoStack.value = []
+    return updateCellMark(subjectId.value, termId.value, detailId, numValue)
+      .then(() => { recalculateRowTotal(actualRow) })
+      .catch(() => {
+        actualRow.details[detailId] = oldValue
+        throw new Error('Failed to save score')
+      })
+  }
 }
 
 function onCopy(event: ClipboardEvent) {
@@ -1658,8 +1896,7 @@ function undo() {
   if (!row) return
   row.details[action.detailId] = action.oldValue
   redoStack.value.push(action)
-  const resolvedUndoId = row.detail_ids?.[action.detailId] ?? action.detailId
-  updateCellMark(subjectId.value, termId.value, resolvedUndoId, action.oldValue)
+  updateCellMark(subjectId.value, termId.value, action.detailId, action.oldValue)
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -1672,8 +1909,7 @@ function redo() {
   if (!row) return
   const current = row.details[action.detailId]
   row.details[action.detailId] = current === null ? action.oldValue : null
-  const resolvedRedoId = row.detail_ids?.[action.detailId] ?? action.detailId
-  updateCellMark(subjectId.value, termId.value, resolvedRedoId, row.details[action.detailId])
+  updateCellMark(subjectId.value, termId.value, action.detailId, row.details[action.detailId])
     .then(() => { showSaveStatus('saved'); refreshData() })
     .catch(() => showSaveStatus('failed'))
 }
@@ -1739,6 +1975,93 @@ async function doAddColumnInline() {
   } catch { showSaveStatus('failed') }
 }
 
+// ─── Context Menu & Row Insert ───────────────────────────────────
+function showContextMenu(event: MouseEvent, rowIdx: number) {
+  // Position menu, preventing overflow
+  const x = Math.min(event.clientX, window.innerWidth - 200)
+  const y = Math.min(event.clientY, window.innerHeight - 160)
+  contextMenu.value = { x, y, rowIdx }
+  const closeMenu = () => {
+    contextMenu.value = null
+    window.removeEventListener('click', closeMenu)
+  }
+  setTimeout(() => window.addEventListener('click', closeMenu), 0)
+}
+
+async function insertRowAbove(rowIdx: number) {
+  contextMenu.value = null
+  try {
+    const result = await addEnrollment(subjectId.value, termId.value, null)
+    const enrollmentId = result.id
+    const targetRow = filteredRows.value[rowIdx]
+    const actualIndex = targetRow && data.value
+      ? data.value.rows.findIndex(r => r.enrollment_id === targetRow.enrollment_id)
+      : -1
+    pageSize.value = 'all'
+    showSaveStatus('saving')
+    // Refresh to get proper ScoreDetails from server
+    await refreshData()
+    // Re-insert the new row at the target position (it came back at the bottom)
+    if (actualIndex >= 0 && data.value) {
+      const freshRows = [...data.value.rows]
+      const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
+      if (newRowIdx >= 0) {
+        const [moved] = freshRows.splice(newRowIdx, 1)
+        freshRows.splice(actualIndex, 0, moved)
+        data.value = { ...data.value, rows: freshRows }
+      }
+    }
+    showSaveStatus('saved')
+  } catch (err) {
+    showSaveStatus('failed')
+    console.error('Failed to insert row:', err)
+  }
+}
+
+async function insertRowBelow(rowIdx: number) {
+  contextMenu.value = null
+  try {
+    const result = await addEnrollment(subjectId.value, termId.value, null)
+    const enrollmentId = result.id
+    const targetRow = filteredRows.value[rowIdx]
+    const actualIndex = targetRow && data.value
+      ? data.value.rows.findIndex(r => r.enrollment_id === targetRow.enrollment_id)
+      : -1
+    pageSize.value = 'all'
+    showSaveStatus('saving')
+    await refreshData()
+    // Re-insert the new row after the target position
+    if (actualIndex >= 0 && data.value) {
+      const freshRows = [...data.value.rows]
+      const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
+      if (newRowIdx >= 0) {
+        const [moved] = freshRows.splice(newRowIdx, 1)
+        freshRows.splice(actualIndex + 1, 0, moved)
+        data.value = { ...data.value, rows: freshRows }
+      }
+    }
+    showSaveStatus('saved')
+  } catch (err) {
+    showSaveStatus('failed')
+    console.error('Failed to insert row:', err)
+  }
+}
+
+async function deleteRow(rowIdx: number) {
+  contextMenu.value = null
+  const row = filteredRows.value[rowIdx]
+  if (!row) return
+  if (!confirm(`Delete student "${row.student_name || 'Unnamed'}"?`)) return
+  try {
+    await deleteEnrollment(subjectId.value, termId.value, row.enrollment_id)
+    showSaveStatus('saved')
+    await refreshData()
+  } catch (err) {
+    showSaveStatus('failed')
+    console.error('Failed to delete row:', err)
+  }
+}
+
 async function doAddRow() {
   try {
     await addEnrollment(subjectId.value, termId.value, null)
@@ -1784,26 +2107,154 @@ async function syncToGoogle() {
   finally { syncing.value = false }
 }
 
-function importFromGoogle() { showImport.value = true }
+// ─── File Import (CSV, Excel) ────────────────────────────────────────
+function openFilePicker() {
+  fileInputRef.value?.click()
+}
 
-function importCSV(event: Event) {
+function onFileSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
+  if (file) {
+    pendingFile.value = file
+    selectedFileName.value = file.name
+  }
+  input.value = ''
+}
+
+function onFileDrop(event: DragEvent) {
+  const file = event.dataTransfer?.files?.[0]
+  if (file) {
+    pendingFile.value = file
+    selectedFileName.value = file.name
+  }
+}
+
+async function processImportFile() {
+  const file = pendingFile.value
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = async () => {
-    try {
-      const content = reader.result as string
-      showSaveStatus('saving')
-      await importFromGoogleSheetsCSV(subjectId.value, termId.value, content)
-      showImport.value = false; showSaveStatus('saved'); refreshData()
-    } catch {
-      showSaveStatus('failed')
-      alert('Failed to import CSV. Please check the file format.')
+
+  const ext = file.name.split('.').pop()?.toLowerCase() || ''
+  showSaveStatus('saving')
+  showImport.value = false
+
+  try {
+    if (ext === 'csv') {
+      await importCSVFile(file)
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      await importExcelFile(file)
+    } else {
+      throw new Error('Unsupported file format. Please use CSV or Excel (.xlsx/.xls).')
+    }
+    showSaveStatus('saved')
+    pageSize.value = 'all'
+    await refreshData()
+  } catch (err: any) {
+    showSaveStatus('failed')
+    alert('Import failed: ' + (err.message || 'Unknown error'))
+    console.error('Import error:', err)
+  }
+
+  pendingFile.value = null
+  selectedFileName.value = ''
+}
+
+async function importCSVFile(file: File) {
+  const content = await file.text()
+  // Parse CSV into structured rows and send to the unified import endpoint
+  const lines = content.split('\n').filter(l => l.trim())
+  const parsedRows: (string | number)[][] = lines.map(l => {
+    // Handle quoted CSV values properly
+    const row: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (const ch of l) {
+      if (ch === '"') { inQuotes = !inQuotes; continue }
+      if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; continue }
+      current += ch
+    }
+    row.push(current.trim())
+    return row
+  })
+  const rows = parseTabularData(parsedRows)
+  await importFile(subjectId.value, termId.value, { rows })
+}
+
+async function importExcelFile(file: File) {
+  const { read, utils } = await import('xlsx')
+  const buffer = await file.arrayBuffer()
+  const workbook = read(buffer, { type: 'array' })
+  const sheetName = workbook.SheetNames[0]
+  if (!sheetName) throw new Error('Excel file has no sheets')
+  const sheet = workbook.Sheets[sheetName]
+  const jsonData: any[][] = utils.sheet_to_json(sheet, { header: 1 })
+  if (jsonData.length < 2) throw new Error('Excel file must contain at least a header row and one data row')
+
+  const rows = parseTabularData(jsonData as (string | number)[][])
+  await importFile(subjectId.value, termId.value, { rows })
+}
+
+function parseTabularData(jsonData: (string | number)[][]): Array<{
+  student_name: string
+  student_number?: string
+  marks?: Record<string, number>
+}> {
+  if (jsonData.length < 2) throw new Error('Data must have at least a header and one row')
+
+  const header = jsonData[0].map(c => String(c).trim())
+  // Find column indices: Student Name and Student ID
+  let nameIdx = header.findIndex(h => /name|student/i.test(h))
+  let idIdx = header.findIndex(h => /id|number|code|no/i.test(h) && !/name/i.test(h))
+  if (nameIdx < 0) nameIdx = 0  // Default: first column is name
+  if (idIdx < 0 || idIdx === nameIdx) idIdx = -1  // No ID column
+
+  // Parse score columns (everything after name/ID columns)
+  const scoreColumns: { index: number; label: string }[] = []
+  for (let i = 0; i < header.length; i++) {
+    if (i === nameIdx || i === idIdx) continue
+    const label = header[i].replace(/\(.*?\)/g, '').trim() // Remove type info like "(quiz)"
+    const typeMatch = header[i].match(/\(([^)]+)\)/)
+    const type = typeMatch ? typeMatch[1].toLowerCase().trim() : 'unknown'
+    if (label && !/total|grade|remark/i.test(label)) {
+      scoreColumns.push({ index: i, label: `${label}_${type}` })
     }
   }
-  reader.readAsText(file)
-  input.value = ''
+
+  const rows: Array<{
+    student_name: string
+    student_number?: string
+    marks?: Record<string, number>
+  }> = []
+
+  for (let r = 1; r < jsonData.length; r++) {
+    const row = jsonData[r]
+    if (!row || row.length === 0) continue
+    const studentName = String(row[nameIdx] ?? '').trim()
+    if (!studentName) continue
+
+    const studentNumber = idIdx >= 0 ? String(row[idIdx] ?? '').trim() : ''
+    const marks: Record<string, number> = {}
+
+    for (const sc of scoreColumns) {
+      if (sc.index < row.length) {
+        const val = row[sc.index]
+        if (val !== '' && val !== undefined && val !== null) {
+          const num = Number(val)
+          if (!isNaN(num)) {
+            marks[sc.label] = num
+          }
+        }
+      }
+    }
+
+    rows.push({
+      student_name: studentName,
+      student_number: studentNumber || undefined,
+      marks: Object.keys(marks).length > 0 ? marks : undefined,
+    })
+  }
+
+  return rows
 }
 
 // ─── Export ──────────────────────────────────────────────────────────
@@ -1902,8 +2353,8 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
 
-.search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 220px; }
-.search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 200px; color: #1e293b; }
+.search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 120px; }
+.search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 100px; color: #1e293b; }
 .search-box i { color: #94a3b8; font-size: 0.78rem; }
 
 .save-status { font-size: 0.7rem; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
@@ -2366,10 +2817,62 @@ select.form-input { appearance: auto; }
 .inline-btn-cancel { position: absolute; top: 4px; right: 6px; background: none; border: none; font-size: 1.1rem; color: #94a3b8; cursor: pointer; line-height: 1; }
 .inline-btn-cancel:hover { color: #ef4444; }
 
+/* ─── Placeholder Rows (Excel-like) ─────────────────────────────── */
+.placeholder-row { cursor: pointer; }
+.placeholder-row:hover { background: #f8faff !important; }
+.placeholder-row:hover .placeholder-cell { border-color: #bfdbfe !important; }
+.placeholder-cell {
+  color: #94a3b8 !important;
+  font-size: 0.8rem;
+  border: 1px dashed #e2e8f0 !important;
+  padding: 8px 12px !important;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+.placeholder-hint i { margin-right: 6px; color: #3b82f6; }
+.placeholder-row:hover .placeholder-hint { color: #3b82f6; }
+
+/* ─── Add Row Button ───────────────────────────────────────────── */
 .add-row-row { cursor: pointer; transition: background 0.15s; }
 .add-row-row:hover { background: #f0f9ff !important; }
 .add-row-cell { text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.8rem; padding: 10px !important; border: 2px dashed #bfdbfe !important; border-radius: 0 0 8px 0; }
 .add-row-cell i { margin-right: 6px; }
+
+/* ─── Right-Click Context Menu ──────────────────────────────────── */
+.context-menu {
+  position: fixed;
+  z-index: 10000;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  padding: 4px 0;
+  min-width: 180px;
+  animation: contextMenuFadeIn 0.12s ease;
+}
+@keyframes contextMenuFadeIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #334155;
+  transition: background 0.1s;
+}
+.context-menu-item:hover { background: #f1f5f9; }
+.context-menu-item.text-danger { color: #ef4444; }
+.context-menu-item.text-danger:hover { background: #fef2f2; }
+.context-menu-separator {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 8px;
+}
+.context-menu-item i { font-size: 0.9rem; width: 16px; text-align: center; }
 
 .cell { transition: background 0.1s ease, border-color 0.1s ease; }
 .cell-score:hover { background: #f8fafc; }

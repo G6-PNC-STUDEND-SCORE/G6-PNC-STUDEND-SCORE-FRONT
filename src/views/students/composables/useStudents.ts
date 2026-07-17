@@ -1,10 +1,10 @@
 import { ref, computed } from 'vue'
 import {
   getStudents,
-  getStudent,
   createStudent,
   updateStudent,
   deleteStudent,
+  bulkDeleteStudents,
   assignStudentToClass,
   uploadStudentPhoto,
   deleteStudentPhoto,
@@ -13,18 +13,16 @@ import {
 } from '@/services/studentService'
 
 import { classService } from '@/services/classService'
+import { cacheService } from '@/services/cacheService'
 
-let cachedStudents: Student[] | null = null
-let cachedClasses: SchoolClass[] | null = null
-let studentCacheTime = 0
-let classCacheTime = 0
-const CACHE_TTL = 30_000
-
-function isCacheStale(cacheTime: number): boolean {
-  return Date.now() - cacheTime > CACHE_TTL
-}
+const STUDENTS_CACHE_KEY = 'students-data'
+const CLASSES_CACHE_KEY = 'classes-data'
 
 export function useStudents() {
+  // ==================== Data ====================
+  const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
+  const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
+
   const students = ref<Student[]>(cachedStudents ?? [])
   const classes = ref<SchoolClass[]>(cachedClasses ?? [])
   const loading = ref(true)
@@ -33,14 +31,16 @@ export function useStudents() {
   const formSubmitting = ref(false)
   const formError = ref<string | null>(null)
 
-  const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
+const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-  const showCreateModal = ref(false)
-  const showEditModal = ref(false)
-  const showDeleteModal = ref(false)
-  const showAssignModal = ref(false)
-  const showDetailsModal = ref(false)
-  const selectedStudent = ref<Student | null>(null)
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const showBulkDeleteModal = ref(false)
+const showAssignModal = ref(false)
+const showDetailsModal = ref(false)
+const selectedStudent = ref<Student | null>(null)
+const selectedBulkIds = ref<number[]>([])
 
   const genderFilter = ref('')
 
@@ -103,16 +103,10 @@ export function useStudents() {
   }
 
   async function loadStudents() {
-    if (cachedStudents && !isCacheStale(studentCacheTime)) {
-      students.value = cachedStudents
-      loading.value = false
-      return
-    }
     try {
       const res = await getStudents()
-      cachedStudents = res.students
-      studentCacheTime = Date.now()
-      students.value = cachedStudents
+      students.value = res.students.sort((a, b) => b.id - a.id)
+      cacheService.set(STUDENTS_CACHE_KEY, res.students.sort((a, b) => b.id - a.id), 24 * 60 * 60_000)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       error.value = err.response?.data?.message || err.message || 'Failed to load students'
@@ -122,16 +116,12 @@ export function useStudents() {
   }
 
   async function loadClasses() {
-    if (cachedClasses && !isCacheStale(classCacheTime)) {
-      classes.value = cachedClasses
-      return
-    }
     try {
       const response = await classService.getClasses()
       if (response.success) {
-        cachedClasses = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
-        classCacheTime = Date.now()
-        classes.value = cachedClasses
+        const data = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
+        classes.value = data
+        cacheService.set(CLASSES_CACHE_KEY, data, 24 * 60 * 60_000)
       }
     } catch {
       // Non-critical; silently ignore
@@ -139,13 +129,22 @@ export function useStudents() {
   }
 
   async function init() {
-    loading.value = !cachedStudents || isCacheStale(studentCacheTime)
+    // 1. Show cached data INSTANTLY
+    const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
+    const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
+    if (cachedStudents) students.value = cachedStudents
+    if (cachedClasses) classes.value = cachedClasses
+    loading.value = !cachedStudents
+
+    // 2. Refresh from API in background
     await Promise.all([loadStudents(), loadClasses()])
+    loading.value = false
   }
 
+  // Invalidate cache on mutations
   function invalidateStudentCache() {
-    cachedStudents = null
-    studentCacheTime = 0
+    cacheService.remove(STUDENTS_CACHE_KEY)
+    cacheService.remove(CLASSES_CACHE_KEY)
   }
 
   function openCreateModal() {
@@ -171,19 +170,21 @@ export function useStudents() {
       formError.value = 'Password must be at least 8 characters'
       return
     }
-    formSubmitting.value = true
     formError.value = null
+    // Close modal immediately so user feels no delay
+    closeCreateModal()
+    // Save in background — show toast on success, or reopen modal on error
     try {
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
       invalidateStudentCache()
-      closeCreateModal()
       showToast('Student created successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to create student', 'error')
+      // Reopen the form with the error so user can retry
+      showCreateModal.value = true
       formError.value = err.response?.data?.message || err.message || 'Failed to create student'
-    } finally {
-      formSubmitting.value = false
     }
   }
 
@@ -247,6 +248,34 @@ export function useStudents() {
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       formError.value = err.response?.data?.message || err.message || 'Failed to update student'
+    } finally {
+      formSubmitting.value = false
+    }
+  }
+
+  function openBulkDeleteModal(ids: number[]) {
+    selectedBulkIds.value = ids
+    showBulkDeleteModal.value = true
+  }
+
+  function closeBulkDeleteModal() {
+    showBulkDeleteModal.value = false
+    selectedBulkIds.value = []
+  }
+
+  async function handleBulkDelete() {
+    const ids = selectedBulkIds.value
+    if (!ids.length) return
+    formSubmitting.value = true
+    try {
+      await bulkDeleteStudents(ids)
+      students.value = students.value.filter((s) => !ids.includes(s.id))
+      invalidateStudentCache()
+      closeBulkDeleteModal()
+      showToast(`${ids.length} student(s) deleted successfully`)
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
     } finally {
       formSubmitting.value = false
     }
@@ -330,9 +359,11 @@ export function useStudents() {
     showCreateModal,
     showEditModal,
     showDeleteModal,
+    showBulkDeleteModal,
     showAssignModal,
     showDetailsModal,
     selectedStudent,
+    selectedBulkIds,
     genderFilter,
     createForm,
     editForm,
@@ -356,6 +387,9 @@ export function useStudents() {
     openDeleteModal,
     closeDeleteModal,
     handleDelete,
+    openBulkDeleteModal,
+    closeBulkDeleteModal,
+    handleBulkDelete,
     openAssignModal,
     closeAssignModal,
     handleAssign,

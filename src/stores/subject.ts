@@ -25,7 +25,6 @@ export const useSubjectStore = defineStore('subject', () => {
   }
 
   async function fetchSubjects(search?: string, status?: string) {
-    const cacheKey = `${search ?? ''}_${status ?? ''}`
     const now = Date.now()
     if (search === lastSearch && status === lastStatus && subjects.value.length > 0 && (now - subjectsCacheTime) < CACHE_TTL) {
       return
@@ -90,7 +89,7 @@ export const useSubjectStore = defineStore('subject', () => {
     try {
       const response = await subjectService.createSubject(subjectData)
       if (response.success) {
-        subjects.value.push(response.data as Subject)
+        subjects.value.unshift(response.data as Subject)
         subjectsCacheTime = Date.now()
         successMessage.value = response.message || 'Subject created successfully'
         return true

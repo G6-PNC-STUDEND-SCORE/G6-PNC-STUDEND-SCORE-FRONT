@@ -1,10 +1,9 @@
 <template>
-  <Header />
   <div class="px-4 py-4">
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">
-          <i class="bi bi-person-vcard-fill"></i>
+          <UserCheck :size="22" />
         </div>
         <div>
           <h2 class="page-title">Teachers</h2>
@@ -14,7 +13,7 @@
     </div>
     <div class="empty-state">
       <div class="empty-state-icon">
-        <i class="bi bi-people"></i>
+        <Users :size="24" />
       </div>
       <h5>Teacher Management</h5>
       <p class="text-secondary">Teacher management features coming soon.</p>
@@ -23,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import Header from '@/layouts/Header.vue'
+import { UserCheck, Users } from '@lucide/vue'
 </script>
 
 <style scoped>
@@ -84,7 +83,6 @@ import Header from '@/layouts/Header.vue'
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
   margin-bottom: 1rem;
 }
 .empty-state h5 {
