@@ -271,11 +271,11 @@ const selectedBulkIds = ref<number[]>([])
     if (!ids.length) return
     formSubmitting.value = true
     try {
-      await bulkDeleteStudents(ids)
+      const res = await bulkDeleteStudents(ids)
       students.value = students.value.filter((s) => !ids.includes(s.id))
       invalidateStudentCache()
       closeBulkDeleteModal()
-      showToast(`${ids.length} student(s) deleted successfully`)
+      showToast(res.message || 'Student deleted successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
@@ -298,14 +298,23 @@ const selectedBulkIds = ref<number[]>([])
     if (!selectedStudent.value) return
     formSubmitting.value = true
     try {
-      await deleteStudent(selectedStudent.value.id)
+      const res = await deleteStudent(selectedStudent.value.id)
       students.value = students.value.filter((s) => s.id !== selectedStudent.value!.id)
       invalidateStudentCache()
       closeDeleteModal()
-      showToast('Student deleted successfully')
+      showToast(res.message || 'Student deleted successfully')
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string }
-      showToast(err.response?.data?.message || err.message || 'Failed to delete student', 'error')
+      const err = e as { response?: { data?: { message?: string }; status?: number }; message?: string }
+      const msg = err.response?.data?.message || err.message || ''
+      // If already deleted, still clean up and show success
+      if (err.response?.status === 404 || msg.toLowerCase().includes('not found')) {
+        students.value = students.value.filter((s) => s.id !== selectedStudent.value?.id)
+        invalidateStudentCache()
+        closeDeleteModal()
+        showToast('Student deleted successfully')
+      } else {
+        showToast(msg || 'Failed to delete student', 'error')
+      }
     } finally {
       formSubmitting.value = false
     }
