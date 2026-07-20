@@ -2,36 +2,40 @@
   <div class="student-card">
     <!-- Search & Filter Bar -->
     <div class="toolbar">
-      <div class="search-box">
-        <Search :size="16" class="search-icon" />
-        <input
-          :value="searchQuery"
-          @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
-          type="text"
-          class="search-input"
-          placeholder="Search by name..."
-        />
+      <div class="toolbar-left">
+        <div class="search-box">
+          <Search :size="16" class="search-icon" />
+          <input
+            :value="searchQuery"
+            @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
+            type="text"
+            class="search-input"
+            placeholder="Search by name..."
+          />
+        </div>
       </div>
 
-      <div class="filter-group">
-        <label class="filter-label">
-          <VenusAndMars :size="16" />
-          <span>Gender</span>
-          <select
-            :value="genderFilter"
-            @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
-            class="filter-select"
-          >
-            <option value="">All</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </label>
-      </div>
+      <div class="toolbar-right">
+        <div class="filter-group">
+          <label class="filter-label">
+            <VenusAndMars :size="16" />
+            <span>Gender</span>
+            <select
+              :value="genderFilter"
+              @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
+              class="filter-select"
+            >
+              <option value="">All</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </label>
+        </div>
 
-      <span class="count-badge">
-        {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
-      </span>
+        <span class="count-badge">
+          {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
+        </span>
+      </div>
     </div>
 
     <!-- Bulk Delete Bar (appears when rows are selected) -->
@@ -375,6 +379,7 @@ defineEmits<{
 .toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 20px;
@@ -382,10 +387,22 @@ defineEmits<{
   border-bottom: 1px solid #e9ecef;
 }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .search-box {
   position: relative;
-  flex: 1 1 320px;
-  max-width: 520px;
+  width: 260px;
 }
 
 .search-icon {
@@ -453,7 +470,6 @@ defineEmits<{
 }
 
 .count-badge {
-  margin-left: auto;
   font-size: 0.75rem;
   font-weight: 600;
   color: #2563eb;
