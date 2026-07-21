@@ -1,22 +1,24 @@
 <template>
-  <div class="px-4 py-4">
-    <div class="page-header">
-      <div class="page-header-left">
-        <div class="page-header-icon">
-          <Shield :size="22" />
-        </div>
-        <div>
-          <h2 class="page-title">Roles &amp; Permissions</h2>
-          <p class="page-subtitle">Manage roles and access control</p>
+  <div class="roles-page">
+    <div class="px-4 py-4">
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-header-icon">
+            <Shield :size="22" />
+          </div>
+          <div>
+            <h2 class="page-title">Roles &amp; Permissions</h2>
+            <p class="page-subtitle">Manage roles and access control</p>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="empty-state">
-      <div class="empty-state-icon">
-        <Inbox :size="24" />
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <Inbox :size="24" />
+        </div>
+        <h5>Roles &amp; Permissions</h5>
+        <p class="text-secondary">Role management features coming soon.</p>
       </div>
-      <h5>Roles &amp; Permissions</h5>
-      <p class="text-secondary">Role management features coming soon.</p>
     </div>
   </div>
 </template>
@@ -26,6 +28,15 @@ import { Shield, Inbox } from '@lucide/vue'
 </script>
 
 <style scoped>
+.roles-page {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
 .page-header {
   display: flex;
   align-items: center;

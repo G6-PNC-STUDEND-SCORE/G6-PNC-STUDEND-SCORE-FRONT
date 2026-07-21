@@ -1,24 +1,5 @@
 <template>
-  <div class="page-container">
-    <!-- ── Header ── -->
-    <div class="page-head">
-      <div class="page-head-left">
-        <div class="page-icon">
-          <Users :size="22" />
-        </div>
-        <div>
-          <h1 class="page-title">Classes</h1>
-          <p class="page-desc">Manage classes and sections</p>
-        </div>
-      </div>
-      <div class="page-head-right">
-        <button class="btn btn-primary" @click="openAddModal">
-          <Plus :size="16" />
-          <span>Add Class</span>
-        </button>
-      </div>
-    </div>
-
+  <div class="class-page">
     <!-- ── Store Messages ── -->
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
@@ -32,150 +13,242 @@
     </div>
 
     <!-- ── Loading ── -->
-    <div v-if="store.loading" class="load-state">
+    <div v-if="store.loading && store.classes.length === 0" class="load-state">
       <div class="spinner"></div>
       <span>Loading classes…</span>
     </div>
 
-    <!-- ── Content (toolbar + table) ── -->
+    <!-- ── Content ── -->
     <template v-else>
-      <div class="toolbar">
-        <div class="tb-search">
-          <Search :size="16" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search classes..."
-          />
-          <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
-            <X :size="14" />
-          </button>
-        </div>
-        <div class="tb-filter">
-          <select v-model="statusFilter">
-            <option value="">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Class</th>
-            <th>Generation</th>
-            <th>Room</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <TransitionGroup name="row" tag="tbody">
-          <tr v-if="filteredClasses.length === 0" key="empty">
-            <td colspan="5" class="td-empty">
-              <div class="empty-box">
-                <Inbox :size="40" />
-                <h5>No classes found</h5>
-                <p>{{ searchQuery ? 'Try a different search term.' : 'No classes match the current filter.' }}</p>
-              </div>
-            </td>
-          </tr>
-          <tr v-for="cls in paginatedClasses" :key="cls.id">
-            <td class="td-name" @click="openEditModal(cls)">
-              <div class="cls-avatar" :style="{ background: classIconBg() }">
-                <Users :size="16" />
-              </div>
-              <span class="cls-name">{{ cls.name }}</span>
-            </td>
-            <td class="td-meta" @click="openEditModal(cls)">
-              <span class="meta-val">{{ cls.academicYear?.name || '—' }}</span>
-            </td>
-            <td class="td-meta" @click="openEditModal(cls)">
-              <span class="meta-val">{{ cls.room || '—' }}</span>
-            </td>
-            <td class="td-status">
-              <span class="pill" :class="cls.is_active ? 'pill-on' : 'pill-off'">
-                {{ cls.is_active ? 'Active' : 'Inactive' }}
-              </span>
-            </td>
-            <td class="td-actions">
-              <button class="act-btn" @click.stop="openEditModal(cls)" title="Edit">
-                <Pencil :size="15" />
+      <div class="class-card">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="search-box">
+              <Search :size="16" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                class="search-input"
+                placeholder="Search classes..."
+                @input="onSearchInput"
+              />
+              <button v-if="searchQuery" class="tb-clear" @click="clearSearch">
+                <X :size="14" />
               </button>
-              <button class="act-btn act-danger" @click.stop="confirmDelete(cls)" title="Delete">
-                <Trash2 :size="15" />
-              </button>
-            </td>
-          </tr>
-        </TransitionGroup>
-      </table>
-
-      <!-- Pagination -->
-      <div class="pagination-bar">
-        <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
-          <div class="rows-selector">
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">
+                <ToggleLeft :size="16" />
+                <span>Status</span>
+                <select v-model="statusFilter" class="filter-select" @change="onFilterChange">
+                  <option value="">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="toolbar-right">
             <button
-              v-for="size in pageSizeOptions"
-              :key="size"
-              class="rows-btn"
-              :class="{ active: pageSize === size }"
-              @click="pageSize = size; currentPage = 1"
+              class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+              style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+              @click="openAddModal"
             >
-              {{ size }}
+              <Plus :size="15" />
+              Add Class
             </button>
+            <span class="count-badge">
+              {{ store.totalClasses }} class{{ store.totalClasses !== 1 ? 'es' : '' }}
+            </span>
           </div>
         </div>
 
-        <div class="pagination-pages">
-          <button
-            class="page-nav"
-            :disabled="currentPage <= 1"
-            @click="currentPage--"
-            aria-label="Previous page"
-          >
-            <ChevronLeft :size="16" />
+        <!-- Bulk Action Bar -->
+        <div v-if="selectedIds.length > 0" class="bulk-bar">
+          <span class="bulk-count">{{ selectedIds.length }} selected</span>
+          <button class="bulk-delete-btn" @click="confirmBulkDelete">
+            <Trash :size="16" />
+            Delete Selected
           </button>
-
-          <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
-            <button
-              v-if="page !== '...'"
-              class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="currentPage = page as number"
-            >
-              {{ page }}
-            </button>
-            <span v-else class="page-dots">…</span>
-          </template>
-
-          <button
-            class="page-nav"
-            :disabled="currentPage >= totalPages"
-            @click="currentPage++"
-            aria-label="Next page"
-          >
-            <ChevronRight :size="16" />
-          </button>
+          <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
         </div>
 
-        <div class="pagination-total">
-          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredClasses.length) }} of {{ filteredClasses.length }}
+        <!-- Table + Empty State (using v-show to prevent DOM rebuild) -->
+        <div class="table-area">
+          <div class="table-wrap" v-show="store.classes.length > 0">
+            <table class="class-table">
+              <thead>
+                <tr>
+                  <th class="col-check">
+                    <input
+                      type="checkbox"
+                      class="table-checkbox"
+                      :checked="isAllPageSelected"
+                      :indeterminate="isIndeterminate"
+                      @change="toggleSelectAll"
+                    />
+                  </th>
+                  <th class="col-index">#</th>
+                  <th>Class</th>
+                  <th>Generation</th>
+                  <th>Room</th>
+                  <th>Status</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(cls, index) in store.classes"
+                  :key="cls.id"
+                  class="class-row"
+                  :class="{ 'row-selected': selectedIds.includes(cls.id) }"
+                >
+                  <td class="col-check" @click.stop>
+                    <input
+                      type="checkbox"
+                      class="table-checkbox"
+                      :checked="selectedIds.includes(cls.id)"
+                      @change="toggleSelectUser(cls.id)"
+                    />
+                  </td>
+                  <td class="col-index">{{ pagination.from + index }}</td>
+                  <td>
+                    <div class="user-cell">
+                      <div class="class-avatar">
+                        <Users :size="16" />
+                      </div>
+                      <span class="user-name">{{ cls.name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="meta-val">{{ cls.academicYear?.name || '—' }}</span>
+                  </td>
+                  <td>
+                    <span class="meta-val">{{ cls.room || '—' }}</span>
+                  </td>
+                  <td>
+                    <span class="status-badge" :class="cls.is_active ? 'badge-active' : 'badge-inactive'">
+                      {{ cls.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="col-actions" @click.stop>
+                    <div class="action-dropdown">
+                      <button
+                        class="action-trigger"
+                        :title="`Actions for ${cls.name}`"
+                        @click.stop="toggleDropdown(cls.id)"
+                      >
+                        <MoreVertical :size="18" />
+                      </button>
+                      <Transition name="dropdown">
+                        <div v-if="openDropdownId === cls.id" class="action-menu">
+                          <button class="action-item edit" @click.stop="openEditModal(cls); openDropdownId = null">
+                            <Pencil :size="16" />
+                            <span>Edit</span>
+                          </button>
+                          <button class="action-item view" @click.stop="viewClass(cls); openDropdownId = null">
+                            <Eye :size="16" />
+                            <span>View</span>
+                          </button>
+                          <div class="dropdown-divider"></div>
+                          <button class="action-item delete" @click.stop="confirmDelete(cls); openDropdownId = null">
+                            <Trash2 :size="16" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </Transition>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ═══ Empty State ═══ -->
+          <div class="empty-state-standalone" v-show="store.classes.length === 0">
+            <div class="empty-state-inner">
+              <div class="empty-state-icon-box">
+                <div class="empty-state-icon-ring">
+                  <SearchX :size="28" />
+                </div>
+              </div>
+              <div class="empty-state-texts">
+                <h5 class="empty-state-title">No classes found</h5>
+                <p class="empty-state-desc">
+                  <template v-if="searchQuery">We couldn't find any classes matching "<strong>{{ searchQuery }}</strong>". Try adjusting your search or filters.</template>
+                  <template v-else>There are no classes to display yet. Create your first class to get started.</template>
+                </p>
+              </div>
+              <button v-if="searchQuery" class="empty-state-btn" @click="clearSearch">
+                <X :size="14" />
+                <span>Clear search</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span class="rows-label">Rows per page:</span>
+            <div class="rows-selector">
+              <button
+                v-for="size in pageSizeOptions"
+                :key="size"
+                class="rows-btn"
+                :class="{ active: perPage === size }"
+                @click="changePerPage(size)"
+              >
+                {{ size }}
+              </button>
+            </div>
+          </div>
+          <div class="pagination-pages">
+            <button
+              class="page-nav"
+              :disabled="currentPage <= 1"
+              @click="changePage(currentPage - 1)"
+              aria-label="Previous page"
+            >
+              <ChevronLeft :size="16" />
+            </button>
+            <template v-for="page in visiblePages" :key="'vp-' + page">
+              <button
+                v-if="page !== '...'"
+                class="page-btn"
+                :class="{ active: currentPage === page }"
+                @click="changePage(page as number)"
+              >
+                {{ page }}
+              </button>
+              <span v-else class="page-dots">…</span>
+            </template>
+            <button
+              class="page-nav"
+              :disabled="currentPage >= store.lastPage"
+              @click="changePage(currentPage + 1)"
+              aria-label="Next page"
+            >
+              <ChevronRight :size="16" />
+            </button>
+          </div>
+          <div class="pagination-total">
+            {{ store.totalClasses > 0 ? pagination.from : 0 }}-{{ pagination.to }} of {{ store.totalClasses }}
+          </div>
         </div>
       </div>
-    </div>
     </template>
 
     <!-- ── Add / Edit Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showModal" class="overlay" @click.self="closeModal">
-          <div class="modal-card">
+        <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+          <div class="modal-content-panel">
             <div class="modal-head">
-              <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-add'">
-                <SquarePen v-if="isEditMode" :size="20" />
-                <CirclePlus v-else :size="20" />
+              <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-create'">
+                <SquarePen v-if="isEditMode" :size="18" />
+                <CirclePlus v-else :size="18" />
               </div>
               <div>
                 <h3>{{ isEditMode ? 'Edit Class' : 'New Class' }}</h3>
@@ -183,40 +256,53 @@
               </div>
               <button class="modal-x" @click="closeModal">&times;</button>
             </div>
-            <form @submit.prevent="handleSubmit" class="modal-body">
-              <div class="field">
-                <label>Class Name <span class="req">*</span></label>
-                <input v-model="formData.name" :class="{ err: errors.name }" placeholder="e.g. Class A" required />
-                <span v-if="errors.name" class="field-err">{{ errors.name }}</span>
-              </div>
-              <div class="field">
-                <label>Generation <span class="req">*</span></label>
-                <select v-model.number="formData.generation_id" :class="{ err: errors.generation_id }">
-                  <option :value="null">Select generation</option>
-                  <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
-                </select>
-                <span v-if="errors.generation_id" class="field-err">{{ errors.generation_id }}</span>
-              </div>
-              <div class="field">
-                <label>Room</label>
-                <input v-model="formData.room" placeholder="e.g. B12" />
-              </div>
-              <div class="field">
-                <label>Description</label>
-                <textarea v-model="formData.description" placeholder="Optional notes..." rows="3"></textarea>
-              </div>
-              <div class="field">
-                <label>Status</label>
-                <select v-model="formData.is_active">
-                  <option :value="true">Active</option>
-                  <option :value="false">Inactive</option>
-                </select>
+            <form @submit.prevent="handleSubmit">
+              <div class="modal-body-custom">
+                <div class="form-group">
+                  <label class="form-label">Class Name <span class="text-danger">*</span></label>
+                  <div class="input-wrapper">
+                    <input v-model="formData.name" class="modern-input" :class="{ 'input-err': errors.name }" placeholder="e.g. Class A" required />
+                  </div>
+                  <span v-if="errors.name" class="field-err">{{ errors.name }}</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Generation <span class="text-danger">*</span></label>
+                  <div class="input-wrapper">
+                    <select v-model.number="formData.generation_id" class="modern-input" :class="{ 'input-err': errors.generation_id }">
+                      <option :value="null">Select generation</option>
+                      <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
+                    </select>
+                  </div>
+                  <span v-if="errors.generation_id" class="field-err">{{ errors.generation_id }}</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Room</label>
+                  <div class="input-wrapper">
+                    <input v-model="formData.room" class="modern-input" placeholder="e.g. B12" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <div class="input-wrapper">
+                    <textarea v-model="formData.description" class="modern-input" placeholder="Optional notes..." rows="3" style="resize: vertical;"></textarea>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Status</label>
+                  <div class="input-wrapper">
+                    <select v-model="formData.is_active" class="modern-input">
+                      <option :value="true">Active</option>
+                      <option :value="false">Inactive</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="store.loading">
                   <span v-if="store.loading" class="spinner-sm"></span>
-                  {{ isEditMode ? 'Update Class' : 'Create Class' }}
+                  <Check v-else :size="16" />
+                  <span>{{ isEditMode ? 'Update Class' : 'Create Class' }}</span>
                 </button>
               </div>
             </form>
@@ -228,29 +314,60 @@
     <!-- ── Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
-          <div class="modal-card modal-sm">
+        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+          <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon icon-danger">
+              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Class</h3>
+                <h3 style="color: #dc2626;">Delete Class</h3>
                 <p>This action cannot be undone.</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
-            <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ classToDelete?.name }}</strong>?</p>
+            <div class="modal-body" style="padding: 16px 24px 20px;">
+              <p v-if="classToDelete" style="font-size: 0.9rem; color: #475569; margin: 0;">
+                Are you sure you want to delete <strong>{{ classToDelete.name }}</strong>?
+              </p>
+              <p v-else style="font-size: 0.9rem; color: #475569; margin: 0;">
+                Are you sure you want to delete <strong>{{ selectedIds.length }} class(es)</strong>?
+              </p>
+              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; margin: 8px 0 0;">
+                <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
+                <span style="vertical-align: middle;">This class and all associated data will be permanently removed.</span>
+              </p>
             </div>
             <div class="modal-foot">
               <button class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
-              <button class="btn btn-danger" @click="handleDelete" :disabled="store.loading">
+              <button class="btn btn-danger" @click="selectedIds.length > 0 ? handleBulkDelete() : handleDelete()" :disabled="store.loading">
                 <span v-if="store.loading" class="spinner-sm"></span>
-                Delete
+                <Trash2 v-else :size="16" />
+                <span>{{ classToDelete ? 'Delete' : `Delete ${selectedIds.length} class(es)` }}</span>
               </button>
             </div>
           </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ── View Details Modal ── -->
+    <ClassDetailsModal
+      :show="showDetailsModal"
+      :class-data="selectedClassDetails"
+      @close="closeDetailsModal"
+    />
+
+    <!-- ── Toast Notification ── -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div v-if="toast.show" class="toast-notification" :class="toast.type">
+          <div class="toast-icon">
+            <CheckCircleIcon v-if="toast.type === 'success'" :size="18" />
+            <AlertCircle v-else :size="18" />
+          </div>
+          <span class="toast-message">{{ toast.message }}</span>
+          <button class="toast-close" @click="toast.show = false">&times;</button>
         </div>
       </Transition>
     </Teleport>
@@ -258,17 +375,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive, watch } from 'vue'
-
-const currentPage = ref(1)
-const pageSize = ref(10)
-const pageSizeOptions = [10, 25, 50]
+import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
 import { useClassStore } from '@/stores/class'
 import type { SchoolClass } from '@/services/classService'
 import { getAcademicYears } from '@/services/academicYearService'
+import ClassDetailsModal from './ClassDetailsModal.vue'
 import {
-  Users, Plus, AlertTriangle, CheckCircle, Inbox, Pencil, Trash2, SquarePen, CirclePlus,
-  ChevronLeft, ChevronRight, Search, X,
+  Users, Plus, AlertTriangle, CheckCircle, Pencil, Trash2, SquarePen, CirclePlus,
+  ChevronLeft, ChevronRight, Search, SearchX, X, Check, ToggleLeft,
+  MoreVertical, AlertCircle, CheckCircle as CheckCircleIcon, Trash, Eye,
 } from '@lucide/vue'
 
 const store = useClassStore()
@@ -280,40 +395,77 @@ const isEditMode = ref(false)
 const classToDelete = ref<SchoolClass | null>(null)
 const academicYears = ref<{ id: number; name: string }[]>([])
 
-const formData = reactive({
-  name: '',
-  generation_id: null as number | null,
-  room: '',
-  description: '',
-  is_active: true,
-})
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-const errors = reactive({ name: '', generation_id: '' })
+// ─── Toast Notification ────────────────────────────────────────────────
+const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-const classes = computed(() => store.classes)
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  toast.value = { show: true, message, type }
+  setTimeout(() => { toast.value.show = false }, 3000)
+}
 
-const filteredClasses = computed(() => {
-  let list = classes.value
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
+// ─── Dropdown ─────────────────────────────────────────────────────────
+const openDropdownId = ref<number | null>(null)
+
+function toggleDropdown(id: number) {
+  openDropdownId.value = openDropdownId.value === id ? null : id
+}
+
+function handleClickOutside(e: Event) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.action-dropdown') && !target.closest('.action-menu') && !target.closest('.action-trigger')) {
+    openDropdownId.value = null
   }
-  if (statusFilter.value === 'Active') list = list.filter((c) => c.is_active)
-  if (statusFilter.value === 'Inactive') list = list.filter((c) => !c.is_active)
-  return list
-})
+}
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredClasses.value.length / pageSize.value)))
+// ─── View Details Modal ─────────────────────────────────────────────
+const showDetailsModal = ref(false)
+const selectedClassDetails = ref<{
+  id: number
+  name: string
+  generation: string
+  room: string
+  students: number
+  status: string
+  teacher: { id: number; name: string } | null
+} | null>(null)
 
-const paginatedClasses = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredClasses.value.slice(start, end)
+function viewClass(cls: SchoolClass) {
+  selectedClassDetails.value = {
+    id: cls.id,
+    name: cls.name,
+    generation: cls.academicYear?.name || '—',
+    room: cls.room || '—',
+    students: 0,
+    status: cls.is_active ? 'Active' : 'Inactive',
+    teacher: null,
+  }
+  showDetailsModal.value = true
+}
+
+function closeDetailsModal() {
+  showDetailsModal.value = false
+  selectedClassDetails.value = null
+}
+
+// ─── Server-side Pagination ─────────────────────────────────────────
+const currentPage = ref(1)
+const perPage = ref(10)
+const pageSizeOptions = [5, 10, 25, 50]
+
+const pagination = computed(() => {
+  const total = store.totalClasses
+  const page = currentPage.value
+  const size = perPage.value
+  const from = (page - 1) * size + 1
+  const to = Math.min(page * size, total)
+  return { from, to }
 })
 
 const visiblePages = computed(() => {
   const pages: (number | string)[] = []
-  const total = totalPages.value
+  const total = store.lastPage
   const current = currentPage.value
 
   if (total <= 7) {
@@ -330,6 +482,92 @@ const visiblePages = computed(() => {
   pages.push(total)
   return pages
 })
+
+async function loadClasses() {
+  const params: Record<string, string | number> = {
+    page: currentPage.value,
+    per_page: perPage.value,
+  }
+  if (searchQuery.value) params.search = searchQuery.value
+  if (statusFilter.value) params.status = statusFilter.value
+  await store.fetchClasses(params)
+}
+
+function changePage(page: number) {
+  currentPage.value = page
+  loadClasses()
+}
+
+function changePerPage(size: number) {
+  perPage.value = size
+  currentPage.value = 1
+  loadClasses()
+}
+
+function onSearchInput() {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    currentPage.value = 1
+    loadClasses()
+  }, 700)
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  currentPage.value = 1
+  loadClasses()
+}
+
+function onFilterChange() {
+  currentPage.value = 1
+  loadClasses()
+}
+
+// ─── Selection State ──────────────────────────────────────────────────
+const selectedIds = ref<number[]>([])
+
+const isAllPageSelected = computed(() => {
+  return store.classes.length > 0 && store.classes.every(c => selectedIds.value.includes(c.id))
+})
+
+const isIndeterminate = computed(() => {
+  const some = store.classes.some(c => selectedIds.value.includes(c.id))
+  return some && !isAllPageSelected.value
+})
+
+function toggleSelectAll() {
+  if (isAllPageSelected.value) {
+    selectedIds.value = selectedIds.value.filter(id => !store.classes.some(c => c.id === id))
+  } else {
+    const currentIds = new Set(selectedIds.value)
+    store.classes.forEach(c => currentIds.add(c.id))
+    selectedIds.value = Array.from(currentIds)
+  }
+}
+
+function toggleSelectUser(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value.splice(idx, 1)
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = []
+}
+
+// ─── Form State ──────────────────────────────────────────────────────
+const formData = reactive({
+  name: '',
+  generation_id: null as number | null,
+  room: '',
+  description: '',
+  is_active: true,
+})
+
+const errors = reactive({ name: '', generation_id: '' })
 
 function validateForm() {
   let v = true
@@ -373,184 +611,915 @@ async function handleSubmit() {
   if (!validateForm()) return
   if (isEditMode.value && store.currentClass) {
     const ok = await store.updateClass(store.currentClass.id, formData)
-    if (ok) { closeModal(); await store.fetchClasses() }
+    if (ok) { closeModal(); loadClasses(); showToast('Class updated successfully') }
   } else {
     const ok = await store.createClass(formData)
-    if (ok) { closeModal(); await store.fetchClasses() }
+    if (ok) { closeModal(); loadClasses(); showToast('Class created successfully') }
   }
 }
 
 function confirmDelete(cls: SchoolClass) { classToDelete.value = cls; showDeleteModal.value = true }
 function closeDeleteModal() { showDeleteModal.value = false; classToDelete.value = null }
 
+// ─── Bulk Delete ────────────────────────────────────────────────────
+function confirmBulkDelete() {
+  if (selectedIds.value.length === 0) return
+  showDeleteModal.value = true
+}
+
+async function handleBulkDelete() {
+  if (selectedIds.value.length === 0) return
+  const ids = [...selectedIds.value]
+  try {
+    for (const id of ids) {
+      await store.deleteClass(id)
+    }
+    clearSelection()
+    closeDeleteModal()
+    loadClasses()
+    showToast(`${ids.length} class(es) deleted successfully`)
+  } catch {
+    showToast('Failed to delete some classes', 'error')
+  }
+}
+
 async function handleDelete() {
   if (!classToDelete.value) return
   const ok = await store.deleteClass(classToDelete.value.id)
-  if (ok) { closeDeleteModal() }
+  if (ok) {
+    closeDeleteModal()
+    loadClasses()
+    showToast('Class deleted successfully')
+  }
 }
-
-// ─── Reset page on search / filter ────────────────────────────
-watch([searchQuery, statusFilter], () => {
-  currentPage.value = 1
-})
 
 onMounted(async () => {
-  await Promise.all([store.fetchClasses(), loadAcademicYears()])
+  await Promise.all([loadClasses(), loadAcademicYears()])
+  window.addEventListener('click', handleClickOutside)
 })
 
-function classIconBg() {
-  return '#2563eb'
-}
+onUnmounted(() => {
+  window.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
-.page-container { padding: 1rem 1.5rem 2rem; font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif; color: #0f172a; max-width: 1440px; }
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; gap: 16px; flex-wrap: wrap; }
-.page-head-left { display: flex; align-items: center; gap: 14px; }
-.page-icon { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.page-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.025em; }
-.page-desc { font-size: 0.8rem; color: #64748b; margin: 0; }
-.page-head-right { display: flex; align-items: center; gap: 10px; }
+/* ==================== Page Layout ==================== */
+.class-page {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
 
-.msg { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; margin-bottom: 14px; }
+.msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
 .msg-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
 .msg-success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
 .msg-close { margin-left: auto; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.5; padding: 0 4px; }
 .msg-close:hover { opacity: 1; }
 
-.load-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4rem; color: #64748b; }
-.spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
-.spinner-sm { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+.load-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 4rem;
+  color: #64748b;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinner-sm {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.table-wrap { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; }
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl thead th { padding: 12px 16px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left; white-space: nowrap; }
-.tbl tbody tr { transition: background 0.15s; }
-.tbl tbody tr:hover { background: #f8faff; }
-.tbl tbody td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
-.td-empty { text-align: center; padding: 3rem 1rem; }
-.empty-box { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; }
-.empty-box h5 { font-weight: 700; color: #64748b; margin: 0; font-size: 1rem; }
-.empty-box p { font-size: 0.85rem; margin: 0; }
+/* ==================== Card ==================== */
+.class-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: box-shadow 0.25s ease;
+  position: relative;
+}
 
-.td-name { cursor: pointer; }
-.cls-avatar { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; margin-right: 8px; vertical-align: middle; }
-.cls-name { font-weight: 600; font-size: 0.9rem; color: #0f172a; }
-.td-meta { cursor: pointer; }
-.meta-val { font-size: 0.82rem; color: #64748b; }
+.class-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
 
-.pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; }
-.pill-on { background: #dcfce7; color: #16a34a; }
-.pill-off { background: #f1f5f9; color: #94a3b8; }
-
-.td-actions { white-space: nowrap; }
-.act-btn { background: none; border: none; padding: 5px 6px; border-radius: 6px; cursor: pointer; color: #94a3b8; transition: all 0.15s; }
-.act-btn:hover { background: #f1f5f9; color: #3b82f6; }
-.act-danger:hover { background: #fef2f2; color: #ef4444; }
-
-.overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
-.modal-card { background: #fff; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; animation: modal-in 0.25s ease-out; }
-.modal-sm { max-width: 380px; }
-@keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
-.modal-head { display: flex; align-items: flex-start; gap: 14px; padding: 20px 24px 0; position: relative; }
-.modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
-.modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
-.modal-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
-.icon-add { background: #dbeafe; color: #2563eb; }
-.icon-edit { background: #fef3c7; color: #d97706; }
-.icon-danger { background: #fee2e2; color: #ef4444; }
-.modal-x { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px; }
-.modal-x:hover { color: #475569; }
-.modal-body { padding: 16px 24px 20px; }
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
-.req { color: #ef4444; }
-.field input, .field select, .field textarea { width: 100%; padding: 8px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; box-sizing: border-box; font-family: inherit; background: #fff; color: #0f172a; }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.field input.err, .field select.err { border-color: #ef4444; }
-.field-err { display: block; font-size: 0.75rem; color: #ef4444; margin-top: 3px; font-weight: 500; }
-.del-text { font-size: 0.9rem; color: #475569; margin: 0; }
-.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px 20px; }
-
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 0.5rem 1.125rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
-.btn-primary { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
-.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-ghost { background: #f1f5f9; color: #475569; }
-.btn-ghost:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
-
+/* ==================== Toolbar ==================== */
 .toolbar {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
 }
-.tb-search {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 14px; height: 38px;
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
-  min-width: 200px; flex: 1; max-width: 320px;
-  transition: border-color 0.2s;
-}
-.tb-search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.tb-search svg { color: #94a3b8; flex-shrink: 0; }
-.tb-search input {
-  border: none; background: transparent; outline: none;
-  width: 100%; font-size: 0.85rem; color: #1e293b; font-family: inherit;
-}
-.tb-search input::placeholder { color: #94a3b8; }
-.tb-clear { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; }
-.tb-filter select {
-  height: 38px; padding: 0 12px; border: 1.5px solid #e2e8f0;
-  border-radius: 10px; background: #fff; font-size: 0.85rem;
-  color: #475569; cursor: pointer; outline: none; font-family: inherit;
-}
-.tb-filter select:focus { border-color: #93c5fd; }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
 
-.modal-enter-active, .modal-leave-active { transition: all 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.96); }
-.row-enter-active, .row-leave-active { transition: all 0.3s ease; }
-.row-enter-from { opacity: 0; transform: translateX(-20px); }
-.row-leave-to { opacity: 0; transform: translateX(20px); }
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
 
-/* ══════════════════════════════════════════════════════════════
-   PAGINATION
-   ══════════════════════════════════════════════════════════════ */
+.search-box {
+  position: relative;
+  width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.6rem 0.9rem 0.6rem 2.4rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: #1f2937;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input::placeholder { color: #9ca3af; }
+.search-input:hover { border-color: #cbd5e1; }
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.tb-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.filter-label:hover { border-color: #cbd5e1; }
+.filter-label :deep(svg) { color: #94a3b8; }
+
+.filter-select {
+  border: none;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #334155;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.count-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 0.4rem 0.85rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+/* ==================== Table Area ==================== */
+.table-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+/* ==================== Table ==================== */
+.table-wrap {
+  width: 100%;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  height: 1px;
+  max-height: calc(100vh - 200px);
+  min-height: 100px;
+}
+
+.class-table {
+  width: 100%;
+  height: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.class-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.col-check {
+  width: 48px;
+  text-align: center;
+  padding: 12px 8px !important;
+}
+
+.class-table thead th.col-check,
+.class-table tbody td.col-check {
+  text-align: center;
+  padding: 12px 8px !important;
+  vertical-align: middle;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+}
+
+.col-index {
+  width: 64px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.col-actions {
+  text-align: right;
+  padding-right: 20px !important;
+  width: 80px;
+}
+
+.class-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f3f5;
+  color: #475569;
+  vertical-align: middle;
+  font-weight: 500;
+}
+
+.class-table tbody td.col-actions {
+  overflow: visible;
+}
+
+.class-table tbody tr:last-child td { border-bottom: none; }
+
+.row-selected {
+  background: #f0f5ff !important;
+  border-left-color: #2563eb !important;
+}
+
+.empty-state-standalone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  min-height: 200px;
+}
+
+.empty-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  max-width: 400px;
+}
+
+.empty-state-icon-box {
+  margin-bottom: 4px;
+}
+
+.empty-state-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  position: relative;
+}
+
+.empty-state-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(37, 99, 235, 0.08);
+}
+
+.empty-state-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+  font-size: 0.8375rem;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.empty-state-desc strong {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.empty-state-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.class-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.user-name {
+  font-weight: 500;
+  color: #0f172a;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta-val {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 100px;
+  letter-spacing: 0.01em;
+}
+
+.badge-active { background: #dcfce7; color: #16a34a; }
+.badge-inactive { background: #f1f5f9; color: #64748b; }
+
+/* ==================== Bulk Action Bar ==================== */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulk-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.bulk-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.bulk-delete-btn:hover { background: #dc2626; }
+
+.bulk-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+/* ==================== Pagination ==================== */
 .pagination-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px; border-top: 1px solid #e5e7eb;
-  background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
-  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafbfc;
+  font-size: 0.8125rem;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: auto;
 }
+
 .pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
 .rows-label { font-weight: 500; white-space: nowrap; }
-.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+
+.rows-selector {
+  display: flex;
+  gap: 2px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+}
+
 .rows-btn {
-  padding: 4px 10px; border: none; background: transparent;
-  color: #64748b; border-radius: 6px; cursor: pointer;
-  font-size: 0.75rem; font-weight: 600; font-family: inherit;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
   transition: all 0.15s ease;
 }
+
 .rows-btn:hover { color: #334155; }
-.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+
 .pagination-pages { display: flex; align-items: center; gap: 2px; }
+
 .page-nav {
-  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-  border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: #fff; color: #64748b;
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.15s ease;
 }
 .page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
 .page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .page-btn {
-  min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; color: #475569;
-  border-radius: 8px; cursor: pointer; font-size: 0.8125rem;
-  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
+  border-radius: 8px; cursor: pointer;
+  font-size: 0.8125rem; font-weight: 500;
+  font-family: inherit; transition: all 0.15s ease;
 }
 .page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
-.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
+.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); }
+
 .page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
 .pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+
+/* ==================== Modal Styles ==================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(6px);
+  padding: 1rem;
+}
+
+.modal-content-panel {
+  background: #fff;
+  border-radius: 16px;
+  width: 480px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  animation: modal-in 0.25s ease-out;
+  font-family: inherit;
+}
+
+@keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 24px 0;
+  position: relative;
+}
+.modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
+.modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
+
+.modal-x {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+.modal-x:hover { color: #475569; }
+
+.modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.icon-create { background: #dbeafe; color: #2563eb; }
+.icon-edit { background: #fef3c7; color: #d97706; }
+
+.modal-body-custom { padding: 16px 24px 20px; }
+.modal-body { padding: 16px 24px; }
+
+.form-group { margin-bottom: 14px; }
+
+.form-label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+.input-wrapper { position: relative; }
+
+.modern-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  font-family: inherit;
+  color: #0f172a;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.15s;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.modern-input:hover { border-color: #9ca3af; }
+.modern-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+.modern-input::placeholder { color: #94a3b8; }
+
+.input-err { border-color: #ef4444; }
+.field-err { display: block; font-size: 0.75rem; color: #ef4444; margin-top: 4px; }
+
+select.modern-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 2.4rem;
+}
+
+.text-danger { color: #ef4444; }
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 24px 20px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 1.125rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover { background: #dc2626; }
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-ghost { background: #f1f5f9; color: #475569; }
+.btn-ghost:hover { background: #e2e8f0; }
+
+/* ==================== Action Dropdown ==================== */
+.action-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.action-trigger {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-trigger:hover {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.action-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 170px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 100;
+  animation: dropIn 0.18s ease-out;
+  transform-origin: top right;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dropdown-enter-active { transition: all 0.18s ease-out; }
+.dropdown-leave-active { transition: all 0.12s ease-in; }
+.dropdown-enter-from { opacity: 0; transform: scale(0.92) translateY(-6px); }
+.dropdown-leave-to { opacity: 0; transform: scale(0.95) translateY(-3px); }
+
+.action-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  text-align: left;
+  color: #374151;
+}
+
+.action-item:hover { background: #f0f5ff; color: #2563eb; }
+.action-item.edit:hover { background: #fef3c7; color: #d97706; }
+.action-item.view:hover { background: #dbeafe; color: #2563eb; }
+.action-item.delete { color: #ef4444; }
+.action-item.delete:hover { background: #fef2f2; color: #dc2626; }
+
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 8px;
+}
+
+/* ==================== Toast ==================== */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  z-index: 99999;
+  max-width: 400px;
+  animation: toastPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-left: 4px solid transparent;
+}
+
+.toast-notification.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border-left-color: #10b981;
+  border-top: 1px solid #a7f3d0;
+  border-right: 1px solid #a7f3d0;
+  border-bottom: 1px solid #a7f3d0;
+}
+
+.toast-notification.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border-left-color: #ef4444;
+  border-top: 1px solid #fecaca;
+  border-right: 1px solid #fecaca;
+  border-bottom: 1px solid #fecaca;
+}
+
+.toast-icon { display: flex; flex-shrink: 0; }
+.toast-notification.success .toast-icon svg { color: #10b981; }
+.toast-notification.error .toast-icon svg { color: #ef4444; }
+
+.toast-message { flex: 1; line-height: 1.4; }
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.5;
+  margin-left: auto;
+  padding: 0 4px;
+  line-height: 1;
+}
+.toast-close:hover { opacity: 1; }
+
+@keyframes toastPop {
+  0% { opacity: 0; transform: scale(0.85) translateY(-10px); }
+  60% { transform: scale(1.03) translateY(2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.toast-enter-active { transition: all 0.3s ease-out; }
+.toast-leave-active { transition: all 0.2s ease-in; }
+.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
+
+.modal-enter-active { transition: all 0.25s ease-out; }
+.modal-leave-active { transition: all 0.15s ease-in; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
 </style>

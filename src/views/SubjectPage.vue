@@ -69,192 +69,202 @@
       </div>
     </div>
 
-    <!-- ── Toolbar ── -->
-    <div class="toolbar">
-      <div class="tb-search">
-        <Search :size="16" />
-        <input
-          v-model="searchQuery"
-          @input="handleSearch"
-          type="text"
-          placeholder="Search subjects..."
-        />
-        <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''; handleSearch()">
-          <X :size="14" />
-        </button>
+    <!-- ── Card (wraps toolbar + table + pagination, like Classes page) ── -->
+    <div class="subject-card">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="tb-search">
+          <Search :size="16" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search subjects..."
+          />
+          <button v-if="searchQuery" class="tb-clear" @click="clearSearch">
+            <X :size="14" />
+          </button>
+        </div>
+        <div class="tb-filter">
+          <select v-model="statusFilter">
+            <option value="">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="tb-chips">
+          <button
+            v-for="term in terms"
+            :key="term.id"
+            class="chip"
+            :class="{ 'chip-on': activeTermFilter === term.id }"
+            @click="activeTermFilter = activeTermFilter === term.id ? null : term.id"
+          >
+            {{ term.name }}
+          </button>
+        </div>
       </div>
-      <div class="tb-filter">
-        <select v-model="statusFilter" @change="handleFilter">
-          <option value="">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
+
+      <!-- ── Loading Overlay ── -->
+      <div v-if="loading && subjects.length === 0" class="loading-overlay">
+        <div class="loading-spinner-wrap">
+          <div class="spinner"></div>
+          <span>Loading subjects…</span>
+        </div>
       </div>
-      <div class="tb-chips">
-        <button
-          v-for="term in terms"
-          :key="term.id"
-          class="chip"
-          :class="{ 'chip-on': activeTermFilter === term.id }"
-          @click="activeTermFilter = activeTermFilter === term.id ? null : term.id"
-        >
-          {{ term.name }}
-        </button>
-      </div>
-    </div>
 
-    <!-- ── Loading ── -->
-    <div v-if="loading" class="load-state">
-      <div class="spinner"></div>
-      <span>Loading subjects…</span>
-    </div>
-
-    <!-- ── Table ── -->
-    <div v-else class="table-wrap">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th class="th-subject">Subject</th>
-            <th class="th-teacher">Teacher</th>
-            <th class="th-class">Class</th>
-            <th class="th-terms">Terms</th>
-            <th class="th-status">Status</th>
-            <th class="th-actions">Actions</th>
-          </tr>
-        </thead>
-        <TransitionGroup name="row" tag="tbody">
-          <tr v-if="filteredSubjects.length === 0" key="empty">
-            <td colspan="6" class="td-empty">
-              <div class="empty-box">
-                <Inbox :size="40" />
-                <h5>No subjects found</h5>
-                <p>{{ searchQuery ? 'Try a different search term.' : 'No subjects match the current filter.' }}</p>
-              </div>
-            </td>
-          </tr>
-          <tr v-for="subject in paginatedSubjects" :key="subject.id">
-            <!-- Subject -->
-            <td class="td-subject" @click="openEditModal(subject)">
-              <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
-                <BookOpen :size="16" />
-              </div>
-              <span class="subj-name">{{ subject.name }}</span>
-            </td>
-            <!-- Teacher -->
-            <td class="td-meta" @click="openEditModal(subject)">
-              <div v-if="teacherNamesForSubject(subject).length === 0" class="meta-val">—</div>
-              <div v-else class="teacher-stack">
-                <span class="meta-val">{{ teacherNamesForSubject(subject).slice(0, 2).join(' & ') }}</span>
-                <span
-                  v-if="teacherNamesForSubject(subject).length > 2"
-                  class="teacher-more-chip"
-                  :title="teacherNamesForSubject(subject).join(', ')"
-                >
-                  +{{ teacherNamesForSubject(subject).length - 2 }} more
-                </span>
-              </div>
-            </td>
-            <!-- Class -->
-            <td class="td-meta" @click="openEditModal(subject)">
-              <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
-              <div v-else class="teacher-stack">
-                <span class="meta-val">{{ classNamesForSubject(subject).slice(0, 2).join(', ') }}</span>
-                <span
-                  v-if="classNamesForSubject(subject).length > 2"
-                  class="teacher-more-chip"
-                  :title="classNamesForSubject(subject).join(', ')"
-                >
-                  +{{ classNamesForSubject(subject).length - 2 }} more
-                </span>
-              </div>
-            </td>
-            <!-- Term Toggles -->
-            <td class="td-terms">
-              <div class="tog-group" @click.stop>
-                <button
-                  v-for="term in terms"
-                  :key="term.id"
-                  class="tog"
-                  :class="{ 'tog-on': subject.term_ids.includes(term.id) }"
-                  @click="toggleTerm(subject, term.id)"
-                >
-                  <CheckCircle v-if="subject.term_ids.includes(term.id)" :size="14" />
-                  <Circle v-else :size="14" />
-                  <span>{{ term.name }}</span>
-                </button>
-              </div>
-            </td>
-            <!-- Status -->
-            <td class="td-status">
-              <span class="pill" :class="subject.status === 'Active' ? 'pill-on' : 'pill-off'">
-                {{ subject.status }}
-              </span>
-            </td>
-            <!-- Actions -->
-            <td class="td-actions">
-              <button class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
-                <Pencil :size="15" />
-              </button>
-              <button class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
-                <Trash2 :size="15" />
-              </button>
-            </td>
-          </tr>
-        </TransitionGroup>
-      </table>
-
-      <!-- Pagination -->
-      <div class="pagination-bar">
-        <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
-          <div class="rows-selector">
-            <button
-              v-for="size in pageSizeOptions"
-              :key="size"
-              class="rows-btn"
-              :class="{ active: pageSize === size }"
-              @click="pageSize = size; currentPage = 1"
-            >
-              {{ size }}
-            </button>
+      <!-- ── Table + Empty State ── -->
+      <div class="table-area">
+        <Transition name="view-fade" mode="out-in">
+          <div v-if="filteredSubjects.length > 0" class="table-wrap-inner" key="table">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th class="th-subject">Subject</th>
+                  <th class="th-teacher">Teacher</th>
+                  <th class="th-class">Class</th>
+                  <th class="th-terms">Terms</th>
+                  <th class="th-status">Status</th>
+                  <th class="th-actions">Actions</th>
+                </tr>
+              </thead>
+              <TransitionGroup name="row" tag="tbody">
+                <tr v-for="subject in paginatedSubjects" :key="subject.id">
+                  <!-- Subject -->
+                  <td class="td-subject" @click="openEditModal(subject)">
+                    <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
+                      <BookOpen :size="16" />
+                    </div>
+                    <span class="subj-name">{{ subject.name }}</span>
+                  </td>
+                  <!-- Teacher -->
+                  <td class="td-meta" @click="openEditModal(subject)">
+                    <div v-if="teacherNamesForSubject(subject).length === 0" class="meta-val">—</div>
+                    <div v-else class="teacher-stack">
+                      <span class="meta-val">{{ teacherNamesForSubject(subject).slice(0, 2).join(' & ') }}</span>
+                      <span
+                        v-if="teacherNamesForSubject(subject).length > 2"
+                        class="teacher-more-chip"
+                        :title="teacherNamesForSubject(subject).join(', ')"
+                      >
+                        +{{ teacherNamesForSubject(subject).length - 2 }} more
+                      </span>
+                    </div>
+                  </td>
+                  <!-- Class -->
+                  <td class="td-meta" @click="openEditModal(subject)">
+                    <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
+                    <div v-else class="teacher-stack">
+                      <span class="meta-val">{{ classNamesForSubject(subject).slice(0, 2).join(', ') }}</span>
+                      <span
+                        v-if="classNamesForSubject(subject).length > 2"
+                        class="teacher-more-chip"
+                        :title="classNamesForSubject(subject).join(', ')"
+                      >
+                        +{{ classNamesForSubject(subject).length - 2 }} more
+                      </span>
+                    </div>
+                  </td>
+                  <!-- Term Toggles -->
+                  <td class="td-terms">
+                    <div class="tog-group" @click.stop>
+                      <button
+                        v-for="term in terms"
+                        :key="term.id"
+                        class="tog"
+                        :class="{ 'tog-on': subject.term_ids.includes(term.id) }"
+                        @click="toggleTerm(subject, term.id)"
+                      >
+                        <CheckCircle v-if="subject.term_ids.includes(term.id)" :size="14" />
+                        <Circle v-else :size="14" />
+                        <span>{{ term.name }}</span>
+                      </button>
+                    </div>
+                  </td>
+                  <!-- Status -->
+                  <td class="td-status">
+                    <span class="pill" :class="subject.status === 'Active' ? 'pill-on' : 'pill-off'">
+                      {{ subject.status }}
+                    </span>
+                  </td>
+                  <!-- Actions -->
+                  <td class="td-actions">
+                    <button class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
+                      <Pencil :size="15" />
+                    </button>
+                    <button class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
+                      <Trash2 :size="15" />
+                    </button>
+                  </td>
+                </tr>
+              </TransitionGroup>
+            </table>
           </div>
-        </div>
+          <div v-else class="empty-wrap-inner" key="empty">
+            <div class="empty-state-standalone">
+              <div class="empty-state-icon-ring">
+                <BookOpen :size="32" />
+              </div>
+              <h3 class="empty-state-title">No subjects found</h3>
+              <p class="empty-state-desc">
+                {{ searchQuery ? `No subjects matching "${searchQuery}"` : 'No subjects match the current filter.' }}
+              </p>
+              <button v-if="searchQuery || statusFilter || activeTermFilter" class="empty-state-btn" @click="clearAllFilters">
+                <X :size="14" />
+                Clear filters
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
 
-        <div class="pagination-pages">
+      <!-- Pagination (inside card, like Classes/Users pages) -->
+      <div class="pagination-bar">
+      <div class="pagination-info">
+        <span class="rows-label">Rows per page:</span>
+        <div class="rows-selector">
           <button
-            class="page-nav"
-            :disabled="currentPage <= 1"
-            @click="currentPage--"
-            aria-label="Previous page"
+            v-for="size in pageSizeOptions"
+            :key="size"
+            class="rows-btn"
+            :class="{ active: pageSize === size }"
+            @click="pageSize = size; currentPage = 1"
           >
-            <ChevronLeft :size="16" />
+            {{ size }}
           </button>
-
-          <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
-            <button
-              v-if="page !== '...'"
-              class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="currentPage = page as number"
-            >
-              {{ page }}
-            </button>
-            <span v-else class="page-dots">…</span>
-          </template>
-
+        </div>
+      </div>
+      <div class="pagination-pages">
+        <button
+          class="page-nav"
+          :disabled="currentPage <= 1"
+          @click="currentPage--"
+          aria-label="Previous page"
+        >
+          <ChevronLeft :size="16" />
+        </button>
+        <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
           <button
-            class="page-nav"
-            :disabled="currentPage >= totalPages"
-            @click="currentPage++"
-            aria-label="Next page"
+            v-if="page !== '...'"
+            class="page-btn"
+            :class="{ active: currentPage === page }"
+            @click="currentPage = page as number"
           >
-            <ChevronRight :size="16" />
+            {{ page }}
           </button>
-        </div>
-
-        <div class="pagination-total">
-          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} of {{ filteredSubjects.length }}
-        </div>
+          <span v-else class="page-dots">…</span>
+        </template>
+        <button
+          class="page-nav"
+          :disabled="currentPage >= totalPages"
+          @click="currentPage++"
+          aria-label="Next page"
+        >
+          <ChevronRight :size="16" />
+        </button>
+      </div>
+      <div class="pagination-total">
+        {{ filteredSubjects.length > 0 ? (currentPage - 1) * pageSize + 1 : 0 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} of {{ filteredSubjects.length }}
+      </div>
       </div>
     </div>
 
@@ -409,7 +419,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed, watch, type Component } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
 import type { Subject } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
@@ -430,7 +440,6 @@ import {
   CheckCircle,
   Search,
   X,
-  Inbox,
   Circle,
   SquarePen,
   CirclePlus,
@@ -477,7 +486,6 @@ const store = useSubjectStore()
 const searchQuery = ref('')
 const statusFilter = ref('')
 const activeTermFilter = ref<number | null>(null)
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 // ─── Term State ────────────────────────────────────────────────────
 const loading = ref(false)
@@ -493,8 +501,6 @@ const toast = reactive({
   type: 'success' as 'success' | 'error',
   icon: CheckCircle,
 })
-
-const toastIconComponent = computed(() => toast.type === 'success' ? CheckCircle : AlertTriangle)
 
 // ─── CRUD State ────────────────────────────────────────────────────
 const teachers = ref<{ id: number; name: string }[]>([])
@@ -562,10 +568,6 @@ function subjectsInTerm(tid: number) {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
-function getSubjectIcon(_name: string): Component {
-  return BookOpen
-}
-
 function subjectIconBg(_name: string): string {
   return '#2563eb'
 }
@@ -646,10 +648,18 @@ watch([searchQuery, statusFilter, activeTermFilter], () => {
   currentPage.value = 1
 })
 
-// ─── CRUD ──────────────────────────────────────────────────────────
-function handleSearch() {}
-function handleFilter() {}
+// ─── Filter helpers ────────────────────────────────────────────
+function clearSearch() {
+  searchQuery.value = ''
+}
 
+function clearAllFilters() {
+  searchQuery.value = ''
+  statusFilter.value = ''
+  activeTermFilter.value = null
+}
+
+// ─── CRUD ──────────────────────────────────────────────────────────
 function openAddModal() {
   isEditMode.value = false
   Object.assign(formData, { name: '', teacher_ids: [], class_ids: [], status: 'Active', term_ids: [] })
@@ -696,7 +706,6 @@ async function handleSubmit() {
     })
     if (!store.error) {
       closeModal(); await store.fetchSubjects(); await loadTermData()
-      // Store already sets successMessage — no duplicate toast needed
     }
   } else {
     await store.createSubject({
@@ -709,7 +718,6 @@ async function handleSubmit() {
       closeModal()
       await store.fetchSubjects()
       await loadTermData()
-      // Store already sets successMessage — no duplicate toast needed
       // Assign terms to the newly created subject if any were picked.
       if (formData.term_ids.length) {
         const subj = store.subjects.find((s: any) => s.name === formData.name)
@@ -731,7 +739,6 @@ async function handleDelete() {
     // Also remove from local subjects list (different from store.subjects)
     subjects.value = subjects.value.filter(s => s.id !== targetId)
     closeDeleteModal()
-    // Store already sets successMessage — no duplicate toast needed
   }
 }
 
@@ -787,10 +794,16 @@ onMounted(async () => {
    GLOBAL
    ══════════════════════════════════════════════════════════════ */
 .page-container {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
   padding: 1rem 1.5rem 2rem;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
   max-width: 1440px;
+  position: relative;
 }
 
 .page-icon {
@@ -942,12 +955,27 @@ onMounted(async () => {
 .chip-on { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
 
 /* ══════════════════════════════════════════════════════════════
-   LOADING
+   LOADING OVERLAY
    ══════════════════════════════════════════════════════════════ */
-.load-state {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  padding: 4rem; color: #64748b;
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(2px);
+  z-index: 5;
+  border-radius: 14px;
 }
+.loading-spinner-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+}
+
 .spinner {
   width: 30px; height: 30px;
   border: 3px solid #e2e8f0; border-top-color: #3b82f6;
@@ -958,11 +986,41 @@ onMounted(async () => {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══════════════════════════════════════════════════════════════
-   TABLE
+   TABLE AREA
    ══════════════════════════════════════════════════════════════ */
-.table-wrap {
-  background: #fff; border-radius: 14px;
-  border: 1px solid #e2e8f0; overflow: hidden;
+.table-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SUBJECT CARD (wraps toolbar + table + pagination)
+   ══════════════════════════════════════════════════════════════ */
+.subject-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+.table-wrap-inner {
+  flex: 1;
+  overflow: auto;
+}
+
+.empty-wrap-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .tbl { width: 100%; border-collapse: collapse; }
@@ -1026,10 +1084,84 @@ onMounted(async () => {
 .act-btn:hover { background: #f1f5f9; color: #3b82f6; }
 .act-danger:hover { background: #fef2f2; color: #ef4444; }
 
-.td-empty { text-align: center; padding: 3rem 1rem; }
-.empty-box { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; }
-.empty-box h5 { font-weight: 700; color: #64748b; margin: 0; font-size: 1rem; }
-.empty-box p { font-size: 0.85rem; margin: 0; }
+/* ══════════════════════════════════════════════════════════════
+   EMPTY STATE (standalone, outside table)
+   ══════════════════════════════════════════════════════════════ */
+.empty-state-standalone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 200px;
+  padding: 48px 24px;
+  gap: 8px;
+}
+
+.empty-state-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6366f1;
+  box-shadow: 0 4px 12px rgba(99,102,241,0.12);
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.empty-state-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid rgba(99,102,241,0.1);
+}
+
+.empty-state-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.empty-state-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 7px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.empty-state-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+.empty-state-btn:active {
+  transform: scale(0.97);
+}
 
 /* ══════════════════════════════════════════════════════════════
    MODAL
@@ -1151,6 +1283,20 @@ onMounted(async () => {
 .row-leave-to { opacity: 0; transform: translateX(20px); }
 .row-move { transition: transform 0.3s ease; }
 
+/* View fade transition for table <-> empty state swap */
+.view-fade-enter-active,
+.view-fade-leave-active {
+  transition: all 0.2s ease;
+}
+.view-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.view-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 /* ══════════════════════════════════════════════════════════════
    TOAST BAR
    ══════════════════════════════════════════════════════════════ */
@@ -1190,6 +1336,8 @@ onMounted(async () => {
   padding: 12px 20px; border-top: 1px solid #e5e7eb;
   background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
   font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: auto;
 }
 .pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
 .rows-label { font-weight: 500; white-space: nowrap; }

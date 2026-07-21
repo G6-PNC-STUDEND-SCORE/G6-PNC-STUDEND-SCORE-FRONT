@@ -236,7 +236,7 @@
       </div>
 
       <div class="pagination-total">
-        {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, students.length) }} of {{ students.length }}
+        {{ students.length > 0 ? (currentPage - 1) * pageSize + 1 : 0 }}-{{ Math.min(currentPage * pageSize, students.length) }} of {{ students.length }}
       </div>
     </div>
   </div>

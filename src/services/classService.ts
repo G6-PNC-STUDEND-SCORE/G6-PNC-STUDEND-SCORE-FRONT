@@ -25,7 +25,6 @@ export interface SchoolClass {
     year: string
     name: string
   } | null
-  room?: string | null
   students?: number | null
 }
 
@@ -36,69 +35,37 @@ export interface ClassResponse {
   errors?: Record<string, string[]>
 }
 
+export interface PaginatedClasses {
+  current_page: number
+  data: SchoolClass[]
+  from: number
+  last_page: number
+  per_page: number
+  to: number
+  total: number
+}
+
 export interface Teacher {
   id: number
   name: string
 }
 
-const CACHE_KEY = 'classes_cache'
-const CACHE_TTL = 60_000
-
-function readCache(): SchoolClass[] | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY)
-    if (!raw) return null
-    const entry = JSON.parse(raw)
-    if (Date.now() > entry.expiry) { localStorage.removeItem(CACHE_KEY); return null }
-    return entry.data as SchoolClass[]
-  } catch { return null }
-}
-
-function writeCache(data: SchoolClass[]) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, expiry: Date.now() + CACHE_TTL }))
-  } catch { /* ignore */ }
-}
-
 export const classService = {
-  async getClasses(): Promise<ClassResponse> {
-    const cached = readCache()
-    if (cached) {
-      return { success: true, data: cached } as ClassResponse
-    }
-    const response = await http.get('/classes')
-    const data = response.data
-    if (data?.success && Array.isArray(data.data)) writeCache(data.data)
-    return data
+  async getClasses(params?: Record<string, string | number>): Promise<ClassResponse> {
+    const response = await http.get('/classes', { params })
+    return response.data
   },
   async createClass(payload: Partial<SchoolClass>): Promise<ClassResponse> {
     const response = await http.post('/classes', payload)
-    const data = response.data
-    if (data?.success && Array.isArray(data.data)) writeCache(data.data)
-    return data
+    return response.data
   },
   async updateClass(id: number, payload: Partial<SchoolClass>): Promise<ClassResponse> {
     const response = await http.put(`/classes/${id}`, payload)
-    const data = response.data
-    if (data?.success) {
-      const list = readCache()
-      if (Array.isArray(list)) {
-        const idx = list.findIndex(c => c.id === id)
-        const updated = Array.isArray(data.data) ? data.data[0] : (data.data as SchoolClass)
-        if (idx >= 0 && updated) list[idx] = updated
-        writeCache(list)
-      }
-    }
-    return data
+    return response.data
   },
   async deleteClass(id: number): Promise<ClassResponse> {
     const response = await http.delete(`/classes/${id}`)
-    const data = response.data
-    if (data?.success) {
-      const list = readCache()
-      if (Array.isArray(list)) { writeCache(list.filter(c => c.id !== id)) }
-    }
-    return data
+    return response.data
   },
 
   async getTeachers(): Promise<ClassResponse> {

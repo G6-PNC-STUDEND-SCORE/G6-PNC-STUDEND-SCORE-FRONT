@@ -30,7 +30,10 @@ export const useSubjectStore = defineStore('subject', () => {
       return
     }
 
-    loading.value = subjects.value.length === 0
+    // Only show loading for initial page load, NOT for search/filter
+    if (!search && !status) {
+      loading.value = subjects.value.length === 0
+    }
     error.value = null
     clearMessages()
 

@@ -79,7 +79,10 @@ export const useUserStore = defineStore('user', () => {
       return
     }
 
-    loading.value = users.value.length === 0
+    // Only show loading for initial page load, NOT for search/filter/pagination
+    if (!params?.search && !params?.status && !params?.role && !params?.page && !params?.per_page) {
+      loading.value = users.value.length === 0
+    }
     error.value = null
     clearMessages()
 

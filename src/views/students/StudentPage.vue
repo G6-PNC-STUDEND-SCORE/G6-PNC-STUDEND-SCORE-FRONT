@@ -309,6 +309,11 @@ onMounted(() => init())
    GLOBAL
    ══════════════════════════════════════════════════════════════ */
 .page-container {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 1rem 1.5rem 2rem;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
