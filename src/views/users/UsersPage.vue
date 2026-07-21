@@ -1,256 +1,273 @@
-
-
 <template>
   <div class="users-page">
-    <!-- Loading State (only on initial load) -->
-    <div v-if="loading && users.length === 0" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p class="mt-2" style="color: #6b7280;">Loading users...</p>
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
+    <!-- ── Store Messages ── -->
+    <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
-      {{ error }}
+      {{ store.error }}
+      <button class="msg-close" @click="store.clearMessages()">&times;</button>
+    </div>
+    <div v-if="store.successMessage" class="msg msg-success">
+      <CheckCircle :size="16" />
+      {{ store.successMessage }}
+      <button class="msg-close" @click="store.clearMessages()">&times;</button>
     </div>
 
-    <!-- User List -->
-    <div v-else class="user-card">
-      <!-- Store Success Message -->
-      <div v-if="store.successMessage" class="d-flex align-items-center gap-2 p-3" style="font-size: 0.85rem; font-weight: 500; background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; border-bottom: 1px solid #a7f3d0;">
-        <CheckCircle :size="18" />
-        {{ store.successMessage }}
-        <button class="ms-auto bg-transparent border-0 p-0" style="font-size: 1.2rem; color: #065f46; opacity: 0.5; cursor: pointer; line-height: 1;" @click="store.clearMessages()">&times;</button>
-      </div>
+    <!-- ── Loading ── -->
+    <div v-if="loading && users.length === 0" class="load-state">
+      <div class="spinner"></div>
+      <span>Loading users…</span>
+    </div>
 
-      <!-- Search & Filter Toolbar -->
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="search-box">
-            <Search :size="16" class="search-icon" />
-            <input
-              v-model="searchQuery"
-              type="text"
-              class="search-input"
-              placeholder="Search by name or email..."
-              @input="onSearchInput"
-            />
+    <!-- ── Content ── -->
+    <template v-else>
+      <div class="user-card">
+        <!-- Search & Filter Toolbar -->
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="search-box">
+              <Search :size="16" class="search-icon" />
+              <input
+                v-model="searchQuery"
+                type="text"
+                class="search-input"
+                placeholder="Search by name or email..."
+                @input="onSearchInput"
+              />
+              <button v-if="searchQuery" class="tb-clear" @click="clearSearch">
+                <X :size="14" />
+              </button>
+            </div>
+            <div class="filter-group">
+              <label class="filter-label">
+                <ShieldCheck :size="16" />
+                <span>Role</span>
+                <select v-model="roleFilter" class="filter-select" @change="applyFilters">
+                  <option value="">All Roles</option>
+                  <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
+                </select>
+              </label>
+              <label class="filter-label">
+                <ToggleLeft :size="16" />
+                <span>Status</span>
+                <select v-model="statusFilter" class="filter-select" @change="applyFilters">
+                  <option value="">All</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="suspended">Suspended</option>
+                </select>
+              </label>
+            </div>
           </div>
-          <div class="filter-group">
-            <label class="filter-label">
-              <ShieldCheck :size="16" />
-              <span>Role</span>
-              <select v-model="roleFilter" class="filter-select" @change="applyFilters">
-                <option value="">All Roles</option>
-                <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
-              </select>
-            </label>
-            <label class="filter-label">
-              <ToggleLeft :size="16" />
-              <span>Status</span>
-              <select v-model="statusFilter" class="filter-select" @change="applyFilters">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </label>
-          </div>
-        </div>
 
-        <div class="toolbar-right">
-          <button
-            class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
-            style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
-            @click="openCreateModal"
-          >
-            <Plus :size="15" />
-            Add User
-          </button>
-
-          <span class="count-badge">
-            {{ totalUsers }} user{{ totalUsers !== 1 ? 's' : '' }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Bulk Action Bar -->
-      <div v-if="selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
-        <button class="bulk-delete-btn" @click="openBulkDeleteModal">
-          <Trash :size="16" />
-          Delete Selected
-        </button>
-        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
-      </div>
-
-      <!-- Table -->
-      <div class="table-wrap">
-        <table class="user-table">
-          <thead>
-            <tr>
-              <th class="col-check">
-                <input
-                  type="checkbox"
-                  class="table-checkbox"
-                  :checked="isAllPageSelected"
-                  :indeterminate="isIndeterminate"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th class="col-index">#</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Gender</th>
-              <th>Status</th>
-              <th class="col-actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="users.length === 0">
-              <td colspan="8" class="empty-state">
-                <Users :size="28" class="d-block mb-2" style="margin: 0 auto;" />
-                No users found
-              </td>
-            </tr>
-            <tr
-              v-for="(user, index) in users"
-              :key="user.id"
-              class="user-row"
-              :class="[getRowClass(user), { 'row-selected': selectedIds.includes(user.id) }]"
-              @dblclick="openEditModal(user)"
+          <div class="toolbar-right">
+            <button
+              class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+              style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+              @click="openCreateModal"
             >
-              <td class="col-check" @dblclick.stop>
-                <input
-                  type="checkbox"
-                  class="table-checkbox"
-                  :checked="selectedIds.includes(user.id)"
-                  @change="toggleSelectUser(user.id)"
-                />
-              </td>
-              <td class="col-index">{{ pagination.from + index }}</td>
-              <td>
-                <div class="user-cell">
-                  <div class="avatar" :class="getAvatarClass(user)">
-                    {{ getInitials(user.name) }}
-                  </div>
-                  <span class="user-name">{{ user.name }}</span>
-                </div>
-              </td>
-              <td>
-                <span class="email-cell">{{ user.email }}</span>
-              </td>
-              <td>
-                <span class="role-badge" :class="getRoleBadgeClass(user.role?.slug || '')">
-                  {{ user.role?.name || '—' }}
-                </span>
-              </td>
-              <td>
-                <span
-                  class="gender-badge"
-                  :class="getGenderClass(user.gender || '')"
+              <Plus :size="15" />
+              Add User
+            </button>
+
+            <span class="count-badge">
+              {{ totalUsers }} user{{ totalUsers !== 1 ? 's' : '' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Bulk Action Bar -->
+        <div v-if="selectedIds.length > 0" class="bulk-bar">
+          <span class="bulk-count">{{ selectedIds.length }} selected</span>
+          <button class="bulk-delete-btn" @click="openBulkDeleteModal">
+            <Trash :size="16" />
+            Delete Selected
+          </button>
+          <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+        </div>
+
+        <!-- Table + Empty State (using v-show to prevent DOM rebuild) -->
+        <div class="table-area">
+          <div class="table-wrap" v-show="users.length > 0">
+            <table class="user-table">
+              <thead>
+                <tr>
+                  <th class="col-check">
+                    <input
+                      type="checkbox"
+                      class="table-checkbox"
+                      :checked="isAllPageSelected"
+                      :indeterminate="isIndeterminate"
+                      @change="toggleSelectAll"
+                    />
+                  </th>
+                  <th class="col-index">#</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Gender</th>
+                  <th>Status</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(user, index) in users"
+                  :key="user.id"
+                  class="user-row"
+                  :class="[getRowClass(user), { 'row-selected': selectedIds.includes(user.id) }]"
                 >
-                  {{ user.gender || '—' }}
-                </span>
-              </td>
-              <td>
-                <span
-                  class="status-badge"
-                  :class="getStatusClass(user.status)"
-                >
-                  {{ user.status }}
-                </span>
-              </td>
-              <td class="col-actions" @click.stop>
-                <div class="action-dropdown">
-                  <button
-                    class="action-trigger"
-                    :title="`Actions for ${user.name}`"
-                    @click="toggleDropdown(user.id)"
-                  >
-                    <MoreVertical :size="18" />
-                  </button>
-                  <Transition name="dropdown">
-                    <div v-if="openDropdownId === user.id" class="action-menu">
-                      <button class="action-item view" @click="viewUser(user); openDropdownId = null">
-                        <Eye :size="16" />
-                        <span>View Details</span>
-                      </button>
-                      <button class="action-item edit" @click="openEditModal(user); openDropdownId = null">
-                        <Pencil :size="16" />
-                        <span>Edit</span>
-                      </button>
-                      <div class="dropdown-divider"></div>
-                      <button class="action-item delete" @click="openDeleteModal(user); openDropdownId = null">
-                        <Trash2 :size="16" />
-                        <span>Delete</span>
-                      </button>
+                  <td class="col-check" @click.stop>
+                    <input
+                      type="checkbox"
+                      class="table-checkbox"
+                      :checked="selectedIds.includes(user.id)"
+                      @change="toggleSelectUser(user.id)"
+                    />
+                  </td>
+                  <td class="col-index">{{ pagination.from + index }}</td>
+                  <td>
+                    <div class="user-cell">
+                      <div class="user-avatar" :class="getAvatarClass(user)">
+                        {{ getInitials(user.name) }}
+                      </div>
+                      <span class="user-name">{{ user.name }}</span>
                     </div>
-                  </Transition>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                  </td>
+                  <td>
+                    <span class="meta-val">{{ user.email }}</span>
+                  </td>
+                  <td>
+                    <span class="role-badge" :class="getRoleBadgeClass(user.role?.slug || '')">
+                      {{ user.role?.name || '—' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="gender-badge"
+                      :class="getGenderClass(user.gender || '')"
+                    >
+                      {{ user.gender || '—' }}
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      class="status-badge"
+                      :class="getStatusClass(user.status)"
+                    >
+                      {{ user.status }}
+                    </span>
+                  </td>
+                  <td class="col-actions" @click.stop>
+                    <div class="action-dropdown">
+                      <button
+                        class="action-trigger"
+                        :title="`Actions for ${user.name}`"
+                        @click="toggleDropdown(user.id)"
+                      >
+                        <MoreVertical :size="18" />
+                      </button>
+                      <Transition name="dropdown">
+                        <div v-if="openDropdownId === user.id" class="action-menu">
+                          <button class="action-item view" @click="viewUser(user); openDropdownId = null">
+                            <Eye :size="16" />
+                            <span>View Details</span>
+                          </button>
+                          <button class="action-item edit" @click="openEditModal(user); openDropdownId = null">
+                            <Pencil :size="16" />
+                            <span>Edit</span>
+                          </button>
+                          <div class="dropdown-divider"></div>
+                          <button class="action-item delete" @click="openDeleteModal(user); openDropdownId = null">
+                            <Trash2 :size="16" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </Transition>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-      <!-- Pagination -->
-      <div class="pagination-bar">
-        <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
-          <div class="rows-selector">
-            <button
-              v-for="size in pageSizeOptions"
-              :key="size"
-              class="rows-btn"
-              :class="{ active: perPage === size }"
-              @click="changePerPage(size)"
-            >
-              {{ size }}
-            </button>
+          <!-- ═══ Empty State ═══ -->
+          <div class="empty-state-standalone" v-show="users.length === 0">
+            <div class="empty-state-inner">
+              <div class="empty-state-icon-box">
+                <div class="empty-state-icon-ring">
+                  <SearchX :size="28" />
+                </div>
+              </div>
+              <div class="empty-state-texts">
+                <h5 class="empty-state-title">No users found</h5>
+                <p class="empty-state-desc">
+                  <template v-if="searchQuery">We couldn't find any users matching "<strong>{{ searchQuery }}</strong>". Try adjusting your search or filters.</template>
+                  <template v-else>There are no users to display yet. Create your first user to get started.</template>
+                </p>
+              </div>
+              <button v-if="searchQuery || roleFilter || statusFilter" class="empty-state-btn" @click="clearAllFilters">
+                <X :size="14" />
+                <span>Clear all filters</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="pagination-pages">
-          <button
-            class="page-nav"
-            :disabled="currentPage <= 1"
-            @click="changePage(currentPage - 1)"
-            aria-label="Previous page"
-          >
-            <ChevronLeft :size="16" />
-          </button>
+        <!-- Pagination -->
+        <div class="pagination-bar">
+          <div class="pagination-info">
+            <span class="rows-label">Rows per page:</span>
+            <div class="rows-selector">
+              <button
+                v-for="size in pageSizeOptions"
+                :key="size"
+                class="rows-btn"
+                :class="{ active: perPage === size }"
+                @click="changePerPage(size)"
+              >
+                {{ size }}
+              </button>
+            </div>
+          </div>
 
-          <template v-for="page in visiblePages" :key="page">
+          <div class="pagination-pages">
             <button
-              v-if="page !== '...'"
-              class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="changePage(page as number)"
+              class="page-nav"
+              :disabled="currentPage <= 1"
+              @click="changePage(currentPage - 1)"
+              aria-label="Previous page"
             >
-              {{ page }}
+              <ChevronLeft :size="16" />
             </button>
-            <span v-else class="page-dots">…</span>
-          </template>
 
-          <button
-            class="page-nav"
-            :disabled="currentPage >= lastPage"
-            @click="changePage(currentPage + 1)"
-            aria-label="Next page"
-          >
-            <ChevronRight :size="16" />
-          </button>
-        </div>
+            <template v-for="page in visiblePages" :key="'vp-' + page">
+              <button
+                v-if="page !== '...'"
+                class="page-btn"
+                :class="{ active: currentPage === page }"
+                @click="changePage(page as number)"
+              >
+                {{ page }}
+              </button>
+              <span v-else class="page-dots">…</span>
+            </template>
 
-        <div class="pagination-total">
-          {{ pagination.from }}-{{ pagination.to }} of {{ totalUsers }}
+            <button
+              class="page-nav"
+              :disabled="currentPage >= lastPage"
+              @click="changePage(currentPage + 1)"
+              aria-label="Next page"
+            >
+              <ChevronRight :size="16" />
+            </button>
+          </div>
+
+          <div class="pagination-total">
+            {{ totalUsers > 0 ? pagination.from : 0 }}-{{ pagination.to }} of {{ totalUsers }}
+          </div>
         </div>
       </div>
-    </div>
+    </template>
 
     <!-- Create/Edit Modal -->
     <Teleport to="body">
@@ -407,7 +424,7 @@
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding: 16px 24px 20px;">
               <p style="font-size: 0.9rem; color: #475569; margin: 0;">
                 Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?
               </p>
@@ -444,7 +461,7 @@
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="padding: 16px 24px 20px;">
               <p style="font-size: 0.9rem; color: #475569; margin: 0;">
                 Are you sure you want to delete <strong>{{ selectedIds.length }} user(s)</strong>?
               </p>
@@ -453,7 +470,7 @@
                 <span style="vertical-align: middle;">These users, their profiles, and all associated data will be permanently removed.</span>
               </p>
             </div>
-            <div class="modal-foot" style="padding-top: 16px;">
+            <div class="modal-foot">
               <button type="button" class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
               <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleBulkDelete">
                 <span v-if="formSubmitting" class="spinner-sm"></span>
@@ -574,7 +591,7 @@
 </template>
 
 <script setup lang="ts">
-import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash } from '@lucide/vue'
+import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, SearchX } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, type Component } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
@@ -600,7 +617,21 @@ function onSearchInput() {
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
     loadUsers()
-  }, 400)
+  }, 700)
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  currentPage.value = 1
+  loadUsers()
+}
+
+function clearAllFilters() {
+  searchQuery.value = ''
+  roleFilter.value = ''
+  statusFilter.value = ''
+  currentPage.value = 1
+  loadUsers()
 }
 
 function applyFilters() {
@@ -610,7 +641,7 @@ function applyFilters() {
 
 // ─── Pagination ────────────────────────────────────────────────────────
 const currentPage = ref(1)
-const perPage = ref(5)
+const perPage = ref(10)
 const pageSizeOptions = [5, 10, 25, 50]
 
 const pagination = computed(() => {
@@ -665,7 +696,7 @@ function toggleDropdown(id: number) {
 
 function handleClickOutside(e: Event) {
   const target = e.target as HTMLElement
-  if (!target.closest('.action-dropdown') && !target.closest('.action-trigger')) {
+  if (!target.closest('.action-dropdown') && !target.closest('.action-menu') && !target.closest('.action-trigger')) {
     openDropdownId.value = null
   }
 }
@@ -1034,18 +1065,64 @@ onMounted(() => {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  border-radius: 16px;
   overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  padding: 1rem 1.5rem;
 }
 
+.msg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.msg-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+.msg-success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
+.msg-close { margin-left: auto; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.5; padding: 0 4px; }
+.msg-close:hover { opacity: 1; }
+
+.load-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 4rem;
+  color: #64748b;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.spinner-sm {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ==================== Card ==================== */
 .user-card {
   background: #fff;
   border: 1px solid #e9ecef;
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   flex: 1;
@@ -1054,6 +1131,7 @@ onMounted(() => {
   flex-direction: column;
   min-height: 0;
   transition: box-shadow 0.25s ease;
+  position: relative;
 }
 
 .user-card:hover {
@@ -1122,6 +1200,20 @@ onMounted(() => {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
+.tb-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
 .filter-group {
   display: flex;
   align-items: center;
@@ -1167,6 +1259,309 @@ onMounted(() => {
   border-radius: 100px;
   white-space: nowrap;
 }
+
+/* ==================== Table Area ==================== */
+.table-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+/* ==================== Table ==================== */
+.table-wrap {
+  width: 100%;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  height: 1px;
+  max-height: calc(100vh - 200px);
+  min-height: 100px;
+}
+
+.user-table {
+  width: 100%;
+  height: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.user-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.user-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f3f5;
+  color: #475569;
+  vertical-align: middle;
+  font-weight: 500;
+}
+
+.user-table tbody td.col-actions {
+  overflow: visible;
+}
+
+.user-table tbody tr:last-child td { border-bottom: none; }
+
+.col-check {
+  width: 48px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.user-table thead th.col-check,
+.user-table tbody td.col-check {
+  text-align: center;
+  vertical-align: middle;
+  padding: 12px 8px !important;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+}
+
+.col-index {
+  width: 64px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.col-actions {
+  text-align: right;
+  width: 80px;
+  padding-right: 20px !important;
+}
+
+.row-selected {
+  background: #f0f5ff !important;
+  border-left-color: #2563eb !important;
+}
+
+/* ==================== Empty State ==================== */
+.empty-state-standalone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  min-height: 200px;
+}
+
+.empty-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  max-width: 400px;
+}
+
+.empty-state-icon-box {
+  margin-bottom: 4px;
+}
+
+.empty-state-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  position: relative;
+}
+
+.empty-state-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(37, 99, 235, 0.08);
+}
+
+.empty-state-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+  font-size: 0.8375rem;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.empty-state-desc strong {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.empty-state-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* ==================== Cells ==================== */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.675rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
+}
+
+.avatar-admin {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.avatar-teacher {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.avatar-student {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.user-name {
+  font-weight: 500;
+  color: #0f172a;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta-val {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 4px 0 0;
+}
+
+.user-row {
+  transition: background 0.2s ease;
+}
+
+.user-row:hover { background: #f8fafc; }
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 100px;
+  letter-spacing: 0.01em;
+}
+
+.role-admin { background: #dbeafe; color: #1d4ed8; }
+.role-teacher { background: #dbeafe; color: #1d4ed8; }
+.role-student { background: #dbeafe; color: #1d4ed8; }
+
+.gender-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 100px;
+  letter-spacing: 0.01em;
+}
+
+.badge-male { background: #dbeafe; color: #1d4ed8; }
+.badge-female { background: #dbeafe; color: #1d4ed8; }
+.badge-other { background: #dbeafe; color: #1d4ed8; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 100px;
+  letter-spacing: 0.01em;
+}
+
+.badge-active { background: #dcfce7; color: #16a34a; }
+.badge-inactive { background: #f1f5f9; color: #64748b; }
+.badge-suspended { background: #fef2f2; color: #dc2626; }
 
 /* ==================== Bulk Action Bar ==================== */
 .bulk-bar {
@@ -1225,206 +1620,15 @@ onMounted(() => {
 
 .bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
 
-/* ==================== Table ==================== */
-.table-wrap {
-  width: 100%;
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
-  max-height: calc(100vh - 210px);
-}
-
-.user-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.875rem;
-}
-
-.user-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f8fafc;
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-
-.col-check {
-  width: 48px;
-  text-align: center;
-  padding: 12px 8px !important;
-}
-
-.user-table thead th.col-check,
-.user-table tbody td.col-check {
-  text-align: center;
-  padding: 12px 8px !important;
-  vertical-align: middle;
-}
-
-.table-checkbox {
-  width: 16px;
-  height: 16px;
-  accent-color: #2563eb;
-  cursor: pointer;
-  display: block;
-  margin: 0 auto;
-}
-
-.col-index {
-  width: 64px;
-  color: #94a3b8;
-  font-weight: 600;
-}
-
-.col-actions {
-  text-align: right;
-  padding-right: 20px !important;
-  width: 80px;
-}
-
-.user-table tbody td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  color: #475569;
-  vertical-align: middle;
-  font-weight: 500;
-}
-
-
-.user-table tbody tr:last-child td { border-bottom: none; }
-
-.empty-state {
-  text-align: center;
-  padding: 48px 16px !important;
-  color: #9ca3af;
-}
-
-.user-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.avatar-admin {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.avatar-teacher {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.avatar-student {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.user-name {
-  font-weight: 500;
-  color: #0f172a;
-}
-
-.email-cell {
-  font-size: 0.8125rem;
-  color: #64748b;
-}
-
-.field-hint {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin: 4px 0 0;
-}
-
-.user-row {
-  transition: background 0.2s ease, border-left 0.2s ease;
-  border-left: 3px solid transparent;
-}
-
-.user-row:hover { background: #f8fafc; }
-
-.row-selected {
-  background: #f0f5ff !important;
-  border-left-color: #2563eb !important;
-}
-
-.row-admin:hover { border-left-color: #2563eb; background: #eff6ff; }
-.row-teacher:hover { border-left-color: #2563eb; background: #eff6ff; }
-.row-student:hover { border-left-color: #2563eb; background: #eff6ff; }
-
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
-
-.role-admin { background: #dbeafe; color: #1d4ed8; }
-.role-teacher { background: #dbeafe; color: #1d4ed8; }
-.role-student { background: #dbeafe; color: #1d4ed8; }
-
-.gender-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
-
-.badge-male { background: #dbeafe; color: #1d4ed8; }
-.badge-female { background: #dbeafe; color: #1d4ed8; }
-.badge-other { background: #dbeafe; color: #1d4ed8; }
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
-
-.badge-active { background: #dcfce7; color: #16a34a; }
-.badge-inactive { background: #f1f5f9; color: #64748b; }
-.badge-suspended { background: #fef2f2; color: #dc2626; }
-
+/* ==================== Action Dropdown ==================== */
 .action-dropdown {
   position: relative;
   display: inline-flex;
 }
 
 .action-trigger {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1437,9 +1641,8 @@ onMounted(() => {
 }
 
 .action-trigger:hover {
-  background: #eef2ff;
-  color: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 .action-menu {
@@ -1479,14 +1682,16 @@ onMounted(() => {
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 500;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  font-family: inherit;
   transition: all 0.15s ease;
   text-align: left;
   color: #374151;
 }
 
-.action-item.view:hover { background: #f0f5ff; color: #2563eb; }
-.action-item.edit:hover { background: #eff6ff; color: #1d4ed8; }
+.action-item:hover { background: #f0f5ff; color: #2563eb; }
+.action-item.edit:hover { background: #fef3c7; color: #d97706; }
+.action-item.view:hover { background: #dbeafe; color: #2563eb; }
+.action-item.delete { color: #ef4444; }
 .action-item.delete:hover { background: #fef2f2; color: #dc2626; }
 
 .dropdown-divider {
@@ -1500,10 +1705,9 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 20px;
+  padding: 12px 20px;
   border-top: 1px solid #e5e7eb;
   background: #fafbfc;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   font-size: 0.8125rem;
   gap: 12px;
   flex-wrap: wrap;
@@ -1511,13 +1715,7 @@ onMounted(() => {
   margin-top: auto;
 }
 
-.pagination-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-}
-
+.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
 .rows-label { font-weight: 500; white-space: nowrap; }
 
 .rows-selector {
@@ -1544,46 +1742,27 @@ onMounted(() => {
 .rows-btn:hover { color: #334155; }
 .rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
 
-.pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
+.pagination-pages { display: flex; align-items: center; gap: 2px; }
 
 .page-nav {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
   border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
-  border-radius: 6px;
-  cursor: pointer;
+  background: #fff; color: #64748b;
+  border-radius: 8px; cursor: pointer;
   transition: all 0.15s ease;
 }
-
 .page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
 .page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .page-btn {
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: #475569;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 500;
-  font-family: inherit;
-  transition: all 0.15s ease;
+  min-width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #475569;
+  border-radius: 8px; cursor: pointer;
+  font-size: 0.8125rem; font-weight: 500;
+  font-family: inherit; transition: all 0.15s ease;
 }
-
 .page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
 .page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); }
 
@@ -1612,12 +1791,11 @@ onMounted(() => {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: modal-in 0.25s ease-out;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-family: inherit;
 }
 
 @keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
 
-/* ── Modal Head ── */
 .modal-head {
   display: flex;
   align-items: flex-start;
@@ -1657,6 +1835,7 @@ onMounted(() => {
 .icon-edit { background: #fef3c7; color: #d97706; }
 
 .modal-body-custom { padding: 16px 24px 20px; }
+.modal-body { padding: 16px 24px; }
 
 .form-group { margin-bottom: 14px; }
 
@@ -1668,7 +1847,7 @@ onMounted(() => {
   width: 100%;
   padding: 8px 12px;
   font-size: 0.88rem;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-family: inherit;
   color: #0f172a;
   background: #fff;
   border: 1.5px solid #d1d5db;
@@ -1733,19 +1912,6 @@ select.modern-input {
 .btn-ghost { background: #f1f5f9; color: #475569; }
 .btn-ghost:hover { background: #e2e8f0; }
 
-/* ── Spinner ── */
-.spinner-sm {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #fff;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  vertical-align: middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
 .detail-row {
   display: flex;
   justify-content: space-between;
@@ -1758,7 +1924,7 @@ select.modern-input {
 .detail-label { font-size: 0.8125rem; color: #64748b; font-weight: 500; }
 .detail-value { font-size: 0.8125rem; color: #0f172a; font-weight: 600; }
 
-/* ==================== Toast Styles ==================== */
+/* ==================== Toast ==================== */
 .toast-notification {
   position: fixed;
   top: 20px;
@@ -1795,23 +1961,11 @@ select.modern-input {
   border-bottom: 1px solid #fecaca;
 }
 
-.toast-icon {
-  display: flex;
-  flex-shrink: 0;
-}
+.toast-icon { display: flex; flex-shrink: 0; }
+.toast-notification.success .toast-icon svg { color: #10b981; }
+.toast-notification.error .toast-icon svg { color: #ef4444; }
 
-.toast-notification.success .toast-icon svg {
-  color: #10b981;
-}
-
-.toast-notification.error .toast-icon svg {
-  color: #ef4444;
-}
-
-.toast-message {
-  flex: 1;
-  line-height: 1.4;
-}
+.toast-message { flex: 1; line-height: 1.4; }
 
 .toast-close {
   background: none;
@@ -1824,18 +1978,12 @@ select.modern-input {
   padding: 0 4px;
   line-height: 1;
 }
-
 .toast-close:hover { opacity: 1; }
 
 @keyframes toastPop {
   0% { opacity: 0; transform: scale(0.85) translateY(-10px); }
   60% { transform: scale(1.03) translateY(2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
 }
 
 .toast-enter-active { transition: all 0.3s ease-out; }
@@ -1845,18 +1993,4 @@ select.modern-input {
 .modal-enter-active { transition: all 0.25s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
-
-/* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════════════════════════ */  @media (max-width: 768px) {
-  .toolbar { flex-direction: column; align-items: stretch; }
-  .search-box { max-width: 100%; }
-  .filter-group { flex-wrap: wrap; }
-  .pagination-bar { flex-direction: column; align-items: center; gap: 8px; }
-  .pagination-info { width: 100%; justify-content: center; }
-  .modal-content-panel { width: 100%; margin: 0 8px; }
-  .gender-toggle, .status-toggle { flex-wrap: wrap; }
-}
 </style>
-
-
