@@ -3,7 +3,15 @@ import { ref, computed } from 'vue'
 import { classService } from '@/services/classService'
 import type { SchoolClass } from '@/services/classService'
 
-const CACHE_TTL = 60_000
+interface PaginatedData {
+  data: SchoolClass[]
+  total: number
+  last_page: number
+  current_page: number
+  per_page: number
+  from: number | null
+  to: number | null
+}
 
 export const useClassStore = defineStore('class', () => {
   const classes = ref<SchoolClass[]>([])
@@ -11,10 +19,11 @@ export const useClassStore = defineStore('class', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const successMessage = ref<string | null>(null)
-  let classesCacheTime = 0
-  let lastSearch = ''
 
-  const totalClasses = computed(() => classes.value.length)
+  // Server-side pagination state
+  const totalClasses = ref(0)
+  const lastPage = ref(1)
+
   const activeClasses = computed(() => classes.value.filter(c => c.is_active === true).length)
   const inactiveClasses = computed(() => classes.value.filter(c => c.is_active === false).length)
 
@@ -23,22 +32,29 @@ export const useClassStore = defineStore('class', () => {
     successMessage.value = null
   }
 
-  async function fetchClasses(search?: string, bypassCache = false) {
-    const now = Date.now()
-    if (!bypassCache && search === lastSearch && classes.value.length > 0 && (now - classesCacheTime) < CACHE_TTL) {
-      return
-    }
-
+  async function fetchClasses(params?: Record<string, string | number>) {
     loading.value = classes.value.length === 0
     error.value = null
     clearMessages()
 
     try {
-      const response = await classService.getClasses()
+      const response = await classService.getClasses(params)
       if (response.success) {
-        classes.value = (response.data as SchoolClass[]) || []
-        classesCacheTime = Date.now()
-        lastSearch = search ?? ''
+        const data = response.data as PaginatedData | SchoolClass[]
+        // Handle both paginated and non-paginated responses
+        if (!Array.isArray(data) && Array.isArray(data.data)) {
+          classes.value = data.data as SchoolClass[]
+          totalClasses.value = data.total ?? 0
+          lastPage.value = data.last_page ?? 1
+        } else if (Array.isArray(data)) {
+          classes.value = data as SchoolClass[]
+          totalClasses.value = data.length
+          lastPage.value = 1
+        } else {
+          classes.value = []
+          totalClasses.value = 0
+          lastPage.value = 1
+        }
       } else {
         error.value = response.message || 'Failed to fetch classes'
       }
@@ -70,22 +86,14 @@ export const useClassStore = defineStore('class', () => {
     }
   }
 
-  function invalidateCache() {
-    localStorage.removeItem('classes_cache')
-    classesCacheTime = 0
-    lastSearch = ''
-  }
-
   async function createClass(classData: Partial<SchoolClass>) {
     loading.value = true
     error.value = null
     clearMessages()
 
     try {
-      const response = await classService.createClass(classData as any)
+      const response = await classService.createClass(classData as Partial<SchoolClass>)
       if (response.success) {
-        invalidateCache()
-        await fetchClasses(undefined, true)
         successMessage.value = response.message || 'Class created successfully'
         return true
       } else {
@@ -113,8 +121,6 @@ export const useClassStore = defineStore('class', () => {
     try {
       const response = await classService.updateClass(id, classData as any)
       if (response.success) {
-        invalidateCache()
-        await fetchClasses(undefined, true)
         successMessage.value = response.message || 'Class updated successfully'
         return true
       } else {
@@ -138,9 +144,9 @@ export const useClassStore = defineStore('class', () => {
     try {
       const response = await classService.deleteClass(id)
       if (response.success) {
-        // Remove from local list instantly — no API re-fetch needed
+        // Remove from local list instantly
         classes.value = classes.value.filter(c => c.id !== id)
-        invalidateCache()
+        totalClasses.value = Math.max(0, totalClasses.value - 1)
         successMessage.value = response.message || 'Class deleted successfully'
         return true
       } else {
@@ -163,10 +169,10 @@ export const useClassStore = defineStore('class', () => {
     error,
     successMessage,
     totalClasses,
+    lastPage,
     activeClasses,
     inactiveClasses,
     clearMessages,
-    invalidateCache,
     fetchClasses,
     fetchClass,
     createClass,

@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-4">
+  <div class="teachers-page">
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">
@@ -26,6 +26,15 @@ import { UserCheck, Users } from '@lucide/vue'
 </script>
 
 <style scoped>
+.teachers-page {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
 .page-header {
   display: flex;
   align-items: center;

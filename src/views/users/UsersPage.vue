@@ -1,15 +1,15 @@
 <template>
   <div class="users-page">
-    <!-- Loading State (only on initial load) -->
-    <div v-if="loading && users.length === 0" class="text-center py-5">
+    <!-- Loading State -->
+    <div v-if="loading && users.length === 0" class="loading-state">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
         <span class="visually-hidden">Loading...</span>
       </div>
-      <p class="mt-2" style="color: #6b7280;">Loading users...</p>
+      <p>Loading users...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
+    <div v-else-if="error" class="error-state">
       <AlertTriangle :size="16" />
       {{ error }}
     </div>
@@ -17,13 +17,13 @@
     <!-- User List -->
     <div v-else class="user-card">
       <!-- Store Success Message -->
-      <div v-if="store.successMessage" class="d-flex align-items-center gap-2 p-3" style="font-size: 0.85rem; font-weight: 500; background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; border-bottom: 1px solid #a7f3d0;">
+      <div v-if="store.successMessage" class="success-banner">
         <CheckCircle :size="18" />
         {{ store.successMessage }}
-        <button class="ms-auto bg-transparent border-0 p-0" style="font-size: 1.2rem; color: #065f46; opacity: 0.5; cursor: pointer; line-height: 1;" @click="store.clearMessages()">&times;</button>
+        <button class="banner-close" @click="store.clearMessages()">&times;</button>
       </div>
 
-      <!-- Search & Filter Toolbar -->
+      <!-- Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box">
@@ -59,18 +59,11 @@
         </div>
 
         <div class="toolbar-right">
-          <button
-            class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
-            style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
-            @click="openCreateModal"
-          >
-            <Plus :size="15" />
+          <button class="btn-add" @click="openCreateModal">
+            <Plus :size="16" />
             Add User
           </button>
-
-          <span class="count-badge">
-            {{ totalUsers }} user{{ totalUsers !== 1 ? 's' : '' }}
-          </span>
+          <span class="count-badge">{{ totalUsers }} user{{ totalUsers !== 1 ? 's' : '' }}</span>
         </div>
       </div>
 
@@ -89,15 +82,7 @@
         <table class="user-table">
           <thead>
             <tr>
-              <th class="col-check">
-                <input
-                  type="checkbox"
-                  class="table-checkbox"
-                  :checked="isAllPageSelected"
-                  :indeterminate="isIndeterminate"
-                  @change="toggleSelectAll"
-                />
-              </th>
+              <th class="col-check"><input type="checkbox" class="table-checkbox" :checked="isAllPageSelected" :indeterminate="isIndeterminate" @change="toggleSelectAll" /></th>
               <th class="col-index">#</th>
               <th>Name</th>
               <th>Email</th>
@@ -108,82 +93,46 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="users.length === 0">
-              <td colspan="8" class="empty-state">
-                <Users :size="28" class="d-block mb-2" style="margin: 0 auto;" />
-                No users found
-              </td>
-            </tr>
             <tr
               v-for="(user, index) in users"
               :key="user.id"
               class="user-row"
-              :class="[getRowClass(user), { 'row-selected': selectedIds.includes(user.id) }]"
+              :class="{ 'row-selected': selectedIds.includes(user.id) }"
             >
               <td class="col-check">
-                <input
-                  type="checkbox"
-                  class="table-checkbox"
-                  :checked="selectedIds.includes(user.id)"
-                  @change="toggleSelectUser(user.id)"
-                />
+                <input type="checkbox" class="table-checkbox" :checked="selectedIds.includes(user.id)" @change="toggleSelectUser(user.id)" />
               </td>
               <td class="col-index">{{ pagination.from + index }}</td>
               <td>
-                <div class="user-cell">
-                  <div class="avatar" :class="getAvatarClass(user)">
-                    {{ getInitials(user.name) }}
-                  </div>
-                  <span class="user-name">{{ user.name }}</span>
+                <div class="name-cell">
+                  <div class="avatar">{{ getInitials(user.name) }}</div>
+                  <span class="name-text">{{ user.name }}</span>
                 </div>
               </td>
+              <td><span class="email-text">{{ user.email }}</span></td>
+              <td><span class="badge badge-role">{{ user.role?.name || '—' }}</span></td>
+              <td><span class="badge badge-gender">{{ user.gender || '—' }}</span></td>
               <td>
-                <span class="email-cell">{{ user.email }}</span>
-              </td>
-              <td>
-                <span class="role-badge" :class="getRoleBadgeClass(user.role?.slug || '')">
-                  {{ user.role?.name || '—' }}
-                </span>
-              </td>
-              <td>
-                <span
-                  class="gender-badge"
-                  :class="getGenderClass(user.gender || '')"
-                >
-                  {{ user.gender || '—' }}
-                </span>
-              </td>
-              <td>
-                <span
-                  class="status-badge"
-                  :class="getStatusClass(user.status)"
-                >
+                <span class="badge" :class="'badge-' + user.status">
                   {{ user.status }}
                 </span>
               </td>
               <td class="col-actions" @click.stop>
                 <div class="action-dropdown">
-                  <button
-                    class="action-trigger"
-                    :title="`Actions for ${user.name}`"
-                    @click="toggleDropdown(user.id)"
-                  >
+                  <button class="action-trigger" :title="`Actions for ${user.name}`" @click="toggleDropdown(user.id)">
                     <MoreVertical :size="18" />
                   </button>
                   <Transition name="dropdown">
                     <div v-if="openDropdownId === user.id" class="action-menu">
-                      <button class="action-item view" @click="viewUser(user); openDropdownId = null">
-                        <Eye :size="16" />
-                        <span>View Details</span>
+                      <button class="action-item" @click="viewUser(user); openDropdownId = null">
+                        <Eye :size="16" /><span>View Details</span>
                       </button>
-                      <button class="action-item edit" @click="openEditModal(user); openDropdownId = null">
-                        <Pencil :size="16" />
-                        <span>Edit</span>
+                      <button class="action-item" @click="openEditModal(user); openDropdownId = null">
+                        <Pencil :size="16" /><span>Edit</span>
                       </button>
                       <div class="dropdown-divider"></div>
-                      <button class="action-item delete" @click="openDeleteModal(user); openDropdownId = null">
-                        <Trash2 :size="16" />
-                        <span>Delete</span>
+                      <button class="action-item action-delete" @click="openDeleteModal(user); openDropdownId = null">
+                        <Trash2 :size="16" /><span>Delete</span>
                       </button>
                     </div>
                   </Transition>
@@ -195,57 +144,22 @@
       </div>
 
       <!-- Pagination -->
-      <div class="pagination-bar">
+      <div v-if="totalUsers > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
           <div class="rows-selector">
-            <button
-              v-for="size in pageSizeOptions"
-              :key="size"
-              class="rows-btn"
-              :class="{ active: perPage === size }"
-              @click="changePerPage(size)"
-            >
-              {{ size }}
-            </button>
+            <button v-for="size in pageSizeOptions" :key="size" class="rows-btn" :class="{ active: perPage === size }" @click="changePerPage(size)">{{ size }}</button>
           </div>
         </div>
-
         <div class="pagination-pages">
-          <button
-            class="page-nav"
-            :disabled="currentPage <= 1"
-            @click="changePage(currentPage - 1)"
-            aria-label="Previous page"
-          >
-            <ChevronLeft :size="16" />
-          </button>
-
+          <button class="page-nav" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)" aria-label="Previous page"><ChevronLeft :size="16" /></button>
           <template v-for="page in visiblePages" :key="page">
-            <button
-              v-if="page !== '...'"
-              class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="changePage(page as number)"
-            >
-              {{ page }}
-            </button>
+            <button v-if="page !== '...'" class="page-btn" :class="{ active: currentPage === page }" @click="changePage(page as number)">{{ page }}</button>
             <span v-else class="page-dots">…</span>
           </template>
-
-          <button
-            class="page-nav"
-            :disabled="currentPage >= lastPage"
-            @click="changePage(currentPage + 1)"
-            aria-label="Next page"
-          >
-            <ChevronRight :size="16" />
-          </button>
+          <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" aria-label="Next page"><ChevronRight :size="16" /></button>
         </div>
-
-        <div class="pagination-total">
-          {{ pagination.from }}-{{ pagination.to }} of {{ totalUsers }}
-        </div>
+        <div class="pagination-total">{{ pagination.from }}-{{ pagination.to }} of {{ totalUsers }}</div>
       </div>
     </div>
 
@@ -254,7 +168,6 @@
       <Transition name="modal">
         <div v-if="showFormModal" class="modal-overlay" @click.self="closeFormModal">
           <div class="modal-content-panel">
-            <!-- Header -->
             <div class="modal-head">
               <div class="modal-icon" :class="isEditing ? 'icon-edit' : 'icon-create'">
                 <SquarePen v-if="isEditing" :size="18" />
@@ -266,115 +179,35 @@
               </div>
               <button class="modal-x" @click="closeFormModal">&times;</button>
             </div>
-
             <form @submit.prevent="handleFormSubmit">
               <div class="modal-body-custom">
-                <!-- Error Alert -->
-                <div v-if="formError" class="error-alert">
-                  <AlertTriangle :size="16" class="me-2" />
-                  {{ formError }}
-                </div>
-
-                <!-- Full Name -->
+                <div v-if="formError" class="error-alert"><AlertTriangle :size="16" class="me-2" />{{ formError }}</div>
                 <div class="form-group">
-                  <label class="form-label">
-                    <UserIcon :size="14" class="me-1" />
-                    Full Name <span class="text-danger">*</span>
-                  </label>
-                  <div class="input-wrapper">
-                    <input
-                      v-model="form.name"
-                      type="text"
-                      class="modern-input"
-                      placeholder="e.g. John Smith"
-                      required
-                    />
-                  </div>
+                  <label class="form-label"><UserIcon :size="14" class="me-1" />Full Name <span class="text-danger">*</span></label>
+                  <div class="input-wrapper"><input v-model="form.name" type="text" class="modern-input" placeholder="e.g. John Smith" required /></div>
                 </div>
-
-                <!-- Email -->
                 <div class="form-group">
-                  <label class="form-label">
-                    <Mail :size="14" class="me-1" />
-                    Email Address <span class="text-danger">*</span>
-                  </label>
-                  <div class="input-wrapper">
-                    <input
-                      v-model="form.email"
-                      type="email"
-                      class="modern-input"
-                      placeholder="user@example.com"
-                      required
-                    />
-                  </div>
+                  <label class="form-label"><Mail :size="14" class="me-1" />Email Address <span class="text-danger">*</span></label>
+                  <div class="input-wrapper"><input v-model="form.email" type="email" class="modern-input" placeholder="user@example.com" required /></div>
                 </div>
-
-                <!-- Password -->
                 <div class="form-group">
-                  <label class="form-label">
-                    <Lock :size="14" class="me-1" />
-                    Password {{ isEditing ? '' : '<span class="text-danger">*</span>' }}
-                  </label>
-                  <div class="input-wrapper">
-                    <input
-                      v-model="form.password"
-                      type="password"
-                      class="modern-input"
-                      :placeholder="isEditing ? 'Leave blank to keep current' : 'Min. 8 characters'"
-                      :required="!isEditing"
-                      minlength="8"
-                    />
-                  </div>
+                  <label class="form-label"><Lock :size="14" class="me-1" />Password {{ isEditing ? '' : '<span class="text-danger">*</span>' }}</label>
+                  <div class="input-wrapper"><input v-model="form.password" type="password" class="modern-input" :placeholder="isEditing ? 'Leave blank to keep current' : 'Min. 8 characters'" :required="!isEditing" minlength="8" /></div>
                   <p v-if="isEditing" class="field-hint">Leave blank to keep the current password</p>
                 </div>
-
-                <!-- Role -->
                 <div class="form-group">
-                  <label class="form-label">
-                    <ShieldCheck :size="14" class="me-1" />
-                    Role <span class="text-danger">*</span>
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.role_id" class="modern-input" required>
-                      <option :value="null" disabled>— Select a role —</option>
-                      <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
-                    </select>
-                  </div>
+                  <label class="form-label"><ShieldCheck :size="14" class="me-1" />Role <span class="text-danger">*</span></label>
+                  <div class="input-wrapper"><select v-model="form.role_id" class="modern-input" required><option :value="null" disabled>— Select a role —</option><option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option></select></div>
                 </div>
-
-                <!-- Gender -->
                 <div class="form-group">
-                  <label class="form-label">
-                    <VenusAndMars :size="14" class="me-1" />
-                    Gender
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.gender" class="modern-input">
-                      <option value="">— Select gender —</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
+                  <label class="form-label"><VenusAndMars :size="14" class="me-1" />Gender</label>
+                  <div class="input-wrapper"><select v-model="form.gender" class="modern-input"><option value="">— Select gender —</option><option value="Male">Male</option><option value="Female">Female</option><option value="Other">Other</option></select></div>
                 </div>
-
-                <!-- Status -->
                 <div class="form-group">
-                  <label class="form-label">
-                    <ToggleLeft :size="14" class="me-1" />
-                    Status <span class="text-danger">*</span>
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.status" class="modern-input" required>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
-                  </div>
+                  <label class="form-label"><ToggleLeft :size="14" class="me-1" />Status <span class="text-danger">*</span></label>
+                  <div class="input-wrapper"><select v-model="form.status" class="modern-input" required><option value="active">Active</option><option value="inactive">Inactive</option><option value="suspended">Suspended</option></select></div>
                 </div>
               </div>
-
-              <!-- Footer -->
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
@@ -389,36 +222,25 @@
       </Transition>
     </Teleport>
 
-    <!-- Delete Confirmation Modal -->
+    <!-- Delete Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
-                <AlertTriangle :size="20" />
-              </div>
-              <div>
-                <h3 style="color: #dc2626;">Delete User</h3>
-                <p>This action cannot be undone.</p>
-              </div>
+              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;"><AlertTriangle :size="20" /></div>
+              <div><h3 style="color: #dc2626;">Delete User</h3><p>This action cannot be undone.</p></div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
-                Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?
-              </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; margin: 8px 0 0;">
-                <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
-                <span style="vertical-align: middle;">The user, their profile, and all associated data will be permanently removed.</span>
-              </p>
+              <p>Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?</p>
+              <p class="delete-warning"><AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" /><span style="vertical-align: middle;">The user, their profile, and all associated data will be permanently removed.</span></p>
             </div>
             <div class="modal-foot">
               <button type="button" class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
               <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleDelete">
                 <span v-if="formSubmitting" class="spinner-sm"></span>
-                <Trash2 v-else :size="16" />
-                <span>Delete</span>
+                <Trash2 v-else :size="16" /><span>Delete</span>
               </button>
             </div>
           </div>
@@ -426,36 +248,25 @@
       </Transition>
     </Teleport>
 
-    <!-- Bulk Delete Confirmation Modal -->
+    <!-- Bulk Delete Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
-                <AlertTriangle :size="20" />
-              </div>
-              <div>
-                <h3 style="color: #dc2626;">Delete Users</h3>
-                <p>This action cannot be undone.</p>
-              </div>
+              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;"><AlertTriangle :size="20" /></div>
+              <div><h3 style="color: #dc2626;">Delete Users</h3><p>This action cannot be undone.</p></div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
-                Are you sure you want to delete <strong>{{ selectedIds.length }} user(s)</strong>?
-              </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; line-height: 1.4; margin: 8px 0 0;">
-                <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
-                <span style="vertical-align: middle;">These users, their profiles, and all associated data will be permanently removed.</span>
-              </p>
+              <p>Are you sure you want to delete <strong>{{ selectedIds.length }} user(s)</strong>?</p>
+              <p class="delete-warning"><AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" /><span style="vertical-align: middle;">These users, their profiles, and all associated data will be permanently removed.</span></p>
             </div>
             <div class="modal-foot" style="padding-top: 16px;">
               <button type="button" class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
               <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleBulkDelete">
                 <span v-if="formSubmitting" class="spinner-sm"></span>
-                <Trash2 v-else :size="16" />
-                <span>Delete {{ selectedIds.length }} user(s)</span>
+                <Trash2 v-else :size="16" /><span>Delete {{ selectedIds.length }} user(s)</span>
               </button>
             </div>
           </div>
@@ -469,81 +280,27 @@
         <div v-if="showDetailsModal && detailUser" class="modal-overlay" @click.self="closeDetailsModal">
           <div class="modal-content-panel" style="max-width: 460px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #dbeafe; color: #2563eb;">
-                <IdCard :size="18" />
-              </div>
-              <div>
-                <h3>User Details</h3>
-                <p>Complete information about this user</p>
-              </div>
+              <div class="modal-icon" style="background: #dbeafe; color: #2563eb;"><IdCard :size="18" /></div>
+              <div><h3>User Details</h3><p>Complete information about this user</p></div>
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
-
             <div class="modal-body-custom">
-              <!-- User Avatar & Name -->
-              <div class="d-flex align-items-center gap-3 mb-4 pb-3" style="border-bottom: 1px solid #f1f5f9;">
-                <div
-                  class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0 shadow-sm"
-                  :style="{ width: '54px', height: '54px', fontSize: '1.125rem', background: getAvatarGradient(detailUser) }"
-                >
-                  {{ getInitials(detailUser.name) }}
-                </div>
+              <div class="detail-user-header">
+                <div class="detail-avatar">{{ getInitials(detailUser.name) }}</div>
                 <div>
-                  <h6 class="mb-1 fw-bold" style="color: #0f172a;">{{ detailUser.name }}</h6>
-                  <span class="role-badge" :class="getRoleBadgeClass(detailUser.role?.slug || '')">
-                    {{ detailUser.role?.name || '—' }}
-                  </span>
+                  <h6 class="detail-user-name">{{ detailUser.name }}</h6>
+                  <span class="badge badge-role">{{ detailUser.role?.name || '—' }}</span>
                 </div>
               </div>
-
-              <!-- Detail Rows -->
-              <div class="detail-row">
-                <span class="detail-label">User ID</span>
-                <span class="detail-value">
-                  <span class="badge bg-light text-dark rounded-pill px-3 py-2">#{{ detailUser.id }}</span>
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Email</span>
-                <span class="detail-value">{{ detailUser.email }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Gender</span>
-                <span class="detail-value">
-                  <component :is="getGenderIconComponent(detailUser.gender || '')" :size="14" class="me-1" />
-                  {{ detailUser.gender || '—' }}
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Role</span>
-                <span class="detail-value">
-                  <span class="role-badge" :class="getRoleBadgeClass(detailUser.role?.slug || '')">
-                    {{ detailUser.role?.name || '—' }}
-                  </span>
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Status</span>
-                <span class="detail-value">
-                  <span class="status-badge" :class="getStatusClass(detailUser.status)">
-                    {{ detailUser.status }}
-                  </span>
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Last Login</span>
-                <span class="detail-value">{{ formatDate(detailUser.last_login_at) }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Created</span>
-                <span class="detail-value">{{ formatFullDate(detailUser.created_at) }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Updated</span>
-                <span class="detail-value">{{ formatFullDate(detailUser.updated_at) }}</span>
-              </div>
+              <div class="detail-row"><span class="detail-label">User ID</span><span class="detail-value"><span class="id-badge">#{{ detailUser.id }}</span></span></div>
+              <div class="detail-row"><span class="detail-label">Email</span><span class="detail-value">{{ detailUser.email }}</span></div>
+              <div class="detail-row"><span class="detail-label">Gender</span><span class="detail-value">{{ detailUser.gender || '—' }}</span></div>
+              <div class="detail-row"><span class="detail-label">Role</span><span class="detail-value"><span class="badge badge-role">{{ detailUser.role?.name || '—' }}</span></span></div>
+              <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value"><span class="badge" :class="'badge-' + detailUser.status">{{ detailUser.status }}</span></span></div>
+              <div class="detail-row"><span class="detail-label">Last Login</span><span class="detail-value">{{ formatDate(detailUser.last_login_at) }}</span></div>
+              <div class="detail-row"><span class="detail-label">Created</span><span class="detail-value">{{ formatFullDate(detailUser.created_at) }}</span></div>
+              <div class="detail-row"><span class="detail-label">Updated</span><span class="detail-value">{{ formatFullDate(detailUser.updated_at) }}</span></div>
             </div>
-
             <div class="modal-foot">
               <button type="button" class="btn btn-primary" style="flex: 1;" @click="closeDetailsModal">
                 <CheckCircle :size="16" class="me-1" />Close
@@ -554,7 +311,7 @@
       </Transition>
     </Teleport>
 
-    <!-- Toast Notification -->
+    <!-- Toast -->
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="toast.show" class="toast-notification" :class="toast.type">
@@ -571,22 +328,19 @@
 </template>
 
 <script setup lang="ts">
-import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash } from '@lucide/vue'
-import { ref, computed, onMounted, onUnmounted, type Component } from 'vue'
+import { Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash } from '@lucide/vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import type { User } from '@/services/userService'
 
-// ─── Store ────────────────────────────────────────────────────────────
 const store = useUserStore()
 const { users, roles, loading, error, totalUsers, lastPage } = storeToRefs(store)
 
-// ─── Local State ──────────────────────────────────────────────────────
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
 const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-// ─── Search & Filters ─────────────────────────────────────────────────
 const searchQuery = ref('')
 const roleFilter = ref<number | ''>('')
 const statusFilter = ref('')
@@ -605,9 +359,8 @@ function applyFilters() {
   loadUsers()
 }
 
-// ─── Pagination ────────────────────────────────────────────────────────
 const currentPage = ref(1)
-const perPage = ref(5)
+const perPage = ref(10)
 const pageSizeOptions = [5, 10, 25, 50]
 
 const pagination = computed(() => {
@@ -653,7 +406,6 @@ function changePerPage(size: number) {
   loadUsers()
 }
 
-// ─── Dropdown ─────────────────────────────────────────────────────────
 const openDropdownId = ref<number | null>(null)
 
 function toggleDropdown(id: number) {
@@ -672,16 +424,15 @@ onUnmounted(() => {
   window.removeEventListener('click', handleClickOutside)
 })
 
-// ─── Modal State ──────────────────────────────────────────────────────
 const showFormModal = ref(false)
 const isEditing = ref(false)
 const showDeleteModal = ref(false)
 const showDetailsModal = ref(false)
+const showBulkDeleteModal = ref(false)
 const deleteTarget = ref<User | null>(null)
 const detailUser = ref<User | null>(null)
 const editingUser = ref<User | null>(null)
 
-// ─── Form State ───────────────────────────────────────────────────────
 const initialForm = () => ({
   name: '',
   email: '',
@@ -693,7 +444,6 @@ const initialForm = () => ({
 
 const form = ref(initialForm())
 
-// ─── API Calls ────────────────────────────────────────────────────────
 async function loadUsers() {
   const params: Record<string, string | number> = {
     page: currentPage.value,
@@ -702,7 +452,6 @@ async function loadUsers() {
   if (searchQuery.value) params.search = searchQuery.value
   if (roleFilter.value) params.role_id = roleFilter.value
   if (statusFilter.value) params.status = statusFilter.value
-
   await store.fetchUsers(params)
 }
 
@@ -710,7 +459,6 @@ async function init() {
   await store.init()
 }
 
-// ─── Create / Edit ────────────────────────────────────────────────────
 function openCreateModal() {
   isEditing.value = false
   editingUser.value = null
@@ -740,22 +488,10 @@ function closeFormModal() {
 }
 
 async function handleFormSubmit() {
-  if (!form.value.name.trim()) {
-    formError.value = 'Name is required'
-    return
-  }
-  if (!form.value.email.trim()) {
-    formError.value = 'Email is required'
-    return
-  }
-  if (!form.value.role_id) {
-    formError.value = 'Please select a role'
-    return
-  }
-  if (!isEditing.value && (!form.value.password || form.value.password.length < 8)) {
-    formError.value = 'Password must be at least 8 characters'
-    return
-  }
+  if (!form.value.name.trim()) { formError.value = 'Name is required'; return }
+  if (!form.value.email.trim()) { formError.value = 'Email is required'; return }
+  if (!form.value.role_id) { formError.value = 'Please select a role'; return }
+  if (!isEditing.value && (!form.value.password || form.value.password.length < 8)) { formError.value = 'Password must be at least 8 characters'; return }
 
   formSubmitting.value = true
   formError.value = null
@@ -770,28 +506,19 @@ async function handleFormSubmit() {
         status: form.value.status,
         ...(form.value.password ? { password: form.value.password } : {}),
       })
-      if (result.success) {
-        showToast(result.message || 'User updated successfully')
-        closeFormModal()
-      } else {
-        formError.value = result.message
-      }
+      if (result.success) { showToast(result.message || 'User updated successfully'); closeFormModal() }
+      else { formError.value = result.message }
     } else {
-      const payload = {
+      const result = await store.createUser({
         name: form.value.name,
         email: form.value.email,
         password: form.value.password,
         role_id: form.value.role_id!,
         gender: form.value.gender || undefined,
         status: form.value.status,
-      }
-      const result = await store.createUser(payload)
-      if (result.success) {
-        showToast(result.message || 'User created successfully')
-        closeFormModal()
-      } else {
-        formError.value = result.message
-      }
+      })
+      if (result.success) { showToast(result.message || 'User created successfully'); closeFormModal() }
+      else { formError.value = result.message }
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
@@ -801,60 +528,33 @@ async function handleFormSubmit() {
   }
 }
 
-// ─── Delete ─────────────────────────────────────────────────────────────
-function openDeleteModal(user: User) {
-  deleteTarget.value = user
-  showDeleteModal.value = true
-}
-
-function closeDeleteModal() {
-  showDeleteModal.value = false
-  deleteTarget.value = null
-}
+function openDeleteModal(user: User) { deleteTarget.value = user; showDeleteModal.value = true }
+function closeDeleteModal() { showDeleteModal.value = false; deleteTarget.value = null }
 
 async function handleDelete() {
   if (!deleteTarget.value) return
   formSubmitting.value = true
-  const targetId = deleteTarget.value.id
   try {
-    const result = await store.deleteUser(targetId)
+    const result = await store.deleteUser(deleteTarget.value.id)
     if (result.success) {
       lastPage.value = Math.max(1, Math.ceil(totalUsers.value / perPage.value))
       showToast('User deleted successfully')
       closeDeleteModal()
-      if (users.value.length === 0 && currentPage.value > 1) {
-        currentPage.value--
-        loadUsers()
-      }
-    } else {
-      showToast(result.message || 'Failed to delete user', 'error')
-    }
+      if (users.value.length === 0 && currentPage.value > 1) { currentPage.value--; loadUsers() }
+    } else { showToast(result.message || 'Failed to delete user', 'error') }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
     showToast(err.response?.data?.message || err.message || 'Failed to delete user', 'error')
-  } finally {
-    formSubmitting.value = false
-  }
+  } finally { formSubmitting.value = false }
 }
 
-// ─── View Details ──────────────────────────────────────────────────────
-function viewUser(user: User) {
-  detailUser.value = user
-  showDetailsModal.value = true
-}
+function viewUser(user: User) { detailUser.value = user; showDetailsModal.value = true }
+function closeDetailsModal() { showDetailsModal.value = false; detailUser.value = null }
 
-function closeDetailsModal() {
-  showDetailsModal.value = false
-  detailUser.value = null
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────────
 function getInitials(name: string): string {
   const safeName = name || ''
   const parts = safeName.split(' ').filter(Boolean)
-  return parts.length >= 2
-    ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-    : safeName.substring(0, 2).toUpperCase()
+  return parts.length >= 2 ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase() : safeName.substring(0, 2).toUpperCase()
 }
 
 function formatDate(dateStr?: string | null): string {
@@ -864,81 +564,18 @@ function formatDate(dateStr?: string | null): string {
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
   if (diffDays === 0) {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    if (diffHours === 0) {
-      const diffMins = Math.floor(diffMs / (1000 * 60))
-      return `${diffMins}m ago`
-    }
+    if (diffHours === 0) { const diffMins = Math.floor(diffMs / (1000 * 60)); return `${diffMins}m ago` }
     return `${diffHours}h ago`
   }
   if (diffDays < 7) return `${diffDays}d ago`
-
-  return d.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
-  })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
 }
 
 function formatFullDate(dateStr?: string): string {
   if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function getRowClass(user: User): string {
-  if (user.role?.slug === 'admin') return 'row-admin'
-  if (user.role?.slug === 'teacher') return 'row-teacher'
-  if (user.role?.slug === 'student') return 'row-student'
-  return ''
-}
-
-function getAvatarClass(user: User): string {
-  if (user.role?.slug === 'admin') return 'avatar-admin'
-  if (user.role?.slug === 'teacher') return 'avatar-teacher'
-  if (user.role?.slug === 'student') return 'avatar-student'
-  return ''
-}
-
-function getAvatarGradient(user: User): string {
-  return 'linear-gradient(135deg, #2563eb, #1d4ed8)'
-}
-
-function getRoleBadgeClass(slug: string): string {
-  if (slug === 'admin') return 'role-admin'
-  if (slug === 'teacher') return 'role-teacher'
-  if (slug === 'student') return 'role-student'
-  return ''
-}
-
-function getGenderClass(gender: string): string {
-  if (gender === 'Male') return 'badge-male'
-  if (gender === 'Female') return 'badge-female'
-  if (gender === 'Other') return 'badge-other'
-  return ''
-}
-
-const genderIconMap: Record<string, Component> = {
-  'Male': Users,
-  'Female': Users,
-}
-
-function getGenderIconComponent(gender: string): Component {
-  return genderIconMap[gender] || Users
-}
-
-function getStatusClass(status: string): string {
-  if (status === 'active') return 'badge-active'
-  if (status === 'inactive') return 'badge-inactive'
-  if (status === 'suspended') return 'badge-suspended'
-  return ''
+  return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function showToast(message: string, type: 'success' | 'error' = 'success') {
@@ -946,51 +583,26 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   setTimeout(() => { toast.value.show = false }, 3000)
 }
 
-// ─── Multi-Select & Bulk Delete ───────────────────────────────────────
 const selectedIds = ref<number[]>([])
 
-const isAllPageSelected = computed(() => {
-  return users.value.length > 0 && users.value.every(u => selectedIds.value.includes(u.id))
-})
-
-const isIndeterminate = computed(() => {
-  const some = users.value.some(u => selectedIds.value.includes(u.id))
-  return some && !isAllPageSelected.value
-})
+const isAllPageSelected = computed(() => users.value.length > 0 && users.value.every(u => selectedIds.value.includes(u.id)))
+const isIndeterminate = computed(() => { const some = users.value.some(u => selectedIds.value.includes(u.id)); return some && !isAllPageSelected.value })
 
 function toggleSelectAll() {
-  if (isAllPageSelected.value) {
-    selectedIds.value = selectedIds.value.filter(id => !users.value.some(u => u.id === id))
-  } else {
-    const currentIds = new Set(selectedIds.value)
-    users.value.forEach(u => currentIds.add(u.id))
-    selectedIds.value = Array.from(currentIds)
-  }
+  if (isAllPageSelected.value) { selectedIds.value = selectedIds.value.filter(id => !users.value.some(u => u.id === id)) }
+  else { const currentIds = new Set(selectedIds.value); users.value.forEach(u => currentIds.add(u.id)); selectedIds.value = Array.from(currentIds) }
 }
 
 function toggleSelectUser(id: number) {
   const idx = selectedIds.value.indexOf(id)
-  if (idx === -1) {
-    selectedIds.value.push(id)
-  } else {
-    selectedIds.value.splice(idx, 1)
-  }
+  if (idx === -1) selectedIds.value.push(id)
+  else selectedIds.value.splice(idx, 1)
 }
 
-function clearSelection() {
-  selectedIds.value = []
-}
+function clearSelection() { selectedIds.value = [] }
 
-// ─── Bulk Delete Modal ────────────────────────────────────────────────
-const showBulkDeleteModal = ref(false)
-
-function openBulkDeleteModal() {
-  showBulkDeleteModal.value = true
-}
-
-function closeBulkDeleteModal() {
-  showBulkDeleteModal.value = false
-}
+function openBulkDeleteModal() { showBulkDeleteModal.value = true }
+function closeBulkDeleteModal() { showBulkDeleteModal.value = false }
 
 async function handleBulkDelete() {
   if (selectedIds.value.length === 0) return
@@ -1003,25 +615,15 @@ async function handleBulkDelete() {
       showToast('User deleted successfully')
       closeBulkDeleteModal()
       clearSelection()
-      if (users.value.length === 0 && currentPage.value > 1) {
-        currentPage.value--
-        loadUsers()
-      }
-    } else {
-      showToast(result.message || 'Failed to delete users', 'error')
-    }
+      if (users.value.length === 0 && currentPage.value > 1) { currentPage.value--; loadUsers() }
+    } else { showToast(result.message || 'Failed to delete users', 'error') }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
     showToast(err.response?.data?.message || err.message || 'Failed to delete users', 'error')
-  } finally {
-    formSubmitting.value = false
-  }
+  } finally { formSubmitting.value = false }
 }
 
-// ─── Lifecycle ─────────────────────────────────────────────────────────
-onMounted(() => {
-  init()
-})
+onMounted(() => { init() })
 </script>
 
 <style scoped>
@@ -1035,7 +637,27 @@ onMounted(() => {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+  color: #6b7280;
+  gap: 8px;
+}
 
+.error-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
 
 /* ==================== Card ==================== */
 .user-card {
@@ -1043,19 +665,39 @@ onMounted(() => {
   border: 1px solid #e9ecef;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.02);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   flex: 1;
   height: 1px;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  transition: box-shadow 0.25s ease;
 }
 
-.user-card:hover {
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #ecfdf5;
+  color: #065f46;
+  border-bottom: 1px solid #a7f3d0;
 }
+
+.banner-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  color: #065f46;
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.banner-close:hover { opacity: 1; }
 
 /* ==================== Toolbar ==================== */
 .toolbar {
@@ -1101,8 +743,8 @@ onMounted(() => {
 
 .search-input {
   width: 100%;
-  padding: 0.6rem 0.9rem 0.6rem 2.4rem;
-  font-size: 0.8125rem;
+  padding: 0.5rem 0.9rem 0.5rem 2.4rem;
+  font-size: 0.85rem;
   font-family: inherit;
   color: #1f2937;
   background: #fff;
@@ -1155,6 +797,24 @@ onMounted(() => {
   outline: none;
 }
 
+.btn-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+.btn-add:hover { background: #1d4ed8; }
+
 .count-badge {
   font-size: 0.75rem;
   font-weight: 600;
@@ -1181,11 +841,7 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.bulk-count {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #991b1b;
-}
+.bulk-count { font-size: 0.8125rem; font-weight: 600; color: #991b1b; }
 
 .bulk-delete-btn {
   display: inline-flex;
@@ -1199,10 +855,9 @@ onMounted(() => {
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  transition: background 0.15s ease;
+  font-family: inherit;
 }
-
 .bulk-delete-btn:hover { background: #dc2626; }
 
 .bulk-clear-btn {
@@ -1217,9 +872,8 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-family: inherit;
 }
-
 .bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
 
 /* ==================== Table ==================== */
@@ -1229,7 +883,32 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
   height: 1px;
-  max-height: calc(100vh - 280px);
+  max-height: calc(100vh - 200px);
+  min-height: 100px;
+}
+
+.table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Firefox scrollbar */
+.table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
 .user-table {
@@ -1246,31 +925,30 @@ onMounted(() => {
   background: #f8fafc;
   text-align: left;
   font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-weight: 600;
   text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 14px;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  padding: 10px 12px;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
 }
 
 .col-check {
-  width: 48px;
-  text-align: center;
-  padding: 12px 8px !important;
+  width: 40px;
+  padding: 10px 6px !important;
 }
 
 .user-table thead th.col-check,
 .user-table tbody td.col-check {
   text-align: center;
-  padding: 12px 8px !important;
+  padding: 10px 6px !important;
   vertical-align: middle;
 }
 
 .table-checkbox {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   accent-color: #2563eb;
   cursor: pointer;
   display: block;
@@ -1278,152 +956,130 @@ onMounted(() => {
 }
 
 .col-index {
-  width: 64px;
+  width: 50px;
   color: #94a3b8;
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 0.75rem;
 }
 
 .col-actions {
   text-align: right;
-  padding-right: 20px !important;
-  width: 80px;
+  padding-right: 14px !important;
+  width: 60px;
 }
 
 .user-table tbody td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
   color: #475569;
   vertical-align: middle;
-  font-weight: 500;
 }
 
-
-
-.user-table tbody tr:last-child td { border-bottom: none; }
-
-.empty-state {
-  text-align: center;
-  padding: 48px 16px !important;
-  color: #9ca3af;
+.user-table tbody tr {
+  transition: background 0.2s ease;
 }
 
-.user-cell {
+.user-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.user-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.row-selected {
+  background: #f0f5ff !important;
+}
+
+/* ==================== Name Column ==================== */
+.name-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .avatar {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
   color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.avatar-admin {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
 }
 
-.avatar-teacher {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.avatar-student {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.user-name {
-  font-weight: 500;
-  color: #0f172a;
-}
-
-.email-cell {
+.name-text {
   font-size: 0.8125rem;
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== Email Column ==================== */
+.email-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  display: block;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==================== Badges ==================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.badge-role {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.badge-gender {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.badge-active {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.badge-inactive {
+  background: #f1f5f9;
   color: #64748b;
 }
 
-.field-hint {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin: 4px 0 0;
+.badge-suspended {
+  background: #fef2f2;
+  color: #dc2626;
 }
 
-.user-row {
-  transition: background 0.2s ease, border-left 0.2s ease;
-  border-left: 3px solid transparent;
-}
-
-.user-row:hover { background: #f8fafc; }
-
-.row-selected {
-  background: #f0f5ff !important;
-  border-left-color: #2563eb !important;
-}
-
-.row-admin:hover { border-left-color: #2563eb; background: #eff6ff; }
-.row-teacher:hover { border-left-color: #2563eb; background: #eff6ff; }
-.row-student:hover { border-left-color: #2563eb; background: #eff6ff; }
-
-.role-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
-
-.role-admin { background: #dbeafe; color: #1d4ed8; }
-.role-teacher { background: #dbeafe; color: #1d4ed8; }
-.role-student { background: #dbeafe; color: #1d4ed8; }
-
-.gender-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
-
-.badge-male { background: #dbeafe; color: #1d4ed8; }
-.badge-female { background: #dbeafe; color: #1d4ed8; }
-.badge-other { background: #dbeafe; color: #1d4ed8; }
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
-
-.badge-active { background: #dcfce7; color: #16a34a; }
-.badge-inactive { background: #f1f5f9; color: #64748b; }
-.badge-suspended { background: #fef2f2; color: #dc2626; }
-
+/* ==================== Action Dropdown ==================== */
 .action-dropdown {
   position: relative;
   display: inline-flex;
 }
 
 .action-trigger {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1436,9 +1092,8 @@ onMounted(() => {
 }
 
 .action-trigger:hover {
-  background: #eef2ff;
-  color: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 .action-menu {
@@ -1478,15 +1133,15 @@ onMounted(() => {
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 500;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+  font-family: inherit;
   transition: all 0.15s ease;
   text-align: left;
   color: #374151;
 }
 
-.action-item.view:hover { background: #f0f5ff; color: #2563eb; }
-.action-item.edit:hover { background: #eff6ff; color: #1d4ed8; }
-.action-item.delete:hover { background: #fef2f2; color: #dc2626; }
+.action-item:hover { background: #f0f5ff; color: #2563eb; }
+.action-delete { color: #ef4444; }
+.action-delete:hover { background: #fef2f2; color: #dc2626; }
 
 .dropdown-divider {
   height: 1px;
@@ -1502,7 +1157,6 @@ onMounted(() => {
   padding: 12px 20px;
   border-top: 1px solid #e5e7eb;
   background: #fafbfc;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   font-size: 0.8125rem;
   gap: 12px;
   flex-wrap: wrap;
@@ -1510,13 +1164,7 @@ onMounted(() => {
   margin-top: auto;
 }
 
-.pagination-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-}
-
+.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
 .rows-label { font-weight: 500; white-space: nowrap; }
 
 .rows-selector {
@@ -1543,46 +1191,27 @@ onMounted(() => {
 .rows-btn:hover { color: #334155; }
 .rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
 
-.pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
+.pagination-pages { display: flex; align-items: center; gap: 2px; }
 
 .page-nav {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
   border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
-  border-radius: 8px;
-  cursor: pointer;
+  background: #fff; color: #64748b;
+  border-radius: 8px; cursor: pointer;
   transition: all 0.15s ease;
 }
-
 .page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
 .page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .page-btn {
-  min-width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: #475569;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  font-family: inherit;
-  transition: all 0.15s ease;
+  min-width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #475569;
+  border-radius: 8px; cursor: pointer;
+  font-size: 0.8125rem; font-weight: 500;
+  font-family: inherit; transition: all 0.15s ease;
 }
-
 .page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
 .page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); }
 
@@ -1611,12 +1240,11 @@ onMounted(() => {
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: modal-in 0.25s ease-out;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-family: inherit;
 }
 
 @keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
 
-/* ── Modal Head ── */
 .modal-head {
   display: flex;
   align-items: flex-start;
@@ -1656,6 +1284,7 @@ onMounted(() => {
 .icon-edit { background: #fef3c7; color: #d97706; }
 
 .modal-body-custom { padding: 16px 24px 20px; }
+.modal-body { padding: 16px 24px; }
 
 .form-group { margin-bottom: 14px; }
 
@@ -1667,7 +1296,7 @@ onMounted(() => {
   width: 100%;
   padding: 8px 12px;
   font-size: 0.88rem;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-family: inherit;
   color: #0f172a;
   background: #fff;
   border: 1.5px solid #d1d5db;
@@ -1702,6 +1331,8 @@ select.modern-input {
   border-left: 4px solid #ef4444;
 }
 
+.field-hint { font-size: 0.75rem; color: #94a3b8; margin: 4px 0 0; }
+
 .modal-foot {
   display: flex;
   justify-content: flex-end;
@@ -1732,7 +1363,6 @@ select.modern-input {
 .btn-ghost { background: #f1f5f9; color: #475569; }
 .btn-ghost:hover { background: #e2e8f0; }
 
-/* ── Spinner ── */
 .spinner-sm {
   display: inline-block;
   width: 16px;
@@ -1744,6 +1374,48 @@ select.modern-input {
   vertical-align: middle;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.delete-warning {
+  font-size: 0.75rem;
+  color: #ef4444;
+  background: #fef2f2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  line-height: 1.4;
+  margin: 8px 0 0;
+}
+
+/* ==================== Detail Modal ==================== */
+.detail-user-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.detail-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.detail-user-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
 
 .detail-row {
   display: flex;
@@ -1757,7 +1429,17 @@ select.modern-input {
 .detail-label { font-size: 0.8125rem; color: #64748b; font-weight: 500; }
 .detail-value { font-size: 0.8125rem; color: #0f172a; font-weight: 600; }
 
-/* ==================== Toast Styles ==================== */
+.id-badge {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #1f2937;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* ==================== Toast ==================== */
 .toast-notification {
   position: fixed;
   top: 20px;
@@ -1794,23 +1476,11 @@ select.modern-input {
   border-bottom: 1px solid #fecaca;
 }
 
-.toast-icon {
-  display: flex;
-  flex-shrink: 0;
-}
+.toast-icon { display: flex; flex-shrink: 0; }
+.toast-notification.success .toast-icon svg { color: #10b981; }
+.toast-notification.error .toast-icon svg { color: #ef4444; }
 
-.toast-notification.success .toast-icon svg {
-  color: #10b981;
-}
-
-.toast-notification.error .toast-icon svg {
-  color: #ef4444;
-}
-
-.toast-message {
-  flex: 1;
-  line-height: 1.4;
-}
+.toast-message { flex: 1; line-height: 1.4; }
 
 .toast-close {
   background: none;
@@ -1823,18 +1493,12 @@ select.modern-input {
   padding: 0 4px;
   line-height: 1;
 }
-
 .toast-close:hover { opacity: 1; }
 
 @keyframes toastPop {
   0% { opacity: 0; transform: scale(0.85) translateY(-10px); }
   60% { transform: scale(1.03) translateY(2px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
 }
 
 .toast-enter-active { transition: all 0.3s ease-out; }
@@ -1845,15 +1509,13 @@ select.modern-input {
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 
-/* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════════════════════════ */  @media (max-width: 768px) {
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
   .toolbar { flex-direction: column; align-items: stretch; }
-  .search-box { max-width: 100%; }
+  .search-box { max-width: 100%; width: 100%; }
   .filter-group { flex-wrap: wrap; }
   .pagination-bar { flex-direction: column; align-items: center; gap: 8px; }
   .pagination-info { width: 100%; justify-content: center; }
   .modal-content-panel { width: 100%; margin: 0 8px; }
-  .gender-toggle, .status-toggle { flex-wrap: wrap; }
 }
 </style>

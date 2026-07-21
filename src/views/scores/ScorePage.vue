@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <div class="px-4 py-4">
+  <div class="scores-page">
+    <div>
       <div class="page-header">
         <h2 class="page-title">Score Sheet</h2>
       </div>
@@ -272,4 +272,13 @@ onMounted(async () => {
 }
 .empty-state h5 { font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
 .empty-state p { font-size: 0.875rem; }
+
+.scores-page {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
 </style>
