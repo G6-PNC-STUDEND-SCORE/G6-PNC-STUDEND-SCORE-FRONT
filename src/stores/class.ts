@@ -33,7 +33,10 @@ export const useClassStore = defineStore('class', () => {
   }
 
   async function fetchClasses(params?: Record<string, string | number>) {
-    loading.value = classes.value.length === 0
+    // Only show loading for initial page load, NOT for search/filter/pagination
+    if (!params?.search && !params?.status && !params?.page && !params?.per_page) {
+      loading.value = classes.value.length === 0
+    }
     error.value = null
     clearMessages()
 

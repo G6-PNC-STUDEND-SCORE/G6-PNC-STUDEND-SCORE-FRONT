@@ -74,101 +74,122 @@
           <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
         </div>
 
-        <!-- Table -->
-        <div class="table-wrap">
-          <table class="class-table">
-            <thead>
-              <tr>
-                <th class="col-check">
-                  <input
-                    type="checkbox"
-                    class="table-checkbox"
-                    :checked="isAllPageSelected"
-                    :indeterminate="isIndeterminate"
-                    @change="toggleSelectAll"
-                  />
-                </th>
-                <th class="col-index">#</th>
-                <th>Class</th>
-                <th>Generation</th>
-                <th>Room</th>
-                <th>Status</th>
-                <th class="col-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(cls, index) in store.classes"
-                :key="cls.id"
-                class="class-row"
-                :class="{ 'row-selected': selectedIds.includes(cls.id) }"
-              >
-                <td class="col-check" @click.stop>
-                  <input
-                    type="checkbox"
-                    class="table-checkbox"
-                    :checked="selectedIds.includes(cls.id)"
-                    @change="toggleSelectUser(cls.id)"
-                  />
-                </td>
-                <td class="col-index">{{ pagination.from + index }}</td>
-                <td>
-                  <div class="user-cell">
-                    <div class="class-avatar">
-                      <Users :size="16" />
-                    </div>
-                    <span class="user-name">{{ cls.name }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="meta-val">{{ cls.academicYear?.name || '—' }}</span>
-                </td>
-                <td>
-                  <span class="meta-val">{{ cls.room || '—' }}</span>
-                </td>
-                <td>
-                  <span class="status-badge" :class="cls.is_active ? 'badge-active' : 'badge-inactive'">
-                    {{ cls.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="col-actions" @click.stop>
-                  <div class="action-dropdown">
-                    <button
-                      class="action-trigger"
-                      :title="`Actions for ${cls.name}`"
-                      @click.stop="toggleDropdown(cls.id)"
-                    >
-                      <MoreVertical :size="18" />
-                    </button>
-                    <Transition name="dropdown">
-                      <div v-if="openDropdownId === cls.id" class="action-menu">
-                        <button class="action-item edit" @click.stop="openEditModal(cls); openDropdownId = null">
-                          <Pencil :size="16" />
-                          <span>Edit</span>
-                        </button>
-                        <button class="action-item view" @click.stop="viewClass(cls); openDropdownId = null">
-                          <Eye :size="16" />
-                          <span>View</span>
-                        </button>
-                        <div class="dropdown-divider"></div>
-                        <button class="action-item delete" @click.stop="confirmDelete(cls); openDropdownId = null">
-                          <Trash2 :size="16" />
-                          <span>Delete</span>
-                        </button>
+        <!-- Table + Empty State (using v-show to prevent DOM rebuild) -->
+        <div class="table-area">
+          <div class="table-wrap" v-show="store.classes.length > 0">
+            <table class="class-table">
+              <thead>
+                <tr>
+                  <th class="col-check">
+                    <input
+                      type="checkbox"
+                      class="table-checkbox"
+                      :checked="isAllPageSelected"
+                      :indeterminate="isIndeterminate"
+                      @change="toggleSelectAll"
+                    />
+                  </th>
+                  <th class="col-index">#</th>
+                  <th>Class</th>
+                  <th>Generation</th>
+                  <th>Room</th>
+                  <th>Status</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(cls, index) in store.classes"
+                  :key="cls.id"
+                  class="class-row"
+                  :class="{ 'row-selected': selectedIds.includes(cls.id) }"
+                >
+                  <td class="col-check" @click.stop>
+                    <input
+                      type="checkbox"
+                      class="table-checkbox"
+                      :checked="selectedIds.includes(cls.id)"
+                      @change="toggleSelectUser(cls.id)"
+                    />
+                  </td>
+                  <td class="col-index">{{ pagination.from + index }}</td>
+                  <td>
+                    <div class="user-cell">
+                      <div class="class-avatar">
+                        <Users :size="16" />
                       </div>
-                    </Transition>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="store.classes.length === 0">
-                <td colspan="7" class="empty-state">No classes found</td>
-              </tr>
-            </tbody>
-          </table>
+                      <span class="user-name">{{ cls.name }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="meta-val">{{ cls.academicYear?.name || '—' }}</span>
+                  </td>
+                  <td>
+                    <span class="meta-val">{{ cls.room || '—' }}</span>
+                  </td>
+                  <td>
+                    <span class="status-badge" :class="cls.is_active ? 'badge-active' : 'badge-inactive'">
+                      {{ cls.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="col-actions" @click.stop>
+                    <div class="action-dropdown">
+                      <button
+                        class="action-trigger"
+                        :title="`Actions for ${cls.name}`"
+                        @click.stop="toggleDropdown(cls.id)"
+                      >
+                        <MoreVertical :size="18" />
+                      </button>
+                      <Transition name="dropdown">
+                        <div v-if="openDropdownId === cls.id" class="action-menu">
+                          <button class="action-item edit" @click.stop="openEditModal(cls); openDropdownId = null">
+                            <Pencil :size="16" />
+                            <span>Edit</span>
+                          </button>
+                          <button class="action-item view" @click.stop="viewClass(cls); openDropdownId = null">
+                            <Eye :size="16" />
+                            <span>View</span>
+                          </button>
+                          <div class="dropdown-divider"></div>
+                          <button class="action-item delete" @click.stop="confirmDelete(cls); openDropdownId = null">
+                            <Trash2 :size="16" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </Transition>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ═══ Empty State ═══ -->
+          <div class="empty-state-standalone" v-show="store.classes.length === 0">
+            <div class="empty-state-inner">
+              <div class="empty-state-icon-box">
+                <div class="empty-state-icon-ring">
+                  <SearchX :size="28" />
+                </div>
+              </div>
+              <div class="empty-state-texts">
+                <h5 class="empty-state-title">No classes found</h5>
+                <p class="empty-state-desc">
+                  <template v-if="searchQuery">We couldn't find any classes matching "<strong>{{ searchQuery }}</strong>". Try adjusting your search or filters.</template>
+                  <template v-else>There are no classes to display yet. Create your first class to get started.</template>
+                </p>
+              </div>
+              <button v-if="searchQuery" class="empty-state-btn" @click="clearSearch">
+                <X :size="14" />
+                <span>Clear search</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Pagination -->
-        <div v-if="store.totalClasses > 0" class="pagination-bar">
+        <div class="pagination-bar">
           <div class="pagination-info">
             <span class="rows-label">Rows per page:</span>
             <div class="rows-selector">
@@ -213,7 +234,7 @@
             </button>
           </div>
           <div class="pagination-total">
-            {{ pagination.from }}-{{ pagination.to }} of {{ store.totalClasses }}
+            {{ store.totalClasses > 0 ? pagination.from : 0 }}-{{ pagination.to }} of {{ store.totalClasses }}
           </div>
         </div>
       </div>
@@ -361,7 +382,7 @@ import { getAcademicYears } from '@/services/academicYearService'
 import ClassDetailsModal from './ClassDetailsModal.vue'
 import {
   Users, Plus, AlertTriangle, CheckCircle, Pencil, Trash2, SquarePen, CirclePlus,
-  ChevronLeft, ChevronRight, Search, X, Check, ToggleLeft,
+  ChevronLeft, ChevronRight, Search, SearchX, X, Check, ToggleLeft,
   MoreVertical, AlertCircle, CheckCircle as CheckCircleIcon, Trash, Eye,
 } from '@lucide/vue'
 
@@ -488,7 +509,7 @@ function onSearchInput() {
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
     loadClasses()
-  }, 400)
+  }, 700)
 }
 
 function clearSearch() {
@@ -844,6 +865,15 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+/* ==================== Table Area ==================== */
+.table-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
 /* ==================== Table ==================== */
 .table-wrap {
   width: 100%;
@@ -857,6 +887,7 @@ onUnmounted(() => {
 
 .class-table {
   width: 100%;
+  height: 100%;
   border-collapse: separate;
   border-spacing: 0;
   font-size: 0.875rem;
@@ -931,10 +962,108 @@ onUnmounted(() => {
   border-left-color: #2563eb !important;
 }
 
-.empty-state {
+.empty-state-standalone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  min-height: 200px;
+}
+
+.empty-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 48px 16px !important;
-  color: #9ca3af;
+  gap: 16px;
+  max-width: 400px;
+}
+
+.empty-state-icon-box {
+  margin-bottom: 4px;
+}
+
+.empty-state-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  position: relative;
+}
+
+.empty-state-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(37, 99, 235, 0.08);
+}
+
+.empty-state-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+  font-size: 0.8375rem;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.empty-state-desc strong {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.empty-state-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .user-cell {

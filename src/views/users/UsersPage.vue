@@ -1,21 +1,21 @@
 <template>
   <div class="users-page">
-    <!-- Loading State -->
-    <div v-if="loading && users.length === 0" class="loading-state">
-      <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-        <span class="visually-hidden">Loading...</span>
+    <!-- Loading overlay (shown on top of card, never replaces it) -->
+    <div v-if="loading && users.length === 0" class="loading-overlay">
+      <div class="loading-spinner-wrap">
+        <div class="spinner"></div>
+        <p>Loading users...</p>
       </div>
-      <p>Loading users...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="error-state">
+    <div v-if="error" class="error-state">
       <AlertTriangle :size="16" />
       {{ error }}
     </div>
 
-    <!-- User List -->
-    <div v-else class="user-card">
+    <!-- User Card (always visible once loaded) -->
+    <div class="user-card" :class="{ 'card-loading': loading && users.length > 0 }">
       <!-- Store Success Message -->
       <div v-if="store.successMessage" class="success-banner">
         <CheckCircle :size="18" />
@@ -35,6 +35,9 @@
               placeholder="Search by name or email..."
               @input="onSearchInput"
             />
+            <button v-if="searchQuery" class="tb-clear" @click="clearSearch">
+              <X :size="14" />
+            </button>
           </div>
           <div class="filter-group">
             <label class="filter-label">
@@ -77,74 +80,98 @@
         <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
       </div>
 
-      <!-- Table -->
-      <div class="table-wrap">
-        <table class="user-table">
-          <thead>
-            <tr>
-              <th class="col-check"><input type="checkbox" class="table-checkbox" :checked="isAllPageSelected" :indeterminate="isIndeterminate" @change="toggleSelectAll" /></th>
-              <th class="col-index">#</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Gender</th>
-              <th>Status</th>
-              <th class="col-actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(user, index) in users"
-              :key="user.id"
-              class="user-row"
-              :class="{ 'row-selected': selectedIds.includes(user.id) }"
-            >
-              <td class="col-check">
-                <input type="checkbox" class="table-checkbox" :checked="selectedIds.includes(user.id)" @change="toggleSelectUser(user.id)" />
-              </td>
-              <td class="col-index">{{ pagination.from + index }}</td>
-              <td>
-                <div class="name-cell">
-                  <div class="avatar">{{ getInitials(user.name) }}</div>
-                  <span class="name-text">{{ user.name }}</span>
+      <!-- Table + Empty State (with smooth fade transition) -->
+      <div class="table-area">
+        <Transition name="view-fade" mode="out-in">
+          <div class="table-wrap" v-if="users.length > 0" key="table">
+            <table class="user-table">
+            <thead>
+              <tr>
+                <th class="col-check"><input type="checkbox" class="table-checkbox" :checked="isAllPageSelected" :indeterminate="isIndeterminate" @change="toggleSelectAll" /></th>
+                <th class="col-index">#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Gender</th>
+                <th>Status</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(user, index) in users"
+                :key="user.id"
+                class="user-row"
+                :class="{ 'row-selected': selectedIds.includes(user.id) }"
+              >
+                <td class="col-check">
+                  <input type="checkbox" class="table-checkbox" :checked="selectedIds.includes(user.id)" @change="toggleSelectUser(user.id)" />
+                </td>
+                <td class="col-index">{{ pagination.from + index }}</td>
+                <td>
+                  <div class="name-cell">
+                    <div class="avatar">{{ getInitials(user.name) }}</div>
+                    <span class="name-text">{{ user.name }}</span>
+                  </div>
+                </td>
+                <td><span class="email-text">{{ user.email }}</span></td>
+                <td><span class="badge badge-role">{{ user.role?.name || '—' }}</span></td>
+                <td><span class="badge badge-gender">{{ user.gender || '—' }}</span></td>
+                <td>
+                  <span class="badge" :class="'badge-' + user.status">
+                    {{ user.status }}
+                  </span>
+                </td>
+                <td class="col-actions" @click.stop>
+                  <div class="action-dropdown">
+                    <button class="action-trigger" :title="`Actions for ${user.name}`" @click="toggleDropdown(user.id)">
+                      <MoreVertical :size="18" />
+                    </button>
+                    <Transition name="dropdown">
+                      <div v-if="openDropdownId === user.id" class="action-menu">
+                        <button class="action-item" @click="viewUser(user); openDropdownId = null">
+                          <Eye :size="16" /><span>View Details</span>
+                        </button>
+                        <button class="action-item" @click="openEditModal(user); openDropdownId = null">
+                          <Pencil :size="16" /><span>Edit</span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button class="action-item action-delete" @click="openDeleteModal(user); openDropdownId = null">
+                          <Trash2 :size="16" /><span>Delete</span>
+                        </button>
+                      </div>
+                    </Transition>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+          <div class="empty-state-standalone" v-else key="empty">
+            <div class="empty-state-inner">
+              <div class="empty-state-icon-box">
+                <div class="empty-state-icon-ring">
+                  <SearchX :size="28" />
                 </div>
-              </td>
-              <td><span class="email-text">{{ user.email }}</span></td>
-              <td><span class="badge badge-role">{{ user.role?.name || '—' }}</span></td>
-              <td><span class="badge badge-gender">{{ user.gender || '—' }}</span></td>
-              <td>
-                <span class="badge" :class="'badge-' + user.status">
-                  {{ user.status }}
-                </span>
-              </td>
-              <td class="col-actions" @click.stop>
-                <div class="action-dropdown">
-                  <button class="action-trigger" :title="`Actions for ${user.name}`" @click="toggleDropdown(user.id)">
-                    <MoreVertical :size="18" />
-                  </button>
-                  <Transition name="dropdown">
-                    <div v-if="openDropdownId === user.id" class="action-menu">
-                      <button class="action-item" @click="viewUser(user); openDropdownId = null">
-                        <Eye :size="16" /><span>View Details</span>
-                      </button>
-                      <button class="action-item" @click="openEditModal(user); openDropdownId = null">
-                        <Pencil :size="16" /><span>Edit</span>
-                      </button>
-                      <div class="dropdown-divider"></div>
-                      <button class="action-item action-delete" @click="openDeleteModal(user); openDropdownId = null">
-                        <Trash2 :size="16" /><span>Delete</span>
-                      </button>
-                    </div>
-                  </Transition>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+              <div class="empty-state-texts">
+                <h5 class="empty-state-title">No users found</h5>
+                <p class="empty-state-desc">
+                  <template v-if="searchQuery">We couldn't find any users matching "<strong>{{ searchQuery }}</strong>". Try adjusting your search or filters.</template>
+                  <template v-else>There are no users to display yet. Create your first user to get started.</template>
+                </p>
+              </div>
+              <button v-if="searchQuery" class="empty-state-btn" @click="clearSearch">
+                <X :size="14" />
+                <span>Clear search</span>
+              </button>
+            </div>
+          </div>
+        </Transition>
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalUsers > 0" class="pagination-bar">
+      <div class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
           <div class="rows-selector">
@@ -159,7 +186,7 @@
           </template>
           <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" aria-label="Next page"><ChevronRight :size="16" /></button>
         </div>
-        <div class="pagination-total">{{ pagination.from }}-{{ pagination.to }} of {{ totalUsers }}</div>
+        <div class="pagination-total">{{ totalUsers > 0 ? pagination.from : 0 }}-{{ pagination.to }} of {{ totalUsers }}</div>
       </div>
     </div>
 
@@ -328,7 +355,7 @@
 </template>
 
 <script setup lang="ts">
-import { Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash } from '@lucide/vue'
+import { Plus, AlertTriangle, Search, SearchX, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, X } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
@@ -351,7 +378,13 @@ function onSearchInput() {
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
     loadUsers()
-  }, 400)
+  }, 300)
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  currentPage.value = 1
+  loadUsers()
 }
 
 function applyFilters() {
@@ -634,17 +667,44 @@ onMounted(() => { init() })
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.loading-state {
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  z-index: 5;
+  border-radius: 16px;
+}
+
+.loading-spinner-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 48px 0;
-  color: #6b7280;
-  gap: 8px;
+  gap: 12px;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.loading-spinner-wrap .spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.card-loading {
+  position: relative;
+  overflow: hidden;
 }
 
 .error-state {
@@ -875,6 +935,153 @@ onMounted(() => { init() })
   font-family: inherit;
 }
 .bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+/* ==================== Table Area ==================== */
+.table-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+.empty-state-standalone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  min-height: 200px;
+}
+
+.empty-state-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  max-width: 400px;
+}
+
+.empty-state-icon-box {
+  margin-bottom: 4px;
+}
+
+.empty-state-icon-ring {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  position: relative;
+}
+
+.empty-state-icon-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(37, 99, 235, 0.08);
+}
+
+.empty-state-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-state-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-desc {
+  font-size: 0.8375rem;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+.empty-state-desc strong {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.55rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.empty-state-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.empty-state-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.tb-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tb-clear:hover {
+  color: #64748b;
+}
+
+/* ==================== View Fade Transition ==================== */
+.view-fade-enter-active {
+  transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+}
+.view-fade-leave-active {
+  transition: opacity 0.12s ease-in, transform 0.12s ease-in;
+}
+.view-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.view-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
 
 /* ==================== Table ==================== */
 .table-wrap {
