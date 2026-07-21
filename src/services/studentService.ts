@@ -1,18 +1,47 @@
-// import { log } from 'console'
 import { http } from './api'
 
 export interface Student {
   id: number
-  class_id: number | null
-  name: string
-  photo: string | null
-  gender: 'Male' | 'Female'
-  status: 'active' | 'inactive'
+  user_id: number
+  student_number_sequence_id: number | null
+  generation_id: number | null
+  profile_photo: string | null
+  profile_photo_url: string | null
+  class_id?: number | null
+  academic_year_id?: number | null
+  enrollment_date?: string | null
+  gender?: string | null
   created_at: string
   updated_at: string
+  user?: {
+    id: number
+    name: string
+    email: string
+    gender: string | null
+    status: string
+    avatar: string | null
+  } | null
+  classHistories?: Array<{
+    id: number
+    class_id: number
+    status: string
+    class?: {
+      id: number
+      name: string
+    } | null
+  }> | null
   class?: {
     id: number
     name: string
+  } | null
+  generation?: {
+    id: number
+    name: string
+  } | null
+  studentNumberSequence?: {
+    id: number
+    student_number: string
+    intake_year: number
   } | null
 }
 
@@ -34,24 +63,9 @@ export interface ClassesResponse {
 }
 
 export async function getStudents(): Promise<StudentsResponse> {
-  // const res = await http.get<StudentsResponse>('/students')
-  // return res.data
-  return {
-    students: [
-      {
-        id: 1,
-        class_id: 1,
-        name: 'John Doe',
-        photo: null,
-        gender: 'Male',
-        created_at: '2022-01-01',
-        updated_at: '2022-01-01',
-        class: { id: 1, name: 'Class 1' },
-      },
-    ],
-  }
+  const res = await http.get<StudentsResponse>('/students')
+  return res.data
 }
-
 
 export async function getStudent(id: number): Promise<StudentResponse> {
   const res = await http.get<StudentResponse>(`/students/${id}`)
@@ -60,10 +74,12 @@ export async function getStudent(id: number): Promise<StudentResponse> {
 
 export async function createStudent(data: {
   name: string
-  gender: 'Male' | 'Female'
+  email: string
+  password: string
+  gender?: string
+  status?: string
+  generation_id?: number | null
   class_id?: number | null
-  photo?: string | null
-  status?: 'active' | 'inactive'
 }): Promise<StudentResponse> {
   const res = await http.post<StudentResponse>('/students', data)
   return res.data
@@ -73,13 +89,19 @@ export async function updateStudent(
   id: number,
   data: {
     name?: string
-    gender?: 'Male' | 'Female'
+    gender?: string
+    status?: string
+    generation_id?: number | null
     class_id?: number | null
-    photo?: string | null
-    status?: 'active' | 'inactive'
   }
 ): Promise<StudentResponse> {
-  const res = await http.put<StudentResponse>(`/students/${id}`, data)
+  const payload: Record<string, unknown> = {}
+  if (data.name !== undefined) payload.name = data.name
+  if (data.gender !== undefined) payload.gender = data.gender
+  if (data.status !== undefined) payload.status = data.status
+  if (data.generation_id !== undefined) payload.generation_id = data.generation_id
+  if (data.class_id !== undefined) payload.class_id = data.class_id
+  const res = await http.put<StudentResponse>(`/students/${id}`, payload)
   return res.data
 }
 
@@ -98,8 +120,30 @@ export async function assignStudentToClass(
   return res.data
 }
 
-// export async function getClasses(): Promise<ClassesResponse> {
-//   log('getClasses')
-//   // const res = await http.get<ClassesResponse>('/classes/list')
-//   // return res.data
-// }
+export async function uploadStudentPhoto(
+  id: number,
+  file: File
+): Promise<StudentResponse> {
+  const formData = new FormData()
+  formData.append('profile_photo', file)
+
+  // Ensure we send multipart/form-data
+  const res = await http.post<StudentResponse>(`/students/${id}/photo`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+  return res.data
+}
+
+export async function bulkDeleteStudents(ids: number[]): Promise<{ message: string; data: { deleted_count: number } }> {
+  const res = await http.post('/students/bulk-delete', { ids })
+  return res.data
+}
+
+export async function deleteStudentPhoto(
+  id: number
+): Promise<StudentResponse> {
+  const res = await http.delete<StudentResponse>(`/students/${id}/photo`)
+  return res.data
+}

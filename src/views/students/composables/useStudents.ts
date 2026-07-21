@@ -4,53 +4,86 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  bulkDeleteStudents,
   assignStudentToClass,
-  // getClasses,
+  uploadStudentPhoto,
+  deleteStudentPhoto,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
 
+import { classService } from '@/services/classService'
+import { cacheService } from '@/services/cacheService'
+
+const STUDENTS_CACHE_KEY = 'students-data'
+const CLASSES_CACHE_KEY = 'classes-data'
+
 export function useStudents() {
   // ==================== Data ====================
-  const students = ref<Student[]>([])
-  const classes = ref<SchoolClass[]>([])
+  const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
+  const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
+
+  const students = ref<Student[]>(cachedStudents ?? [])
+  const classes = ref<SchoolClass[]>(cachedClasses ?? [])
   const loading = ref(true)
   const error = ref<string | null>(null)
   const searchQuery = ref('')
-  const genderFilter = ref('')
   const formSubmitting = ref(false)
   const formError = ref<string | null>(null)
 
-  const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
+const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 
-  // ==================== Modal State ====================
-  const showCreateModal = ref(false)
-  const showEditModal = ref(false)
-  const showDeleteModal = ref(false)
-  const showAssignModal = ref(false)
-  const showDetailsModal = ref(false)
-  const selectedStudent = ref<Student | null>(null)
+const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteModal = ref(false)
+const showBulkDeleteModal = ref(false)
+const showAssignModal = ref(false)
+const showDetailsModal = ref(false)
+const selectedStudent = ref<Student | null>(null)
+const selectedBulkIds = ref<number[]>([])
 
-  // ==================== Form State ====================
-  const editForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
+  const genderFilter = ref('')
+
+  const initialCreateForm = () => ({
+    name: '',
+    email: '',
+    password: '',
+    gender: 'Male' as 'Male' | 'Female',
+    status: 'active' as 'active' | 'inactive',
+    class_id: null as number | null,
+    generation_id: null as number | null,
+  })
+
+  const createForm = ref(initialCreateForm())
+  
+  const initialEditForm = () => ({
+    name: '',
+    gender: 'Male' as 'Male' | 'Female',
+    status: 'active' as 'active' | 'inactive',
+    class_id: null as number | null,
+    academic_year_id: null as number | null,
+    enrollment_date: null as string | null,
+  })
+
+  const editForm = ref(initialEditForm())
+  
   const assignForm = ref({ class_id: null as number | null })
-  const createForm = ref({ name: '', gender: 'Male' as 'Male' | 'Female', class_id: null as number | null, status: 'active' as 'active' | 'inactive' })
 
-  // ==================== Computed ====================
   const filteredStudents = computed(() => {
     return students.value.filter((s) => {
-      const matchesSearch = s.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchesGender = !genderFilter.value || s.gender === genderFilter.value
-      return matchesSearch && matchesGender
+      const studentName = s.user?.name || ''
+      const matchesSearch = studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
+      const matchesStudentNumber = (s.studentNumberSequence?.student_number || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      return matchesSearch || matchesStudentNumber
     })
   })
 
-  // ==================== Helpers ====================
   function getInitials(name: string): string {
-    const parts = name.split(' ').filter(Boolean)
+    const safeName = name || ''
+    const parts = safeName.split(' ').filter(Boolean)
     return parts.length >= 2
       ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-      : name.substring(0, 2).toUpperCase()
+      : safeName.substring(0, 2).toUpperCase()
   }
 
   function formatDate(dateStr?: string): string {
@@ -69,11 +102,11 @@ export function useStudents() {
     setTimeout(() => { toast.value.show = false }, 3000)
   }
 
-  // ==================== API Calls ====================
   async function loadStudents() {
     try {
       const res = await getStudents()
-      students.value = res.students
+      students.value = res.students.sort((a, b) => b.id - a.id)
+      cacheService.set(STUDENTS_CACHE_KEY, res.students.sort((a, b) => b.id - a.id), 24 * 60 * 60_000)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       error.value = err.response?.data?.message || err.message || 'Failed to load students'
@@ -84,20 +117,38 @@ export function useStudents() {
 
   async function loadClasses() {
     try {
-      const res = await getClasses()
-      classes.value = res.classes
+      const response = await classService.getClasses()
+      if (response.success) {
+        const data = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean) as SchoolClass[]
+        classes.value = data
+        cacheService.set(CLASSES_CACHE_KEY, data, 24 * 60 * 60_000)
+      }
     } catch {
-      // Silently fail
+      // Non-critical; silently ignore
     }
   }
 
   async function init() {
+    // 1. Show cached data INSTANTLY
+    const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
+    const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
+    if (cachedStudents) students.value = cachedStudents
+    if (cachedClasses) classes.value = cachedClasses
+    loading.value = !cachedStudents
+
+    // 2. Refresh from API in background
     await Promise.all([loadStudents(), loadClasses()])
+    loading.value = false
   }
 
-  // ==================== Create ====================
+  // Invalidate cache on mutations
+  function invalidateStudentCache() {
+    cacheService.remove(STUDENTS_CACHE_KEY)
+    cacheService.remove(CLASSES_CACHE_KEY)
+  }
+
   function openCreateModal() {
-    createForm.value = { name: '', gender: 'Male', class_id: null, status: 'active' }
+    createForm.value = initialCreateForm()
     formError.value = null
     showCreateModal.value = true
   }
@@ -108,54 +159,93 @@ export function useStudents() {
 
   async function handleCreate() {
     if (!createForm.value.name.trim()) {
-      formError.value = 'Name is required'
+      formError.value = 'Student name is required'
       return
     }
-    formSubmitting.value = true
+    if (!createForm.value.email.trim()) {
+      formError.value = 'Email address is required'
+      return
+    }
+    if (!createForm.value.password || createForm.value.password.length < 8) {
+      formError.value = 'Password must be at least 8 characters'
+      return
+    }
     formError.value = null
+    // Close modal immediately so user feels no delay
+    closeCreateModal()
+    // Save in background — show toast on success, or reopen modal on error
     try {
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
-      closeCreateModal()
+      invalidateStudentCache()
       showToast('Student created successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to create student', 'error')
+      // Reopen the form with the error so user can retry
+      showCreateModal.value = true
       formError.value = err.response?.data?.message || err.message || 'Failed to create student'
-    } finally {
-      formSubmitting.value = false
     }
   }
 
-  // ==================== Edit ====================
+  const photoFile = ref<File | null>(null)
+  const removePhotoFlag = ref(false)
+
   function openEditModal(student: Student) {
     selectedStudent.value = student
     editForm.value = {
-      name: student.name,
-      gender: student.gender,
-      class_id: student.class_id,
-      status: student.status,
+      ...initialEditForm(),
+      name: student.user?.name ?? '',
+      gender: (student.user?.gender as 'Male' | 'Female') ?? 'Male',
+      status: (student.user?.status as 'active' | 'inactive') ?? 'active',
+      class_id: student.class_id ?? student.classHistories?.find((h: any) => h.status === 'active')?.class_id ?? null,
+      academic_year_id: student.academic_year_id ?? null,
+      enrollment_date: student.enrollment_date ?? null,
     }
     formError.value = null
+    photoFile.value = null
+    removePhotoFlag.value = false
     showEditModal.value = true
   }
 
   function closeEditModal() {
     showEditModal.value = false
     selectedStudent.value = null
+    photoFile.value = null
+    removePhotoFlag.value = false
+  }
+
+  function onEditPhotoSelected(file: File | null) {
+    photoFile.value = file
+    if (file) {
+      removePhotoFlag.value = false
+    }
+  }
+
+  function onEditRemovePhoto() {
+    photoFile.value = null
+    removePhotoFlag.value = true
   }
 
   async function handleEdit() {
     if (!selectedStudent.value) return
-    if (!editForm.value.name.trim()) {
-      formError.value = 'Name is required'
-      return
-    }
     formSubmitting.value = true
     formError.value = null
     try {
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
+      let updatedStudent = res.student
+
+      if (photoFile.value) {
+        const photoRes = await uploadStudentPhoto(selectedStudent.value.id, photoFile.value)
+        updatedStudent = photoRes.student
+      } else if (removePhotoFlag.value) {
+        const photoRes = await deleteStudentPhoto(selectedStudent.value.id)
+        updatedStudent = photoRes.student
+      }
+
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
-      if (index !== -1) students.value[index] = res.student
+      if (index !== -1) students.value[index] = updatedStudent
+      invalidateStudentCache()
       closeEditModal()
       showToast('Student updated successfully')
     } catch (e: unknown) {
@@ -166,7 +256,34 @@ export function useStudents() {
     }
   }
 
-  // ==================== Delete ====================
+  function openBulkDeleteModal(ids: number[]) {
+    selectedBulkIds.value = ids
+    showBulkDeleteModal.value = true
+  }
+
+  function closeBulkDeleteModal() {
+    showBulkDeleteModal.value = false
+    selectedBulkIds.value = []
+  }
+
+  async function handleBulkDelete() {
+    const ids = selectedBulkIds.value
+    if (!ids.length) return
+    formSubmitting.value = true
+    try {
+      const res = await bulkDeleteStudents(ids)
+      students.value = students.value.filter((s) => !ids.includes(s.id))
+      invalidateStudentCache()
+      closeBulkDeleteModal()
+      showToast(res.message || 'Student deleted successfully')
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
+    } finally {
+      formSubmitting.value = false
+    }
+  }
+
   function openDeleteModal(student: Student) {
     selectedStudent.value = student
     showDeleteModal.value = true
@@ -181,22 +298,31 @@ export function useStudents() {
     if (!selectedStudent.value) return
     formSubmitting.value = true
     try {
-      await deleteStudent(selectedStudent.value.id)
+      const res = await deleteStudent(selectedStudent.value.id)
       students.value = students.value.filter((s) => s.id !== selectedStudent.value!.id)
+      invalidateStudentCache()
       closeDeleteModal()
-      showToast('Student deleted successfully')
+      showToast(res.message || 'Student deleted successfully')
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } }; message?: string }
-      showToast(err.response?.data?.message || err.message || 'Failed to delete student', 'error')
+      const err = e as { response?: { data?: { message?: string }; status?: number }; message?: string }
+      const msg = err.response?.data?.message || err.message || ''
+      // If already deleted, still clean up and show success
+      if (err.response?.status === 404 || msg.toLowerCase().includes('not found')) {
+        students.value = students.value.filter((s) => s.id !== selectedStudent.value?.id)
+        invalidateStudentCache()
+        closeDeleteModal()
+        showToast('Student deleted successfully')
+      } else {
+        showToast(msg || 'Failed to delete student', 'error')
+      }
     } finally {
       formSubmitting.value = false
     }
   }
 
-  // ==================== Assign ====================
   function openAssignModal(student: Student) {
     selectedStudent.value = student
-    assignForm.value = { class_id: student.class_id }
+    assignForm.value = { class_id: student.class_id ?? null }
     showAssignModal.value = true
   }
 
@@ -212,6 +338,7 @@ export function useStudents() {
       const res = await assignStudentToClass(selectedStudent.value.id, assignForm.value.class_id)
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
       if (index !== -1) students.value[index] = res.student
+      invalidateStudentCache()
       closeAssignModal()
       showToast('Student assigned to class successfully')
     } catch (e: unknown) {
@@ -222,7 +349,6 @@ export function useStudents() {
     }
   }
 
-  // ==================== View Details ====================
   function viewDetails(student: Student) {
     selectedStudent.value = student
     showDetailsModal.value = true
@@ -233,46 +359,49 @@ export function useStudents() {
     selectedStudent.value = null
   }
 
-  // ==================== Return ====================
   return {
-    // Data
     students,
     classes,
     loading,
     error,
     searchQuery,
-    genderFilter,
     formSubmitting,
     formError,
     toast,
-    // Modal state
     showCreateModal,
     showEditModal,
     showDeleteModal,
+    showBulkDeleteModal,
     showAssignModal,
     showDetailsModal,
     selectedStudent,
-    // Form state
+    selectedBulkIds,
+    genderFilter,
     createForm,
     editForm,
     assignForm,
-    // Computed
+    photoFile,
+    existingPhotoUrl: computed(() => selectedStudent.value?.profile_photo_url ?? null),
     filteredStudents,
-    // Helpers
     getInitials,
     formatDate,
     showToast,
-    // Actions
     init,
+    invalidateStudentCache,
     openCreateModal,
     closeCreateModal,
     handleCreate,
     openEditModal,
     closeEditModal,
     handleEdit,
+    onEditPhotoSelected,
+    onEditRemovePhoto,
     openDeleteModal,
     closeDeleteModal,
     handleDelete,
+    openBulkDeleteModal,
+    closeBulkDeleteModal,
+    handleBulkDelete,
     openAssignModal,
     closeAssignModal,
     handleAssign,

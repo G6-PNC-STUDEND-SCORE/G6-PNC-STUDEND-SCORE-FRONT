@@ -2,39 +2,66 @@
   <div class="student-card">
     <!-- Search & Filter Bar -->
     <div class="toolbar">
-      <div class="search-box">
-        <i class="bi bi-search search-icon"></i>
-        <input
-          :value="searchQuery"
-          @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
-          type="text"
-          class="search-input"
-          placeholder="Search by name..."
-        />
+      <div class="toolbar-left">
+        <div class="search-box">
+          <Search :size="16" class="search-icon" />
+          <input
+            :value="searchQuery"
+            @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
+            type="text"
+            class="search-input"
+            placeholder="Search by name..."
+          />
+        </div>
       </div>
 
-      <div class="filter-group">
-        <label class="filter-label">
-          <i class="bi bi-gender-ambiguous"></i>
-          <span>Gender</span>
-          <select
-            :value="genderFilter"
-            @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
-            class="filter-select"
-          >
-            <option value="">All</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </label>
-      </div>
+      <div class="toolbar-right">
+        <div class="filter-group">
+          <label class="filter-label">
+            <VenusAndMars :size="16" />
+            <span>Gender</span>
+            <select
+              :value="genderFilter"
+              @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
+              class="filter-select"
+            >
+              <option value="">All</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </label>
+        </div>
 
-      <span class="count-badge">
-        {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
-      </span>
+        <span class="count-badge">
+          {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
+        </span>
+      </div>
     </div>
 
-    <!-- Table -->
+    <!-- Bulk Delete Bar (appears when rows are selected) -->
+    <Transition name="bulk-slide">
+      <div v-if="someSelected" class="bulk-bar">
+        <div class="bulk-left">
+          <div class="bulk-check-icon">
+            <CheckCheck :size="18" />
+          </div>
+          <span class="bulk-count-label">
+            <strong>{{ selectedIds.length }}</strong> selected
+          </span>
+        </div>
+        <div class="bulk-right">
+          <button class="bulk-btn bulk-btn-clear" @click="selectedIds = []" title="Clear selection">
+            <X :size="15" />
+            <span>Clear</span>
+          </button>
+          <button class="bulk-btn bulk-btn-delete" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" title="Delete selected students">
+            <Trash2 :size="15" />
+            <span>Delete Selected</span>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <div class="table-wrap">
       <table class="student-table">
         <thead>
@@ -49,7 +76,6 @@
                 aria-label="Select all"
               />
             </th>
-            <th class="col-index">ID</th>
             <th>Name</th>
             <th>Gender</th>
             <th>Class</th>
@@ -59,16 +85,16 @@
         </thead>
         <tbody>
           <tr v-if="students.length === 0">
-              <td colspan="7" class="empty-state">
-              <i class="bi bi-people fs-1 d-block mb-2"></i>
+              <td colspan="6" class="empty-state">
+              <Users :size="28" class="d-block mb-2" style="margin: 0 auto;" />
               No students found
             </td>
           </tr>
           <tr
-            v-for="student in paginatedStudents"
+            v-for="(student, index) in paginatedStudents"
             :key="student.id"
             class="student-row"
-            :class="student.gender === 'Male' ? 'row-male' : 'row-female'"
+            :class="(student.user?.gender || '') === 'Male' ? 'row-male' : 'row-female'"
           >
             <td class="col-check">
               <input
@@ -76,67 +102,79 @@
                 class="row-check"
                 :checked="selectedIds.includes(student.id)"
                 @change="toggleRow(student.id)"
-                :aria-label="`Select ${student.name}`"
+                :aria-label="`Select ${student.user?.name || student.id}`"
               />
             </td>
-            <td class="col-index">{{ student.id }}</td>
             <td>
               <div class="student-cell">
-                <div class="avatar">
-                  {{ getInitials(student.name) }}
+                <div
+                  v-if="student.profile_photo_url"
+                  class="avatar-img"
+                >
+                  <img
+                    :src="student.profile_photo_url"
+                    :alt="student.user?.name || 'Student'"
+                    class="photo-img"
+                  />
                 </div>
-                <span class="student-name">{{ student.name }}</span>
+                <div v-else class="avatar">
+                  {{ getInitials(student.user?.name || '') }}
+                </div>
+                <span class="student-name">{{ student.user?.name }}</span>
               </div>
             </td>
             <td>
               <span
                 class="gender-badge"
-                :class="student.gender === 'Male' ? 'badge-male' : 'badge-female'"
+                :class="(student.user?.gender || '') === 'Male' ? 'badge-male' : 'badge-female'"
               >
-                {{ student.gender }}
+                {{ student.user?.gender || '—' }}
               </span>
             </td>
             <td>
-              <span v-if="student.class" class="class-cell"></span>
+              <span v-if="student.class" class="class-cell">
+                <Building2 :size="14" />
+                {{ student.class.name }}
+              </span>
               <span v-else class="class-empty">
-                <i class="bi bi-dash"></i>
+                <Minus :size="14" />
                 Not assigned
               </span>
             </td>
             <td class="py-3">
               <span
                 class="status-badge"
-                :class="student.status === 'active' ? 'badge-active' : 'badge-inactive'"
+                :class="(student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'"
               >
-                {{ student.status === 'active' ? 'Active' : 'Inactive' }}
+                {{ (student.user?.status || '') === 'active' ? 'Active' : 'Inactive' }}
               </span>
             </td>
             <td class="col-actions" @click.stop>
               <div class="action-dropdown">
                 <button
                   class="action-trigger"
-                  :title="`Actions for ${student.name}`"
+                  :title="`Actions for ${student.user?.name || student.id}`"
                   @click="toggleDropdown(student.id)"
                 >
-                  <i class="bi bi-three-dots-vertical"></i>
+                  <MoreVertical :size="18" />
                 </button>
                 <Transition name="dropdown">
                   <div v-if="openDropdownId === student.id" class="action-menu">
                     <button class="action-item view" @click="$emit('view', student); openDropdownId = null">
-                      <i class="bi bi-eye"></i>
+                      <Eye :size="16" />
                       <span>View Details</span>
                     </button>
                     <button class="action-item edit" @click="$emit('edit', student); openDropdownId = null">
-                      <i class="bi bi-pencil"></i>
+                      <Pencil :size="16" />
                       <span>Edit</span>
                     </button>
                     <button class="action-item assign" @click="$emit('assign', student); openDropdownId = null">
-                      <i class="bi bi-box-arrow-in-right"></i>
+                      <ArrowRightFromLine :size="16" />
                       <span>Assign Class</span>
                     </button>
                     <div class="dropdown-divider"></div>
                     <button class="action-item delete" @click="$emit('delete', student); openDropdownId = null">
-                      <i class="bi bi-trash"></i>
+                      <Trash2 :size="16" />
                       <span>Delete</span>
                     </button>
                   </div>
@@ -172,7 +210,7 @@
           @click="currentPage--"
           aria-label="Previous page"
         >
-          <i class="bi bi-chevron-left"></i>
+          <ChevronLeft :size="16" />
         </button>
 
         <template v-for="page in visiblePages" :key="page">
@@ -193,7 +231,7 @@
           @click="currentPage++"
           aria-label="Next page"
         >
-          <i class="bi bi-chevron-right"></i>
+          <ChevronRight :size="16" />
         </button>
       </div>
 
@@ -207,6 +245,22 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import type { Student } from '@/services/studentService'
+import {
+  Search,
+  VenusAndMars,
+  Users,
+  Building2,
+  Minus,
+  MoreVertical,
+  Eye,
+  Pencil,
+  ArrowRightFromLine,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  CheckCheck,
+  X,
+} from '@lucide/vue'
 
 const openDropdownId = ref<number | null>(null)
 const currentPage = ref(1)
@@ -235,6 +289,9 @@ const allSelected = computed(() =>
 )
 
 const someSelected = computed(() => selectedIds.value.length > 0)
+
+// Expose selectedIds for parent to read after bulk delete
+defineExpose({ selectedIds })
 
 function toggleRow(id: number) {
   const idx = selectedIds.value.indexOf(id)
@@ -283,7 +340,6 @@ function toggleDropdown(id: number) {
   openDropdownId.value = openDropdownId.value === id ? null : id
 }
 
-// Close dropdown when clicking outside
 function handleClickOutside() {
   openDropdownId.value = null
 }
@@ -300,40 +356,53 @@ defineEmits<{
   edit: [student: Student]
   assign: [student: Student]
   delete: [student: Student]
-}>()
+  bulkDelete: [ids: number[]]}>()
 </script>
 
 <style scoped>
 /* ==================== Card ==================== */
 .student-card {
   background: #fff;
-  border: 1px solid #eef0f3;
+  border: 1px solid #e9ecef;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   transition: box-shadow 0.25s ease;
 }
 
 .student-card:hover {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 12px 32px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 /* ==================== Toolbar ==================== */
 .toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 20px;
-  background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #eef0f3;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .search-box {
   position: relative;
-  flex: 1 1 260px;
-  max-width: 340px;
+  width: 260px;
 }
 
 .search-icon {
@@ -342,7 +411,6 @@ defineEmits<{
   top: 50%;
   transform: translateY(-50%);
   color: #9ca3af;
-  font-size: 0.9rem;
   pointer-events: none;
 }
 
@@ -353,7 +421,7 @@ defineEmits<{
   font-family: inherit;
   color: #1f2937;
   background: #fff;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   outline: none;
   transition: all 0.2s ease;
@@ -378,7 +446,7 @@ defineEmits<{
   font-weight: 500;
   color: #64748b;
   background: #fff;
-  border: 1.5px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.4rem 0.5rem 0.4rem 0.75rem;
   transition: all 0.2s ease;
@@ -386,7 +454,7 @@ defineEmits<{
 
 .filter-label:hover { border-color: #cbd5e1; }
 
-.filter-label i { font-size: 0.85rem; color: #94a3b8; }
+.filter-label :deep(svg) { color: #94a3b8; }
 
 .filter-select {
   border: none;
@@ -402,11 +470,10 @@ defineEmits<{
 }
 
 .count-badge {
-  margin-left: auto;
   font-size: 0.75rem;
   font-weight: 600;
   color: #2563eb;
-  background: #eef2ff;
+  background: #eff6ff;
   padding: 0.4rem 0.85rem;
   border-radius: 100px;
   white-space: nowrap;
@@ -435,16 +502,10 @@ defineEmits<{
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #94a3b8;
+  color: #64748b;
   padding: 14px 16px;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
-}
-
-.col-index {
-  width: 64px;
-  color: #94a3b8;
-  font-weight: 600;
 }
 
 .col-check {
@@ -464,18 +525,6 @@ defineEmits<{
 .col-actions {
   text-align: right;
   padding-right: 20px !important;
-}
-
-.col-check {
-  width: 44px;
-  padding-left: 20px !important;
-}
-
-.row-check {
-  width: 16px;
-  height: 16px;
-  accent-color: #2563eb;
-  cursor: pointer;
 }
 
 .student-table tbody td {
@@ -514,6 +563,22 @@ defineEmits<{
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
+.avatar-img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .student-name {
   font-weight: 600;
   color: #0f172a;
@@ -534,23 +599,17 @@ defineEmits<{
   color: #9ca3af;
 }
 
-/* ==================== Rows ==================== */
 .student-row {
   transition: background 0.2s ease, border-left 0.2s ease;
   border-left: 3px solid transparent;
 }
 
-.row-male:hover {
-  background: #eff6ff;
-  border-left-color: #3b82f6;
-}
-
+.row-male:hover,
 .row-female:hover {
-  background: #fdf2f8;
-  border-left-color: #ec4899;
+  background: #eff6ff;
+  border-left-color: #2563eb;
 }
 
-/* ==================== Gender Badge ==================== */
 .gender-badge {
   display: inline-flex;
   align-items: center;
@@ -585,7 +644,6 @@ defineEmits<{
   background: #3b82f6;
 }
 
-/* ==================== Status Badge ==================== */
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -643,7 +701,6 @@ defineEmits<{
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 1rem;
 }
 
 .action-trigger:hover {
@@ -711,13 +768,6 @@ defineEmits<{
   color: #374151;
 }
 
-.action-item i {
-  font-size: 1rem;
-  width: 18px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
 .action-item.view:hover {
   background: #f0f5ff;
   color: #2563eb;
@@ -742,6 +792,116 @@ defineEmits<{
   height: 1px;
   background: #e5e7eb;
   margin: 4px 8px;
+}
+
+/* ==================== Bulk Action Bar ==================== */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bulk-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bulk-check-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bulk-count-label {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.bulk-count-label strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.bulk-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.bulk-btn-clear {
+  background: #fff;
+  color: #64748b;
+}
+
+.bulk-btn-clear:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.bulk-btn-delete {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.bulk-btn-delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Bulk bar slide transition */
+.bulk-slide-enter-active {
+  transition: all 0.25s ease-out;
+}
+.bulk-slide-leave-active {
+  transition: all 0.15s ease-in;
+}
+.bulk-slide-enter-from {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.bulk-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.bulk-slide-enter-from .bulk-check-icon,
+.bulk-slide-leave-to .bulk-check-icon {
+  transform: scale(0.5);
 }
 
 /* ==================== Pagination ==================== */
@@ -819,7 +979,6 @@ defineEmits<{
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-size: 0.75rem;
 }
 
 .page-nav:hover:not(:disabled) {
@@ -889,12 +1048,10 @@ defineEmits<{
   }
 }
 
-/* ==================== Responsive ==================== */
 @media (max-width: 768px) {
   .action-trigger {
     width: 30px;
     height: 30px;
-    font-size: 0.875rem;
   }
 
   .action-menu {

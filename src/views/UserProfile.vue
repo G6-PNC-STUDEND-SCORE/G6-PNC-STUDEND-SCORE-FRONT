@@ -34,60 +34,29 @@
       </Transition>
     </template>
 
-    <!-- ═══════════ ERROR STATE ═══════════ -->
-    <template v-else-if="fetchError">
-      <Transition name="fade-slide">
-        <div class="state-card error-state-card">
-          <div class="state-icon error-icon">
-            <i class="bi bi-exclamation-triangle-fill"></i>
-          </div>
-          <p class="state-text error-text">{{ fetchError }}</p>
-          <button class="btn btn-primary" @click="loadProfile">
-            <i class="bi bi-arrow-clockwise me-1"></i>
-            Retry
-          </button>
-        </div>
-      </Transition>
-    </template>
+    <!-- Error State -->
+    <div v-else-if="fetchError" class="error-state">
+      <AlertTriangle :size="32" style="color: #dc2626; margin-bottom: 12px;" />
+      <p>{{ fetchError }}</p>
+      <button class="btn btn-primary" @click="loadProfile">Retry</button>
+    </div>
 
     <!-- ═══════════ MAIN CONTENT ═══════════ -->
     <template v-else>
       <TransitionGroup name="stagger" tag="div" class="content-wrapper">
       <!-- Success Message -->
-      <Transition name="alert-slide" key="success">
-        <div v-if="successMessage" class="alert alert-success" role="alert">
-          <div class="alert-icon">
-            <i class="bi bi-check-circle-fill"></i>
-          </div>
-          <span class="alert-text">{{ successMessage }}</span>
-          <button type="button" class="alert-close" @click="successMessage = ''" aria-label="Close">
-            <i class="bi bi-x-lg"></i>
-          </button>
-          <div class="alert-progress"></div>
-        </div>
-      </Transition>
+      <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
+        <CheckCircle :size="18" />
+        {{ successMessage }}
+        <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
+      </div>
 
       <!-- Error Message -->
-      <Transition name="alert-slide" key="error">
-        <div v-if="saveError" class="alert alert-danger" role="alert">
-          <div class="alert-icon">
-            <i class="bi bi-exclamation-circle-fill"></i>
-          </div>
-          <span class="alert-text">{{ saveError }}</span>
-          <button type="button" class="alert-close" @click="saveError = ''" aria-label="Close">
-            <i class="bi bi-x-lg"></i>
-          </button>
-          <div class="alert-progress"></div>
-        </div>
-      </Transition>
-
-      <!-- ═══════ PROFILE CARD ═══════ -->
-      <section class="profile-card" key="profile-card">
-        <!-- Cover -->
-        <div class="profile-cover">
-          <div class="cover-pattern"></div>
-          <div class="cover-overlay"></div>
-        </div>
+      <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
+        <AlertTriangle :size="18" />
+        {{ saveError }}
+        <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
+      </div>
 
         <div class="profile-body">
           <!-- Left: Avatar -->
@@ -124,7 +93,7 @@
                 Uploading...
               </template>
               <template v-else>
-                <i class="bi bi-camera-fill me-1"></i> Change photo
+                <Camera :size="14" class="me-1" /> Change photo
               </template>
             </button>
           </div>
@@ -251,11 +220,9 @@
               Reset
             </button>
             <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
-              <span v-if="saving" class="spinner-border spinner-border-sm" role="status"></span>
-              <template v-else>
-                <i class="bi bi-check-lg"></i>
-                Save Changes
-              </template>
+              <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <Check v-else :size="16" class="me-1" />
+              {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
         </section>
@@ -274,48 +241,24 @@
             </div>
           </header>
 
-          <div class="password-form">
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-key"></i>
-                Current Password
-              </label>
-              <div class="password-input-wrapper">
-                <input
-                  :type="showCurrent ? 'text' : 'password'"
-                  v-model="password.current"
-                  placeholder="Enter current password"
-                />
-                <button
-                  type="button"
-                  class="password-toggle"
-                  :aria-label="showCurrent ? 'Hide password' : 'Show password'"
-                  @click="showCurrent = !showCurrent"
-                >
-                  <i :class="showCurrent ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+          <div class="stacked-form">
+            <div class="field">
+              <label>Current Password</label>
+              <div class="password-input">
+                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
+                <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
+                  <EyeOff v-if="showCurrent" :size="18" />
+                  <Eye v-else :size="18" />
                 </button>
               </div>
             </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-lock"></i>
-                New Password
-              </label>
-              <div class="password-input-wrapper">
-                <input
-                  :type="showNew ? 'text' : 'password'"
-                  v-model="password.new"
-                  placeholder="Enter new password (min 8 chars)"
-                  minlength="8"
-                  @input="updateStrength"
-                />
-                <button
-                  type="button"
-                  class="password-toggle"
-                  :aria-label="showNew ? 'Hide password' : 'Show password'"
-                  @click="showNew = !showNew"
-                >
-                  <i :class="showNew ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+            <div class="field">
+              <label>New Password</label>
+              <div class="password-input">
+                <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
+                <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
+                  <EyeOff v-if="showNew" :size="18" />
+                  <Eye v-else :size="18" />
                 </button>
               </div>
               <!-- Strength Indicator -->
@@ -334,24 +277,13 @@
                 </div>
               </Transition>
             </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-check2-all"></i>
-                Confirm Password
-              </label>
-              <div class="password-input-wrapper">
-                <input
-                  :type="showConfirm ? 'text' : 'password'"
-                  v-model="password.confirm"
-                  placeholder="Confirm new password"
-                />
-                <button
-                  type="button"
-                  class="password-toggle"
-                  :aria-label="showConfirm ? 'Hide password' : 'Show password'"
-                  @click="showConfirm = !showConfirm"
-                >
-                  <i :class="showConfirm ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill'"></i>
+            <div class="field">
+              <label>Confirm Password</label>
+              <div class="password-input">
+                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
+                <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
+                  <EyeOff v-if="showConfirm" :size="18" />
+                  <Eye v-else :size="18" />
                 </button>
               </div>
               <!-- Match Indicator -->
@@ -374,11 +306,9 @@
               Clear
             </button>
             <button class="btn btn-primary" @click="updatePassword" :disabled="passwordSaving">
-              <span v-if="passwordSaving" class="spinner-border spinner-border-sm" role="status"></span>
-              <template v-else>
-                <i class="bi bi-lock"></i>
-                Update Password
-              </template>
+              <span v-if="passwordSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
+              <Lock v-else :size="16" class="me-1" />
+              {{ passwordSaving ? 'Updating...' : 'Update Password' }}
             </button>
           </div>
 
@@ -425,14 +355,28 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { getProfile, updateProfile, uploadAvatar } from '@/services/profileService'
-import { http } from '@/services/apiHttp'
-import defaultAvatar from '@/assets/image.png'
+import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
+import { storageUrl } from '@/services/apiHttp'
+import { http } from '@/services/api'
+import { AlertTriangle, CheckCircle, Camera, Check, EyeOff, Eye, Lock } from '@lucide/vue'
+
+let cachedProfile: UserProfile | null = null
+let profileCacheTime = 0
+const PROFILE_CACHE_TTL = 30_000
+
+function isProfileCacheStale(): boolean {
+  return Date.now() - profileCacheTime > PROFILE_CACHE_TTL
+}
+
+function invalidateProfileCache() {
+  cachedProfile = null
+  profileCacheTime = 0
+}
 
 const auth = useAuthStore()
 let objectUrl: string | null = null
 
-const loading = ref(true)
+const loading = ref(!cachedProfile || isProfileCacheStale())
 const saving = ref(false)
 const fetchError = ref('')
 const saveError = ref('')
@@ -549,34 +493,42 @@ const formattedDate = computed(() => {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 })
 
-// ── API functions ──
+
+
+function applyProfile(profile: UserProfile) {
+  form.name = profile.name || ''
+  form.email = profile.email || ''
+  form.phone = profile.phone || ''
+  form.department = profile.department || ''
+  form.school = profile.school || ''
+  form.role = profile.role || ''
+  Object.assign(originalForm, {
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    department: form.department,
+    school: form.school,
+    role: form.role,
+  })
+  form.joined = profile.created_at || ''
+  if (profile.avatar) {
+    avatarUrl.value = storageUrl(profile.avatar)
+  }
+}
+
 async function loadProfile() {
+  if (cachedProfile && !isProfileCacheStale()) {
+    applyProfile(cachedProfile)
+    loading.value = false
+    return
+  }
   loading.value = true
   fetchError.value = ''
   try {
     const profile = await getProfile()
-    form.id = profile.id
-    form.name = profile.name || ''
-    form.email = profile.email || ''
-    form.phone = profile.phone || ''
-    form.department = profile.department || ''
-    form.school = profile.school || ''
-    form.role = profile.role || ''
-    Object.assign(originalForm, {
-      id: form.id,
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      department: form.department,
-      school: form.school,
-      role: form.role,
-    })
-
-    form.joined = profile.created_at || ''
-
-    if (profile.avatar) {
-      avatarUrl.value = http.defaults.baseURL?.replace('/api', '') + '/storage/' + profile.avatar
-    }
+    cachedProfile = profile
+    profileCacheTime = Date.now()
+    applyProfile(profile)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
     fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
@@ -599,21 +551,10 @@ async function saveProfile() {
       school: form.school || undefined,
     })
 
-    form.name = updated.name || ''
-    form.email = updated.email || ''
-    form.phone = updated.phone || ''
-    form.department = updated.department || ''
-    form.school = updated.school || ''
-    Object.assign(originalForm, {
-      id: form.id,
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      department: form.department,
-      school: form.school,
-      role: form.role,
-    })
-
+    invalidateProfileCache()
+    cachedProfile = updated
+    profileCacheTime = Date.now()
+    applyProfile(updated)
     successMessage.value = 'Profile updated successfully!'
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
@@ -660,8 +601,8 @@ async function onFileChange(event: Event) {
 
   try {
     const result = await uploadAvatar(file)
-    const baseUrl = http.defaults.baseURL?.replace('/api', '') || ''
-    avatarUrl.value = baseUrl + '/storage/' + result.avatar
+    avatarUrl.value = storageUrl(result.avatar)
+    // Keep the sidebar avatar in sync
     if (auth.user) {
       auth.user.avatar = result.avatar
     }
@@ -688,7 +629,7 @@ function triggerUpload() {
   }
 }
 
-function updatePassword() {
+async function updatePassword() {
   passwordMessage.value = ''
   passwordStatus.value = ''
 
@@ -712,15 +653,25 @@ function updatePassword() {
 
   passwordSaving.value = true
 
-  setTimeout(() => {
-    passwordMessage.value = 'Password changed successfully'
+  try {
+    const response = await http.patch('/change-password', {
+      current_password: password.current,
+      new_password: password.new,
+      new_password_confirmation: password.confirm,
+    })
+    
+    passwordMessage.value = response.data.message || 'Password changed successfully'
     passwordStatus.value = 'success'
     password.current = ''
     password.new = ''
     password.confirm = ''
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    passwordMessage.value = err.response?.data?.message || err.message || 'Failed to change password'
+    passwordStatus.value = 'error'
+  } finally {
     passwordSaving.value = false
-    strengthLevel.value = 'none'
-  }, 1000)
+  }
 }
 
 function resetPassword() {
@@ -839,8 +790,39 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.page-header-content {
-  position: relative;
+.page-subtitle {
+  color: #64748b;
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+.loading-state,
+.error-state {
+  max-width: 1200px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 40px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.error-state p {
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.profile-card {
+  max-width: 1200px;
+  margin: 0 auto 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+.profile-body {
   display: flex;
   align-items: center;
   gap: 20px;
@@ -1352,16 +1334,6 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
-.info-value--name {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.2px;
-}
-
-/* ════════════════════════════════════════════════════
-   CONTENT GRID
-   ════════════════════════════════════════════════════ */
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1559,7 +1531,7 @@ input::placeholder {
   outline: none;
   background: transparent;
   color: #94a3b8;
-  font-size: 1.05rem;
+  line-height: 1;
   cursor: pointer;
   border-radius: 9px;
   transition: all 0.2s ease;
@@ -1984,121 +1956,6 @@ input::placeholder {
 
   .profile-cover {
     height: 80px;
-  }
-}
-
-@media (max-width: 600px) {
-  .admin-profile-page {
-    padding: 16px;
-  }
-
-  .page-header-content {
-    padding: 16px 18px;
-    gap: 14px;
-  }
-
-  .page-header-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 1.2rem;
-    border-radius: 12px;
-  }
-
-  .page-header-title {
-    font-size: 1.1rem;
-  }
-
-  .page-header-subtitle {
-    font-size: 0.75rem;
-  }
-
-  .profile-body {
-    padding: 16px 18px 16px;
-    gap: 16px;
-  }
-
-  .avatar-wrapper {
-    width: 80px;
-    height: 80px;
-  }
-
-  .avatar-ring {
-    inset: -3px;
-    border-width: 2px;
-  }
-
-  .profile-info {
-    width: 100%;
-    gap: 4px;
-  }
-
-  .info-row {
-    padding: 10px 14px;
-    gap: 12px;
-  }
-
-  .info-icon {
-    width: 34px;
-    height: 34px;
-    font-size: 0.9rem;
-    border-radius: 10px;
-  }
-
-  .info-value {
-    font-size: 13px;
-  }
-
-  .info-value--name {
-    font-size: 14px;
-  }
-
-  .profile-cover {
-    height: 64px;
-  }
-}
-
-@media (max-width: 420px) {
-  .admin-profile-page {
-    padding: 12px;
-  }
-
-  .page-header-content {
-    padding: 14px 14px;
-  }
-
-  .page-header-title {
-    font-size: 1rem;
-  }
-
-  .form-card-header {
-    flex-direction: column;
-  }
-
-  .chip {
-    margin-top: 0;
-  }
-
-  .form-card-footer {
-    flex-direction: column;
-  }
-
-  .form-card-footer .btn {
-    width: 100%;
-  }
-
-  .info-row {
-    padding: 10px 12px;
-    gap: 10px;
-  }
-
-  .info-icon {
-    width: 30px;
-    height: 30px;
-    font-size: 0.85rem;
-  }
-
-  .info-value {
-    font-size: 12px;
   }
 }
 </style>

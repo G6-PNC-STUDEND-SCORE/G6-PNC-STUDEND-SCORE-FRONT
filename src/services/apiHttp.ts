@@ -1,9 +1,9 @@
 import axios from 'axios'
+import router from '@/router'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL as string | undefined
 
 if (!baseURL) {
-  // Helps developers catch misconfigured .env quickly
   // eslint-disable-next-line no-console
   console.warn('VITE_API_BASE_URL is not set. Please create frontend/.env')
 }
@@ -14,6 +14,23 @@ export const http = axios.create({
     'Content-Type': 'application/json',
   },
 })
+
+// Hard redirect to reset Vue/Pinia state on expired tokens
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      clearAuthToken()
+      // Force full page reload to completely reset Pinia state
+      // (router.push alone leaves stale token.value in the Pinia store)
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
 
 export function setAuthToken(token: string | null) {
   if (token) {

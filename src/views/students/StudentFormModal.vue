@@ -6,10 +6,11 @@
           <!-- Header -->
           <div class="modal-header-custom">
             <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
-              <i class="bi bi-x-lg"></i>
+              <X :size="14" />
             </button>
             <div class="modal-icon" :class="isEdit ? 'icon-edit' : 'icon-create'">
-              <i :class="isEdit ? 'bi bi-pencil-square' : 'bi bi-person-plus-fill'"></i>
+              <SquarePen v-if="isEdit" :size="22" />
+              <UserPlus v-else :size="22" />
             </div>
             <h5 class="mb-1 fw-bold">{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h5>
             <p class="modal-subtitle">{{ isEdit ? 'Update student information' : 'Fill in the student details' }}</p>
@@ -19,14 +20,62 @@
             <div class="modal-body-custom">
               <!-- Error Alert -->
               <div v-if="error" class="error-alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <AlertTriangle :size="16" class="me-2" />
                 {{ error }}
+              </div>
+
+              <!-- Profile Photo (Edit mode only) -->
+              <div v-if="isEdit" class="form-group">
+                <label class="form-label">
+                  <Camera :size="14" class="me-1" />
+                  Profile Photo
+                </label>
+                <div class="photo-upload-area">
+                  <!-- Preview -->
+                  <div class="photo-preview-wrapper">
+                    <div v-if="photoPreview" class="photo-preview">
+                      <img :src="photoPreview" alt="Preview" class="preview-img" />
+                    </div>
+                    <div v-else-if="existingPhotoUrl" class="photo-preview">
+                      <img :src="existingPhotoUrl" alt="Current photo" class="preview-img" />
+                    </div>
+                    <div v-else class="photo-placeholder">
+                      <User :size="32" />
+                    </div>
+                  </div>
+                  <div class="photo-actions">
+                    <label class="photo-upload-btn">
+                      <CloudUpload :size="14" class="me-1" />
+                      {{ existingPhotoUrl || photoPreview ? 'Change Photo' : 'Upload Photo' }}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
+                        class="visually-hidden"
+                        @change="onPhotoSelected"
+                      />
+                    </label>
+                    <button
+                      v-if="existingPhotoUrl || photoPreview"
+                      type="button"
+                      class="photo-remove-btn"
+                      @click="onRemovePhoto"
+                    >
+                      <Trash2 :size="14" class="me-1" />
+                      Remove
+                    </button>
+                  </div>
+                  <p v-if="photoError" class="photo-error">
+                    <AlertCircle :size="14" class="me-1" />
+                    {{ photoError }}
+                  </p>
+                  <p v-else class="photo-hint">JPEG, PNG, JPG, GIF, or WebP. Max 2MB.</p>
+                </div>
               </div>
 
               <!-- Full Name -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-person-fill me-1"></i>
+                  <User :size="14" class="me-1" />
                   Full Name
                 </label>
                 <div class="input-wrapper">
@@ -41,10 +90,49 @@
                 </div>
               </div>
 
+              <!-- Email (Create mode only) -->
+              <div v-if="!isEdit" class="form-group">
+                <label class="form-label">
+                  <Mail :size="14" class="me-1" />
+                  Email Address
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    :value="email"
+                    @input="$emit('update:email', ($event.target as HTMLInputElement).value)"
+                    type="email"
+                    class="modern-input"
+                    placeholder="student@example.com"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Password (Create mode only) -->
+              <div v-if="!isEdit" class="form-group">
+                <label class="form-label">
+                  <Lock :size="14" class="me-1" />
+                  Password
+                </label>
+                <div class="input-wrapper">
+                  <input
+                    :value="password"
+                    @input="$emit('update:password', ($event.target as HTMLInputElement).value)"
+                    type="password"
+                    class="modern-input"
+                    placeholder="Min. 8 characters"
+                    required
+                    minlength="8"
+                  />
+                </div>
+              </div>
+
+
+
               <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-gender-ambiguous me-1"></i>
+                  <VenusAndMars :size="14" class="me-1" />
                   Gender
                 </label>
                 <div class="gender-toggle">
@@ -80,7 +168,7 @@
               <!-- Class -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-building me-1"></i>
+                  <Building2 :size="14" class="me-1" />
                   Assign to Class
                 </label>
                 <div class="input-wrapper">
@@ -98,7 +186,7 @@
               <!-- Status -->
               <div class="form-group">
                 <label class="form-label">
-                  <i class="bi bi-toggle-on me-1"></i>
+                  <ToggleLeft :size="14" class="me-1" />
                   Status
                 </label>
                 <div class="status-toggle">
@@ -147,7 +235,7 @@
                   {{ isEdit ? 'Saving...' : 'Creating...' }}
                 </template>
                 <template v-else>
-                  <i class="bi bi-check-lg me-1"></i>
+                  <Check :size="16" class="me-1" />
                   {{ isEdit ? 'Save Changes' : 'Create Student' }}
                 </template>
               </button>
@@ -160,9 +248,27 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { SchoolClass } from '@/services/studentService'
+import {
+  X,
+  SquarePen,
+  UserPlus,
+  AlertTriangle,
+  Camera,
+  User,
+  CloudUpload,
+  Trash2,
+  AlertCircle,
+  Mail,
+  Lock,
+  VenusAndMars,
+  Building2,
+  ToggleLeft,
+  Check,
+} from '@lucide/vue'
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   isEdit: boolean
   name: string
@@ -172,16 +278,82 @@ defineProps<{
   classes: SchoolClass[]
   submitting: boolean
   error: string | null
+  existingPhotoUrl?: string | null
+  // Create-only fields
+  email?: string
+  password?: string
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
   submit: []
   'update:name': [value: string]
   'update:gender': [value: 'Male' | 'Female']
   'update:classId': [value: number | null]
   'update:status': [value: 'active' | 'inactive']
+  'update:photo': [file: File | null]
+  'remove-photo': []
+  'update:email': [value: string]
+  'update:password': [value: string]
 }>()
+
+const photoPreview = ref<string | null>(null)
+const photoError = ref<string | null>(null)
+
+// Reset photo preview when modal opens
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    photoPreview.value = null
+    photoError.value = null
+  }
+})
+
+// Watch for existingPhotoUrl changes (when editing different students)
+watch(() => props.existingPhotoUrl, () => {
+  photoPreview.value = null
+  photoError.value = null
+})
+
+function onPhotoSelected(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (!target.files || target.files.length === 0) return
+
+  const file = target.files[0]
+  photoError.value = null
+
+  // Validate file type (extra client-side validation)
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.type)) {
+    photoError.value = 'Invalid file type. Allowed: JPEG, PNG, JPG, GIF, WebP.'
+    target.value = ''
+    return
+  }
+
+  // Validate file size (max 2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    photoError.value = 'File is too large. Maximum size is 2MB.'
+    target.value = ''
+    return
+  }
+
+  // Create preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    photoPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+
+  emit('update:photo', file)
+
+  // Reset input so the same file can be re-selected
+  target.value = ''
+}
+
+function onRemovePhoto() {
+  photoPreview.value = null
+  photoError.value = null
+  emit('remove-photo')
+}
 </script>
 
 <style scoped>
@@ -243,7 +415,6 @@ defineEmits<{
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.75rem;
 }
 
 .modal-close-btn:hover {
@@ -259,7 +430,6 @@ defineEmits<{
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
   margin: 0 auto 16px;
 }
 
@@ -302,8 +472,7 @@ defineEmits<{
   margin-bottom: 6px;
 }
 
-.form-label i {
-  font-size: 0.75rem;
+.form-label :deep(svg) {
   color: #94a3b8;
 }
 
@@ -378,10 +547,6 @@ select.modern-input {
   border-color: #cbd5e1;
 }
 
-.gender-option.active {
-  border-color: #2563eb;
-}
-
 .gender-option.active.male-active {
   background: #eff6ff;
   color: #1d4ed8;
@@ -437,10 +602,6 @@ select.modern-input {
 .status-option:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
-}
-
-.status-option.active {
-  border-color: #2563eb;
 }
 
 .status-option.active.active-on {
@@ -536,7 +697,121 @@ select.modern-input {
   box-shadow: none;
 }
 
-/* ==================== Transitions ==================== */
+/* ==================== Photo Upload ==================== */
+.photo-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1.5px dashed #d1d5db;
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.photo-upload-area:hover {
+  border-color: #93c5fd;
+  background: #f0f5ff;
+}
+
+.photo-preview-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+  color: #94a3b8;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.photo-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.photo-upload-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.photo-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.photo-remove-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.12);
+}
+
+.photo-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+  text-align: center;
+}
+
+.photo-error {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin: 0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .modal-enter-active { transition: all 0.25s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
@@ -545,7 +820,6 @@ select.modern-input {
   transform: scale(0.92) translateY(12px);
 }
 
-/* ==================== Scrollbar ==================== */
 .modal-content-panel::-webkit-scrollbar { width: 4px; }
 .modal-content-panel::-webkit-scrollbar-track { background: transparent; }
 .modal-content-panel::-webkit-scrollbar-thumb {

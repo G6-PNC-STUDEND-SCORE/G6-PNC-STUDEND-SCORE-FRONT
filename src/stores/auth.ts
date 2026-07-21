@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { login as loginApi, logout as logoutApi, me } from '@/services/authService'
+import { googleLogin as googleLoginApi } from '@/services/googleAuthService'
 import { setAuthToken, clearAuthToken } from '@/services/apiHttp'
+import router from '@/router'
 
 export interface User {
   id: number
@@ -17,7 +19,8 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const isAuthenticated = computed(() => !!token.value && !!user.value)
+  // Trust the token; the 401 interceptor handles truly invalid tokens
+  const isAuthenticated = computed(() => !!token.value)
 
   async function init() {
     if (token.value) {
@@ -25,9 +28,13 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         const response = await me()
         user.value = response.user as User
-      } catch (e) {
-        console.error('Failed to fetch user', e)
-        logout()
+      } catch {
+        // Token is invalid/expired — clear everything and redirect to login
+        token.value = null
+        user.value = null
+        localStorage.removeItem('token')
+        clearAuthToken()
+        router.push('/login')
       }
     }
   }
@@ -67,6 +74,28 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithGoogle(credential: string) {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await googleLoginApi(credential)
+      token.value = response.token
+      user.value = response.user as User
+
+      localStorage.setItem('token', response.token)
+      setAuthToken(response.token)
+
+      return true
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      error.value = err.response?.data?.message || err.message || 'Google login failed'
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     token,
     user,
@@ -75,6 +104,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     init,
     login,
+    loginWithGoogle,
     logout,
   }
 })
