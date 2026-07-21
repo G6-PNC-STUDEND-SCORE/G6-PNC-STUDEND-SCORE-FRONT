@@ -19,10 +19,18 @@
         <div class="btn-group">
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
-          <button class="tb-btn" @click="syncToGoogle" title="Export to Google Sheets" :disabled="syncing"><i :class="syncing ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ syncing ? 'Exporting...' : 'Google Sheets' }}</span></button>
+          <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading"><i :class="gsLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span></button>
+          <button v-if="gsSheetId" class="tb-btn" @click="syncFromGoogleSheets" :disabled="gsSyncLoading" title="Sync scores from Google Sheets back to this page"><i :class="gsSyncLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-arrow-down-up'"></i><span>{{ gsSyncLoading ? 'Syncing...' : 'Sync from Sheets' }}</span></button>
           <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
           <button class="tb-btn" @click="exportCSV" title="Export CSV"><i class="bi bi-download"></i> <span>Export</span></button>
           <button class="tb-btn" @click="refreshData" title="Refresh"><i class="bi bi-arrow-clockwise" :class="{ spinning: loading }"></i></button>
+        </div>
+        <div class="toolbar-meta">
+          <span v-if="gsReconnectNeeded" class="gs-sync-status gs-reconnect-needed">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#f59e0b;font-size:11px"></i>
+            <a class="gs-reconnect-link" @click="openGoogleSheetsDirect" title="Re-connect Google account">Reconnect Google</a>
+          </span>
+
         </div>
         <div class="search-box">
           <i class="bi bi-search"></i>
@@ -295,18 +303,22 @@
         </div>
       </div>
     </div>
-    <div v-if="loading" class="loading-overlay"><div class="spinner"></div><span>Loading scores...</span></div>
+
+
+    <div v-if="loading" class="loading-bar"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef } from 'vue'
+import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick, reactive, triggerRef } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
-  renameColumn, updateWeights, syncToGoogleSheets, createGoogleSheet,
+  renameColumn, updateWeights,
   addEnrollment, deleteEnrollment, updateStudentInfo,
   changeColumnType, getStudentNumbers, importFile,
+  createGoogleSheet, getGoogleConfig,
+  importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken,
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
 
@@ -318,7 +330,6 @@ const termId = computed(() => Number(route.params.termId))
 // ─── Core State ──────────────────────────────────────────────────────
 const data = shallowRef<SpreadsheetResponse | null>(null)
 const loading = ref(false)
-const syncing = ref(false)
 const searchQuery = ref('')
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
@@ -354,6 +365,13 @@ const inlineColType = ref('quiz')
 const inlineColMax = ref<number | null>(100)
 const showWeights = ref(false)
 const showImport = ref(false)
+const gsLoading = ref(false)
+const gsSheetId = ref<string | null>(null)
+const gsSyncLoading = ref(false)
+const gsLastSynced = ref<string | null>(null)
+const gsReconnectNeeded = ref(false)
+let gsAutoSyncTimer: ReturnType<typeof setInterval> | null = null
+let gsIsSyncing = false // Guard to prevent duplicate syncs
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
@@ -2115,28 +2133,208 @@ async function doUpdateWeights() {
   } catch { showSaveStatus('failed') }
 }
 
-// ─── Google Sheets Sync ──────────────────────────────────────────────
-async function syncToGoogle() {
-  syncing.value = true
+// ─── Google Sheets - One-Click Create & Open ─────────────────────────
+function openGoogleSheetsDirect() {
+  gsLoading.value = true
+  gsReconnectNeeded.value = false
+  const storedToken = localStorage.getItem("google_access_token")
+  if (storedToken) { createAndOpenSheet(storedToken); return }
+  startGoogleAuth()
+}
+
+async function createAndOpenSheet(token: string) {
   try {
-    const token = localStorage.getItem('google_access_token')
-    if (token) {
-      try {
-        const result = await createGoogleSheet(subjectId.value, termId.value, token)
-        window.open(result.url, '_blank'); showSaveStatus('saved'); return
-      } catch (e) { console.warn('OAuth sync failed, falling back to CSV export', e) }
+    const result = await createGoogleSheet(subjectId.value, termId.value, token)
+    // Store the spreadsheet ID so we can sync back later
+    const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
+    const storageData = { sheet_id: result.spreadsheet_id, created_at: new Date().toISOString() }
+    localStorage.setItem(storageKey, JSON.stringify(storageData))
+    gsSheetId.value = result.spreadsheet_id
+    window.open(result.url, "_blank")
+    showSaveStatus("saved")
+    // Data was just exported to Google Sheets — nothing to refresh in the system
+    gsLastSynced.value = new Date().toLocaleTimeString()
+    gsLoading.value = false
+  } catch (err: any) {
+    // If token expired/invalid, clear it and re-authenticate
+    const status = err?.response?.status
+    if (status === 400 || status === 401 || status === 403) {
+      console.warn("Google token expired or missing, re-authenticating...")
+      localStorage.removeItem("google_access_token")
+      // Keep gsLoading=true so button shows "Creating..." during re-auth
+      startGoogleAuth()
+      return
     }
-    const result = await syncToGoogleSheets(subjectId.value, termId.value)
-    const blob = new Blob([result.csv_content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    window.open('https://docs.google.com/spreadsheets', '_blank')
-    const link = document.createElement('a')
-    link.href = url; link.download = `${data.value?.subject?.name || 'scores'}-${data.value?.term?.name || 'term'}.csv`
-    document.body.appendChild(link); link.click(); document.body.removeChild(link)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-    showSaveStatus('saved')
-  } catch { showSaveStatus('failed') }
-  finally { syncing.value = false }
+    console.error("Google Sheets error:", err?.response?.data?.message || err?.message || "Failed")
+    showSaveStatus("failed")
+    gsLoading.value = false
+  }
+}
+
+// ─── Sync from Google Sheets back to system ────────────────────────
+async function syncFromGoogleSheets() {
+  if (gsIsSyncing) return // Prevent concurrent syncs (e.g. visibility + focus firing together)
+  gsIsSyncing = true
+  try {
+    let token = localStorage.getItem("google_access_token")
+    
+    // If no stored token, try backend refresh first
+    if (!token) {
+      try {
+        const refreshed = await refreshGoogleToken()
+        localStorage.setItem("google_access_token", refreshed.access_token)
+        token = refreshed.access_token
+      } catch {
+        gsReconnectNeeded.value = true
+        stopAutoSync()
+        showSaveStatus("failed")
+        return
+      }
+    }
+
+    try {
+      await importFromGoogleSheets(
+        subjectId.value,
+        termId.value,
+        gsSheetId.value!,
+        token
+      )
+      await refreshData()
+      gsLastSynced.value = new Date().toLocaleTimeString()
+      gsReconnectNeeded.value = false
+      showSaveStatus("saved")
+    } catch (err: any) {
+      gsSyncLoading.value = false
+      const status = err?.response?.status
+      if (status === 400 || status === 401 || status === 403) {
+        // Token expired — try backend refresh
+        localStorage.removeItem("google_access_token")
+        try {
+          const refreshed = await refreshGoogleToken()
+          localStorage.setItem("google_access_token", refreshed.access_token)
+          // Retry import with fresh token
+          await importFromGoogleSheets(
+            subjectId.value,
+            termId.value,
+            gsSheetId.value!,
+            refreshed.access_token
+          )
+          await refreshData()
+          gsLastSynced.value = new Date().toLocaleTimeString()
+          gsReconnectNeeded.value = false
+          showSaveStatus("saved")
+          return
+        } catch {
+          // Backend refresh also failed — need user to re-authorize
+          gsReconnectNeeded.value = true
+          stopAutoSync()
+          console.warn("Google token expired. Click 'Reconnect Google' to re-authorize.")
+          showSaveStatus("failed")
+        }
+      } else {
+        console.error("Sync from Google Sheets failed:", err?.response?.data?.message || err?.message || "Failed")
+        showSaveStatus("failed")
+      }
+    }
+  } finally {
+    gsIsSyncing = false
+    gsSyncLoading.value = false
+  }
+}
+
+// ─── Auto-sync: instant sync when returning from Google Sheets tab ──
+function startAutoSync() {
+  stopAutoSync()
+  // Sync instantly when user switches back from Google Sheets tab
+  document.addEventListener("visibilitychange", onVisibilityChange)
+  window.addEventListener("focus", onWindowFocus)
+  // Periodic fallback sync every 30 seconds
+  gsAutoSyncTimer = setInterval(() => {
+    if (!gsSheetId.value || editingRow.value !== null) return // Don't sync while user is editing
+    syncFromGoogleSheets()
+  }, 30000)
+}
+
+function stopAutoSync() {
+  document.removeEventListener("visibilitychange", onVisibilityChange)
+  window.removeEventListener("focus", onWindowFocus)
+  if (gsAutoSyncTimer !== null) {
+    clearInterval(gsAutoSyncTimer)
+    gsAutoSyncTimer = null
+  }
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === "visible" && gsSheetId.value && editingRow.value === null) {
+    syncFromGoogleSheets()
+  }
+}
+
+function onWindowFocus() {
+  if (gsSheetId.value && editingRow.value === null) {
+    syncFromGoogleSheets()
+  }
+}
+
+// ─── Load stored Google Sheet ID from localStorage ───────────────────
+function loadStoredSheetId() {
+  const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
+  try {
+    const stored = localStorage.getItem(storageKey)
+    if (stored) {
+      const data = JSON.parse(stored)
+      gsSheetId.value = data.sheet_id || null
+      if (gsSheetId.value) {
+        startAutoSync()
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+}
+
+async function startGoogleAuth() {
+  try {
+    const config = await getGoogleConfig()
+    if (!config.client_id) { showSaveStatus("failed"); gsLoading.value = false; return }
+    await loadGoogleScript()
+    const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+      client_id: config.client_id,
+      scope: config.scopes.join(" "),
+      callback: async (response: any) => {
+        if (response.error) { showSaveStatus("failed"); gsLoading.value = false; return }
+        localStorage.setItem("google_access_token", response.access_token)
+        if (response.code) {
+          try { await exchangeGoogleToken(response.code) } catch {}
+        }
+        await createAndOpenSheet(response.access_token)
+      },
+      error_callback: () => { showSaveStatus("failed"); gsLoading.value = false },
+    })
+    tokenClient.requestAccessToken({ prompt: "consent" })
+  } catch (err: any) {
+    console.error("Google auth failed:", err)
+    showSaveStatus("failed")
+    gsLoading.value = false
+  }
+}
+
+function loadGoogleScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).google?.accounts?.oauth2) { resolve(); return }
+    const script = document.createElement("script")
+    script.src = "https://accounts.google.com/gsi/client"
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      setTimeout(() => {
+        if ((window as any).google?.accounts?.oauth2) resolve()
+        else reject(new Error("Google Identity Services failed to load"))
+      }, 200)
+    }
+    script.onerror = () => reject(new Error("Failed to load Google script"))
+    document.head.appendChild(script)
+  })
 }
 
 // ─── File Import (CSV, Excel) ────────────────────────────────────────
@@ -2335,11 +2533,17 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
 
 onMounted(() => {
   refreshData()
+  loadStoredSheetId()
   getStudentNumbers().then(nums => { studentNumbers.value = nums }).catch(() => {})
   nextTick(() => {
     const container = document.querySelector('.sheet-wrapper') as HTMLElement
     if (container) container.focus()
   })
+})
+
+onUnmounted(() => {
+  stopAutoSync()
+  gsSheetId.value = null
 })
 
 watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshData() })
@@ -2389,6 +2593,13 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 .search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 100px; color: #1e293b; }
 .search-box i { color: #94a3b8; font-size: 0.78rem; }
 
+.toolbar-meta { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; white-space: nowrap; padding-right: 8px; }
+.gs-sync-status { display: flex; align-items: center; gap: 4px; color: #16a34a; padding: 2px 8px; background: #f0fdf4; border-radius: 4px; }
+.gs-sync-pending { color: #f59e0b; background: #fefce8; }
+.gs-reconnect-needed { color: #ea580c; background: #fff7ed; cursor: pointer; transition: background 0.15s; }
+.gs-reconnect-needed:hover { background: #ffedd5; }
+.gs-reconnect-link { color: #ea580c; text-decoration: underline; cursor: pointer; }
+.gs-reconnect-link:hover { color: #c2410c; }
 .save-status { font-size: 0.7rem; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
 .status-saving { color: #f59e0b; background: #fef3c7; }
 .status-saved { color: #16a34a; background: #dcfce7; }
@@ -2789,12 +3000,17 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 .grade-none { color: #94a3b8 !important; }
 
 /* ─── Loading ──────────────────────────────────────────────────────── */
-.loading-overlay {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(255,255,255,0.85);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-  z-index: 100; font-size: 0.85rem; color: #64748b;
+.loading-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%);
+  background-size: 200% 100%;
+  animation: loading-bar 1.2s ease-in-out infinite;
+  z-index: 200;
+  border-radius: 0 0 2px 2px;
+}
+@keyframes loading-bar {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 .spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

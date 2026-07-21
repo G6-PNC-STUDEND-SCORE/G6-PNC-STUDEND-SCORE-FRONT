@@ -68,8 +68,33 @@ export async function getSpreadsheetSubjects(): Promise<SubjectsResponse> {
   return res.data.data
 }
 
+// Module-level variable for background refresh tracking
+let spreadsheetRefreshPromise: Promise<SpreadsheetResponse> | null = null
+
+export function getSpreadsheetRefreshPromise(): Promise<SpreadsheetResponse> | null {
+  return spreadsheetRefreshPromise
+}
+
 export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number): Promise<SpreadsheetResponse> {
+  const cacheKey = `spreadsheet_${subjectId}_${termId}`
+
+  // Return cached data instantly if available (while fresh data loads in background)
+  const cached = sessionStorage.getItem(cacheKey)
+  if (cached) {
+    // Fire off a background refresh
+    spreadsheetRefreshPromise = http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
+      .then(res => {
+        sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
+        return res.data.data
+      })
+      .catch(() => { /* silently fail - cached data is fine */ })
+    return JSON.parse(cached) as SpreadsheetResponse
+  }
+
   const res = await http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
+  } catch { /* quota exceeded, ignore */ }
   return res.data.data
 }
 
@@ -114,8 +139,7 @@ export async function updateWeights(weights: { id: number; weight_percent: numbe
 
 export async function syncToGoogleSheets(subjectId: number, termId: number): Promise<{
   csv_content: string
-  google_sheets_url: string
-  download_url: string
+  filename: string
 }> {
   const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/sync-google`)
   return res.data.data
@@ -178,4 +202,46 @@ export async function importFile(subjectId: number, termId: number, data: {
 export async function getStudents(): Promise<Array<{ id: number; name: string; student_number: string }>> {
   const res = await http.get('/students')
   return res.data.data
+}
+
+// ─── Google Sheets OAuth & API ──────────────────────────────────────
+
+export interface GoogleConfigResponse {
+  client_id: string
+  scopes: string[]
+}
+
+export async function getGoogleConfig(): Promise<GoogleConfigResponse> {
+  const res = await http.get('/google-sheets/config')
+  return res.data.data
+}
+
+export interface GoogleTokenResponse {
+  access_token: string
+  expires_in: number
+  has_refresh_token: boolean
+}
+
+export async function exchangeGoogleToken(code: string): Promise<GoogleTokenResponse> {
+  const res = await http.post('/google-sheets/token', { code })
+  return res.data.data
+}
+
+export async function refreshGoogleToken(): Promise<{ access_token: string; expires_in: number }> {
+  const res = await http.post('/google-sheets/refresh')
+  return res.data.data
+}
+
+export interface GoogleStatusResponse {
+  connected: boolean
+  has_valid_token: boolean
+}
+
+export async function getGoogleStatus(): Promise<GoogleStatusResponse> {
+  const res = await http.get('/google-sheets/status')
+  return res.data.data
+}
+
+export async function disconnectGoogleAccount(): Promise<void> {
+  await http.post('/google-sheets/disconnect')
 }
