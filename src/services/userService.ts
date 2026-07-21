@@ -95,6 +95,17 @@ export async function deleteUser(id: number): Promise<{ success: boolean; messag
   return res.data
 }
 
+export interface BulkDeleteResponse {
+  success: boolean
+  message: string
+  data: { deleted_count: number }
+}
+
+export async function bulkDeleteUsers(ids: number[]): Promise<BulkDeleteResponse> {
+  const res = await http.post<BulkDeleteResponse>('/users/bulk-delete', { ids })
+  return res.data
+}
+
 export async function getRoles(): Promise<RolesResponse> {
   const res = await http.get<RolesResponse>('/users/roles')
   return res.data

@@ -696,7 +696,7 @@ async function handleSubmit() {
     })
     if (!store.error) {
       closeModal(); await store.fetchSubjects(); await loadTermData()
-      showToast('Subject updated successfully')
+      // Store already sets successMessage — no duplicate toast needed
     }
   } else {
     await store.createSubject({
@@ -709,7 +709,7 @@ async function handleSubmit() {
       closeModal()
       await store.fetchSubjects()
       await loadTermData()
-      showToast('Subject created successfully')
+      // Store already sets successMessage — no duplicate toast needed
       // Assign terms to the newly created subject if any were picked.
       if (formData.term_ids.length) {
         const subj = store.subjects.find((s: any) => s.name === formData.name)
@@ -725,12 +725,13 @@ function closeDeleteModal() { showDeleteModal.value = false; subjectToDelete.val
 
 async function handleDelete() {
   if (!subjectToDelete.value) return
-  await store.deleteSubject(subjectToDelete.value.id)
+  const targetId = subjectToDelete.value.id
+  await store.deleteSubject(targetId)
   if (!store.error) {
-    store.clearMessages()
+    // Also remove from local subjects list (different from store.subjects)
+    subjects.value = subjects.value.filter(s => s.id !== targetId)
     closeDeleteModal()
-    await loadTermData()
-    showToast('Subject deleted successfully')
+    // Store already sets successMessage — no duplicate toast needed
   }
 }
 
