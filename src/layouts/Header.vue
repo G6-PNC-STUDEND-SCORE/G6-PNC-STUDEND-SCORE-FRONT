@@ -125,7 +125,7 @@ import {
   MoonStar, Sun,
   GraduationCap,
   User, Settings, LogOut
-} from '@lucide/vue'
+} from "lucide-vue-next"
 
 const emit = defineEmits<{
   'toggle-sidebar': []

@@ -1,14 +1,5 @@
 <template>
   <div class="page-container">
-    <!-- ── Toast ── -->
-    <Transition name="toast">
-      <div v-if="toast.show" class="toast-bar" :class="toast.type">
-        <component :is="toastIconComponent" :size="16" />
-        <span>{{ toast.message }}</span>
-        <button class="toast-close" @click="toast.show = false">&times;</button>
-      </div>
-    </Transition>
-
     <!-- ── Header ── -->
     <div class="page-head">
       <div class="page-head-left">
@@ -172,7 +163,6 @@
         <div class="pagination-total">
           {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredClasses.length) }} of {{ filteredClasses.length }}
         </div>
-        <p class="mt-2" style="color: #6b7280;">Loading classes...</p>
       </div>
     </div>
     </template>
@@ -383,10 +373,10 @@ async function handleSubmit() {
   if (!validateForm()) return
   if (isEditMode.value && store.currentClass) {
     const ok = await store.updateClass(store.currentClass.id, formData)
-    if (ok) { closeModal(); await store.fetchClasses(); showToast('Class updated successfully') }
+    if (ok) { closeModal(); await store.fetchClasses() }
   } else {
     const ok = await store.createClass(formData)
-    if (ok) { closeModal(); await store.fetchClasses(); showToast('Class created successfully') }
+    if (ok) { closeModal(); await store.fetchClasses() }
   }
 }
 
@@ -396,17 +386,7 @@ function closeDeleteModal() { showDeleteModal.value = false; classToDelete.value
 async function handleDelete() {
   if (!classToDelete.value) return
   const ok = await store.deleteClass(classToDelete.value.id)
-  if (ok) { closeDeleteModal(); await store.fetchClasses(); showToast('Class deleted successfully') }
-}
-
-const toast = reactive({ show: false, message: '', type: 'success' as 'success' | 'error' })
-const toastIconComponent = computed(() => toast.type === 'success' ? CheckCircle : AlertTriangle)
-
-function showToast(msg: string, type: 'success' | 'error' = 'success') {
-  toast.message = msg
-  toast.type = type
-  toast.show = true
-  setTimeout(() => { toast.show = false }, 3000)
+  if (ok) { closeDeleteModal() }
 }
 
 // ─── Reset page on search / filter ────────────────────────────
@@ -528,14 +508,7 @@ function classIconBg() {
 }
 .tb-filter select:focus { border-color: #93c5fd; }
 
-.toast-bar { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 400px; }
-.toast-bar.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-.toast-bar.error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-.toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.6; margin-left: auto; padding: 0 4px; }
-.toast-close:hover { opacity: 1; }
 
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
 .modal-enter-active, .modal-leave-active { transition: all 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.96); }
 .row-enter-active, .row-leave-active { transition: all 0.3s ease; }
