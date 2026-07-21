@@ -147,8 +147,8 @@ export async function importFromGoogleSheetsCSV(subjectId: number, termId: numbe
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
 }
 
-export async function addEnrollment(subjectId: number, termId: number, studentId: number | null): Promise<{ id: number; student_id: number; student_number: string }> {
-  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId })
+export async function addEnrollment(subjectId: number, termId: number, studentId: number | null, classId?: number | null): Promise<{ id: number; student_id: number; student_number: string }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId, class_id: classId || undefined })
   return res.data.data
 }
 
@@ -170,8 +170,8 @@ export async function importFile(subjectId: number, termId: number, data: {
     student_number?: string
     marks?: Record<string, number>
   }>
-}): Promise<{ imported_count: number }> {
-  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-file`, data)
+}, classId?: number | null): Promise<{ imported_count: number }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-file`, { ...data, class_id: classId || undefined })
   return res.data.data
 }
 
