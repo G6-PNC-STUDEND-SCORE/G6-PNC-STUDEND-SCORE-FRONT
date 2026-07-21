@@ -42,6 +42,9 @@
           <i :class="saveStatusIcon"></i>
           <span class="status-text">{{ saveStatusText }}</span>
         </div>
+        <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
+          <i class="bi bi-keyboard"></i>
+        </button>
       </div>
     </div>
 
@@ -372,6 +375,66 @@
         </div>
       </div>
     </div>
+    <!-- Keyboard Shortcuts Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showKeyboardShortcuts" class="overlay" @click.self="showKeyboardShortcuts = false">
+          <div class="modal-card shortcuts-modal">
+            <div class="modal-head">
+              <div class="modal-icon icon-add">
+                <i class="bi bi-keyboard" style="font-size:1.2rem"></i>
+              </div>
+              <div>
+                <h3>Keyboard Shortcuts</h3>
+                <p>All available shortcuts for the score sheet</p>
+              </div>
+              <button class="modal-x" @click="showKeyboardShortcuts = false">&times;</button>
+            </div>
+            <div class="shortcuts-body">
+              <!-- Navigation -->
+              <div class="shortcut-group">
+                <h4 class="shortcut-group-title"><i class="bi bi-arrows-move"></i> Navigation</h4>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></span><span class="shortcut-desc">Move between cells</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Tab</kbd> <kbd>Shift</kbd>+<kbd>Tab</kbd></span><span class="shortcut-desc">Next / previous cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Home</kbd></span><span class="shortcut-desc">Go to first row (same column)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>End</kbd></span><span class="shortcut-desc">Go to last row (same column)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Go to first cell (top-left)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Go to last cell (bottom-right)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>↑</kbd></span><span class="shortcut-desc">Jump to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>↓</kbd></span><span class="shortcut-desc">Jump to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>←</kbd></span><span class="shortcut-desc">Go to student name</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>→</kbd></span><span class="shortcut-desc">Go to last column</span></div>
+              </div>
+              <!-- Selection -->
+              <div class="shortcut-group">
+                <h4 class="shortcut-group-title"><i class="bi bi-ui-checks"></i> Selection</h4>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></span><span class="shortcut-desc">Extend selection in direction</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Click</kbd></span><span class="shortcut-desc">Range select from anchor to clicked cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Extend selection to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Extend selection to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Select all rows in current column</span></div>
+              </div>
+              <!-- Editing -->
+              <div class="shortcut-group">
+                <h4 class="shortcut-group-title"><i class="bi bi-pencil"></i> Editing</h4>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd> <kbd>F2</kbd></span><span class="shortcut-desc">Edit the selected cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd></span><span class="shortcut-desc">Save edit &amp; move to next cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Escape</kbd></span><span class="shortcut-desc">Cancel editing</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Delete</kbd> <kbd>Backspace</kbd></span><span class="shortcut-desc">Clear cell value(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>C</kbd></span><span class="shortcut-desc">Copy selected cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>V</kbd></span><span class="shortcut-desc">Paste into selected cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>X</kbd></span><span class="shortcut-desc">Cut selected cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Undo last change</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Y</kbd> <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Redo last undone change</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>S</kbd></span><span class="shortcut-desc">Save all changes</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys">Type a digit</span><span class="shortcut-desc">Type any number to start editing the selected score cell</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <div v-if="loading" class="loading-overlay"><div class="spinner"></div><span>Loading scores...</span></div>
   </div>
 </template>
@@ -444,6 +507,7 @@ const contextMenu = ref<{ x: number; y: number; rowIdx: number } | null>(null)
 // ─── Export Dropdown State ────────────────────────────────────────────
 const showExportMenu = ref(false)
 const exportBtnRef = ref<HTMLElement | null>(null)
+const showKeyboardShortcuts = ref(false)
 
 function onDocumentClick(e: MouseEvent) {
   if (showExportMenu.value && exportBtnRef.value && !exportBtnRef.value.contains(e.target as Node)) {
@@ -1551,7 +1615,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedRowIndex.value = next
@@ -1571,7 +1635,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedRowIndex.value = prev
@@ -1587,6 +1651,12 @@ function onGlobalKeydown(event: KeyboardEvent) {
         scrollToCell(currentRow, -1)
       } else if (selectedCol.value === 0) {
         // From student ID go to student name
+        if (shiftKey && !isRangeSelecting.value) {
+          expandAllRowsForSelection()
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedCol.value = -1
         scrollToCell(currentRow, -1)
       } else if (currentColIdx > 0) {
@@ -1594,13 +1664,19 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx + 1].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
       } else if (currentColIdx === 0 && cols.length > 0 && selectedCol.value === cols[0].id) {
         // From first score column go to student ID
+        if (shiftKey && !isRangeSelecting.value) {
+          expandAllRowsForSelection()
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedCol.value = 0
         scrollToCell(currentRow, 0)
       }
@@ -1614,11 +1690,23 @@ function onGlobalKeydown(event: KeyboardEvent) {
         scrollToCell(currentRow, cols.length - 1)
       } else if (selectedCol.value === -1) {
         // From student name go to student ID
+        if (shiftKey && !isRangeSelecting.value) {
+          expandAllRowsForSelection()
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedCol.value = 0
         scrollToCell(currentRow, 0)
       } else if (selectedCol.value === 0) {
         // From student ID go to first score column
         if (cols.length > 0) {
+          if (shiftKey && !isRangeSelecting.value) {
+            expandAllRowsForSelection()
+            selectionStartRow.value = currentRow
+            selectionStartCol.value = selectedCol.value
+            isRangeSelecting.value = true
+          }
           selectedCol.value = cols[0].id
           scrollToCell(currentRow, 0)
         }
@@ -1627,7 +1715,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx - 1].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedCol.value = cols[currentColIdx].id
@@ -1670,28 +1758,56 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'Home':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+Home: go to first cell
+        // Ctrl+Home: go to first cell (top-left)
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedRowIndex.value = 0
-        selectedCol.value = cols.length > 0 ? cols[0].id : null
+        selectedCol.value = cols.length > 0 ? cols[0].id : -1
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(0, 0)
       } else {
-        // Home: go to first column in current row
-        selectedCol.value = cols.length > 0 ? cols[0].id : null
+        // Home: go to first row (same column)
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
+        selectedRowIndex.value = 0
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(0, currentColIdx)
       }
-      if (!shiftKey) isRangeSelecting.value = false
-      scrollToCell(selectedRowIndex.value, 0)
       break
     case 'End':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+End: go to last cell
+        // Ctrl+End: go to last cell (bottom-right)
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedRowIndex.value = filteredRows.value.length - 1
-        selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : null
+        selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : -1
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(filteredRows.value.length - 1, cols.length - 1)
       } else {
-        // End: go to last column in current row
-        selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : null
+        // End: go to last row (same column)
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
+        selectedRowIndex.value = filteredRows.value.length - 1
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(filteredRows.value.length - 1, currentColIdx)
       }
-      if (!shiftKey) isRangeSelecting.value = false
-      scrollToCell(selectedRowIndex.value, cols.length - 1)
       break
     case 'PageDown':
       event.preventDefault()
@@ -2625,6 +2741,8 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 }
 .tb-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.kb-btn { font-size: 0.85rem; color: #64748b; }
+.kb-btn:hover { color: #2563eb; background: #eff6ff; border-color: #93c5fd; }
 .btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
 
 .search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 120px; }
@@ -3472,6 +3590,167 @@ select.form-input { appearance: auto; }
 .add-row-cell i { margin-right: 6px; }
 
 /* ─── Right-Click Context Menu ──────────────────────────────────── */
+/* ─── Keyboard Shortcuts Modal ──────────────────────────────────── */
+.shortcuts-modal {
+  max-width: 560px !important;
+  max-height: 80vh;
+}
+
+.shortcuts-body {
+  padding: 4px 24px 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shortcut-group {
+  padding: 12px 0;
+}
+
+.shortcut-group + .shortcut-group {
+  border-top: 1px solid #f1f5f9;
+}
+
+.shortcut-group-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shortcut-group-title i {
+  font-size: 0.85rem;
+  color: #3b82f6;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  gap: 12px;
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+  color: #1e293b;
+  background: #f1f5f9;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+  line-height: 1;
+}
+
+.shortcut-desc {
+  font-size: 0.82rem;
+  color: #475569;
+  text-align: right;
+  flex: 1;
+}
+
+/* Shared overlay/modal-card from other pages - defined here for scoped CSS */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  overflow: hidden;
+  animation: modal-in 0.25s ease-out;
+}
+
+@keyframes modal-in {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px 24px 0;
+  position: relative;
+}
+
+.modal-head h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.modal-head p {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.icon-add {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.modal-x {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.modal-x:hover {
+  color: #475569;
+}
+
 .context-menu {
   position: fixed;
   z-index: 10000;

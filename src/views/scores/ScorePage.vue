@@ -1,36 +1,12 @@
 <template>
-  <div>
-    <div class="px-4 py-4">
-      <!-- ── Breadcrumb ──────────────────────────────────────────── -->
-      <div class="breadcrumb-bar" v-if="selectedClass">
-        <button class="breadcrumb-back" @click="selectClass(null)">
-          <ChevronLeft :size="16" />
-          <span>All Classes</span>
-        </button>
-        <ChevronRight :size="14" class="breadcrumb-sep" />
-        <span class="breadcrumb-current">
-          <School :size="14" />
-          {{ selectedClass.name }}
-        </span>
-      </div>
+  <div class="page-container">
 
-      <!-- ── Page Header ─────────────────────────────────────────── -->
-      <div class="page-header" :class="{ 'with-breadcrumb': selectedClass }">
-        <h2 class="page-title">
-          <template v-if="!selectedClass">Select a Class</template>
-          <template v-else>Select a Term</template>
-        </h2>
-        <p class="page-subtitle" v-if="!selectedClass">
-          Choose a class to view its score sheets
-        </p>
-        <p class="page-subtitle" v-else>
-          Choose a term and subject for <strong>{{ selectedClass.name }}</strong>
-        </p>
-      </div>
+
+
 
       <!-- ── Loading State ───────────────────────────────────────── -->
       <div v-if="loading" class="loading-state">
-        <div class="spinner-sm"></div>
+        <div class="spinner"></div>
         <span>{{ !selectedClass ? 'Loading classes...' : 'Loading terms...' }}</span>
       </div>
 
@@ -39,95 +15,88 @@
         <!-- CLASS GRID                                                 -->
         <!-- ══════════════════════════════════════════════════════════ -->
         <template v-if="!selectedClass">
-          <!-- Toolbar: Search + Generation Filter -->
-          <div class="class-toolbar" v-if="classes.length > 0">
-            <div class="tb-search-wrapper">
-              <div class="tb-search">
-                <Search :size="16" />
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search classes..."
-                />
-                <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
-                  <X :size="14" />
-                </button>
+          <div class="scores-card">
+            <!-- Toolbar: Search + Filter + Stats -->
+            <div class="toolbar" v-if="classes.length > 0">
+              <div class="toolbar-left">
+                <div class="tb-search">
+                  <Search :size="16" />
+                  <input
+                    v-model="searchQuery"
+                    type="text"
+                    placeholder="Search classes..."
+                  />
+                  <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
+                    <X :size="14" />
+                  </button>
+                </div>
+              </div>
+              <div class="toolbar-right">
+                <div class="tb-filter" v-if="classGenerations.length > 0">
+                  <select v-model="selectedGenerationFilter">
+                    <option :value="null">All Generations</option>
+                    <option
+                      v-for="gen in classGenerations"
+                      :key="gen"
+                      :value="gen"
+                    >
+                      {{ gen }}
+                    </option>
+                  </select>
+                </div>
+                <div class="stat-chip" v-if="filteredClasses.length > 0">
+                  <Users :size="14" />
+                  <span>{{ filteredClasses.length }} Class{{ filteredClasses.length !== 1 ? 'es' : '' }}</span>
+                </div>
+                <div class="stat-chip" v-if="classGenerations.length > 0">
+                  <GraduationCap :size="14" />
+                  <span>{{ classGenerations.length }} Generation{{ classGenerations.length !== 1 ? 's' : '' }}</span>
+                </div>
+                <div class="stat-chip" v-if="filteredTotalStudents > 0">
+                  <Users :size="14" />
+                  <span>{{ filteredTotalStudents }} Student{{ filteredTotalStudents !== 1 ? 's' : '' }}</span>
+                </div>
               </div>
             </div>
-            <div v-if="classGenerations.length > 0" class="gen-filter-tabs">
-              <button
-                class="gen-filter-tab"
-                :class="{ 'gen-filter-active': selectedGenerationFilter === null }"
-                @click="selectedGenerationFilter = null"
+
+            <div v-if="filteredClasses.length === 0 && !loadingClasses" class="empty-state">
+              <div class="empty-state-icon"><Inbox :size="24" /></div>
+              <h5 v-if="searchQuery || selectedGenerationFilter">No Matching Classes</h5>
+              <h5 v-else>No Classes Found</h5>
+              <p class="text-secondary" v-if="searchQuery">Try a different search term.</p>
+              <p class="text-secondary" v-else-if="selectedGenerationFilter">No classes found for this generation.</p>
+              <p class="text-secondary" v-else>No classes are available. Please create a class first.</p>
+            </div>
+
+            <div v-else class="classes-grid">
+              <div
+                v-for="cls in filteredClasses"
+                :key="cls.id"
+                class="class-card"
+                :style="{ '--card-accent': getClassAccentColor(cls) }"
+                @click="selectClass(cls)"
               >
-                <Layers :size="15" />
-                <span>All GEN</span>
-              </button>
-              <button
-                v-for="gen in classGenerations"
-                :key="gen"
-                class="gen-filter-tab"
-                :class="{ 'gen-filter-active': selectedGenerationFilter === gen }"
-                @click="selectedGenerationFilter = gen"
-              >
-                <GraduationCap :size="15" />
-                <span>{{ gen }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="stats-row" v-if="filteredClasses.length > 0">
-            <div class="stat-chip">
-              <Users :size="14" />
-              <span>{{ filteredClasses.length }} Class{{ filteredClasses.length !== 1 ? 'es' : '' }}</span>
-            </div>
-            <div class="stat-chip">
-              <GraduationCap :size="14" />
-              <span>{{ classGenerations.length }} Generation{{ classGenerations.length !== 1 ? 's' : '' }}</span>
-            </div>
-            <div class="stat-chip" v-if="filteredTotalStudents > 0">
-              <Users :size="14" />
-              <span>{{ filteredTotalStudents }} Student{{ filteredTotalStudents !== 1 ? 's' : '' }}</span>
-            </div>
-          </div>
-
-          <div v-if="filteredClasses.length === 0 && !loadingClasses" class="empty-state">
-            <div class="empty-state-icon"><Inbox :size="24" /></div>
-            <h5 v-if="searchQuery || selectedGenerationFilter">No Matching Classes</h5>
-            <h5 v-else>No Classes Found</h5>
-            <p class="text-secondary" v-if="searchQuery">Try a different search term.</p>
-            <p class="text-secondary" v-else-if="selectedGenerationFilter">No classes found for this generation.</p>
-            <p class="text-secondary" v-else>No classes are available. Please create a class first.</p>
-          </div>
-
-          <div v-else class="classes-grid">
-            <div
-              v-for="cls in filteredClasses"
-              :key="cls.id"
-              class="class-card"
-              :style="{ '--card-accent': getClassAccentColor(cls) }"
-              @click="selectClass(cls)"
-            >
-              <div class="class-card-top">
-                <div class="class-card-icon" :style="{ background: getClassGradient(cls) }">
-                  <Users :size="22" />
+                <div class="class-card-top">
+                  <div class="class-card-icon" :style="{ background: getClassGradient(cls) }">
+                    <Users :size="22" />
+                  </div>
+                  <div class="class-card-badge" v-if="cls.room">{{ cls.room }}</div>
                 </div>
-                <div class="class-card-badge" v-if="cls.room">{{ cls.room }}</div>
-              </div>
-              <div class="class-card-body">
-                <h3 class="class-card-name">{{ cls.name }}</h3>
-                <p class="class-card-desc" v-if="cls.description">{{ cls.description }}</p>
-              </div>
-              <div class="class-card-footer">
-                <div class="class-card-stat" v-if="cls.students !== undefined && cls.students !== null">
-                  <Users :size="12" />
-                  <span>{{ cls.students }} students</span>
+                <div class="class-card-body">
+                  <h3 class="class-card-name">{{ cls.name }}</h3>
+                  <p class="class-card-desc" v-if="cls.description">{{ cls.description }}</p>
                 </div>
-                <div class="class-card-stat" v-else>
-                  <Calendar :size="12" />
-                  <span>{{ cls.generation?.name || 'Current' }}</span>
+                <div class="class-card-footer">
+                  <div class="class-card-stat" v-if="cls.students !== undefined && cls.students !== null">
+                    <Users :size="12" />
+                    <span>{{ cls.students }} students</span>
+                  </div>
+                  <div class="class-card-stat" v-else>
+                    <Calendar :size="12" />
+                    <span>{{ cls.generation?.name || 'Current' }}</span>
+                  </div>
+                  <div class="class-card-arrow"><ChevronRight :size="16" /></div>
                 </div>
-                <div class="class-card-arrow"><ChevronRight :size="16" /></div>
               </div>
             </div>
           </div>
@@ -137,104 +106,122 @@
         <!-- TERMS WITH SUBJECTS                                        -->
         <!-- ══════════════════════════════════════════════════════════ -->
         <template v-else>
-          <!-- Toolbar: Generation Tabs + Sort Toggle -->
-          <div class="term-toolbar">
-            <div v-if="generations.length > 0" class="generation-tabs">
-              <button
-                v-for="gen in generations"
-                :key="gen"
-                class="gen-tab"
-                :class="{ 'gen-tab-active': selectedGeneration === gen }"
-                @click="selectedGeneration = gen"
-              >
-                <GraduationCap :size="16" />
-                <span>{{ gen }}</span>
+          <div class="scores-card">
+            <!-- ── Breadcrumb inside card ── -->
+            <div class="terms-header">
+              <button class="terms-back" @click="selectClass(null)">
+                <ChevronLeft :size="15" />
+                <span>All Classes</span>
               </button>
+              <ChevronRight :size="12" class="terms-sep" />
+              <span class="terms-current">
+                <School :size="13" />
+                {{ selectedClass.name }}
+              </span>
             </div>
-            <div class="sort-toggle">
-              <span class="sort-label">Sort by</span>
-              <button
-                class="sort-btn"
-                :class="{ 'sort-btn-active': subjectSortMode === 'enrollment' }"
-                @click="subjectSortMode = 'enrollment'"
-                title="Sort by number of enrolled students"
-              >
-                <Users :size="14" />
-                <span>Students</span>
-              </button>
-              <button
-                class="sort-btn"
-                :class="{ 'sort-btn-active': subjectSortMode === 'alphabetical' }"
-                @click="subjectSortMode = 'alphabetical'"
-                title="Sort alphabetically by name"
-              >
-                <ArrowUpDown :size="14" />
-                <span>A–Z</span>
-              </button>
+
+            <!-- Toolbar: Generation Filter + Sort Toggle -->
+            <div class="term-toolbar">
+              <div class="toolbar-left">
+                <div class="tb-filter" v-if="generations.length > 0">
+                  <select v-model="selectedGeneration">
+                    <option :value="null">All Years</option>
+                    <option
+                      v-for="gen in generations"
+                      :key="gen"
+                      :value="gen"
+                    >
+                      {{ gen }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <div class="toolbar-right">
+                <div class="sort-toggle">
+                  <span class="sort-label">Sort by</span>
+                  <button
+                    class="sort-btn"
+                    :class="{ 'sort-btn-active': subjectSortMode === 'enrollment' }"
+                    @click="subjectSortMode = 'enrollment'"
+                    title="Sort by number of enrolled students"
+                  >
+                    <Users :size="14" />
+                    <span>Students</span>
+                  </button>
+                  <button
+                    class="sort-btn"
+                    :class="{ 'sort-btn-active': subjectSortMode === 'alphabetical' }"
+                    @click="subjectSortMode = 'alphabetical'"
+                    title="Sort alphabetically by name"
+                  >
+                    <ArrowUpDown :size="14" />
+                    <span>A–Z</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <!-- Term Cards with Subjects -->
-          <div v-if="filteredTerms.length === 0" class="empty-state">
-            <div class="empty-state-icon"><Inbox :size="24" /></div>
-            <h5>No Terms Found</h5>
-            <p class="text-secondary">No terms available for {{ selectedClass.name }} in this generation.</p>
-          </div>
+            <!-- Term Cards with Subjects -->
+            <div v-if="filteredTerms.length === 0" class="empty-state">
+              <div class="empty-state-icon"><Inbox :size="24" /></div>
+              <h5>No Terms Found</h5>
+              <p class="text-secondary">No terms available for {{ selectedClass.name }} in this generation.</p>
+            </div>
 
-          <div v-else class="term-sections">
-            <div
-              v-for="term in filteredTerms"
-              :key="term.id"
-              class="term-section"
-            >
-              <!-- Term Header -->
-              <div class="term-section-header" @click="goToTermSubjects(term.id)">
-                <div class="term-section-header-left">
-                  <div class="term-section-icon">
-                    <Calendar :size="20" />
+            <div v-else class="term-sections">
+              <div
+                v-for="term in filteredTerms"
+                :key="term.id"
+                class="term-section"
+              >
+                <!-- Term Header -->
+                <div class="term-section-header" @click="goToTermSubjects(term.id)">
+                  <div class="term-section-header-left">
+                    <div class="term-section-icon">
+                      <Calendar :size="20" />
+                    </div>
+                    <div>
+                      <h3 class="term-section-name">{{ term.name }}</h3>
+                      <span class="term-section-count">
+                        {{ getTermSubjects(term.id).length }} subject{{ getTermSubjects(term.id).length !== 1 ? 's' : '' }}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <h3 class="term-section-name">{{ term.name }}</h3>
-                    <span class="term-section-count">
-                      {{ getTermSubjects(term.id).length }} subject{{ getTermSubjects(term.id).length !== 1 ? 's' : '' }}
+                  <div class="term-section-header-right">
+                    <span class="term-year-badge">{{ term.academic_year }}</span>
+                    <ChevronRight :size="18" class="term-section-arrow" />
+                  </div>
+                </div>
+
+                <!-- Subject Chips -->
+                <div class="subject-chips" v-if="getTermSubjects(term.id).length > 0">
+                  <div
+                    v-for="subject in getTermSubjects(term.id)"
+                    :key="subject.id"
+                    class="subject-chip"
+                    :style="{ '--chip-color': getSubjectColor(subject.code || '') }"
+                    @click.stop="goToScoreSheet(subject, term.id)"
+                    :title="`View ${subject.name} scores`"
+                  >
+                    <BookOpen :size="14" />
+                    <span class="subject-chip-name">{{ subject.name }}</span>
+                    <span class="subject-chip-code">{{ subject.code }}</span>
+                    <span class="subject-chip-count" v-if="getSubjectEnrollmentCount(subject, term.id) > 0">
+                      {{ getSubjectEnrollmentCount(subject, term.id) }}
                     </span>
                   </div>
                 </div>
-                <div class="term-section-header-right">
-                  <span class="term-year-badge">{{ term.academic_year }}</span>
-                  <ChevronRight :size="18" class="term-section-arrow" />
-                </div>
-              </div>
 
-              <!-- Subject Chips -->
-              <div class="subject-chips" v-if="getTermSubjects(term.id).length > 0">
-                <div
-                  v-for="subject in getTermSubjects(term.id)"
-                  :key="subject.id"
-                  class="subject-chip"
-                  :style="{ '--chip-color': getSubjectColor(subject.code || '') }"
-                  @click.stop="goToScoreSheet(subject, term.id)"
-                  :title="`View ${subject.name} scores`"
-                >
-                  <BookOpen :size="14" />
-                  <span class="subject-chip-name">{{ subject.name }}</span>
-                  <span class="subject-chip-code">{{ subject.code }}</span>
-                  <span class="subject-chip-count" v-if="getSubjectEnrollmentCount(subject, term.id) > 0">
-                    {{ getSubjectEnrollmentCount(subject, term.id) }}
-                  </span>
+                <div v-else class="no-subjects-note">
+                  <BookOpen :size="12" />
+                  <span>No subjects for this term</span>
                 </div>
-              </div>
-
-              <div v-else class="no-subjects-note">
-                <BookOpen :size="12" />
-                <span>No subjects for this term</span>
               </div>
             </div>
           </div>
         </template>
       </template>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -246,7 +233,7 @@ import { cacheService } from '@/services/cacheService'
 import {
   Inbox, Calendar, ChevronRight, ChevronLeft,
   GraduationCap, School, Users, BookOpen, ArrowUpDown,
-  Search, X, Layers,
+  Search, X,
 } from '@lucide/vue'
 
 const CACHE_KEY = 'scores-subjects'
@@ -481,91 +468,61 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.px-4 { padding-left: 1rem; padding-right: 1rem; }
-.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+/* ══════════════════════════════════════════════════════════════════
+   SCORE PAGE — Consistent with SubjectPage / ClassPage
+   ══════════════════════════════════════════════════════════════════ */
+.page-container {
+  padding: 1rem 1.5rem 2rem;
+  font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
+  color: #0f172a;
+  max-width: 1440px;
+}
 
-/* ── Breadcrumb ───────────────────────────────────────────────────── */
-.breadcrumb-bar {
+/* ── Terms Header (breadcrumb inside card) ───────────────────────── */
+.terms-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 1rem;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  padding: 12px 16px 6px;
   font-size: 0.8125rem;
 }
 
-.breadcrumb-back {
+.terms-back {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border: none;
-  background: #fff;
+  background: transparent;
   border-radius: 6px;
   color: #475569;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
 }
 
-.breadcrumb-back:hover {
-  background: #eef2ff;
+.terms-back:hover {
+  background: #f1f5f9;
   color: #2563eb;
 }
 
-.breadcrumb-sep {
+.terms-sep {
   color: #cbd5e1;
   flex-shrink: 0;
 }
 
-.breadcrumb-current {
+.terms-current {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: #2563eb;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.82rem;
 }
 
-/* ── Page Header ──────────────────────────────────────────────────── */
-.page-header {
-  margin-bottom: 1.25rem;
-}
-
-.page-header.with-breadcrumb {
-  margin-bottom: 0.75rem;
-}
-
-.page-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 4px 0;
-  letter-spacing: -0.02em;
-}
-
-.page-subtitle {
-  font-size: 0.875rem;
-  color: #64748b;
-  margin: 0;
-}
-
-.page-subtitle strong {
-  color: #1e293b;
-}
-
-/* ── Stats Row ────────────────────────────────────────────────────── */
-.stats-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 1.25rem;
-}
-
+/* ── Stats Chip ───────────────────────────────────────────────────── */
 .stat-chip {
   display: flex;
   align-items: center;
@@ -584,42 +541,77 @@ onMounted(async () => {
 /* ── Loading State ────────────────────────────────────────────────── */
 .loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   padding: 4rem;
   color: #64748b;
 }
 
-.spinner-sm {
-  width: 20px; height: 20px;
-  border: 2px solid #e2e8f0;
+.spinner {
+  width: 30px; height: 30px;
+  border: 3px solid #e2e8f0;
   border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+
+.spinner-sm {
+  width: 16px; height: 16px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══════════════════════════════════════════════════════════════════ */
-/*  CLASS-LEVEL TOOLBAR (Search + Generation Filters)                  */
+/*  SCORES CARD — matches UsersPage .user-card style                   */
 /* ══════════════════════════════════════════════════════════════════ */
-.class-toolbar {
+.scores-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.25s ease;
+}
+
+.scores-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
+/*  TOOLBAR — matches UsersPage .toolbar style                        */
+/* ══════════════════════════════════════════════════════════════════ */
+.toolbar,
+.term-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 1.25rem;
-  padding: 12px 16px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
 }
 
-.tb-search-wrapper {
-  flex: 1;
-  min-width: 200px;
-  max-width: 360px;
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .tb-search {
@@ -628,16 +620,18 @@ onMounted(async () => {
   gap: 8px;
   padding: 0 14px;
   height: 38px;
-  background: #f8fafc;
+  background: #fff;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 200px;
+  flex: 1;
+  max-width: 320px;
+  transition: border-color 0.2s;
 }
 
 .tb-search:focus-within {
   border-color: #93c5fd;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
-  background: #fff;
 }
 
 .tb-search svg {
@@ -674,46 +668,27 @@ onMounted(async () => {
   color: #64748b;
 }
 
-.gen-filter-tabs {
+.tb-filter {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.gen-filter-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 14px;
-  border-radius: 8px;
+.tb-filter select {
+  height: 38px;
+  padding: 0 12px;
   border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
   background: #fff;
+  font-size: 0.85rem;
   color: #475569;
-  font-size: 0.78rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  outline: none;
   font-family: inherit;
-  white-space: nowrap;
 }
 
-.gen-filter-tab:hover {
+.tb-filter select:focus {
   border-color: #93c5fd;
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-.gen-filter-active {
-  border-color: #2563eb;
-  background: #2563eb;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
-}
-
-.gen-filter-active:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-  color: #fff;
 }
 
 /* ══════════════════════════════════════════════════════════════════ */
@@ -723,6 +698,7 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
+  padding: 20px;
 }
 
 .class-card {
@@ -825,64 +801,16 @@ onMounted(async () => {
 /* ══════════════════════════════════════════════════════════════════ */
 /*  TERM SECTIONS                                                      */
 /* ══════════════════════════════════════════════════════════════════ */
-.term-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 1.25rem;
-}
-
-.generation-tabs {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.gen-tab {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 20px;
-  border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  background: #fff;
-  color: #475569;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.gen-tab:hover {
-  border-color: #93c5fd;
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-.gen-tab-active {
-  border-color: #2563eb;
-  background: #2563eb;
-  color: #fff;
-}
-
-.gen-tab-active:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-  color: #fff;
-}
-
 .term-sections {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .term-section {
   background: #fff;
-  border-radius: 14px;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
   overflow: hidden;
   transition: all 0.2s;
@@ -890,7 +818,7 @@ onMounted(async () => {
 
 .term-section:hover {
   border-color: #93c5fd;
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.08);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.06);
 }
 
 /* Term section header */
@@ -898,7 +826,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -910,30 +838,29 @@ onMounted(async () => {
 .term-section-header-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .term-section-icon {
-  width: 44px; height: 44px;
-  border-radius: 12px;
+  width: 32px; height: 32px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   color: #2563eb;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
 }
 
 .term-section-name {
-  font-size: 1rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 2px 0;
+  margin: 0 0 1px 0;
 }
 
 .term-section-count {
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: #94a3b8;
   font-weight: 500;
 }
@@ -941,15 +868,15 @@ onMounted(async () => {
 .term-section-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
 .term-year-badge {
-  padding: 3px 10px;
+  padding: 2px 8px;
   background: #f1f5f9;
-  border-radius: 6px;
-  font-size: 0.7rem;
+  border-radius: 5px;
+  font-size: 0.65rem;
   font-weight: 600;
   color: #64748b;
 }
@@ -961,7 +888,7 @@ onMounted(async () => {
 
 .term-section-header:hover .term-section-arrow {
   color: #2563eb;
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 
 /* ══════════════════════════════════════════════════════════════════ */
@@ -1019,21 +946,21 @@ onMounted(async () => {
 .subject-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 4px 20px 16px;
+  gap: 6px;
+  padding: 2px 14px 10px;
 }
 
 .subject-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  gap: 5px;
+  padding: 6px 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-size: 0.8125rem;
+  transition: all 0.15s;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #334155;
   position: relative;
@@ -1054,8 +981,8 @@ onMounted(async () => {
 .subject-chip:hover {
   background: #fff;
   border-color: var(--chip-color, #3b82f6);
-  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.12);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
 }
 
 .subject-chip:active {
@@ -1072,20 +999,20 @@ onMounted(async () => {
 }
 
 .subject-chip-code {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: #94a3b8;
-  padding: 1px 5px;
+  padding: 1px 4px;
   background: #f1f5f9;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .subject-chip-count {
   margin-left: 2px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   background: #eef2ff;
   color: #2563eb;
-  border-radius: 6px;
-  font-size: 0.65rem;
+  border-radius: 4px;
+  font-size: 0.6rem;
   font-weight: 700;
 }
 
@@ -1093,41 +1020,39 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 20px 16px;
-  font-size: 0.78rem;
+  padding: 2px 14px 10px;
+  font-size: 0.75rem;
   color: #94a3b8;
 }
 
 /* ══════════════════════════════════════════════════════════════════ */
-/*  EMPTY STATE                                                        */
+/*  EMPTY STATE — simple, like UsersPage                               */
 /* ══════════════════════════════════════════════════════════════════ */
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
   text-align: center;
-  background: #f8fafc;
-  border-radius: 16px;
-  border: 1.5px dashed #e2e8f0;
+  padding: 48px 16px;
+  color: #9ca3af;
 }
 
 .empty-state-icon {
-  width: 56px; height: 56px;
-  border-radius: 16px;
-  background: #eef2ff;
-  color: #2563eb;
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1rem;
+  margin: 0 auto 12px;
 }
 
-.empty-state h5 { font-weight: 700; color: #0f172a; margin: 0 0 4px 0; }
-.empty-state p { font-size: 0.875rem; margin: 0; }
+.empty-state h5 { font-weight: 600; color: #64748b; margin: 0 0 4px 0; font-size: 1rem; }
+.empty-state p { font-size: 0.8125rem; margin: 0; }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .page-container { padding: 0.75rem 1rem; }
+}
+
 @media (max-width: 640px) {
   .classes-grid { grid-template-columns: 1fr; }
 }

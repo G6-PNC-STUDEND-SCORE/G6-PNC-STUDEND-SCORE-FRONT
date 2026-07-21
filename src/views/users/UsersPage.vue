@@ -119,8 +119,9 @@
               :key="user.id"
               class="user-row"
               :class="[getRowClass(user), { 'row-selected': selectedIds.includes(user.id) }]"
+              @dblclick="openEditModal(user)"
             >
-              <td class="col-check">
+              <td class="col-check" @dblclick.stop>
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -279,7 +280,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <UserIcon :size="14" class="me-1" />
-                    Full Name <span class="text-danger">*</span>
+                    Full Name
                   </label>
                   <div class="input-wrapper">
                     <input
@@ -296,7 +297,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <Mail :size="14" class="me-1" />
-                    Email Address <span class="text-danger">*</span>
+                    Email Address
                   </label>
                   <div class="input-wrapper">
                     <input
@@ -313,7 +314,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <Lock :size="14" class="me-1" />
-                    Password {{ isEditing ? '' : '<span class="text-danger">*</span>' }}
+                    Password
                   </label>
                   <div class="input-wrapper">
                     <input
@@ -332,7 +333,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <ShieldCheck :size="14" class="me-1" />
-                    Role <span class="text-danger">*</span>
+                    Role
                   </label>
                   <div class="input-wrapper">
                     <select v-model="form.role_id" class="modern-input" required>
@@ -362,7 +363,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <ToggleLeft :size="14" class="me-1" />
-                    Status <span class="text-danger">*</span>
+                    Status
                   </label>
                   <div class="input-wrapper">
                     <select v-model="form.status" class="modern-input" required>
@@ -1033,6 +1034,7 @@ onMounted(() => {
   flex-direction: column;
   overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  padding: 1rem 1.5rem;
 }
 
 
@@ -1228,8 +1230,7 @@ onMounted(() => {
   overflow: auto;
   flex: 1;
   min-height: 0;
-  height: 1px;
-  max-height: calc(100vh - 280px);
+  max-height: calc(100vh - 210px);
 }
 
 .user-table {
@@ -1499,7 +1500,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 8px 20px;
   border-top: 1px solid #e5e7eb;
   background: #fafbfc;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
@@ -1550,15 +1551,15 @@ onMounted(() => {
 }
 
 .page-nav {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #e2e8f0;
   background: #fff;
   color: #64748b;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -1567,17 +1568,17 @@ onMounted(() => {
 .page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .page-btn {
-  min-width: 32px;
-  height: 32px;
+  min-width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   background: transparent;
   color: #475569;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 500;
   font-family: inherit;
   transition: all 0.15s ease;
