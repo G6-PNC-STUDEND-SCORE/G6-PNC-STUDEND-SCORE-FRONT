@@ -138,8 +138,9 @@ export const useClassStore = defineStore('class', () => {
     try {
       const response = await classService.deleteClass(id)
       if (response.success) {
+        // Remove from local list instantly — no API re-fetch needed
+        classes.value = classes.value.filter(c => c.id !== id)
         invalidateCache()
-        await fetchClasses(undefined, true)
         successMessage.value = response.message || 'Class deleted successfully'
         return true
       } else {
