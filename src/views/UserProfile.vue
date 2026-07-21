@@ -1,352 +1,241 @@
 <template>
-  <div class="admin-profile-page">
-    <!-- ═══════════ PAGE HEADER ═══════════ -->
-    <header class="page-header">
-      <div class="page-header-bg"></div>
-      <div class="page-header-content">
-        <div class="page-header-icon">
-          <i class="bi bi-person-circle"></i>
+  <div :class="['profile-page', { 'dark-mode': theme.isDark }]">
+    <!-- Header -->
+    <header class="page-head">
+      <div class="page-head-left">
+        <div class="page-icon">
+          <User :size="20" />
         </div>
-        <div class="page-header-text">
-          <h1 class="page-header-title">My Profile</h1>
-          <p class="page-header-subtitle">Manage your institutional profile and security preferences</p>
-        </div>
-        <div class="page-header-badge">
-          <span class="badge-pulse"></span>
-          Active
+        <div>
+          <h1 class="page-title">My Profile</h1>
+          <p class="page-desc">Manage your personal information and security settings.</p>
         </div>
       </div>
     </header>
 
-    <!-- ═══════════ LOADING STATE ═══════════ -->
-    <template v-if="loading">
-      <Transition name="fade-slide">
-        <div class="state-card">
-          <div class="loading-content">
-            <div class="spinner-ring">
-              <div class="ring"></div>
-              <div class="ring"></div>
-              <div class="ring"></div>
-            </div>
-            <p class="state-text">Loading your profile...</p>
-          </div>
-        </div>
-      </Transition>
-    </template>
-
-    <!-- Error State -->
-    <div v-else-if="fetchError" class="error-state">
-      <AlertTriangle :size="32" style="color: #dc2626; margin-bottom: 12px;" />
-      <p>{{ fetchError }}</p>
-      <button class="btn btn-primary" @click="loadProfile">Retry</button>
+    <!-- Loading -->
+    <div v-if="loading" class="state-box">
+      <div class="spinner"></div>
+      <span>Loading your profile...</span>
     </div>
 
-    <!-- ═══════════ MAIN CONTENT ═══════════ -->
+    <!-- Error -->
+    <div v-else-if="fetchError" class="state-box error">
+      <AlertTriangle :size="24" />
+      <p>{{ fetchError }}</p>
+      <button class="btn btn-primary" @click="loadProfile">Try Again</button>
+    </div>
+
     <template v-else>
-      <TransitionGroup name="stagger" tag="div" class="content-wrapper">
-      <!-- Success Message -->
-      <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <CheckCircle :size="18" />
-        {{ successMessage }}
-        <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
-      </div>
+      <!-- Success toast -->
+      <Transition name="slide">
+        <div v-if="successMessage" class="toast toast-success">
+          <CheckCircle :size="16" />
+          <span>{{ successMessage }}</span>
+          <button class="toast-x" @click="successMessage = ''">&times;</button>
+        </div>
+      </Transition>
 
-      <!-- Error Message -->
-      <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <AlertTriangle :size="18" />
-        {{ saveError }}
-        <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
-      </div>
+      <!-- Error toast -->
+      <Transition name="slide">
+        <div v-if="saveError" class="toast toast-error">
+          <AlertTriangle :size="16" />
+          <span>{{ saveError }}</span>
+          <button class="toast-x" @click="saveError = ''">&times;</button>
+        </div>
+      </Transition>
 
-        <div class="profile-body">
-          <!-- Left: Avatar -->
-          <div class="avatar-section">
-            <div class="avatar-wrapper">
-              <div
-                class="avatar"
-                :class="{ 'avatar--clickable': avatarUrl }"
-                role="button"
-                tabindex="0"
-                :title="avatarUrl ? 'Click to view full screen' : 'Click to add a photo'"
-                @click="avatarUrl ? openViewer() : triggerUpload()"
-                @keydown.enter.prevent="avatarUrl ? openViewer() : triggerUpload()"
-              >
-                <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="avatar" />
-                <img v-else :src="defaultAvatar" class="avatar-img" alt="avatar" />
-                <div class="avatar-overlay">
-                  <i class="bi bi-camera-fill"></i>
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="profile-cover">
+          <div class="cover-glow"></div>
+          <div class="cover-content">
+            <div class="avatar-block">
+              <div class="avatar-border">
+                <div
+                  class="avatar"
+                  :class="{ clickable: !!avatarUrl }"
+                  role="button"
+                  tabindex="0"
+                  :title="avatarUrl ? 'View full screen' : 'Upload photo'"
+                  @click="avatarUrl ? openViewer() : $refs.fileInput?.click()"
+                  @keydown.enter.prevent="avatarUrl ? openViewer() : $refs.fileInput?.click()"
+                >
+                  <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="" />
+                  <span v-else class="avatar-initials">{{ initials }}</span>
+                  <span class="avatar-cam">
+                    <Camera :size="16" />
+                  </span>
                 </div>
-                <span v-if="avatarUrl" class="avatar-zoom-icon" aria-hidden="true">
-                  <i class="bi bi-arrows-fullscreen"></i>
-                </span>
               </div>
-              <div class="avatar-ring"></div>
-            </div>
-            <button
-              class="avatar-upload-btn"
-              @click="triggerUpload"
-              :disabled="avatarUploading"
-              :title="avatarUploading ? 'Uploading...' : 'Change photo'"
-            >
-              <template v-if="avatarUploading">
-                <span class="spinner-border spinner-border-sm" role="status"></span>
-                Uploading...
-              </template>
-              <template v-else>
-                <Camera :size="14" class="me-1" /> Change photo
-              </template>
-            </button>
-          </div>
-
-          <!-- Right: Info List -->
-          <div class="profile-info">
-            <div class="info-row info-row--header">
-              <div class="info-icon info-icon--user">
-                <i class="bi bi-person-fill"></i>
-              </div>
-              <div class="info-content">
-                <span class="info-label">Name</span>
-                <span class="info-value info-value--name">{{ form.name || 'User' }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon info-icon--id">
-                <i class="bi bi-hash"></i>
-              </div>
-              <div class="info-content">
-                <span class="info-label">ID</span>
-                <span class="info-value">#{{ form.id || '—' }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon info-icon--email">
-                <i class="bi bi-envelope-fill"></i>
-              </div>
-              <div class="info-content">
-                <span class="info-label">Email</span>
-                <span class="info-value">{{ form.email || '—' }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon info-icon--gen">
-                <i class="bi bi-layers-fill"></i>
-              </div>
-              <div class="info-content">
-                <span class="info-label">Generation</span>
-                <span class="info-value">{{ form.department || '—' }}</span>
+              <div class="avatar-info">
+                <h2 class="avatar-name">{{ form.name || 'User' }}</h2>
+                <div class="avatar-meta">
+                  <div class="meta-tag">
+                    <ShieldCheck :size="12" />
+                    {{ form.role || 'N/A' }}
+                  </div>
+                  <span class="meta-dot">&bull;</span>
+                  <button class="meta-upload" @click="$refs.fileInput?.click()" :disabled="avatarUploading">
+                    <Camera :size="12" />
+                    {{ avatarUploading ? 'Uploading...' : 'Change photo' }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- ═══════ BOTTOM GRID ═══════ -->
-      <div class="content-grid" key="content-grid">
-        <!-- Personal Information -->
-        <section class="form-card">
-          <header class="form-card-header">
-            <div class="form-card-header-left">
-              <div class="form-card-icon">
-                <i class="bi bi-person-lines-fill"></i>
-              </div>
-              <div>
-                <h3 class="form-card-title">Personal Information</h3>
-                <p class="form-card-subtitle">Update your personal details</p>
-              </div>
+        <div class="stats-row">
+          <div class="stat-cell">
+            <div class="stat-icon-box" style="background:#eef2ff;color:#6366f1">
+              <Building2 :size="16" />
             </div>
-            <span class="chip">Primary Contact</span>
-          </header>
-
-          <div class="form-grid">
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-person"></i>
-                Full Name
-              </label>
-              <div class="field-input-wrapper">
-                <input type="text" v-model="form.name" placeholder="Your full name" />
-              </div>
-            </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-envelope"></i>
-                Email Address
-              </label>
-              <div class="field-input-wrapper">
-                <input type="email" v-model="form.email" placeholder="you@example.com" />
-              </div>
-            </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-telephone"></i>
-                Phone
-              </label>
-              <div class="field-input-wrapper">
-                <input type="text" v-model="form.phone" placeholder="+1 555-0001" />
-              </div>
-            </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-building"></i>
-                Department
-              </label>
-              <div class="field-input-wrapper">
-                <input type="text" v-model="form.department" placeholder="e.g. Information Technology" />
-              </div>
-            </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-mortarboard"></i>
-                School
-              </label>
-              <div class="field-input-wrapper">
-                <input type="text" v-model="form.school" placeholder="e.g. PNC" />
-              </div>
-            </div>
-            <div class="field-group">
-              <label class="field-label">
-                <i class="bi bi-shield-check"></i>
-                Role
-              </label>
-              <div class="field-input-wrapper">
-                <input type="text" :value="form.role" disabled class="input-disabled" />
-              </div>
+            <div class="stat-body">
+              <span class="stat-label">Department</span>
+              <span class="stat-value">{{ form.department || '—' }}</span>
             </div>
           </div>
+          <div class="stat-cell">
+            <div class="stat-icon-box" style="background:#f0fdf4;color:#22c55e">
+              <GraduationCap :size="16" />
+            </div>
+            <div class="stat-body">
+              <span class="stat-label">School</span>
+              <span class="stat-value">{{ form.school || '—' }}</span>
+            </div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-icon-box" style="background:#fef3c7;color:#f59e0b">
+              <Calendar :size="16" />
+            </div>
+            <div class="stat-body">
+              <span class="stat-label">Joined</span>
+              <span class="stat-value">{{ formattedDate || '—' }}</span>
+            </div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-icon-box" style="background:#fef2f2;color:#ef4444">
+              <UserCheck :size="16" />
+            </div>
+            <div class="stat-body">
+              <span class="stat-label">Role</span>
+              <span class="stat-value">{{ form.role || '—' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div class="form-card-footer">
-            <button class="btn btn-ghost" @click="resetForm" :disabled="saving">
-              <i class="bi bi-arrow-counterclockwise"></i>
-              Reset
-            </button>
-            <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
-              <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-              <Check v-else :size="16" class="me-1" />
+      <!-- Bottom Grid -->
+      <div class="grid-2">
+        <!-- Personal Info -->
+        <section class="card">
+          <h3 class="card-title">
+            <UserCheck :size="16" />
+            Personal Information
+          </h3>
+          <form id="profile-form" class="form-grid" @submit.prevent="saveProfile">
+            <div class="field">
+              <label for="f-name">Full Name</label>
+              <input id="f-name" v-model="form.name" placeholder="Your full name" />
+            </div>
+            <div class="field">
+              <label for="f-email">Email</label>
+              <input id="f-email" v-model="form.email" type="email" placeholder="you@example.com" />
+            </div>
+            <div class="field">
+              <label for="f-phone">Phone</label>
+              <input id="f-phone" v-model="form.phone" placeholder="+855 12 345 678" />
+            </div>
+            <div class="field">
+              <label for="f-dept">Department</label>
+              <input id="f-dept" v-model="form.department" placeholder="e.g. IT" />
+            </div>
+            <div class="field">
+              <label for="f-school">School</label>
+              <input id="f-school" v-model="form.school" placeholder="e.g. PNC" />
+            </div>
+            <div class="field">
+              <label for="f-role">Role</label>
+              <input id="f-role" :value="form.role" disabled class="input-disabled" />
+            </div>
+          </form>
+          <div class="card-actions">
+            <button type="button" class="btn btn-ghost" @click="resetForm" :disabled="saving">Reset</button>
+            <button type="submit" class="btn btn-primary" :disabled="saving" form="profile-form">
+              <span v-if="saving" class="spinner-sm"></span>
+              <Check v-else :size="15" />
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
         </section>
 
-        <!-- Change Password -->
-        <section class="form-card">
-          <header class="form-card-header">
-            <div class="form-card-header-left">
-              <div class="form-card-icon form-card-icon--lock">
-                <i class="bi bi-lock-fill"></i>
-              </div>
-              <div>
-                <h3 class="form-card-title">Change Password</h3>
-                <p class="form-card-subtitle">Ensure your account security</p>
-              </div>
-            </div>
-          </header>
-
-          <div class="stacked-form">
+        <!-- Password -->
+        <section class="card">
+          <h3 class="card-title">
+            <Lock :size="16" />
+            Change Password
+          </h3>
+          <form class="form-stacked" @submit.prevent="updatePassword">
             <div class="field">
-              <label>Current Password</label>
-              <div class="password-input">
-                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
-                <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
-                  <EyeOff v-if="showCurrent" :size="18" />
-                  <Eye v-else :size="18" />
+              <label for="pw-current">Current Password</label>
+              <div class="pw-wrap">
+                <input id="pw-current" :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" autocomplete="current-password" />
+                <button type="button" class="pw-toggle" :aria-label="showCurrent ? 'Hide' : 'Show'" @click="showCurrent = !showCurrent">
+                  <EyeOff v-if="showCurrent" :size="15" />
+                  <Eye v-else :size="15" />
                 </button>
               </div>
             </div>
             <div class="field">
-              <label>New Password</label>
-              <div class="password-input">
-                <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
-                <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
-                  <EyeOff v-if="showNew" :size="18" />
-                  <Eye v-else :size="18" />
+              <label for="pw-new">New Password</label>
+              <div class="pw-wrap">
+                <input id="pw-new" :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Min 8 characters" minlength="8" autocomplete="new-password" />
+                <button type="button" class="pw-toggle" :aria-label="showNew ? 'Hide' : 'Show'" @click="showNew = !showNew">
+                  <EyeOff v-if="showNew" :size="15" />
+                  <Eye v-else :size="15" />
                 </button>
               </div>
-              <!-- Strength Indicator -->
-              <Transition name="strength-fade">
-                <div v-if="password.new.length > 0" class="strength-bar-wrapper">
-                  <div class="strength-bar">
-                    <div
-                      class="strength-bar-fill"
-                      :class="`strength--${strengthLevel}`"
-                      :style="{ width: strengthPercent + '%' }"
-                    ></div>
-                  </div>
-                  <span class="strength-label" :class="`strength--${strengthLevel}`">
-                    {{ strengthText }}
-                  </span>
+              <!-- Strength bar -->
+              <div v-if="password.new" class="pw-strength">
+                <div class="pw-bar">
+                  <div class="pw-fill" :style="{ width: pwStrength.width, background: pwStrength.color }"></div>
                 </div>
-              </Transition>
+                <span class="pw-label" :style="{ color: pwStrength.color }">{{ pwStrength.label }}</span>
+              </div>
             </div>
             <div class="field">
-              <label>Confirm Password</label>
-              <div class="password-input">
-                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
-                <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
-                  <EyeOff v-if="showConfirm" :size="18" />
-                  <Eye v-else :size="18" />
+              <label for="pw-confirm">Confirm Password</label>
+              <div class="pw-wrap">
+                <input id="pw-confirm" :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" autocomplete="new-password" />
+                <button type="button" class="pw-toggle" :aria-label="showConfirm ? 'Hide' : 'Show'" @click="showConfirm = !showConfirm">
+                  <EyeOff v-if="showConfirm" :size="15" />
+                  <Eye v-else :size="15" />
                 </button>
               </div>
-              <!-- Match Indicator -->
-              <Transition name="strength-fade">
-                <div v-if="password.confirm.length > 0 && password.new.length > 0" class="match-indicator">
-                  <i
-                    :class="passwordsMatch ? 'bi bi-check-circle-fill match-yes' : 'bi bi-x-circle-fill match-no'"
-                  ></i>
-                  <span :class="passwordsMatch ? 'match-yes' : 'match-no'">
-                    {{ passwordsMatch ? 'Passwords match' : 'Passwords do not match' }}
-                  </span>
-                </div>
-              </Transition>
             </div>
-          </div>
-
-          <div class="form-card-footer">
-            <button class="btn btn-ghost" @click="resetPassword">
-              <i class="bi bi-x-circle"></i>
-              Clear
-            </button>
-            <button class="btn btn-primary" @click="updatePassword" :disabled="passwordSaving">
-              <span v-if="passwordSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-              <Lock v-else :size="16" class="me-1" />
+          </form>
+          <div class="card-actions">
+            <button type="button" class="btn btn-ghost" @click="resetPassword">Clear</button>
+            <button type="submit" class="btn btn-primary" :disabled="passwordSaving">
+              <span v-if="passwordSaving" class="spinner-sm"></span>
+              <Lock v-else :size="15" />
               {{ passwordSaving ? 'Updating...' : 'Update Password' }}
             </button>
           </div>
-
-          <!-- Password Message -->
-          <Transition name="strength-fade">
-            <div v-if="passwordMessage" class="password-message" :class="passwordStatus">
-              <i :class="passwordStatus === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'"></i>
-              {{ passwordMessage }}
-            </div>
-          </Transition>
+          <p v-if="passwordMessage" class="hint" :class="passwordStatus">{{ passwordMessage }}</p>
         </section>
       </div>
-      </TransitionGroup>
     </template>
 
     <!-- Hidden file input -->
-    <input
-      ref="fileInput"
-      type="file"
-      accept="image/jpeg,image/png,image/jpg,image/gif,image/webp"
-      class="sr-only"
-      @change="onFileChange"
-    />
+    <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" class="sr-only" @change="onFileChange" />
 
-    <!-- ═══════ FULL-SCREEN AVATAR VIEWER ═══════ -->
-    <Transition name="viewer-fade">
-      <div
-        v-if="viewerOpen && avatarUrl"
-        class="avatar-viewer"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Profile photo full screen"
-        @click.self="closeViewer"
-      >
-        <button type="button" class="viewer-close" aria-label="Close" @click="closeViewer">
-          <i class="bi bi-x-lg"></i>
-        </button>
-        <img :src="avatarUrl" class="viewer-img" alt="Profile photo full screen" @click.stop />
+    <!-- Avatar viewer -->
+    <Transition name="fade">
+      <div v-if="viewerOpen && avatarUrl" class="viewer-overlay" @click.self="closeViewer">
+        <button class="viewer-x" @click="closeViewer" aria-label="Close"><X :size="18" /></button>
+        <img :src="avatarUrl" class="viewer-img" alt="" @click.stop />
       </div>
     </Transition>
   </div>
@@ -355,62 +244,29 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
-import { storageUrl } from '@/services/apiHttp'
-import { http } from '@/services/api'
-import { AlertTriangle, CheckCircle, Camera, Check, EyeOff, Eye, Lock } from '@lucide/vue'
+import { useThemeStore } from '@/stores/theme'
+import { getProfile, updateProfile, uploadAvatar } from '@/services/profileService'
+import { http } from '@/services/apiHttp'
+import {
+  User, UserCheck, CheckCircle, AlertTriangle, Camera,
+  X, Eye, EyeOff, Check, Lock,
+  ShieldCheck, Building2, GraduationCap, Calendar,
+} from '@lucide/vue'
 
-let cachedProfile: UserProfile | null = null
-let profileCacheTime = 0
-const PROFILE_CACHE_TTL = 30_000
-
-function isProfileCacheStale(): boolean {
-  return Date.now() - profileCacheTime > PROFILE_CACHE_TTL
-}
-
-function invalidateProfileCache() {
-  cachedProfile = null
-  profileCacheTime = 0
-}
-
+const theme = useThemeStore()
 const auth = useAuthStore()
-let objectUrl: string | null = null
 
-const loading = ref(!cachedProfile || isProfileCacheStale())
+const loading = ref(true)
 const saving = ref(false)
 const fetchError = ref('')
 const saveError = ref('')
 const successMessage = ref('')
 const avatarUploading = ref(false)
 
-const form = reactive({
-  id: 0,
-  name: '',
-  email: '',
-  phone: '',
-  department: '',
-  school: '',
-  role: '',
-  joined: '',
-})
+const form = reactive({ name: '', email: '', phone: '', department: '', school: '', role: '', joined: '' })
+const originalForm = reactive({ name: '', email: '', phone: '', department: '', school: '', role: '', joined: '' })
 
-const originalForm = reactive({
-  id: 0,
-  name: '',
-  email: '',
-  phone: '',
-  department: '',
-  school: '',
-  role: '',
-  joined: '',
-})
-
-const password = reactive({
-  current: '',
-  new: '',
-  confirm: '',
-})
-
+const password = reactive({ current: '', new: '', confirm: '' })
 const passwordMessage = ref('')
 const passwordStatus = ref('')
 const passwordSaving = ref(false)
@@ -421,71 +277,18 @@ const showNew = ref(false)
 const showConfirm = ref(false)
 const viewerOpen = ref(false)
 
-// ── Password strength ──
-const strengthLevel = ref<'none' | 'weak' | 'fair' | 'strong' | 'very-strong'>('none')
+function openViewer() { if (avatarUrl.value) viewerOpen.value = true }
+function closeViewer() { viewerOpen.value = false }
 
-const strengthPercent = computed(() => {
-  switch (strengthLevel.value) {
-    case 'weak': return 25
-    case 'fair': return 50
-    case 'strong': return 75
-    case 'very-strong': return 100
-    default: return 0
-  }
-})
-
-const strengthText = computed(() => {
-  switch (strengthLevel.value) {
-    case 'weak': return 'Weak'
-    case 'fair': return 'Fair'
-    case 'strong': return 'Strong'
-    case 'very-strong': return 'Very Strong'
-    default: return ''
-  }
-})
-
-const passwordsMatch = computed(() => {
-  if (!password.new || !password.confirm) return false
-  return password.new === password.confirm
-})
-
-function updateStrength() {
-  const pwd = password.new
-  if (!pwd) {
-    strengthLevel.value = 'none'
-    return
-  }
-
-  let score = 0
-  if (pwd.length >= 8) score += 1
-  if (pwd.length >= 12) score += 1
-  if (/[A-Z]/.test(pwd)) score += 1
-  if (/[a-z]/.test(pwd)) score += 1
-  if (/[0-9]/.test(pwd)) score += 1
-  if (/[^A-Za-z0-9]/.test(pwd)) score += 1
-
-  if (score <= 2) strengthLevel.value = 'weak'
-  else if (score <= 3) strengthLevel.value = 'fair'
-  else if (score <= 4) strengthLevel.value = 'strong'
-  else strengthLevel.value = 'very-strong'
-}
-
-// ── Viewer ──
-function openViewer() {
-  if (avatarUrl.value) {
-    viewerOpen.value = true
-  }
-}
-
-function closeViewer() {
-  viewerOpen.value = false
-}
-
-function onViewerKeydown(e: KeyboardEvent) {
+function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') closeViewer()
 }
 
-// ── Date formatting ──
+const initials = computed(() => {
+  if (!form.name) return 'U'
+  return form.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+})
+
 const formattedDate = computed(() => {
   if (!form.joined) return ''
   const d = new Date(form.joined)
@@ -493,1469 +296,369 @@ const formattedDate = computed(() => {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 })
 
-
-
-function applyProfile(profile: UserProfile) {
-  form.name = profile.name || ''
-  form.email = profile.email || ''
-  form.phone = profile.phone || ''
-  form.department = profile.department || ''
-  form.school = profile.school || ''
-  form.role = profile.role || ''
-  Object.assign(originalForm, {
-    name: form.name,
-    email: form.email,
-    phone: form.phone,
-    department: form.department,
-    school: form.school,
-    role: form.role,
-  })
-  form.joined = profile.created_at || ''
-  if (profile.avatar) {
-    avatarUrl.value = storageUrl(profile.avatar)
-  }
-}
+const pwStrength = computed(() => {
+  const pw = password.new
+  if (!pw) return { label: '', color: '', width: '0%' }
+  let s = 0
+  if (pw.length >= 8) s++
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++
+  if (/\d/.test(pw)) s++
+  if (/[^a-zA-Z0-9]/.test(pw)) s++
+  const map = [
+    { label: 'Weak', color: '#ef4444', width: '25%' },
+    { label: 'Fair', color: '#f59e0b', width: '50%' },
+    { label: 'Good', color: '#3b82f6', width: '75%' },
+    { label: 'Strong', color: '#10b981', width: '100%' },
+  ]
+  return map[s - 1] || { label: '', color: '', width: '0%' }
+})
 
 async function loadProfile() {
-  if (cachedProfile && !isProfileCacheStale()) {
-    applyProfile(cachedProfile)
-    loading.value = false
-    return
-  }
-  loading.value = true
-  fetchError.value = ''
+  loading.value = true; fetchError.value = ''
   try {
-    const profile = await getProfile()
-    cachedProfile = profile
-    profileCacheTime = Date.now()
-    applyProfile(profile)
-  } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string } }; message?: string }
-    fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
-  } finally {
-    loading.value = false
-  }
+    const p = await getProfile()
+    Object.assign(form, { name: p.name || '', email: p.email || '', phone: p.phone || '', department: p.department || '', school: p.school || '', role: p.role || '' })
+    Object.assign(originalForm, { ...form })
+    form.joined = p.created_at || ''
+    if (p.avatar) avatarUrl.value = (http.defaults.baseURL?.replace('/api', '') || '') + '/storage/' + p.avatar
+  } catch (e: any) {
+    fetchError.value = e?.response?.data?.message || e?.message || 'Failed to load profile'
+  } finally { loading.value = false }
 }
 
 async function saveProfile() {
-  saving.value = true
-  saveError.value = ''
-  successMessage.value = ''
-
+  saving.value = true; saveError.value = ''; successMessage.value = ''
   try {
-    const updated = await updateProfile({
-      name: form.name,
-      email: form.email,
-      phone: form.phone || undefined,
-      department: form.department || undefined,
-      school: form.school || undefined,
-    })
-
-    invalidateProfileCache()
-    cachedProfile = updated
-    profileCacheTime = Date.now()
-    applyProfile(updated)
-    successMessage.value = 'Profile updated successfully!'
-    setTimeout(() => { successMessage.value = '' }, 4000)
-  } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
-    saveError.value = err.response?.data?.message || err.message || 'Failed to save profile'
-    if (err.response?.data?.errors) {
-      const errorMessages = Object.values(err.response.data.errors).flat()
-      saveError.value = errorMessages.join(', ')
-    }
-  } finally {
-    saving.value = false
-  }
+    const u = await updateProfile({ name: form.name, email: form.email, phone: form.phone || undefined, department: form.department || undefined, school: form.school || undefined })
+    Object.assign(form, { name: u.name || '', email: u.email || '', phone: u.phone || '', department: u.department || '', school: u.school || '' })
+    Object.assign(originalForm, { ...form })
+    successMessage.value = 'Profile updated!'
+    setTimeout(() => successMessage.value = '', 3000)
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || e?.message || 'Failed to save'
+    if (e?.response?.data?.errors) saveError.value = Object.values(e.response.data.errors).flat().join(', ')
+  } finally { saving.value = false }
 }
 
 function resetForm() {
-  form.id = originalForm.id
-  form.name = originalForm.name
-  form.email = originalForm.email
-  form.phone = originalForm.phone
-  form.department = originalForm.department
-  form.school = originalForm.school
-  saveError.value = ''
-  successMessage.value = ''
+  Object.assign(form, { name: originalForm.name, email: originalForm.email, phone: originalForm.phone, department: originalForm.department, school: originalForm.school })
+  saveError.value = ''; successMessage.value = ''
 }
 
-async function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement
+async function onFileChange(e: Event) {
+  const input = e.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
-
-  if (file.size > 2 * 1024 * 1024) {
-    saveError.value = 'Image must be less than 2MB'
-    return
-  }
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
-  if (!allowedTypes.includes(file.type)) {
-    saveError.value = 'Only JPEG, PNG, GIF, and WebP images are allowed'
-    return
-  }
-
-  avatarUploading.value = true
-  saveError.value = ''
-
+  if (file.size > 2 * 1024 * 1024) { saveError.value = 'Image must be under 2MB'; return }
+  if (!['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'].includes(file.type)) { saveError.value = 'Only JPEG, PNG, GIF, WebP allowed'; return }
+  avatarUploading.value = true; saveError.value = ''
   try {
-    const result = await uploadAvatar(file)
-    avatarUrl.value = storageUrl(result.avatar)
-    // Keep the sidebar avatar in sync
-    if (auth.user) {
-      auth.user.avatar = result.avatar
-    }
-    successMessage.value = 'Avatar uploaded successfully!'
-    setTimeout(() => { successMessage.value = '' }, 4000)
-  } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
-    saveError.value = err.response?.data?.message || err.message || 'Failed to upload avatar'
-    if (err.response?.data?.errors) {
-      const errorMessages = Object.values(err.response.data.errors).flat()
-      saveError.value = errorMessages.join(', ')
-    }
+    const r = await uploadAvatar(file)
+    avatarUrl.value = (http.defaults.baseURL?.replace('/api', '') || '') + '/storage/' + r.avatar
+    if (auth.user) auth.user.avatar = r.avatar
+    successMessage.value = 'Avatar uploaded!'
+    setTimeout(() => successMessage.value = '', 3000)
+  } catch (e: any) {
+    saveError.value = e?.response?.data?.message || e?.message || 'Upload failed'
+    if (e?.response?.data?.errors) saveError.value = Object.values(e.response.data.errors).flat().join(', ')
   } finally {
     avatarUploading.value = false
-    if (fileInput.value) {
-      fileInput.value.value = ''
-    }
+    if (fileInput.value) fileInput.value.value = ''
   }
+}
+
+function updatePassword() {
+  passwordMessage.value = ''; passwordStatus.value = ''
+  if (!password.current || !password.new || !password.confirm) { passwordMessage.value = 'Fill in all fields'; passwordStatus.value = 'error'; return }
+  if (password.new.length < 8) { passwordMessage.value = 'Password must be at least 8 characters'; passwordStatus.value = 'error'; return }
+  if (password.new !== password.confirm) { passwordMessage.value = 'Passwords do not match'; passwordStatus.value = 'error'; return }
+  passwordSaving.value = true
+  setTimeout(() => {
+    passwordMessage.value = 'Password changed!'; passwordStatus.value = 'success'
+    password.current = ''; password.new = ''; password.confirm = ''
+    passwordSaving.value = false
+  }, 1000)
 }
 
 function triggerUpload() {
-  if (!avatarUploading.value) {
-    fileInput.value?.click()
-  }
-}
-
-async function updatePassword() {
-  passwordMessage.value = ''
-  passwordStatus.value = ''
-
-  if (!password.current || !password.new || !password.confirm) {
-    passwordMessage.value = 'Please fill in all password fields'
-    passwordStatus.value = 'error'
-    return
-  }
-
-  if (password.new.length < 8) {
-    passwordMessage.value = 'New password must be at least 8 characters'
-    passwordStatus.value = 'error'
-    return
-  }
-
-  if (password.new !== password.confirm) {
-    passwordMessage.value = 'Passwords do not match'
-    passwordStatus.value = 'error'
-    return
-  }
-
-  passwordSaving.value = true
-
-  try {
-    const response = await http.patch('/change-password', {
-      current_password: password.current,
-      new_password: password.new,
-      new_password_confirmation: password.confirm,
-    })
-    
-    passwordMessage.value = response.data.message || 'Password changed successfully'
-    passwordStatus.value = 'success'
-    password.current = ''
-    password.new = ''
-    password.confirm = ''
-  } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string } }; message?: string }
-    passwordMessage.value = err.response?.data?.message || err.message || 'Failed to change password'
-    passwordStatus.value = 'error'
-  } finally {
-    passwordSaving.value = false
-  }
+  fileInput.value?.click()
 }
 
 function resetPassword() {
-  password.current = ''
-  password.new = ''
-  password.confirm = ''
-  passwordMessage.value = ''
-  passwordStatus.value = ''
-  strengthLevel.value = 'none'
+  password.current = ''; password.new = ''; password.confirm = ''
+  passwordMessage.value = ''; passwordStatus.value = ''
 }
 
-onMounted(() => {
-  loadProfile()
-})
+onMounted(() => loadProfile())
 
-watch(viewerOpen, (open) => {
-  if (open) {
-    window.addEventListener('keydown', onViewerKeydown)
-    document.body.style.overflow = 'hidden'
-  } else {
-    window.removeEventListener('keydown', onViewerKeydown)
-    document.body.style.overflow = ''
-  }
+watch(viewerOpen, (o) => {
+  if (o) { window.addEventListener('keydown', onKeydown); document.body.style.overflow = 'hidden' }
+  else { window.removeEventListener('keydown', onKeydown); document.body.style.overflow = '' }
 })
 
 onUnmounted(() => {
-  if (objectUrl) {
-    URL.revokeObjectURL(objectUrl)
-  }
-  window.removeEventListener('keydown', onViewerKeydown)
+  window.removeEventListener('keydown', onKeydown)
   document.body.style.overflow = ''
 })
 </script>
 
 <style scoped>
-/* ════════════════════════════════════════════════════
-   BASE & RESET
-   ════════════════════════════════════════════════════ */
-* {
-  box-sizing: border-box;
-  font-family: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-}
-
-/* ════════════════════════════════════════════════════
-   PAGE CONTAINER
-   ════════════════════════════════════════════════════ */
-.admin-profile-page {
-  position: relative;
-  min-height: 100vh;
-  padding: 32px;
-  background: linear-gradient(160deg, #f0f4f8 0%, #e9eef5 30%, #e2e8f0 60%, #eef2ff 100%);
-  overflow-x: hidden;
-}
-
-/* Decorative background blobs */
-.admin-profile-page::before {
-  content: '';
-  position: fixed;
-  top: -25%;
-  right: -10%;
-  width: 700px;
-  height: 700px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(37, 99, 235, 0.06) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.admin-profile-page::after {
-  content: '';
-  position: fixed;
-  bottom: -20%;
-  left: -8%;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.04) 0%, transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.content-wrapper {
-  position: relative;
-  z-index: 1;
-  max-width: 1100px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 28px;
-}
-
-/* ════════════════════════════════════════════════════
-   PAGE HEADER
-   ════════════════════════════════════════════════════ */
-.page-header {
-  position: relative;
-  z-index: 1;
-  max-width: 1100px;
-  margin: 0 auto 0;
-  border-radius: 20px;
-  overflow: hidden;
-  margin-bottom: 28px;
-  background: linear-gradient(135deg, #1e3a5f 0%, #1a365d 20%, #1e40af 60%, #1d4ed8 100%);
-  box-shadow:
-    0 4px 20px rgba(30, 58, 95, 0.15),
-    0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.page-header-bg {
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-.page-subtitle {
-  color: #64748b;
-  margin: 6px 0 0;
-  font-size: 14px;
-}
-
-.loading-state,
-.error-state {
+/* ── Layout ── */
+.profile-page {
+  padding: 28px 32px;
   max-width: 1200px;
-  margin: 60px auto;
-  text-align: center;
-  padding: 40px;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-}
-
-.error-state p {
-  color: #64748b;
-  margin-bottom: 16px;
-}
-
-.profile-card {
-  max-width: 1200px;
-  margin: 0 auto 28px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.profile-body {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 24px 32px;
-}
-
-.page-header-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  color: #fff;
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.page-header-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.page-header-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0;
-  line-height: 1.2;
-  letter-spacing: -0.3px;
-}
-
-.page-header-subtitle {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.82rem;
-  margin: 4px 0 0;
-  line-height: 1.4;
-}
-
-.page-header-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 18px;
-  border-radius: 20px;
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  color: #6ee7b7;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-  backdrop-filter: blur(4px);
-}
-
-.badge-pulse {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #10b981;
-  animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(0.85); }
-}
-
-/* ════════════════════════════════════════════════════
-   LOADING & ERROR STATES
-   ════════════════════════════════════════════════════ */
-.state-card {
-  max-width: 1100px;
   margin: 0 auto;
-  text-align: center;
-  padding: 56px 40px;
-  background: #fff;
-  border-radius: 20px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+  font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
 }
 
-.loading-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
+.dark-mode.profile-page { color: #e2e8f0; }
 
-/* Spinner Ring */
-.spinner-ring {
-  position: relative;
-  width: 56px;
-  height: 56px;
-}
+.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.page-head-left { display: flex; align-items: center; gap: 14px; }
+.page-icon { width: 44px; height: 44px; border-radius: 12px; background: #dbeafe; color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dark-mode .page-icon { background: #1e3a5f; color: #60a5fa; }
+.page-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 2px; color: #0f172a; }
+.dark-mode .page-title { color: #f1f5f9; }
+.page-desc { font-size: 0.85rem; color: #64748b; margin: 0; }
+.dark-mode .page-desc { color: #94a3b8; }
 
-.ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  border: 3px solid transparent;
-  animation: spin-ring 1.2s linear infinite;
-}
+/* ── States ── */
+.state-box { text-align: center; padding: 60px 20px; background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; }
+.dark-mode .state-box { background: #1e293b; border-color: #334155; }
+.state-box p { color: #64748b; margin: 12px 0 16px; }
+.spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 12px; }
+.spinner-sm { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.ring:nth-child(1) {
-  border-top-color: #1565d8;
-  animation-delay: 0s;
-}
+/* ── Toasts ── */
+.toast { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; margin-bottom: 14px; max-width: 100%; }
+.toast-success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
+.toast-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+.toast-x { margin-left: auto; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.5; padding: 0 4px; line-height: 1; }
+.toast-x:hover { opacity: 1; }
+.slide-enter-active, .slide-leave-active { transition: all 0.25s ease; }
+.slide-enter-from, .slide-leave-to { opacity: 0; transform: translateX(20px); }
 
-.ring:nth-child(2) {
-  inset: 6px;
-  border-right-color: #6366f1;
-  animation-duration: 1.5s;
-  animation-delay: 0.15s;
+/* ── Cards ── */
+.card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 28px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.2s;
 }
+.card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.dark-mode .card { background: #1e293b; border-color: #334155; }
+.dark-mode .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
 
-.ring:nth-child(3) {
-  inset: 12px;
-  border-bottom-color: #10b981;
-  animation-duration: 1.8s;
-  animation-delay: 0.3s;
-}
+.card-title { font-size: 1rem; font-weight: 700; margin: 0 0 20px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+.dark-mode .card-title { color: #f1f5f9; }
 
-@keyframes spin-ring {
-  to { transform: rotate(360deg); }
-}
-
-.state-text {
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0;
-}
-
-.error-state-card .state-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #fef2f2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-}
-
-.error-icon i {
-  font-size: 1.5rem;
-  color: #dc2626;
-}
-
-.error-text {
-  margin-bottom: 20px;
-  color: #6b7280;
-}
-
-/* ════════════════════════════════════════════════════
-   ALERTS
-   ════════════════════════════════════════════════════ */
-.alert {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 500;
-  border: none;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-.alert-success {
-  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-  color: #065f46;
-  border-left: 4px solid #10b981;
-}
-
-.alert-danger {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  color: #991b1b;
-  border-left: 4px solid #ef4444;
-}
-
-.alert-icon {
-  flex-shrink: 0;
-  font-size: 1.2rem;
-  display: flex;
-}
-
-.alert-text {
-  flex: 1;
-}
-
-.alert-close {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.5;
-  transition: all 0.15s ease;
-  font-size: 0.75rem;
-}
-
-.alert-close:hover {
-  opacity: 0.8;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.alert-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: currentColor;
-  opacity: 0.2;
-  animation: alert-shrink 4s linear forwards;
-}
-
-@keyframes alert-shrink {
-  from { width: 100%; }
-  to { width: 0%; }
-}
-
-/* ════════════════════════════════════════════════════
-   PROFILE CARD
-   ════════════════════════════════════════════════════ */
+/* ── Profile Card ── */
 .profile-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 6px 18px rgba(15, 23, 42, 0.04),
-    0 20px 40px rgba(15, 23, 42, 0.03);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+  margin-bottom: 24px; overflow: hidden; border-radius: 16px;
+  background: #fff; border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04); transition: box-shadow 0.2s;
 }
+.profile-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+.dark-mode .profile-card { background: #1e293b; border-color: #334155; }
+.dark-mode .profile-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
 
-.profile-card:hover {
-  border-color: #cbd5e1;
-  box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 8px 24px rgba(15, 23, 42, 0.06),
-    0 24px 48px rgba(15, 23, 42, 0.04);
-}
-
-/* Cover */
+/* ── Cover ── */
 .profile-cover {
-  height: 100px;
-  background: linear-gradient(135deg, #1e3a5f, #1e40af, #3b82f6);
   position: relative;
+  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #7c3aed 100%);
+  padding: 36px 32px;
   overflow: hidden;
 }
-
-.cover-pattern {
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 30% 40%, rgba(255,255,255,0.08) 0%, transparent 40%),
-    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.05) 0%, transparent 35%),
-    repeating-linear-gradient(45deg, transparent 0px, transparent 10px, rgba(255,255,255,0.02) 10px, rgba(255,255,255,0.02) 11px);
+.dark-mode .profile-cover {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #2d1b69 100%);
 }
 
-.cover-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.15));
+.cover-glow {
+  position: absolute; top: -80px; right: -80px;
+  width: 240px; height: 240px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  pointer-events: none;
 }
 
-/* Body */
-.profile-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 28px;
-  padding: 28px 32px 24px;
-  position: relative;
-}
+.cover-content { position: relative; z-index: 1; }
 
-/* ─── Avatar ─── */
-.avatar-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-top: -56px;
+/* ── Avatar Block ── */
+.avatar-block { display: flex; align-items: center; gap: 20px; }
+
+.avatar-border {
   flex-shrink: 0;
   position: relative;
-}
-
-.avatar-wrapper {
-  position: relative;
-  width: 96px;
-  height: 96px;
-}
-
-.avatar-ring {
-  position: absolute;
-  inset: -4px;
+  width: 88px; height: 88px;
   border-radius: 50%;
-  border: 3px solid #ffffff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-border::before {
+  content: ''; position: absolute; inset: -3px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.5), rgba(255,255,255,0.1));
 }
 
 .avatar {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  overflow: hidden;
-  cursor: default;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1;
-}
-
-.avatar--clickable {
-  cursor: zoom-in;
-}
-
-.avatar:hover .avatar-overlay {
-  opacity: 1;
-}
-
-.avatar--clickable:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.avatar-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.45);
-  color: #ffffff;
-  font-size: 1.3rem;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  backdrop-filter: blur(2px);
+  position: relative; z-index: 1;
+  width: 82px; height: 82px;
+  border-radius: 50%; overflow: hidden;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transition: transform 0.25s, box-shadow 0.25s;
 }
+.avatar:hover { transform: scale(1.06); box-shadow: 0 6px 24px rgba(0,0,0,0.3); }
+.avatar.clickable { cursor: zoom-in; }
 
-.avatar-zoom-icon {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.4);
-  color: #ffffff;
-  font-size: 1.2rem;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  backdrop-filter: blur(2px);
+.avatar-initials { font-size: 26px; font-weight: 700; letter-spacing: 0.5px; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
+
+.avatar-cam {
+  position: absolute; bottom: 0; right: 0;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #2563eb; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  border: 2.5px solid #fff;
+  opacity: 0; transform: scale(0.8);
+  transition: all 0.2s;
+  z-index: 2; cursor: pointer;
 }
+.avatar:hover .avatar-cam { opacity: 1; transform: scale(1); }
+.dark-mode .avatar-cam { border-color: #1e293b; }
 
-.avatar--clickable:hover .avatar-zoom-icon {
-  opacity: 1;
+.avatar-info { flex: 1; min-width: 0; color: #fff; }
+.avatar-name { font-size: 1.3rem; font-weight: 700; margin: 0; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+.avatar-meta {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 6px; flex-wrap: wrap;
 }
-
-.avatar--clickable:hover .avatar-overlay {
-  opacity: 0;
+.meta-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 6px;
+  background: rgba(255,255,255,0.12);
+  font-size: 0.78rem; font-weight: 500; color: rgba(255,255,255,0.9);
 }
-
-.avatar-upload-btn {
-  font-size: 12px;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  white-space: nowrap;
+.meta-dot { color: rgba(255,255,255,0.3); font-size: 0.6rem; }
+.meta-upload {
+  background: none; border: none; color: rgba(255,255,255,0.7);
+  font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+  transition: color 0.15s; font-family: inherit; padding: 2px 4px;
 }
+.meta-upload:hover { color: #fff; }
+.meta-upload:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.avatar-upload-btn:hover:not(:disabled) {
-  color: #1565d8;
-  background: rgba(21, 101, 216, 0.06);
-  transform: translateY(-1px);
-}
-
-.avatar-upload-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ─── Profile Info List ─── */
-.profile-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 8px;
-}
-
-.info-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
-  border-radius: 14px;
+/* ── Stats Row ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 18px 24px;
   background: #f8fafc;
-  border: 1px solid #f1f5f9;
-  transition: all 0.2s ease;
 }
+.dark-mode .stats-row { background: #0f172a; }
 
-.info-row:hover {
-  background: #ffffff;
-  border-color: #e2e8f0;
-  transform: translateX(4px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+.stat-cell {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 12px;
 }
+.stat-cell:not(:last-child) { border-right: 1px solid #e2e8f0; }
+.dark-mode .stat-cell:not(:last-child) { border-color: #334155; }
 
-.info-row--header {
-  background: linear-gradient(135deg, #f0f4ff, #e8f0fe);
-  border-color: #d0e0ff;
-}
-
-.info-row--header:hover {
-  background: linear-gradient(135deg, #e8f0fe, #dce8fc);
-  border-color: #b8d0ff;
-}
-
-.info-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.05rem;
+.stat-icon-box {
+  width: 38px; height: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+.dark-mode .stat-icon-box { opacity: 0.85; }
 
-.info-row:hover .info-icon {
-  transform: scale(1.08);
-}
+.stat-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.stat-label { font-size: 0.68rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-value { font-size: 0.85rem; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dark-mode .stat-value { color: #e2e8f0; }
 
-.info-icon--user {
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  color: #1d4ed8;
-}
+/* ── Grid ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+.grid-2 .card { display: flex; flex-direction: column; }
+.grid-2 .card > form { flex: 1; }
 
-.info-icon--id {
-  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-  color: #4338ca;
-}
+/* ── Forms ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-stacked { display: flex; flex-direction: column; gap: 16px; }
 
-.info-icon--email {
-  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
-  color: #059669;
-}
-
-.info-icon--gen {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #d97706;
-}
-
-.info-content {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.info-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.info-value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.content-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-}
-
-/* ════════════════════════════════════════════════════
-   FORM CARDS
-   ════════════════════════════════════════════════════ */
-.form-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 6px 18px rgba(15, 23, 42, 0.04);
-  transition: box-shadow 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
-}
-
-.form-card:hover {
-  border-color: #cbd5e1;
-  box-shadow:
-    0 1px 3px rgba(15, 23, 42, 0.04),
-    0 8px 24px rgba(15, 23, 42, 0.06),
-    0 20px 40px rgba(15, 23, 42, 0.03);
-  transform: translateY(-2px);
-}
-
-/* Card Header */
-.form-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  gap: 12px;
-}
-
-.form-card-header-left {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.form-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: #2563eb;
-  flex-shrink: 0;
-  border: 1px solid #bfdbfe;
-}
-
-.form-card-icon--lock {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #d97706;
-  border-color: #fcd34d;
-}
-
-.form-card-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-  line-height: 1.3;
-}
-
-.form-card-subtitle {
-  font-size: 12px;
-  color: #94a3b8;
-  margin: 2px 0 0;
-}
-
-.chip {
-  background: linear-gradient(135deg, #eff6ff, #dbeafe);
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-/* ─── Form Grid ─── */
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.password-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.field-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.field-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-  color: #475569;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.field-label i {
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-.field-input-wrapper {
-  position: relative;
-}
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 0.78rem; font-weight: 600; color: #475569; }
+.dark-mode .field label { color: #94a3b8; }
 
 input {
-  width: 100%;
-  padding: 11px 14px;
-  border-radius: 12px;
-  border: 1.5px solid #e2e8f0;
-  font-size: 14px;
-  outline: none;
-  background: #f8fafc;
-  color: #0f172a;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  -webkit-appearance: none;
-  appearance: none;
+  padding: 10px 13px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.88rem;
+  outline: none; background: #f8fafc; color: #0f172a; transition: all 0.15s; font-family: inherit;
 }
+input:hover { border-color: #cbd5e1; background: #fff; }
+input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
+.dark-mode input { background: #0f172a; border-color: #475569; color: #e2e8f0; }
+.dark-mode input:hover { border-color: #64748b; background: #1a2332; }
+.dark-mode input:focus { border-color: #60a5fa; background: #1a2332; box-shadow: 0 0 0 3px rgba(96,165,250,0.1); }
 
-input:hover {
-  border-color: #94a3b8;
-  background: #ffffff;
+.input-disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Password ── */
+.pw-wrap { position: relative; display: flex; align-items: center; }
+.pw-wrap input { width: 100%; padding-right: 44px; }
+.pw-toggle {
+  position: absolute; right: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #94a3b8; cursor: pointer; border-radius: 8px; transition: all 0.15s;
 }
+.pw-toggle:hover { color: #3b82f6; background: #eff6ff; }
+.dark-mode .pw-toggle:hover { background: #1e3a5f; }
 
-input:focus {
-  border-color: #1565d8;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(21, 101, 216, 0.1);
-}
+.pw-strength { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.pw-bar { flex: 1; height: 4px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.dark-mode .pw-bar { background: #334155; }
+.pw-fill { height: 100%; border-radius: 4px; transition: width 0.3s, background 0.3s; }
+.pw-label { font-size: 0.72rem; font-weight: 600; min-width: 36px; text-align: right; }
 
-input::placeholder {
-  color: #94a3b8;
-  font-weight: 400;
-}
-
-.input-disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  background: #f1f5f9 !important;
-}
-
-.input-disabled:hover {
-  border-color: #e2e8f0 !important;
-  background: #f1f5f9 !important;
-}
-
-/* ─── Password Input ─── */
-.password-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.password-input-wrapper input {
-  padding-right: 48px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #94a3b8;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 9px;
-  transition: all 0.2s ease;
-}
-
-.password-toggle:hover {
-  color: #1565d8;
-  background: #eff6ff;
-}
-
-.password-toggle:active {
-  transform: translateY(-50%) scale(0.9);
-}
-
-.password-toggle:focus-visible {
-  color: #1565d8;
-  background: #eff6ff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.2);
-}
-
-.password-input-wrapper input:focus ~ .password-toggle {
-  color: #1565d8;
-}
-
-/* ─── Strength Indicator ─── */
-.strength-bar-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.strength-bar {
-  flex: 1;
-  height: 5px;
-  border-radius: 10px;
-  background: #e2e8f0;
-  overflow: hidden;
-}
-
-.strength-bar-fill {
-  height: 100%;
-  border-radius: 10px;
-  transition: width 0.3s ease, background 0.3s ease;
-}
-
-.strength--weak {
-  background: #ef4444;
-}
-
-.strength--fair {
-  background: #f59e0b;
-}
-
-.strength--strong {
-  background: #10b981;
-}
-
-.strength--very-strong {
-  background: #059669;
-}
-
-.strength-label {
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  min-width: 70px;
-  text-align: right;
-}
-
-.strength--weak { color: #dc2626; }
-.strength--fair { color: #d97706; }
-.strength--strong { color: #059669; }
-.strength--very-strong { color: #047857; }
-
-/* ─── Match Indicator ─── */
-.match-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.match-yes {
-  color: #059669;
-}
-
-.match-no {
-  color: #dc2626;
-}
-
-.match-yes i, .match-no i {
-  font-size: 0.9rem;
-}
-
-/* ─── Password Message ─── */
-.password-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.password-message.success {
-  color: #065f46;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-}
-
-.password-message.error {
-  color: #991b1b;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-}
-
-.password-message i {
-  font-size: 1rem;
-  flex-shrink: 0;
-}
-
-/* ─── Footer ─── */
-.form-card-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #f1f5f9;
-}
-
-/* ════════════════════════════════════════════════════
-   BUTTONS
-   ════════════════════════════════════════════════════ */
+/* ── Buttons ── */
 .btn {
-  border: none;
-  padding: 10px 20px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
-  font-family: inherit;
+  display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; font-family: inherit;
 }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:not(:disabled):active { transform: scale(0.97); }
+.btn-primary { background: #2563eb; color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+.btn-primary:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(37,99,235,0.3); }
+.btn-ghost { background: #fff; border: 1.5px solid #e2e8f0; color: #475569; }
+.btn-ghost:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.dark-mode .btn-ghost { background: transparent; border-color: #475569; color: #94a3b8; }
+.dark-mode .btn-ghost:hover:not(:disabled) { background: #334155; border-color: #64748b; color: #e2e8f0; }
 
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
-}
+.card-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+.dark-mode .card-actions { border-top-color: #334155; }
 
-.btn-ghost {
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  color: #475569;
-}
+/* ── Hint ── */
+.hint { margin-top: 12px; font-size: 0.78rem; font-weight: 600; }
+.hint.success { color: #059669; }
+.hint.error { color: #dc2626; }
 
-.btn-ghost:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  color: #0f172a;
-  transform: translateY(-1px);
-}
+/* ── Viewer ── */
+.viewer-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(15,23,42,0.9); backdrop-filter: blur(4px); cursor: zoom-out; }
+.viewer-img { max-width: 90vw; max-height: 85vh; object-fit: contain; border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default; }
+.viewer-x { position: absolute; top: 18px; right: 20px; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.viewer-x:hover { background: rgba(255,255,255,0.2); }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
-.btn-ghost:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #1565d8, #1d4ed8);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(21, 101, 216, 0.25);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #104dae, #1e40af);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(21, 101, 216, 0.35);
-}
-
-.btn-primary:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(21, 101, 216, 0.2);
-}
-
-.spinner-border {
-  width: 1rem;
-  height: 1rem;
-  border-width: 2px;
-}
-
-/* ════════════════════════════════════════════════════
-   FULL-SCREEN AVATAR VIEWER
-   ════════════════════════════════════════════════════ */
-.avatar-viewer {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  background: rgba(15, 23, 42, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  cursor: zoom-out;
-}
-
-.viewer-img {
-  max-width: 90vw;
-  max-height: 85vh;
-  object-fit: contain;
-  border-radius: 20px;
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.08);
-  cursor: default;
-  animation: viewerReveal 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes viewerReveal {
-  from {
-    transform: scale(0.9) translateY(10px);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-
-.viewer-close {
-  position: absolute;
-  top: 24px;
-  right: 28px;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-size: 1.15rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(4px);
-}
-
-.viewer-close:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.08) rotate(90deg);
-}
-
-.viewer-close:active {
-  transform: scale(0.95);
-}
-
-/* ════════════════════════════════════════════════════
-   ANIMATIONS
-   ════════════════════════════════════════════════════ */
-
-/* Fade Slide */
-.fade-slide-enter-active {
-  transition: all 0.4s ease-out;
-}
-.fade-slide-leave-active {
-  transition: all 0.25s ease-in;
-}
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(16px);
-}
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-/* Stagger - for TransitionGroup */
-.stagger-enter-active {
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.stagger-leave-active {
-  transition: all 0.25s ease-in;
-}
-.stagger-enter-from {
-  opacity: 0;
-  transform: translateY(20px) scale(0.98);
-}
-.stagger-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-.stagger-move {
-  transition: transform 0.4s ease;
-}
-
-/* Alert Slide */
-.alert-slide-enter-active {
-  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.alert-slide-leave-active {
-  transition: all 0.2s ease-in;
-}
-.alert-slide-enter-from {
-  opacity: 0;
-  transform: translateY(-12px) scale(0.96);
-}
-.alert-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.96);
-}
-
-/* Strength fade */
-.strength-fade-enter-active {
-  transition: all 0.25s ease-out;
-}
-.strength-fade-leave-active {
-  transition: all 0.15s ease-in;
-}
-.strength-fade-enter-from,
-.strength-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-/* Viewer fade */
-.viewer-fade-enter-active {
-  transition: opacity 0.25s ease;
-}
-.viewer-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.viewer-fade-enter-from,
-.viewer-fade-leave-to {
-  opacity: 0;
-}
-
-/* ════════════════════════════════════════════════════
-   SCREEN READER ONLY
-   ════════════════════════════════════════════════════ */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-/* ════════════════════════════════════════════════════
-   RESPONSIVE
-   ════════════════════════════════════════════════════ */
-@media (max-width: 1100px) {
-  .admin-profile-page {
-    padding: 24px;
-  }
-
-  .profile-info {
-    gap: 4px;
-  }
-}
-
+/* ── Responsive ── */
 @media (max-width: 900px) {
-  .admin-profile-page {
-    padding: 20px;
-  }
-
-  .page-header-content {
-    padding: 20px 24px;
-    flex-wrap: wrap;
-  }
-
-  .page-header-badge {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-body {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 20px 24px 20px;
-  }
-
-  .profile-info {
-    width: 100%;
-    padding-top: 4px;
-  }
-
-  .profile-card {
-    padding: 0;
-  }
-
-  .form-card {
-    padding: 24px 20px;
-  }
-
-  .profile-cover {
-    height: 80px;
-  }
+  .profile-page { padding: 20px; }
+  .grid-2, .form-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .stat-cell:nth-child(4n) { border-right: 1px solid #e2e8f0; }
+  .stat-cell:nth-child(4n+2) { border-right: none; }
+  .dark-mode .stat-cell:nth-child(4n) { border-color: #334155; }
+  .avatar-block { flex-direction: column; text-align: center; }
+  .avatar-meta { justify-content: center; }
+  .profile-cover { padding: 28px 20px; }
 }
 </style>

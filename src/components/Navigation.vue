@@ -158,16 +158,6 @@ function getUserInitials(): string {
   return name.substring(0, 2).toUpperCase()
 }
 
-function getUserInitials(): string {
-    const name = auth.user?.name || ''
-    if (!name) return 'U'
-    const parts = name.split(' ').filter(Boolean)
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-}
-
 function handleLogout() {
   showLogoutModal.value = false
   auth.logout()
