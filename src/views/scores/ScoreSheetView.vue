@@ -9,6 +9,10 @@
         <strong>{{ data?.subject?.name || 'Subject' }}</strong>
         <span class="text-muted">
           <span class="term-badge">{{ data?.term?.name }}</span>
+          <span v-if="className" class="class-badge">
+            <School :size="12" />
+            {{ className }}
+          </span>
           <template v-if="data?.offerings?.length">
             · {{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}
           </template>
@@ -22,7 +26,13 @@
           <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading"><i :class="gsLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span></button>
           <button v-if="gsSheetId" class="tb-btn" @click="syncFromGoogleSheets" :disabled="gsSyncLoading" title="Sync scores from Google Sheets back to this page"><i :class="gsSyncLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-arrow-down-up'"></i><span>{{ gsSyncLoading ? 'Syncing...' : 'Sync from Sheets' }}</span></button>
           <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
-          <button class="tb-btn" @click="exportCSV" title="Export CSV"><i class="bi bi-download"></i> <span>Export</span></button>
+          <div class="export-dropdown" @click.stop>
+            <button class="tb-btn" @click="showExportMenu = !showExportMenu" title="Export" ref="exportBtnRef"><i class="bi bi-download"></i> <span>Export</span> <i class="bi bi-chevron-down" style="font-size:0.6rem;margin-left:2px"></i></button>
+            <div v-if="showExportMenu" class="export-menu">
+              <div class="export-menu-item" @click="exportFormat('xlsx')"><i class="bi bi-file-earmark-excel"></i> Export as Excel (.xlsx)</div>
+              <div class="export-menu-item" @click="exportFormat('pdf')"><i class="bi bi-filetype-pdf"></i> Export as PDF</div>
+            </div>
+          </div>
           <button class="tb-btn" @click="refreshData" title="Refresh"><i class="bi bi-arrow-clockwise" :class="{ spinning: loading }"></i></button>
         </div>
         <div class="toolbar-meta">
@@ -63,7 +73,6 @@
             <tr>
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
               <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
-              <th class="cell-header cell-frozen student-class-header">Class</th>
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
               <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ minWidth: '80px' }">
                 <div class="header-content column-header-content">
@@ -130,9 +139,6 @@
                 </div>
               </td>
 
-              <td class="cell cell-frozen cell-student-class">
-                <span class="cell-value" :title="row.class_name">{{ row.class_name || '-' }}</span>
-              </td>
 
               <td class="cell cell-frozen cell-student-id"
                 :class="getStudentIdCellClass(rowIndex)"
@@ -174,12 +180,23 @@
               <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
-              <td :colspan="4 + columns.length + 2" class="cell-frozen add-row-cell">
+              <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
                 <i class="bi bi-plus-lg"></i> Add Student Row
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Import Progress Bar (overlays the sheet, not full page) -->
+    <div v-if="importProgress > 0" class="import-progress-overlay">
+      <div class="import-progress-card">
+        <div class="import-progress-status">{{ importStatusText }}</div>
+        <div class="import-progress-bar-track">
+          <div class="import-progress-bar-fill" :style="{ width: importProgress + '%' }"></div>
+        </div>
+        <div class="import-progress-pct">{{ Math.round(importProgress) }}%</div>
       </div>
     </div>
 
@@ -278,27 +295,87 @@
       </div>
     </div>
     <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Import File</h5><button class="modal-close" @click="showImport = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="import-notice"><i class="bi bi-info-circle"></i><div><strong>Supported formats:</strong><ul class="import-steps" style="margin-top:6px;padding-left:18px"><li><strong>CSV</strong> — Comma-separated values</li><li><strong>Excel (.xlsx, .xls)</strong> — Microsoft Excel workbook</li><li><strong>PDF</strong> — Text-based PDF tables</li></ul><p style="font-size:0.8rem;color:#64748b;margin-top:6px">Your file should have columns: Student Name, Student ID, then score columns matching your assessment types.</p></div></div>
-          <div class="file-upload-area" @drop.prevent="onFileDrop" @dragover.prevent>
-            <i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:#3b82f6"></i>
-            <p style="margin:8px 0 4px;font-weight:600;color:#1e293b">Drop your file here</p>
-            <p style="margin:0;font-size:0.78rem;color:#94a3b8">or click to browse</p>
-            <input ref="fileInputRef" type="file" accept=".csv,.xlsx,.xls" hidden @change="onFileSelected" />
-            <button class="btn btn-primary btn-sm" style="margin-top:10px" @click="openFilePicker">
-              <i class="bi bi-folder2-open"></i> Choose File
-            </button>
-            <div v-if="selectedFileName" class="selected-file-name">
-              <i class="bi bi-check-circle-fill" style="color:#22c55e"></i> {{ selectedFileName }}
+      <div class="import-modal">
+        <!-- Header -->
+        <div class="import-modal-header">
+          <div class="import-modal-header-icon"><i class="bi bi-cloud-upload"></i></div>
+          <div class="import-modal-header-text">
+            <h5>Import Scores</h5>
+            <p>Import student scores from an Excel file</p>
+          </div>
+          <button class="modal-close" @click="showImport = false; selectedFileName = ''; filePreview = null">&times;</button>
+        </div>
+
+        <div class="import-modal-body">
+          <!-- Format badges -->
+          <div class="import-format-badges">
+            <span class="import-badge import-badge-excel"><i class="bi bi-file-earmark-excel"></i> Excel</span>
+            <span class="import-badge import-badge-pdf"><i class="bi bi-filetype-pdf"></i> PDF</span>
+          </div>
+
+          <!-- Drop zone when NO file selected -->
+          <div v-if="!selectedFileName" class="import-drop-zone"
+            @drop.prevent="onFileDrop" @dragover.prevent="dragOver = true"
+            @dragleave.prevent="dragOver = false"
+            :class="{ 'import-drop-active': dragOver }"
+            @click="openFilePicker">
+            <input ref="fileInputRef" type="file" accept=".xlsx,.xls" hidden @change="onFileSelected" />
+            <div class="import-drop-icon">
+              <i class="bi bi-file-earmark-arrow-up"></i>
+            </div>
+            <div class="import-drop-text">
+              <span class="import-drop-title">Drop your file here</span>
+              <span class="import-drop-sub">or click to browse</span>
+            </div>
+          </div>
+
+          <!-- File card when file IS selected -->
+          <div v-if="selectedFileName" class="import-file-card">
+            <div class="import-file-card-main">
+              <div class="import-file-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+              <div class="import-file-info">
+                <span class="import-file-name">{{ selectedFileName }}</span>
+                <span class="import-file-size">{{ fileSizeFormatted }}</span>
+              </div>
+              <button class="import-file-remove" @click="clearFile" title="Remove file">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <!-- Preview section -->
+            <div v-if="filePreview" class="import-preview">
+              <div class="import-preview-divider"></div>
+              <div class="import-preview-header">
+                <i class="bi bi-table"></i>
+                <span>File Preview</span>
+              </div>
+              <div class="import-preview-grid">
+                <div class="import-preview-stat">
+                  <span class="import-preview-stat-value">{{ filePreview.rowCount }}</span>
+                  <span class="import-preview-stat-label">Students</span>
+                </div>
+                <div class="import-preview-stat">
+                  <span class="import-preview-stat-value">{{ filePreview.colCount }}</span>
+                  <span class="import-preview-stat-label">Columns</span>
+                </div>
+                <div class="import-preview-stat import-preview-stat-wide">
+                  <span class="import-preview-stat-value import-preview-col-names" :title="filePreview.colNames.join(', ')">
+                    {{ filePreview.colNames.slice(0, 3).join(' · ') }}<span v-if="filePreview.colNames.length > 3"> …</span>
+                  </span>
+                  <span class="import-preview-stat-label">Detected columns</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showImport = false; selectedFileName = ''">Cancel</button>
-          <button class="btn btn-primary" :disabled="!pendingFile" @click="processImportFile">
-            <i class="bi bi-upload"></i> Import
+
+        <div class="import-modal-footer">
+          <button class="import-btn import-btn-secondary" @click="showImport = false; selectedFileName = ''; filePreview = null">
+            Cancel
+          </button>
+          <button class="import-btn import-btn-primary" :disabled="!pendingFile" @click="processImportFile">
+            <i class="bi bi-upload"></i>
+            <span>Import {{ filePreview?.rowCount ? filePreview.rowCount + ' student' + (filePreview.rowCount > 1 ? 's' : '') : '' }}</span>
           </button>
         </div>
       </div>
@@ -310,8 +387,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, onMounted, onUnmounted, watch, nextTick, reactive, triggerRef } from 'vue'
+import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef, onBeforeUnmount, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { School } from '@lucide/vue'
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
   renameColumn, updateWeights,
@@ -326,6 +404,8 @@ const router = useRouter()
 const route = useRoute()
 const subjectId = computed(() => Number(route.params.subjectId))
 const termId = computed(() => Number(route.params.termId))
+const classId = computed(() => route.query.class_id ? Number(route.query.class_id) : null)
+const className = computed(() => (route.query.class_name as string) || '')
 
 // ─── Core State ──────────────────────────────────────────────────────
 const data = shallowRef<SpreadsheetResponse | null>(null)
@@ -334,6 +414,8 @@ const searchQuery = ref('')
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
 const pageSize = ref<number | 'all'>(20)
+const importProgress = ref(0)
+const importStatusText = ref('')
 
 // ─── Selection State ─────────────────────────────────────────────────
 const selectedRowIndex = ref(0)
@@ -377,10 +459,61 @@ const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
 const contextMenu = ref<{ x: number; y: number; rowIdx: number } | null>(null)
 
+// ─── Export Dropdown State ────────────────────────────────────────────
+const showExportMenu = ref(false)
+const exportBtnRef = ref<HTMLElement | null>(null)
+
+function onDocumentClick(e: MouseEvent) {
+  if (showExportMenu.value && exportBtnRef.value && !exportBtnRef.value.contains(e.target as Node)) {
+    showExportMenu.value = false
+  }
+}
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
+
 // ─── Import File State ────────────────────────────────────────────────
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const selectedFileName = ref('')
 const pendingFile = ref<File | null>(null)
+const dragOver = ref(false)
+const filePreview = ref<{ rowCount: number; colCount: number; colNames: string[] } | null>(null)
+
+const fileSizeFormatted = computed(() => {
+  if (!pendingFile.value) return ''
+  const bytes = pendingFile.value.size
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+})
+
+function clearFile() {
+  pendingFile.value = null
+  selectedFileName.value = ''
+  filePreview.value = null
+  dragOver.value = false
+}
+
+async function previewExcelFile(file: File) {
+  try {
+    const { read, utils } = await import('xlsx')
+    const buffer = await file.arrayBuffer()
+    const workbook = read(buffer, { type: 'array' })
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) return
+    const sheet = workbook.Sheets[sheetName]
+    const jsonData: any[][] = utils.sheet_to_json(sheet, { header: 1 })
+    if (jsonData.length < 2) return
+    const header = (jsonData[0] as any[]).map(c => String(c).trim()).filter(Boolean)
+    const scoreColumns = header.filter(h => !/name|student|id|number|code|no/i.test(h) && !/total|grade|remark/i.test(h))
+    filePreview.value = {
+      rowCount: jsonData.length - 1,
+      colCount: header.length,
+      colNames: scoreColumns.length > 0 ? scoreColumns : header.slice(2).filter(h => !/total|grade|remark/i.test(h)),
+    }
+  } catch {
+    // Preview is best-effort, ignore errors
+  }
+}
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
@@ -547,9 +680,20 @@ const columns = computed(() => data.value?.columns || [])
 const rows = computed(() => data.value?.rows || [])
 
 const filteredRows = computed(() => {
-  if (!searchQuery.value) return rows.value
-  const q = searchQuery.value.toLowerCase()
-  return rows.value.filter(r => r.student_name.toLowerCase().includes(q) || r.student_number.toLowerCase().includes(q))
+  let result = rows.value
+
+  // Filter by class if a class is selected
+  if (className.value) {
+    result = result.filter(r => r.class_name === className.value)
+  }
+
+  // Filter by search query
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(r => r.student_name.toLowerCase().includes(q) || r.student_number.toLowerCase().includes(q))
+  }
+
+  return result
 })
 
 const visibleRows = computed(() => {
@@ -602,7 +746,7 @@ async function doAddRows() {
   showSaveStatus('saving')
   try {
     for (let i = 0; i < count; i++) {
-      await addEnrollment(subjectId.value, termId.value, null)
+      await addEnrollment(subjectId.value, termId.value, null, classId.value)
     }
     showSaveStatus('saved')
     pageSize.value = 'all'
@@ -2041,7 +2185,7 @@ function showContextMenu(event: MouseEvent, rowIdx: number) {
 async function insertRowAbove(rowIdx: number) {
   contextMenu.value = null
   try {
-    const result = await addEnrollment(subjectId.value, termId.value, null)
+    const result = await addEnrollment(subjectId.value, termId.value, null, classId.value)
     const enrollmentId = result.id
     const targetRow = filteredRows.value[rowIdx]
     const actualIndex = targetRow && data.value
@@ -2071,7 +2215,7 @@ async function insertRowAbove(rowIdx: number) {
 async function insertRowBelow(rowIdx: number) {
   contextMenu.value = null
   try {
-    const result = await addEnrollment(subjectId.value, termId.value, null)
+    const result = await addEnrollment(subjectId.value, termId.value, null, classId.value)
     const enrollmentId = result.id
     const targetRow = filteredRows.value[rowIdx]
     const actualIndex = targetRow && data.value
@@ -2114,7 +2258,7 @@ async function deleteRow(rowIdx: number) {
 
 async function doAddRow() {
   try {
-    await addEnrollment(subjectId.value, termId.value, null)
+    await addEnrollment(subjectId.value, termId.value, null, classId.value)
     showSaveStatus('saved')
     pageSize.value = 'all'
     await refreshData()
@@ -2255,6 +2399,7 @@ function startAutoSync() {
   }, 30000)
 }
 
+
 function stopAutoSync() {
   document.removeEventListener("visibilitychange", onVisibilityChange)
   window.removeEventListener("focus", onWindowFocus)
@@ -2348,6 +2493,7 @@ function onFileSelected(event: Event) {
   if (file) {
     pendingFile.value = file
     selectedFileName.value = file.name
+    previewExcelFile(file)
   }
   input.value = ''
 }
@@ -2357,6 +2503,8 @@ function onFileDrop(event: DragEvent) {
   if (file) {
     pendingFile.value = file
     selectedFileName.value = file.name
+    dragOver.value = false
+    previewExcelFile(file)
   }
 }
 
@@ -2367,51 +2515,36 @@ async function processImportFile() {
   const ext = file.name.split('.').pop()?.toLowerCase() || ''
   showSaveStatus('saving')
   showImport.value = false
+  pendingFile.value = null
+  selectedFileName.value = ''
+  importProgress.value = 0
+  importStatusText.value = ''
 
   try {
-    if (ext === 'csv') {
-      await importCSVFile(file)
-    } else if (ext === 'xlsx' || ext === 'xls') {
+    if (ext === 'xlsx' || ext === 'xls') {
       await importExcelFile(file)
     } else {
-      throw new Error('Unsupported file format. Please use CSV or Excel (.xlsx/.xls).')
+      throw new Error('Unsupported file format. Please use Excel (.xlsx/.xls) files only.')
     }
     showSaveStatus('saved')
     pageSize.value = 'all'
+    await animateImportProgress(70, 90, 500, 'Refreshing sheet...')
     await refreshData()
+    await animateImportProgress(90, 100, 400, 'Import complete!')
+    setTimeout(() => { importProgress.value = 0 }, 1200)
   } catch (err: any) {
     showSaveStatus('failed')
+    importProgress.value = 0
+    importStatusText.value = ''
     alert('Import failed: ' + (err.message || 'Unknown error'))
     console.error('Import error:', err)
   }
-
-  pendingFile.value = null
-  selectedFileName.value = ''
-}
-
-async function importCSVFile(file: File) {
-  const content = await file.text()
-  // Parse CSV into structured rows and send to the unified import endpoint
-  const lines = content.split('\n').filter(l => l.trim())
-  const parsedRows: (string | number)[][] = lines.map(l => {
-    // Handle quoted CSV values properly
-    const row: string[] = []
-    let current = ''
-    let inQuotes = false
-    for (const ch of l) {
-      if (ch === '"') { inQuotes = !inQuotes; continue }
-      if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; continue }
-      current += ch
-    }
-    row.push(current.trim())
-    return row
-  })
-  const rows = parseTabularData(parsedRows)
-  await importFile(subjectId.value, termId.value, { rows })
 }
 
 async function importExcelFile(file: File) {
   const { read, utils } = await import('xlsx')
+
+  await animateImportProgress(0, 15, 400, 'Reading file...')
   const buffer = await file.arrayBuffer()
   const workbook = read(buffer, { type: 'array' })
   const sheetName = workbook.SheetNames[0]
@@ -2420,8 +2553,15 @@ async function importExcelFile(file: File) {
   const jsonData: any[][] = utils.sheet_to_json(sheet, { header: 1 })
   if (jsonData.length < 2) throw new Error('Excel file must contain at least a header row and one data row')
 
+  await animateImportProgress(15, 35, 500, 'Parsing student data...')
   const rows = parseTabularData(jsonData as (string | number)[][])
-  await importFile(subjectId.value, termId.value, { rows })
+
+  // Start smooth progress animation while awaiting the API
+  importStatusText.value = 'Importing scores to server...'
+  const animPromise = animateImportProgress(35, 65, 3000, 'Importing scores to server...')
+  await importFile(subjectId.value, termId.value, { rows }, classId.value)
+  importProgress.value = 70
+  // animPromise resolves in background if still running
 }
 
 function parseTabularData(jsonData: (string | number)[][]): Array<{
@@ -2508,10 +2648,112 @@ function exportCSV() {
   showSaveStatus('saved')
 }
 
+async function exportExcel() {
+  if (!data.value) return
+  const { utils, writeFile } = await import('xlsx')
+  const cols = columns.value
+  
+  // Build header row
+  const header = ['Student Name', 'Student ID']
+  cols.forEach(c => header.push(`${c.label} (${c.type})`))
+  header.push('Total', 'Grade')
+  
+  // Build data rows
+  const dataRows = rows.value.map(r => {
+    const row: (string | number)[] = [r.student_name, r.student_number]
+    cols.forEach(c => {
+      const m = getCellMark(r, c.id)
+      row.push(m !== null ? m : '')
+    })
+    row.push(r.total !== null ? r.total : '', r.grade || '')
+    return row
+  })
+  
+  const ws = utils.aoa_to_sheet([header, ...dataRows])
+  const wb = utils.book_new()
+  utils.book_append_sheet(wb, ws, 'Scores')
+  
+  writeFile(wb, `scores-${data.value.subject?.name || 'export'}.xlsx`)
+  showExportMenu.value = false
+  showSaveStatus('saved')
+}
+
+async function exportPDF() {
+  if (!data.value) return
+  const { default: jsPDF } = await import('jspdf')
+  await import('jspdf-autotable')
+  
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  const cols = columns.value
+  
+  // Title
+  doc.setFontSize(14)
+  doc.text(`${data.value.subject?.name || 'Scores'} - ${data.value.term?.name || ''}`, 14, 15)
+  doc.setFontSize(9)
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 21)
+  
+  // Build table
+  const head = [['#', 'Student Name', 'Student ID', ...cols.map(c => c.label), 'Total', 'Grade']]
+  const body = rows.value.map((r, i) => [
+    String(i + 1),
+    r.student_name,
+    r.student_number,
+    ...cols.map(c => {
+      const m = getCellMark(r, c.id)
+      return m !== null ? String(m) : ''
+    }),
+    r.total !== null ? r.total.toFixed(2) : '-',
+    r.grade || '-',
+  ])
+  
+  ;(doc as any).autoTable({
+    head,
+    body,
+    startY: 26,
+    styles: { fontSize: 7, cellPadding: 1.5 },
+    headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 28 },
+    },
+  })
+  
+  doc.save(`scores-${data.value.subject?.name || 'export'}.pdf`)
+  showExportMenu.value = false
+  showSaveStatus('saved')
+}
+
+function exportFormat(format: 'xlsx' | 'pdf') {
+  showExportMenu.value = false
+  if (format === 'xlsx') exportExcel()
+  else if (format === 'pdf') exportPDF()
+}
+
 // ─── Status ──────────────────────────────────────────────────────────
 function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
   saveStatus.value = status
   if (status !== 'saving') setTimeout(() => { if (saveStatus.value === status) saveStatus.value = 'idle' }, 3000)
+}
+
+function animateImportProgress(from: number, to: number, duration: number, statusText: string): Promise<void> {
+  return new Promise(resolve => {
+    importStatusText.value = statusText
+    const startTime = performance.now()
+    function tick(now: number) {
+      const elapsed = now - startTime
+      const t = Math.min(elapsed / duration, 1)
+      const newValue = from + (to - from) * t
+      // Only go forward — prevents backwards jump if external code sets a higher value
+      if (newValue > importProgress.value) {
+        importProgress.value = newValue
+      }
+      if (t < 1) requestAnimationFrame(tick)
+      else resolve()
+    }
+    requestAnimationFrame(tick)
+  })
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────────────
@@ -2578,6 +2820,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 .offering-info strong { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
 .offering-info .text-muted { font-size: 0.7rem; color: #64748b; }
 .term-badge { display: inline-block; padding: 2px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-weight: 700; font-size: 0.75rem; margin-right: 4px; }
+.class-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: #f0fdf4; color: #166534; border-radius: 4px; font-weight: 600; font-size: 0.75rem; margin-left: 4px; }
 
 .tb-btn {
   display: inline-flex; align-items: center; gap: 4px;
@@ -2613,6 +2856,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 
 /* ─── Sheet Wrapper ────────────────────────────────────────────────── */
 .sheet-wrapper {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -2661,8 +2905,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 
 .row-num-header, .row-num { left: 0; width: 36px; min-width: 36px; max-width: 36px; text-align: center; z-index: 30; }
 .student-name-header, .cell-student-name { left: 36px; min-width: 160px; z-index: 25; }
-.student-class-header, .cell-student-class { left: 196px; min-width: 100px; max-width: 120px; z-index: 25; }
-.student-id-header, .cell-student-id { left: 296px; min-width: 90px; z-index: 25; }
+.student-id-header, .cell-student-id { left: 196px; min-width: 90px; z-index: 25; }
 
 /* ─── Enhanced Header Highlight ─────────────────────────────────────── */
 .header-highlighted {
@@ -2865,19 +3108,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   max-width: 90px;
   width: 90px;
 }
-.cell-student-class {
-  min-width: 100px;
-  max-width: 120px;
-  width: 110px;
-}
-.cell-student-class .cell-value {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+
 .student-id-cell-inner {
   position: relative;
   width: 100%;
@@ -3016,6 +3247,51 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinning { animation: spin 0.7s linear infinite; }
 
+/* ─── Import Progress Bar ─────────────────────────────────────────── */
+.import-progress-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center; justify-content: center;
+  z-index: 90;
+}
+.import-progress-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px 32px;
+  min-width: 280px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.import-progress-status {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.import-progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.import-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 4px;
+  transition: width 0.1s linear;
+}
+.import-progress-pct {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
 /* ─── Modal ────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -3056,6 +3332,299 @@ select.form-input { appearance: auto; }
 .import-steps { font-size: 0.78rem; color: #64748b; padding-left: 18px; margin-bottom: 14px; }
 .import-steps li { margin-bottom: 4px; }
 
+/* ─── Import Modal ─────────────────────────────────────────────────── */
+.import-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 440px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+}
+.import-modal-header {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+.import-modal-header .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: rgba(255,255,255,0.7);
+  font-size: 1.3rem;
+}
+.import-modal-header .modal-close:hover { color: #fff; }
+.import-modal-header-icon {
+  width: 42px;
+  height: 42px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+.import-modal-header-text h5 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+  color: #fff;
+}
+.import-modal-header-text p {
+  font-size: 0.78rem;
+  margin: 0;
+  color: rgba(255,255,255,0.75);
+}
+.import-modal-body {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.import-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 22px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+/* Format badges */
+.import-format-badges {
+  display: flex;
+  gap: 8px;
+}
+.import-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.import-badge-excel {
+  background: #ecfdf5;
+  color: #059669;
+}
+.import-badge-pdf {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Drop zone */
+.import-drop-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+.import-drop-zone:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.import-drop-active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  transform: scale(1.01);
+}
+.import-drop-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #2563eb;
+}
+.import-drop-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.import-drop-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.import-drop-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+/* File card */
+.import-file-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.import-file-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f8fafc;
+}
+.import-file-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+.import-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.import-file-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.import-file-size {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+.import-file-remove {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.import-file-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Preview */
+.import-preview {
+  padding: 0 16px 14px;
+}
+.import-preview-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 0 -16px 10px;
+}
+.import-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+.import-preview-grid {
+  display: flex;
+  gap: 8px;
+}
+.import-preview-stat {
+  flex: 1;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+.import-preview-stat-wide {
+  flex: 2;
+}
+.import-preview-stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.import-preview-stat-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.import-preview-col-names {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Import buttons */
+.import-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+.import-btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+.import-btn-secondary:hover {
+  background: #e2e8f0;
+}
+.import-btn-primary {
+  background: linear-gradient(135deg, #059669, #047857);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(5,150,105,0.25);
+}
+.import-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #065f46);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+}
+.import-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 @media (max-width: 768px) {
   .sheet-toolbar { flex-direction: column; align-items: flex-start; }
   .toolbar-actions { width: 100%; }
@@ -3095,6 +3664,25 @@ select.form-input { appearance: auto; }
 .placeholder-row:hover .placeholder-hint { color: #3b82f6; }
 
 /* ─── Add Row Button ───────────────────────────────────────────── */
+/* ─── Export Dropdown ──────────────────────────────────────────── */
+.export-dropdown { position: relative; display: inline-block; }
+.export-menu {
+  position: absolute; top: 100%; right: 0; z-index: 100;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 180px;
+  padding: 4px; margin-top: 4px;
+}
+.export-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer; border-radius: 6px;
+  font-size: 0.78rem; color: #334155; transition: background 0.12s;
+}
+.export-menu-item:hover { background: #f1f5f9; }
+.export-menu-item i { font-size: 1rem; width: 18px; text-align: center; color: #64748b; }
+.export-menu-item:first-child i { color: #22c55e; }
+.export-menu-item:nth-child(2) i { color: #22c55e; }
+.export-menu-item:last-child i { color: #ef4444; }
+
 .add-row-row { cursor: pointer; transition: background 0.15s; }
 .add-row-row:hover { background: #f0f9ff !important; }
 .add-row-cell { text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.8rem; padding: 10px !important; border: 2px dashed #bfdbfe !important; border-radius: 0 0 8px 0; }
