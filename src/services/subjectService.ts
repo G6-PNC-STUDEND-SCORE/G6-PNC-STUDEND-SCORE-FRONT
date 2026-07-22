@@ -62,6 +62,7 @@ export interface SubjectPayload {
   class_ids?: number[]
   status: 'Active' | 'Inactive'
   teacher_ids?: number[]
+  term_ids?: number[]
 }
 
 export interface SubjectResponse {

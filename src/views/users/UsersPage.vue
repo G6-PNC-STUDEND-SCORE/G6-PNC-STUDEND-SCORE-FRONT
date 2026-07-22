@@ -84,8 +84,17 @@
         <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
       </div>
 
-      <!-- Table -->
-      <div class="table-wrap">
+      <!-- ── Empty State (no data) ── -->
+      <div v-if="users.length === 0" class="empty-container">
+        <div class="empty-box">
+          <Inbox :size="40" />
+          <h5>No users found</h5>
+          <p>{{ searchQuery ? 'Try a different search term.' : 'No users match the current filter.' }}</p>
+        </div>
+      </div>
+
+      <!-- ── Table (with data) ── -->
+      <div v-else class="table-wrap">
         <table class="user-table">
           <thead>
             <tr>
@@ -108,12 +117,6 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-if="users.length === 0">
-              <td colspan="8" class="empty-state">
-                <Users :size="28" class="d-block mb-2" style="margin: 0 auto;" />
-                No users found
-              </td>
-            </tr>
             <tr
               v-for="(user, index) in users"
               :key="user.id"
@@ -196,7 +199,7 @@
       </div>
 
       <!-- Pagination -->
-      <div class="pagination-bar">
+      <div v-if="users.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
           <div class="rows-selector">
@@ -484,8 +487,8 @@
               <!-- User Avatar & Name -->
               <div class="d-flex align-items-center gap-3 mb-4 pb-3" style="border-bottom: 1px solid #f1f5f9;">
                 <div
-                  class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white flex-shrink-0 shadow-sm"
-                  :style="{ width: '54px', height: '54px', fontSize: '1.125rem', background: getAvatarGradient(detailUser) }"
+                  class="d-flex align-items-center justify-content-center rounded-3 fw-bold text-white flex-shrink-0 shadow-sm"
+                  :style="{ width: '54px', height: '54px', fontSize: '1.125rem', background: '#2563eb' }"
                 >
                   {{ getInitials(detailUser.name) }}
                 </div>
@@ -572,7 +575,7 @@
 </template>
 
 <script setup lang="ts">
-import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash } from '@lucide/vue'
+import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, Inbox } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, type Component } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
@@ -901,15 +904,8 @@ function getRowClass(user: User): string {
   return ''
 }
 
-function getAvatarClass(user: User): string {
-  if (user.role?.slug === 'admin') return 'avatar-admin'
-  if (user.role?.slug === 'teacher') return 'avatar-teacher'
-  if (user.role?.slug === 'student') return 'avatar-student'
+function getAvatarClass(): string {
   return ''
-}
-
-function getAvatarGradient(user: User): string {
-  return 'linear-gradient(135deg, #2563eb, #1d4ed8)'
 }
 
 function getRoleBadgeClass(slug: string): string {
@@ -1028,13 +1024,22 @@ onMounted(() => {
 <style scoped>
 /* ==================== Page Layout ==================== */
 .users-page {
-  height: 100%;
-  min-height: 100%;
+  /* Same treatment as Roles & Permissions: header is a fixed 72px,
+     .main-content has 20px padding on all sides; trim that down to a
+     14px gap on top/left/right and a 10px gap on the bottom. Height is
+     computed from the viewport (not a percentage of the parent, which
+     doesn't reliably resolve through the flex chain) so the bottom
+     edge always lands exactly 10px from the screen regardless of how
+     tall the table's content is. .main-content gets a route-based
+     `no-scroll` class for this page, so this is the only scrollbar. */
+  height: calc(100vh - 96px);
+  width: calc(100% + 12px);
+  margin-top: -6px;
+  margin-left: -6px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  padding: 1rem 1.5rem;
 }
 
 
@@ -1230,8 +1235,12 @@ onMounted(() => {
   overflow: auto;
   flex: 1;
   min-height: 0;
-  max-height: calc(100vh - 210px);
 }
+
+.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
 .user-table {
   width: 100%;
@@ -1302,10 +1311,33 @@ onMounted(() => {
 
 .user-table tbody tr:last-child td { border-bottom: none; }
 
-.empty-state {
-  text-align: center;
-  padding: 48px 16px !important;
-  color: #9ca3af;
+.empty-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.empty-container .empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #94a3b8;
+}
+
+.empty-container .empty-box h5 {
+  font-weight: 700;
+  color: #64748b;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.empty-container .empty-box p {
+  font-size: 0.85rem;
+  margin: 0;
 }
 
 .user-cell {
@@ -1315,9 +1347,9 @@ onMounted(() => {
 }
 
 .avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1325,21 +1357,7 @@ onMounted(() => {
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
-
-.avatar-admin {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.avatar-teacher {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-}
-
-.avatar-student {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #2563eb;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
@@ -1413,7 +1431,7 @@ onMounted(() => {
   letter-spacing: 0.01em;
 }
 
-.badge-active { background: #dcfce7; color: #16a34a; }
+.badge-active { background: #dbeafe; color: #1d4ed8; }
 .badge-inactive { background: #f1f5f9; color: #64748b; }
 .badge-suspended { background: #fef2f2; color: #dc2626; }
 

@@ -1,5 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router'
 
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAdmin?: boolean
+  }
+}
+
 export const routes: RouteRecordRaw[] = [
   {
     path: '/',
@@ -59,11 +65,13 @@ export const routes: RouteRecordRaw[] = [
     path: '/users',
     name: 'users',
     component: () => import('@/views/users/UsersPage.vue'),
+    meta: { requiresAdmin: true },
   },
   {
     path: '/roles',
     name: 'roles',
     component: () => import('@/views/roles/RolesPage.vue'),
+    meta: { requiresAdmin: true },
   },
   {
     path: '/profile',

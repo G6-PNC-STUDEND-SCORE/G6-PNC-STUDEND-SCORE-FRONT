@@ -3,7 +3,7 @@
     <Navigation v-if="showSidebar" />
     <div class="content-wrapper" :class="{ 'with-sidebar': showSidebar }" :style="showSidebar ? { marginLeft: sidebarMargin } : {}">
       <Header v-if="showSidebar" />
-      <main class="main-content">
+      <main class="main-content" :class="{ 'no-scroll': selfManagedScrollPages.includes(String(route.name)) }">
         <router-view />
       </main>
     </div>
@@ -22,6 +22,11 @@ const sidebar = useSidebarStore()
 
 const publicPages = ['login']
 const showSidebar = computed(() => !publicPages.includes(String(route.name)))
+
+// Pages that manage their own internal scroll region (a fixed-height
+// card with an inner scrolling table) instead of relying on
+// .main-content's own scrollbar.
+const selfManagedScrollPages = ['roles', 'users', 'classes', 'teachers', 'student', 'subject']
 
 const sidebarMargin = computed(() =>
   sidebar.collapsed ? sidebar.SIDEBAR_COLLAPSED_WIDTH + 'px' : sidebar.SIDEBAR_WIDTH + 'px'
@@ -55,8 +60,19 @@ html, body {
 
 .main-content {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #f0f2f5;
   padding: 20px;
+}
+
+/* Roles & Permissions manages its own internal scrolling (the table
+   body scrolls, the page itself doesn't) — turn off this container's
+   own scrollbar for that route so tiny rounding differences between
+   the two can never produce a second, redundant outer scrollbar. */
+.main-content.no-scroll {
+  overflow: hidden;
 }
 
 .page-header {

@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-4">
+  <div class="py-4">
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">

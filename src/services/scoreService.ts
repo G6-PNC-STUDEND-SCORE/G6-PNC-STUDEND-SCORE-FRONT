@@ -75,11 +75,11 @@ export function getSpreadsheetRefreshPromise(): Promise<SpreadsheetResponse> | n
   return spreadsheetRefreshPromise
 }
 
-export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number): Promise<SpreadsheetResponse> {
+export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number, bypassCache = false): Promise<SpreadsheetResponse> {
   const cacheKey = `spreadsheet_${subjectId}_${termId}`
 
   // Return cached data instantly if available (while fresh data loads in background)
-  const cached = sessionStorage.getItem(cacheKey)
+  const cached = bypassCache ? null : sessionStorage.getItem(cacheKey)
   if (cached) {
     // Fire off a background refresh
     spreadsheetRefreshPromise = http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
@@ -158,13 +158,32 @@ export async function createGoogleSheet(subjectId: number, termId: number, acces
   return res.data.data
 }
 
-export async function importFromGoogleSheets(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<void> {
-  await http.post('/google-sheets/import', {
+export async function importFromGoogleSheets(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<{ synced: boolean }> {
+  const res = await http.post('/google-sheets/import', {
     subject_id: subjectId,
     term_id: termId,
     spreadsheet_id: spreadsheetId,
     access_token: accessToken,
   })
+  return res.data.data ?? { synced: true }
+}
+
+export async function pushToGoogleSheet(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<{ pushed_rows: number }> {
+  const res = await http.post('/google-sheets/push', {
+    subject_id: subjectId,
+    term_id: termId,
+    spreadsheet_id: spreadsheetId,
+    access_token: accessToken,
+  })
+  return res.data.data ?? { pushed_rows: 0 }
+}
+
+export async function ensureGoogleSheetShared(spreadsheetId: string, accessToken: string): Promise<{ shared: boolean }> {
+  const res = await http.post('/google-sheets/ensure-shared', {
+    spreadsheet_id: spreadsheetId,
+    access_token: accessToken,
+  })
+  return res.data.data ?? { shared: false }
 }
 
 export async function importFromGoogleSheetsCSV(subjectId: number, termId: number, csvContent: string): Promise<void> {

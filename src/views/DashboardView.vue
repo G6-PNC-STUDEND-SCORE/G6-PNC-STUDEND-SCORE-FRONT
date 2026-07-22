@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-4 dashboard-page">
+  <div class="py-4 dashboard-page">
     <div v-if="showWelcome" class="welcome-card">
       <div class="welcome-bg-shapes">
         <div class="shape shape-1"></div>

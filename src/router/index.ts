@@ -22,6 +22,11 @@ router.beforeEach((to, _from) => {
   if (!authStore.isAuthenticated) {
     return '/login'
   }
+
+  if (to.meta.requiresAdmin && authStore.user?.role !== 'admin') {
+    return '/dashboard'
+  }
+
   return true
 })
 

@@ -258,7 +258,7 @@ onMounted(async () => {
    GLOBAL
    ══════════════════════════════════════════════════════════════ */
 .page-container {
-  padding: 1rem 1.5rem 2rem;
+  padding: 1rem 0 2rem;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
 }

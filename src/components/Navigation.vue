@@ -1,7 +1,7 @@
 <template>
   <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
     <!-- Logo / Brand -->
-    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 64px">
+    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 72px">
       <div class="sidebar-logo-wrap">
         <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
       </div>
@@ -24,18 +24,20 @@
         <span class="sidebar-link-text">{{ link.label }}</span>
       </RouterLink>
 
-      <h6 class="menu-title mt-3 mb-2">Settings</h6>
+      <template v-if="settingsLinks.length > 0">
+        <h6 class="menu-title mt-3 mb-2">Settings</h6>
 
-      <RouterLink
-        v-for="link in settingsLinks"
-        :key="link.to"
-        :to="link.to"
-        :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
-        :title="sidebar.collapsed ? link.label : ''"
-      >
-        <component :is="link.icon" :size="20" />
-        <span class="sidebar-link-text">{{ link.label }}</span>
-      </RouterLink>
+        <RouterLink
+          v-for="link in settingsLinks"
+          :key="link.to"
+          :to="link.to"
+          :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
+          :title="sidebar.collapsed ? link.label : ''"
+        >
+          <component :is="link.icon" :size="20" />
+          <span class="sidebar-link-text">{{ link.label }}</span>
+        </RouterLink>
+      </template>
     </nav>
 
     <!-- Toggle Button -->
@@ -143,10 +145,13 @@ const navLinks: NavLink[] = [
   { to: '/reports', label: 'Reports', icon: FileText },
 ]
 
-const settingsLinks: NavLink[] = [
-  { to: '/users', label: 'Users', icon: User },
-  { to: '/roles', label: 'Roles & Permissions', icon: Shield },
-]
+const settingsLinks = computed<NavLink[]>(() => {
+  if (auth.user?.role !== 'admin') return []
+  return [
+    { to: '/users', label: 'Users', icon: User },
+    { to: '/roles', label: 'Roles & Permissions', icon: Shield },
+  ]
+})
 
 function getUserInitials(): string {
   const name = auth.user?.name || ''

@@ -457,7 +457,7 @@ import {
   addEnrollment, deleteEnrollment, updateStudentInfo,
   changeColumnType, getStudentNumbers, importFile,
   createGoogleSheet, getGoogleConfig,
-  importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken,
+  importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken, ensureGoogleSheetShared, pushToGoogleSheet,
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
 
@@ -1306,7 +1306,9 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
 
   for (let i = 0; i < count; i++) {
     const nextValue = direction === 1 ? edgeNum + step * (i + 1) : edgeNum - step * (i + 1)
-    result.push(nextValue)
+    // Scores are always 0-100 — an extrapolated arithmetic progression (e.g. 80, 90 -> 100, 110, 120...)
+    // must be clamped or the backend rejects the save (422) while the optimistic UI update sticks around unsaved.
+    result.push(Math.min(100, Math.max(0, nextValue)))
   }
   return result
 }
@@ -1450,11 +1452,17 @@ function commitFillApply() {
     targetRows.forEach((r, i) => {
       const targetRow = rows.value.find(tr => tr.enrollment_id === filteredRows.value[r]?.enrollment_id)
       if (!targetRow) return
+      const oldValue = targetRow.details[srcColId] ?? null
       const nextValue = values[i] ?? null
       targetRow.details[srcColId] = nextValue
       recalculateRowTotal(targetRow)
       const actualDetailId = getActualDetailId(targetRow, srcColId)
-      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {})
+      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
+        // Save rejected (e.g. invalid value) — revert so the grid doesn't show an unsaved value as if it stuck.
+        targetRow.details[srcColId] = oldValue
+        recalculateRowTotal(targetRow)
+        showSaveStatus('failed')
+      })
     })
   } else {
     // Horizontal fill: continue the pattern across columns.
@@ -1488,11 +1496,17 @@ function commitFillApply() {
     }
 
     targetColIndices.forEach((ci, i) => {
+      const oldValue = targetRow.details[cols[ci].id] ?? null
       const nextValue = values[i] ?? null
       targetRow.details[cols[ci].id] = nextValue
       recalculateRowTotal(targetRow)
       const actualDetailId = getActualDetailId(targetRow, cols[ci].id)
-      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {})
+      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
+        // Save rejected (e.g. invalid value) — revert so the grid doesn't show an unsaved value as if it stuck.
+        targetRow.details[cols[ci].id] = oldValue
+        recalculateRowTotal(targetRow)
+        showSaveStatus('failed')
+      })
     })
   }
 
@@ -2229,7 +2243,7 @@ async function refreshData() {
   if (!subjectId.value || !termId.value) return
   loading.value = true
   try {
-    data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value)
+    data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value, true)
     assessments.value = data.value.assessment_types
     assessments.value.forEach(at => { weightEdits[at.id] = at.weight_percent })
     // Initialize column types dropdown values
@@ -2395,12 +2409,79 @@ async function doUpdateWeights() {
 function openGoogleSheetsDirect() {
   gsLoading.value = true
   gsReconnectNeeded.value = false
+  // Reuse the sheet already created for this subject/term instead of creating a new one every click.
+  if (gsSheetId.value) {
+    // Open the tab synchronously, in direct response to this click — several awaited network
+    // calls happen before we know the final URL, and by then the browser no longer considers
+    // window.open() a direct result of the user's gesture, so it would likely get silently
+    // popup-blocked. Opening a blank tab now and navigating it later avoids that entirely.
+    openExistingSheet(gsSheetId.value, openLoadingPopup())
+    return
+  }
   const storedToken = localStorage.getItem("google_access_token")
-  if (storedToken) { createAndOpenSheet(storedToken); return }
+  if (storedToken) { createAndOpenSheet(storedToken, openLoadingPopup()); return }
+  // Google Identity Services owns its own popup lifecycle for the OAuth flow — no
+  // placeholder tab needed (or wanted) here.
   startGoogleAuth()
 }
 
-async function createAndOpenSheet(token: string) {
+function openLoadingPopup(): Window | null {
+  const popup = window.open('', '_blank')
+  try {
+    popup?.document.write('<title>Google Sheets</title><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#64748b">Preparing your Google Sheet…</body>')
+  } catch {
+    // Best-effort only — worst case the tab just stays blank until navigation below.
+  }
+  return popup
+}
+
+function navigatePopupOrOpen(popup: Window | null, url: string) {
+  if (popup && !popup.closed) {
+    popup.location.href = url
+  } else {
+    // Popup was blocked/closed early — fall back to a fresh window.open. This one may itself
+    // get blocked since we're now outside the original click's activation window, but it's
+    // the best remaining option and matches this function's previous (pre-popup-safe) behavior.
+    window.open(url, '_blank')
+  }
+}
+
+// Before opening a previously-created sheet: pull in any pending edits sitting in the
+// sheet, then push the app's current (now up-to-date) data back into it, then make sure
+// it's shared. createSheet() only ever wrote data once, at creation time — anything added
+// or changed in the app afterward (new students, new columns, edited scores) never reached
+// the sheet, so reopening it kept showing a stale snapshot from whenever it was first made.
+// Pull-before-push matters: it means nothing typed directly into Sheets since the last sync
+// gets lost just because someone reopened the link from the app side.
+// Every step here is best-effort and non-blocking — the sheet still opens even if a step
+// fails (e.g. this account isn't the owner and can't push/share on it).
+async function openExistingSheet(sheetId: string, popup: Window | null) {
+  try {
+    let token = localStorage.getItem("google_access_token")
+    if (!token) {
+      try {
+        const refreshed = await refreshGoogleToken()
+        localStorage.setItem("google_access_token", refreshed.access_token)
+        token = refreshed.access_token
+      } catch {
+        // No usable token at all — still open; the steps below are skipped.
+      }
+    }
+    if (token) {
+      const pullResult = await importFromGoogleSheets(subjectId.value, termId.value, sheetId, token).catch(() => null)
+      if (pullResult?.synced) await refreshData()
+      await pushToGoogleSheet(subjectId.value, termId.value, sheetId, token).catch((err) => {
+        console.warn("Could not push latest data to Google Sheet:", err?.response?.data?.message || err?.message)
+      })
+      await ensureGoogleSheetShared(sheetId, token).catch(() => {})
+    }
+  } finally {
+    navigatePopupOrOpen(popup, `https://docs.google.com/spreadsheets/d/${sheetId}/edit`)
+    gsLoading.value = false
+  }
+}
+
+async function createAndOpenSheet(token: string, popup: Window | null) {
   try {
     const result = await createGoogleSheet(subjectId.value, termId.value, token)
     // Store the spreadsheet ID so we can sync back later
@@ -2408,10 +2489,11 @@ async function createAndOpenSheet(token: string) {
     const storageData = { sheet_id: result.spreadsheet_id, created_at: new Date().toISOString() }
     localStorage.setItem(storageKey, JSON.stringify(storageData))
     gsSheetId.value = result.spreadsheet_id
-    window.open(result.url, "_blank")
+    navigatePopupOrOpen(popup, result.url)
     showSaveStatus("saved")
     // Data was just exported to Google Sheets — nothing to refresh in the system
     gsLastSynced.value = new Date().toLocaleTimeString()
+    startAutoSync() // Begin polling immediately instead of waiting for the next page load.
     gsLoading.value = false
   } catch (err: any) {
     // If token expired/invalid, clear it and re-authenticate
@@ -2419,12 +2501,14 @@ async function createAndOpenSheet(token: string) {
     if (status === 400 || status === 401 || status === 403) {
       console.warn("Google token expired or missing, re-authenticating...")
       localStorage.removeItem("google_access_token")
+      popup?.close() // GIS will open its own popup for re-auth; don't leave our blank one hanging.
       // Keep gsLoading=true so button shows "Creating..." during re-auth
       startGoogleAuth()
       return
     }
     console.error("Google Sheets error:", err?.response?.data?.message || err?.message || "Failed")
     showSaveStatus("failed")
+    popup?.close()
     gsLoading.value = false
   }
 }
@@ -2451,12 +2535,13 @@ async function syncFromGoogleSheets() {
     }
 
     try {
-      await importFromGoogleSheets(
+      const result = await importFromGoogleSheets(
         subjectId.value,
         termId.value,
         gsSheetId.value!,
         token
       )
+      if (!result.synced) return // Nothing to sync yet (no matching tab / no data rows) — stay quiet.
       await refreshData()
       gsLastSynced.value = new Date().toLocaleTimeString()
       gsReconnectNeeded.value = false
@@ -2464,29 +2549,40 @@ async function syncFromGoogleSheets() {
     } catch (err: any) {
       gsSyncLoading.value = false
       const status = err?.response?.status
-      if (status === 400 || status === 401 || status === 403) {
+      if (status === 401 || status === 403) {
         // Token expired — try backend refresh
         localStorage.removeItem("google_access_token")
         try {
           const refreshed = await refreshGoogleToken()
           localStorage.setItem("google_access_token", refreshed.access_token)
           // Retry import with fresh token
-          await importFromGoogleSheets(
+          const retryResult = await importFromGoogleSheets(
             subjectId.value,
             termId.value,
             gsSheetId.value!,
             refreshed.access_token
           )
+          if (!retryResult.synced) return
           await refreshData()
           gsLastSynced.value = new Date().toLocaleTimeString()
           gsReconnectNeeded.value = false
           showSaveStatus("saved")
           return
-        } catch {
-          // Backend refresh also failed — need user to re-authorize
+        } catch (retryErr: any) {
           gsReconnectNeeded.value = true
           stopAutoSync()
-          console.warn("Google token expired. Click 'Reconnect Google' to re-authorize.")
+          if (retryErr?.response?.status === 403) {
+            // Fresh token, still denied -> this isn't an expired-token problem, the
+            // connected Google account simply has no access to this specific sheet
+            // (usually created under a different account). Retrying it every page
+            // load forever won't fix that, so forget it: hide "Sync from Sheets" and
+            // stop auto-sync from ever touching this dead reference again. The user
+            // creates a new sheet (or reconnects with the right account) to resume.
+            forgetStoredSheetId()
+            console.warn("This Google account doesn't have access to the linked spreadsheet. Click 'Google Sheets' to create a new one, or reconnect with the account that owns it.")
+          } else {
+            console.warn("Google token expired. Click 'Reconnect Google' to re-authorize.")
+          }
           showSaveStatus("failed")
         }
       } else {
@@ -2506,11 +2602,14 @@ function startAutoSync() {
   // Sync instantly when user switches back from Google Sheets tab
   document.addEventListener("visibilitychange", onVisibilityChange)
   window.addEventListener("focus", onWindowFocus)
-  // Periodic fallback sync every 30 seconds
+  // Check right away instead of waiting for the first interval tick.
+  if (gsSheetId.value && editingRow.value === null) syncFromGoogleSheets()
+  // Periodic fallback sync every 8 seconds, so edits saved in Google Sheets
+  // show up here quickly even if the user never switches tabs.
   gsAutoSyncTimer = setInterval(() => {
     if (!gsSheetId.value || editingRow.value !== null) return // Don't sync while user is editing
     syncFromGoogleSheets()
-  }, 30000)
+  }, 8000)
 }
 
 
@@ -2552,25 +2651,43 @@ function loadStoredSheetId() {
   }
 }
 
+// Drop a sheet reference that's confirmed permanently inaccessible (403 even with a
+// fresh token) so we stop retrying it on every auto-sync tick and every future page load.
+function forgetStoredSheetId() {
+  const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
+  localStorage.removeItem(storageKey)
+  gsSheetId.value = null
+  stopAutoSync()
+}
+
 async function startGoogleAuth() {
   try {
     const config = await getGoogleConfig()
     if (!config.client_id) { showSaveStatus("failed"); gsLoading.value = false; return }
     await loadGoogleScript()
-    const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+    // Use the authorization-code flow (not the implicit token flow) so the backend can
+    // exchange the code for a refresh token and keep the sheet synced without re-prompting.
+    const codeClient = (window as any).google.accounts.oauth2.initCodeClient({
       client_id: config.client_id,
       scope: config.scopes.join(" "),
+      ux_mode: "popup",
       callback: async (response: any) => {
-        if (response.error) { showSaveStatus("failed"); gsLoading.value = false; return }
-        localStorage.setItem("google_access_token", response.access_token)
-        if (response.code) {
-          try { await exchangeGoogleToken(response.code) } catch {}
+        if (response.error || !response.code) { showSaveStatus("failed"); gsLoading.value = false; return }
+        try {
+          const tokenResult = await exchangeGoogleToken(response.code)
+          localStorage.setItem("google_access_token", tokenResult.access_token)
+          // No placeholder popup here (see openGoogleSheetsDirect) — GIS's own popup already
+          // closed after consent, so this falls back to a plain window.open, same as before.
+          await createAndOpenSheet(tokenResult.access_token, null)
+        } catch (err: any) {
+          console.error("Google token exchange failed:", err?.response?.data?.message || err?.message)
+          showSaveStatus("failed")
+          gsLoading.value = false
         }
-        await createAndOpenSheet(response.access_token)
       },
       error_callback: () => { showSaveStatus("failed"); gsLoading.value = false },
     })
-    tokenClient.requestAccessToken({ prompt: "consent" })
+    codeClient.requestCode()
   } catch (err: any) {
     console.error("Google auth failed:", err)
     showSaveStatus("failed")
@@ -2902,7 +3019,18 @@ onUnmounted(() => {
   gsSheetId.value = null
 })
 
-watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshData() })
+watch([subjectId, termId], () => {
+  if (!subjectId.value || !termId.value) return
+  refreshData()
+  // Route params changed but Vue Router reused this component instance (same route,
+  // different :subjectId/:termId) — the Google Sheet linked to the *previous*
+  // subject/term is no longer relevant, so drop it and reload whatever sheet
+  // (if any) is stored for the new subject/term instead of continuing to poll the old one.
+  stopAutoSync()
+  gsSheetId.value = null
+  gsReconnectNeeded.value = false
+  loadStoredSheetId()
+})
 </script>
 
 <style scoped>

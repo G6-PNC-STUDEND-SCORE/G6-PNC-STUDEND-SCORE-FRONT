@@ -32,37 +32,44 @@
           </label>
         </div>
 
+        <button
+          class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+          style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+          @click="$emit('add')"
+        >
+          <Plus :size="15" />
+          Add Student
+        </button>
+
         <span class="count-badge">
           {{ students.length }} student{{ students.length !== 1 ? 's' : '' }}
         </span>
       </div>
     </div>
 
-    <!-- Bulk Delete Bar (appears when rows are selected) -->
-    <Transition name="bulk-slide">
-      <div v-if="someSelected" class="bulk-bar">
-        <div class="bulk-left">
-          <div class="bulk-check-icon">
-            <CheckCheck :size="18" />
-          </div>
-          <span class="bulk-count-label">
-            <strong>{{ selectedIds.length }}</strong> selected
-          </span>
-        </div>
-        <div class="bulk-right">
-          <button class="bulk-btn bulk-btn-clear" @click="selectedIds = []" title="Clear selection">
-            <X :size="15" />
-            <span>Clear</span>
+    <!-- Bulk Action Bar -->
+    <div v-if="someSelected" class="bulk-bar">
+        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <div class="bulk-actions">
+          <button class="bulk-delete-btn" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" title="Delete selected students">
+            <Trash2 :size="16" />
+            Delete Selected
           </button>
-          <button class="bulk-btn bulk-btn-delete" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" title="Delete selected students">
-            <Trash2 :size="15" />
-            <span>Delete Selected</span>
-          </button>
+          <button class="bulk-clear-btn" @click="selectedIds = []" title="Clear selection">Clear Selection</button>
         </div>
       </div>
-    </Transition>
 
-    <div class="table-wrap">
+    <!-- ── Empty State (no data) ── -->
+    <div v-if="students.length === 0" class="empty-container">
+      <div class="empty-box">
+        <Inbox :size="40" />
+        <h5>No students found</h5>
+        <p>{{ props.searchQuery ? 'Try a different search term.' : 'No students match the current filter.' }}</p>
+      </div>
+    </div>
+
+    <!-- ── Table (with data) ── -->
+    <div v-else class="table-wrap">
       <table class="student-table">
         <thead>
           <tr>
@@ -84,17 +91,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="students.length === 0">
-              <td colspan="6" class="empty-state">
-              <Users :size="28" class="d-block mb-2" style="margin: 0 auto;" />
-              No students found
-            </td>
-          </tr>
           <tr
             v-for="(student, index) in paginatedStudents"
-            :key="student.id"
-            class="student-row"
-            :class="(student.user?.gender || '') === 'Male' ? 'row-male' : 'row-female'"
+            :key="student.id"            class="student-row"
+            :class="{ 'row-selected': selectedIds.includes(student.id) }"
           >
             <td class="col-check">
               <input
@@ -124,12 +124,7 @@
               </div>
             </td>
             <td>
-              <span
-                class="gender-badge"
-                :class="(student.user?.gender || '') === 'Male' ? 'badge-male' : 'badge-female'"
-              >
-                {{ student.user?.gender || '—' }}
-              </span>
+              <span class="meta-cell">{{ student.user?.gender || '—' }}</span>
             </td>
             <td>
               <span v-if="student.class" class="class-cell">
@@ -187,7 +182,7 @@
     </div>
 
     <!-- Pagination -->
-    <div class="pagination-bar">
+    <div v-if="students.length > 0" class="pagination-bar">
       <div class="pagination-info">
         <span class="rows-label">Rows per page:</span>
         <div class="rows-selector">
@@ -248,7 +243,7 @@ import type { Student } from '@/services/studentService'
 import {
   Search,
   VenusAndMars,
-  Users,
+  Inbox,
   Building2,
   Minus,
   MoreVertical,
@@ -258,8 +253,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  CheckCheck,
-  X,
+  Plus,
 } from '@lucide/vue'
 
 const openDropdownId = ref<number | null>(null)
@@ -356,7 +350,8 @@ defineEmits<{
   edit: [student: Student]
   assign: [student: Student]
   delete: [student: Student]
-  bulkDelete: [ids: number[]]}>()
+  bulkDelete: [ids: number[]]
+  add: []}>()
 </script>
 
 <style scoped>
@@ -368,6 +363,11 @@ defineEmits<{
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   transition: box-shadow 0.25s ease;
 }
 
@@ -385,6 +385,7 @@ defineEmits<{
   padding: 16px 20px;
   background: #ffffff;
   border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
 }
 
 .toolbar-left {
@@ -482,8 +483,15 @@ defineEmits<{
 /* ==================== Table ==================== */
 .table-wrap {
   width: 100%;
-  overflow-x: auto;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
+
+.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
 .student-table {
   width: 100%;
@@ -503,15 +511,22 @@ defineEmits<{
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #64748b;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
 }
 
 .col-check {
-  width: 44px;
-  padding-left: 18px !important;
-  padding-right: 0 !important;
+  width: 48px;
+  text-align: center;
+  padding: 12px 8px !important;
+}
+
+.student-table thead th.col-check,
+.student-table tbody td.col-check {
+  text-align: center;
+  padding: 12px 8px !important;
+  vertical-align: middle;
 }
 
 .row-check {
@@ -519,27 +534,53 @@ defineEmits<{
   height: 16px;
   accent-color: #2563eb;
   cursor: pointer;
-  vertical-align: middle;
+  display: block;
+  margin: 0 auto;
 }
 
 .col-actions {
   text-align: right;
   padding-right: 20px !important;
+  width: 80px;
 }
 
 .student-table tbody td {
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f1f3f5;
-  color: #334155;
+  color: #475569;
   vertical-align: middle;
+  font-weight: 500;
 }
 
 .student-table tbody tr:last-child td { border-bottom: none; }
 
-.empty-state {
-  text-align: center;
-  padding: 48px 16px !important;
-  color: #9ca3af;
+.empty-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.empty-container .empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #94a3b8;
+}
+
+.empty-container .empty-box h5 {
+  font-weight: 700;
+  color: #64748b;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.empty-container .empty-box p {
+  font-size: 0.85rem;
+  margin: 0;
 }
 
 .student-cell {
@@ -549,27 +590,27 @@ defineEmits<{
 }
 
 .avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #2563eb;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .avatar-img {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 .photo-img {
@@ -582,6 +623,7 @@ defineEmits<{
 .student-name {
   font-weight: 600;
   color: #0f172a;
+  font-size: 0.9rem;
 }
 
 .class-cell {
@@ -604,84 +646,30 @@ defineEmits<{
   border-left: 3px solid transparent;
 }
 
-.row-male:hover,
-.row-female:hover {
-  background: #eff6ff;
-  border-left-color: #2563eb;
+.student-row:hover { background: #f8fafc; border-left-color: #2563eb; }
+
+.row-selected {
+  background: #f0f5ff !important;
+  border-left-color: #2563eb !important;
 }
 
-.gender-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.85rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-  transition: all 0.2s ease;
-}
-
-.badge-male {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.badge-female {
-  background: #fce7f3;
-  color: #be185d;
-}
-
-.gender-badge::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-right: 6px;
-}
-
-.badge-male::before {
-  background: #3b82f6;
+.meta-cell {
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 
 .status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.3rem 0.8rem;
+  padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 500;
   border-radius: 100px;
   letter-spacing: 0.01em;
-  transition: all 0.2s ease;
 }
 
-.badge-active {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.badge-inactive {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.status-badge::before {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  margin-right: 7px;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
-}
-
-.badge-active::before {
-  background: #22c55e;
-}
-
-.badge-inactive::before {
-  background: #94a3b8;
-}
+.badge-active { background: #dbeafe; color: #1d4ed8; }
+.badge-inactive { background: #f1f5f9; color: #64748b; }
 
 /* ==================== Action Dropdown ==================== */
 .action-dropdown {
@@ -779,8 +767,8 @@ defineEmits<{
 }
 
 .action-item.assign:hover {
-  background: #fef9c3;
-  color: #854d0e;
+  background: #f0f5ff;
+  color: #2563eb;
 }
 
 .action-item.delete:hover {
@@ -798,124 +786,80 @@ defineEmits<{
 .bulk-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
   gap: 12px;
-  flex-wrap: wrap;
+  padding: 10px 20px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  animation: slideDown 0.2s ease-out;
 }
 
-.bulk-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.bulk-check-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #2563eb;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.bulk-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #991b1b;
 }
 
-.bulk-count-label {
-  font-size: 0.85rem;
-  color: #475569;
-  font-weight: 500;
-}
-
-.bulk-count-label strong {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.bulk-right {
+.bulk-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
 }
 
-.bulk-btn {
+.bulk-delete-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.bulk-btn-clear {
-  background: #fff;
-  color: #64748b;
-}
-
-.bulk-btn-clear:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.bulk-btn-delete {
+  padding: 6px 14px;
+  border: none;
   background: #ef4444;
   color: #fff;
-  border-color: #ef4444;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.bulk-btn-delete:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+.bulk-delete-btn:hover { background: #dc2626; }
+
+.bulk-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-/* Bulk bar slide transition */
-.bulk-slide-enter-active {
-  transition: all 0.25s ease-out;
-}
-.bulk-slide-leave-active {
-  transition: all 0.15s ease-in;
-}
-.bulk-slide-enter-from {
-  opacity: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  overflow: hidden;
-}
-.bulk-slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  overflow: hidden;
-}
-.bulk-slide-enter-from .bulk-check-icon,
-.bulk-slide-leave-to .bulk-check-icon {
-  transform: scale(0.5);
-}
+.bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
 
 /* ==================== Pagination ==================== */
 .pagination-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 8px 20px;
   border-top: 1px solid #e5e7eb;
   background: #fafbfc;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   font-size: 0.8125rem;
   gap: 12px;
   flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: auto;
 }
 
 .pagination-info {
@@ -968,15 +912,15 @@ defineEmits<{
 }
 
 .page-nav {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid #e2e8f0;
   background: #fff;
   color: #64748b;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -993,17 +937,17 @@ defineEmits<{
 }
 
 .page-btn {
-  min-width: 32px;
-  height: 32px;
+  min-width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   background: transparent;
   color: #475569;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   font-weight: 500;
   font-family: inherit;
   transition: all 0.15s ease;

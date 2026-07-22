@@ -190,8 +190,6 @@ onMounted(() => {
           logo_alignment: 'center',
         })
       }
-
-      window.google.accounts.id.prompt()
     } else if (retries < maxRetries) {
       retries++
       retryTimeout = setTimeout(initGoogleSignIn, 300)
