@@ -1,24 +1,28 @@
 <template>
   <div class="px-4 py-4 dashboard-page">
-    <div v-if="showWelcome" class="welcome-card">
-      <div class="welcome-bg-shapes">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
-      </div>
-      <div class="welcome-content">
-        <div class="welcome-icon-box">
-          <Stars :size="22" />
+    <div class="welcome-collapse" :class="{ 'collapsed': !showWelcome }">
+      <Transition name="welcome">
+        <div v-if="showWelcome" class="welcome-card">
+          <div class="welcome-bg-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+          </div>
+          <div class="welcome-content">
+            <div class="welcome-icon-box">
+              <Stars :size="22" />
+            </div>
+            <div class="welcome-text">
+              <span class="welcome-badge">Dashboard</span>
+              <h3>Welcome back, Admin</h3>
+              <p>Your academic snapshot is ready — everything you need at a glance.</p>
+            </div>
+            <button class="welcome-close" @click="dismissWelcome" title="Dismiss">
+              <X :size="16" />
+            </button>
+          </div>
         </div>
-        <div class="welcome-text">
-          <span class="welcome-badge">Dashboard</span>
-          <h3>Welcome back, Admin</h3>
-          <p>Your academic snapshot is ready — everything you need at a glance.</p>
-        </div>
-        <button class="welcome-close" @click="dismissWelcome" title="Dismiss">
-          <X :size="16" />
-        </button>
-      </div>
+      </Transition>
     </div>
 
     <div
@@ -368,6 +372,7 @@ const dashboard = useDashboardStore()
 const lastUpdated = ref<string>('')
 const activeSection = ref<'overview' | 'performance' | 'activity'>('overview')
 const showWelcome = ref(localStorage.getItem('dashboard_welcome_dismissed') !== 'true')
+let welcomeTimer: ReturnType<typeof setTimeout> | null = null
 let lastUpdatedTimer: ReturnType<typeof setInterval> | null = null
 
 const tabs = [
@@ -385,6 +390,8 @@ const tabIndicatorStyle = computed(() => {
 })
 
 function dismissWelcome() {
+  if (welcomeTimer) clearTimeout(welcomeTimer)
+  welcomeTimer = null
   showWelcome.value = false
   localStorage.setItem('dashboard_welcome_dismissed', 'true')
 }
@@ -635,9 +642,20 @@ onMounted(() => {
   dashboard.initialize()
   updateLastUpdated()
   lastUpdatedTimer = setInterval(updateLastUpdated, 30000)
+
+  // Auto-dismiss the welcome card after 5 seconds
+  if (showWelcome.value) {
+    welcomeTimer = setTimeout(() => {
+      showWelcome.value = false
+    }, 5000)
+  }
 })
 
 onUnmounted(() => {
+  if (welcomeTimer) {
+    clearTimeout(welcomeTimer)
+    welcomeTimer = null
+  }
   if (lastUpdatedTimer) {
     clearInterval(lastUpdatedTimer)
     lastUpdatedTimer = null
@@ -661,7 +679,7 @@ function updateLastUpdated() {
   position: relative;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
   border-radius: 24px;
-  padding: 1.5rem 2rem;
+  padding: 3.5rem 2rem;
   margin-bottom: 1.5rem;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(15, 23, 42, 0.2);
@@ -762,6 +780,7 @@ function updateLastUpdated() {
   line-height: 1.4;
 }
 
+
 .welcome-close {
   width: 34px;
   height: 34px;
@@ -780,6 +799,40 @@ function updateLastUpdated() {
 .welcome-close:hover {
   background: rgba(255,255,255,0.1);
   color: #e2e8f0;
+}
+
+.welcome-collapse {
+  overflow: hidden;
+  transition: max-height 0.8s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.8s cubic-bezier(0.4, 0, 0.2, 1), padding 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 300px;
+  margin-bottom: 1.5rem;
+  padding: 0 2px;
+}
+
+.welcome-collapse.collapsed {
+  max-height: 0;
+  margin-bottom: 1rem;
+  padding: 0;
+}
+
+/* Welcome card enter transition */
+.welcome-enter-active {
+  transition: opacity 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.welcome-enter-from {
+  opacity: 0;
+  transform: translateY(-24px) scale(0.97);
+}
+
+/* Welcome card fade-out transition */
+.welcome-leave-active {
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.welcome-leave-to {
+  opacity: 0;
+  transform: translateY(-12px);
 }
 
 .error-banner {

@@ -18,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const loginMessage = ref<string | null>(null)
 
   // Trust the token; the 401 interceptor handles truly invalid tokens
   const isAuthenticated = computed(() => !!token.value)
@@ -96,15 +97,26 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function setLoginMessage(msg: string | null) {
+    loginMessage.value = msg
+  }
+
+  function clearLoginMessage() {
+    loginMessage.value = null
+  }
+
   return {
     token,
     user,
     loading,
     error,
+    loginMessage,
     isAuthenticated,
     init,
     login,
     loginWithGoogle,
     logout,
+    setLoginMessage,
+    clearLoginMessage,
   }
 })

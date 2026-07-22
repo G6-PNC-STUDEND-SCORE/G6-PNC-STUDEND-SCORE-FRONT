@@ -1,6 +1,6 @@
 <template>
   <div :class="['filter-bar', 'card', 'border-0', { 'dark-mode': isDark }]">
-    <div class="card-body py-2 px-3">
+    <div class="card-body px-3" style="padding-top: 1.5rem; padding-bottom: 1.5rem; min-height: 100px;">
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="filter-group">
           <label class="filter-label">Generation</label>
@@ -128,6 +128,7 @@ function onFilterChange(key: keyof DashboardFilters, value: string) {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: background 0.3s ease, border-color 0.3s ease;
 }
+
 
 .filter-bar.dark-mode {
   background: rgba(30, 41, 59, 0.95);
