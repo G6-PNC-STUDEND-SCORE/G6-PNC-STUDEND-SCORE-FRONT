@@ -1,6 +1,6 @@
 <template>
   <header :class="['app-header', { 'dark-mode': theme.isDark }]">
-    <div class="header-bg"></div>
+    <div class="header-bg" style="height: 64px;"></div>
 
     <div class="header-left">
       <button class="icon-btn mobile-menu-btn d-md-none" @click="toggleSidebar" title="Toggle menu">

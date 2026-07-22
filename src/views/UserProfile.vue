@@ -1,44 +1,46 @@
 <template>
-  <div class="admin-profile-page">
-    <header class="page-header">
-      <div>
-        <h1>My Profile</h1>
-        <p class="page-subtitle">Manage your institutional profile and security preferences.</p>
-      </div>
-    </header>
-
-    <!-- Loading State -->
+  <div class="page-container">
+    <!-- ── Loading State ── -->
     <div v-if="loading" class="loading-state">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p>Loading profile...</p>
+      <div class="spinner"></div>
+      <span>Loading profile…</span>
     </div>
 
-    <!-- Error State -->
+    <!-- ── Error State ── -->
     <div v-else-if="fetchError" class="error-state">
-      <AlertTriangle :size="32" style="color: #dc2626; margin-bottom: 12px;" />
+      <AlertTriangle :size="32" />
       <p>{{ fetchError }}</p>
       <button class="btn btn-primary" @click="loadProfile">Retry</button>
     </div>
 
     <template v-else>
-      <!-- Success Message -->
-      <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <CheckCircle :size="18" />
-        {{ successMessage }}
-        <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
+      <!-- ── Page Header ── -->
+      <div class="page-head">
+        <div class="page-head-left">
+          <div class="page-icon">
+            <User :size="22" />
+          </div>
+          <div>
+            <h1 class="page-title">My Profile</h1>
+            <p class="page-desc">Manage your institutional profile and security preferences.</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Error Message -->
-      <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <AlertTriangle :size="18" />
-        {{ saveError }}
-        <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
+      <!-- ── Toast Messages ── -->
+      <div v-if="successMessage" class="toast-bar toast-success">
+        <CheckCircle :size="16" />
+        <span>{{ successMessage }}</span>
+        <button class="toast-close" @click="successMessage = ''">&times;</button>
+      </div>
+      <div v-if="saveError" class="toast-bar toast-error">
+        <AlertTriangle :size="16" />
+        <span>{{ saveError }}</span>
+        <button class="toast-close" @click="saveError = ''">&times;</button>
       </div>
 
-      <!-- Profile Card -->
-      <div class="profile-card">
+      <!-- ── Profile Card ── -->
+      <div class="card profile-card">
         <div class="profile-body">
           <div class="avatar-wrap" @click="triggerUpload" role="button" tabindex="0" @keydown.enter.prevent="triggerUpload" :title="avatarUploading ? 'Uploading...' : 'Click to change photo'">
             <div class="avatar">
@@ -59,8 +61,6 @@
           <div class="profile-meta">
             <h2 class="profile-name">{{ form.name || 'User' }}</h2>
             <p class="profile-role">{{ form.role || 'N/A' }}</p>
-
-
           </div>
         </div>
 
@@ -84,14 +84,14 @@
         </div>
       </div>
 
-      <!-- Bottom Section -->
+      <!-- ── Content Grid ── -->
       <div class="content-grid">
         <!-- Personal Information -->
-        <section class="card">
-          <header class="card-header">
-            <h3>Personal Information</h3>
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">Personal Information</h3>
             <span class="chip">Primary Contact</span>
-          </header>
+          </div>
 
           <div class="form-grid">
             <div class="field">
@@ -120,8 +120,6 @@
             </div>
           </div>
 
-
-
           <div class="card-actions">
             <button class="btn btn-ghost" @click="resetForm" :disabled="saving">Reset</button>
             <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
@@ -130,10 +128,10 @@
               {{ saving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
-        </section>
+        </div>
 
         <!-- Change Password -->
-        <section class="card">
+        <div class="card">
           <h3 class="card-title">Change Password</h3>
 
           <div class="stacked-form">
@@ -179,7 +177,7 @@
           </div>
 
           <p v-if="passwordMessage" class="hint" :class="passwordStatus">{{ passwordMessage }}</p>
-        </section>
+        </div>
       </div>
     </template>
 
@@ -199,7 +197,7 @@ import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/api'
-import { AlertTriangle, CheckCircle, Camera, Check, EyeOff, Eye, Lock } from '@lucide/vue'
+import { AlertTriangle, CheckCircle, Camera, Check, EyeOff, Eye, Lock, User } from '@lucide/vue'
 
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
@@ -215,7 +213,7 @@ function invalidateProfileCache() {
 }
 
 const auth = useAuthStore()
-let objectUrl: string | null = null
+const objectUrl: string | null = null
 
 const loading = ref(!cachedProfile || isProfileCacheStale())
 const saving = ref(false)
@@ -275,8 +273,6 @@ const formattedDate = computed(() => {
   if (isNaN(d.getTime())) return ''
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 })
-
-
 
 function applyProfile(profile: UserProfile) {
   form.name = profile.name || ''
@@ -444,7 +440,7 @@ async function updatePassword() {
       new_password: password.new,
       new_password_confirmation: password.confirm,
     })
-    
+
     passwordMessage.value = response.data.message || 'Password changed successfully'
     passwordStatus.value = 'success'
     password.current = ''
@@ -479,59 +475,150 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-* {
-  box-sizing: border-box;
-  font-family: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+/* ── Page Container (matches SubjectPage, ClassPage, etc.) ── */
+.page-container {
+  padding: 28px 32px;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.admin-profile-page {
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  min-height: 100vh;
-  padding: 36px;
-}
-
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 32px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-}
-
-.page-subtitle {
-  color: #64748b;
-  margin: 6px 0 0;
-  font-size: 14px;
-}
-
+/* ── Loading & Error States ── */
 .loading-state,
 .error-state {
-  max-width: 1200px;
-  margin: 60px auto;
-  text-align: center;
-  padding: 40px;
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 40px;
   background: #fff;
   border-radius: 16px;
   border: 1px solid #e2e8f0;
+  text-align: center;
 }
 
 .error-state p {
   color: #64748b;
-  margin-bottom: 16px;
+  margin: 0;
 }
 
-.profile-card {
-  max-width: 1200px;
-  margin: 0 auto 28px;
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Page Header (matches SubjectPage) ── */
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.page-head-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #eef2ff, #dbeafe);
+  color: #2563eb;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.page-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+/* ── Toast Messages ── */
+.toast-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+  animation: toastSlide 0.25s ease-out;
+}
+
+@keyframes toastSlide {
+  0% { opacity: 0; transform: translateY(-8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.toast-success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.toast-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.toast-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 4px;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+/* ── Card (matches SubjectPage card) ── */
+.card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 28px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+}
+
+/* ── Profile Card ── */
+.profile-card {
+  margin-bottom: 28px;
 }
 
 .profile-body {
@@ -550,26 +637,26 @@ onUnmounted(() => {
 }
 
 .avatar-wrap:focus-visible .avatar {
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.4);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.4);
 }
 
 .avatar {
   width: 92px;
   height: 92px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #1565d8, #1e40af);
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 26px rgba(21, 101, 216, 0.25);
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.25);
   overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .avatar-wrap:hover .avatar {
   transform: scale(1.05);
-  box-shadow: 0 12px 30px rgba(21, 101, 216, 0.35);
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.35);
 }
 
 .avatar-img {
@@ -592,7 +679,7 @@ onUnmounted(() => {
 }
 
 .avatar-wrap:hover .avatar-hint {
-  color: #1565d8;
+  color: #2563eb;
 }
 
 .profile-meta {
@@ -643,23 +730,15 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* ── Content Grid ── */
 .content-grid {
-  max-width: 1200px;
-  margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 28px;
 }
 
-.card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.card-header {
+/* ── Card Header ── */
+.card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -673,9 +752,13 @@ onUnmounted(() => {
   margin: 0 0 24px;
 }
 
+.card-head .card-title {
+  margin-bottom: 0;
+}
+
 .chip {
   background: #eff6ff;
-  color: #1565d8;
+  color: #2563eb;
   border: 1px solid #dbeafe;
   padding: 6px 14px;
   border-radius: 8px;
@@ -683,6 +766,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* ── Forms ── */
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -695,6 +779,53 @@ onUnmounted(() => {
   gap: 20px;
 }
 
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+input,
+select {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  outline: none;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+input:hover,
+select:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+input:focus,
+select:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.disabled-input {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Password Input ── */
 .password-input {
   position: relative;
   display: flex;
@@ -727,7 +858,7 @@ onUnmounted(() => {
 }
 
 .password-toggle:hover {
-  color: #1565d8;
+  color: #2563eb;
   background: #eff6ff;
 }
 
@@ -736,60 +867,16 @@ onUnmounted(() => {
 }
 
 .password-toggle:focus-visible {
-  color: #1565d8;
+  color: #2563eb;
   background: #eff6ff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.2);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
 }
 
 .password-input input:focus ~ .password-toggle {
-  color: #1565d8;
+  color: #2563eb;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 8px;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-input,
-select {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  font-size: 14px;
-  outline: none;
-  background: #f8fafc;
-  color: #0f172a;
-  transition: all 0.15s ease;
-}
-
-input:hover,
-select:hover {
-  border-color: #cbd5e1;
-  background: #ffffff;
-}
-
-input:focus,
-select:focus {
-  border-color: #1565d8;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.1);
-}
-
-.disabled-input {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+/* ── Card Actions ── */
 .card-actions {
   display: flex;
   justify-content: flex-end;
@@ -797,9 +884,10 @@ select:focus {
   margin-top: 28px;
 }
 
+/* ── Buttons (matches SubjectPage) ── */
 .btn {
   border: none;
-  padding: 12px 22px;
+  padding: 10px 20px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
@@ -807,6 +895,8 @@ select:focus {
   transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  font-family: inherit;
 }
 
 .btn:disabled {
@@ -826,17 +916,18 @@ select:focus {
 }
 
 .btn-primary {
-  background: #1565d8;
+  background: #2563eb;
   color: #ffffff;
-  box-shadow: 0 6px 16px rgba(21, 101, 216, 0.25);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #104dae;
+  background: #1d4ed8;
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(21, 101, 216, 0.3);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
 }
 
+/* ── Hint Text ── */
 .hint {
   margin-top: 14px;
   font-size: 12px;
@@ -852,6 +943,7 @@ select:focus {
   color: #dc2626;
 }
 
+/* ── Screen Reader Only ── */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -864,15 +956,9 @@ select:focus {
   border-width: 0;
 }
 
-.alert {
-  max-width: 1200px;
-  margin: 0 auto 16px;
-  border-radius: 12px;
-  font-size: 14px;
-}
-
+/* ── Responsive ── */
 @media (max-width: 900px) {
-  .admin-profile-page {
+  .page-container {
     padding: 20px;
   }
 
@@ -886,6 +972,5 @@ select:focus {
     flex-direction: column;
     text-align: center;
   }
-
 }
 </style>
