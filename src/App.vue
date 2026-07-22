@@ -48,8 +48,8 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow-y: auto;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
