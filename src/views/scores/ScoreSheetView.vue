@@ -24,7 +24,6 @@
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
           <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading"><i :class="gsLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span></button>
-          <button v-if="gsSheetId" class="tb-btn" @click="syncFromGoogleSheets" :disabled="gsSyncLoading" title="Sync scores from Google Sheets back to this page"><i :class="gsSyncLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-arrow-down-up'"></i><span>{{ gsSyncLoading ? 'Syncing...' : 'Sync from Sheets' }}</span></button>
           <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
           <div class="export-dropdown" @click.stop>
             <button class="tb-btn" @click="showExportMenu = !showExportMenu" title="Export" ref="exportBtnRef"><i class="bi bi-download"></i> <span>Export</span> <i class="bi bi-chevron-down" style="font-size:0.6rem;margin-left:2px"></i></button>
@@ -510,7 +509,6 @@ const showWeights = ref(false)
 const showImport = ref(false)
 const gsLoading = ref(false)
 const gsSheetId = ref<string | null>(null)
-const gsSyncLoading = ref(false)
 const gsLastSynced = ref<string | null>(null)
 const gsReconnectNeeded = ref(false)
 let gsAutoSyncTimer: ReturnType<typeof setInterval> | null = null
@@ -979,6 +977,12 @@ function getTotalCellClass(row: SpreadsheetRow): Record<string, boolean> {
 
 // ─── Cell Selection (single click = select, double click = edit) ────
 function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
+  // Reclaim keyboard focus on every cell click, not just after finishing an edit — focus can
+  // land elsewhere from clicking a toolbar button, closing a modal, etc., and a plain <td>
+  // (name/ID cells that are only selected, not edited) doesn't grab focus on its own. Without
+  // this, arrow keys/Delete/Ctrl+C and the rest silently stop responding until something else
+  // happens to refocus .sheet-wrapper, which is exactly the "works sometimes" symptom.
+  sheetContainer.value?.focus()
   if (editingRow.value !== null) {
     saveEdit()
   }
@@ -1251,6 +1255,15 @@ function cancelEdit() {
   editingRow.value = null
   editingCol.value = null
   editValue.value = ''
+  // The <input class="cell-editor"> that just had focus is about to be removed from the DOM
+  // (it only exists while editingRow/editingCol are set) — when a focused element is removed,
+  // the browser drops focus to <body>, and every keyboard shortcut bound to .sheet-wrapper's
+  // @keydown (arrows, Ctrl+C/V/X/Z/Y, Delete, Home/End, ...) silently stops firing from then
+  // on, since keydown events on <body> never reach that listener. This is why shortcuts felt
+  // like they worked "sometimes" — they worked until the very first edit finished, then quietly
+  // died until something else happened to refocus the grid. Wait a tick for the input to
+  // actually unmount, then reclaim focus so the grid keeps responding to the keyboard.
+  nextTick(() => sheetContainer.value?.focus())
 }
 
 // ─── Fill Handle ─────────────────────────────────────────────────────
@@ -1575,6 +1588,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
           promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
         }
       }
+      // Reflect the clear immediately (data is a shallowRef — mutating nested .details
+      // doesn't trigger a re-render on its own) instead of waiting on the network
+      // round-trip below, which is what made Delete feel laggy.
+      triggerRef(data)
       if (promises.length) {
         Promise.all(promises)
           .then(() => {
@@ -1595,13 +1612,14 @@ function onGlobalKeydown(event: KeyboardEvent) {
       const oldValue = getCellMark(row, colId)
       if (oldValue === null) return
       actualRow.details[colId] = null
+      triggerRef(data) // Immediate feedback — see note on the range branch above.
       undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
       redoStack.value = []
       showSaveStatus('saving')
       const actualDetailId = getActualDetailId(actualRow, colId)
       updateCellMark(subjectId.value, termId.value, actualDetailId, null)
         .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow) })
-        .catch(() => { showSaveStatus('failed'); actualRow.details[colId] = oldValue })
+        .catch(() => { showSaveStatus('failed'); actualRow.details[colId] = oldValue; triggerRef(data) })
     }
     return
   }
@@ -1851,73 +1869,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
       if (!shiftKey) isRangeSelecting.value = false
       scrollToCell(selectedRowIndex.value, currentColIdx)
       break
-
-    case 'Delete':
-    case 'Backspace':
-      if (selectedCol.value !== null && selectedCol.value > 0 && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault()
-        // If range selected, clear all cells in range
-        if (isRangeSelecting.value) {
-          clearRangeSelection()
-        } else {
-          clearSingleCell()
-        }
-      }
-      break
   }
-}
-
-function clearSingleCell() {
-  const row = filteredRows.value[selectedRowIndex.value]
-  if (!row) return
-  const colId = selectedCol.value!
-  const oldValue = getCellMark(row, colId)
-  if (oldValue === null) return
-  const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-  if (actualRow) { actualRow.details[colId] = null; triggerRef(data) }
-  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
-  redoStack.value = []
-  showSaveStatus('saving')
-  const actualDetailId = actualRow ? getActualDetailId(actualRow, colId) : colId
-  updateCellMark(subjectId.value, termId.value, actualDetailId, null)
-    .then(() => { showSaveStatus('saved'); if (actualRow) recalculateRowTotal(actualRow) })
-    .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[colId] = oldValue })
-}
-
-function clearRangeSelection() {
-  if (selectionStartRow.value === null || selectionStartCol.value === null || selectedCol.value === null) return
-  const bounds = getSelectionBounds()
-  if (!bounds) return
-  const columnsInSelection = getSelectableColumnIds()
-  const promises: Promise<void>[] = []
-  const clearedRows: SpreadsheetRow[] = []
-  for (let r = bounds.r1; r <= bounds.r2; r++) {
-    for (let c = bounds.c1; c <= bounds.c2; c++) {
-      const colId = columnsInSelection[c]
-      if (colId === undefined || colId <= 0) continue
-      const row = filteredRows.value[r]
-      if (!row) continue
-      const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
-      if (!actualRow) continue
-      const oldValue = getCellMark(row, colId)
-      if (oldValue === null) continue
-      actualRow.details[colId] = null
-      undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
-      if (!clearedRows.includes(actualRow)) clearedRows.push(actualRow)
-      const actualDetailId = getActualDetailId(actualRow, colId)
-      promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
-    }
-  }
-  redoStack.value = []
-  triggerRef(data)
-  clearedRows.forEach(r => recalculateRowTotal(r))
-  if (promises.length) {
-    showSaveStatus('saving')
-    Promise.all(promises)
-      .then(() => showSaveStatus('saved'))
-      .catch(() => showSaveStatus('failed'))
-  }
-  isRangeSelecting.value = false
 }
 
 function onEditKeydown(event: KeyboardEvent) {
@@ -1943,19 +1895,6 @@ function onEditKeydown(event: KeyboardEvent) {
     }
   }
 
-  // Escape key: cancel editing without saving
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    cancelEdit()
-    return
-  }
-
-  // Enter/Tab: save and move to next cell
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    saveEdit()
-    return
-  }
 
   // Let the native text field / datalist handle vertical navigation for
   // the frozen Student Name / Student ID editors so long suggestion lists
@@ -2490,7 +2429,8 @@ async function createAndOpenSheet(token: string, popup: Window | null) {
     localStorage.setItem(storageKey, JSON.stringify(storageData))
     gsSheetId.value = result.spreadsheet_id
     navigatePopupOrOpen(popup, result.url)
-    showSaveStatus("saved")
+    // Sheet was just created with the current data — nothing new to push back yet.
+    showSaveStatus("saved", { skipSheetPush: true })
     // Data was just exported to Google Sheets — nothing to refresh in the system
     gsLastSynced.value = new Date().toLocaleTimeString()
     startAutoSync() // Begin polling immediately instead of waiting for the next page load.
@@ -2545,9 +2485,10 @@ async function syncFromGoogleSheets() {
       await refreshData()
       gsLastSynced.value = new Date().toLocaleTimeString()
       gsReconnectNeeded.value = false
-      showSaveStatus("saved")
+      // This "saved" came FROM pulling the sheet's own data — pushing back here would just
+      // re-write the same data we just read, and risks a pointless pull->push->pull loop.
+      showSaveStatus("saved", { skipSheetPush: true })
     } catch (err: any) {
-      gsSyncLoading.value = false
       const status = err?.response?.status
       if (status === 401 || status === 403) {
         // Token expired — try backend refresh
@@ -2566,7 +2507,7 @@ async function syncFromGoogleSheets() {
           await refreshData()
           gsLastSynced.value = new Date().toLocaleTimeString()
           gsReconnectNeeded.value = false
-          showSaveStatus("saved")
+          showSaveStatus("saved", { skipSheetPush: true }) // Pull result — see note above.
           return
         } catch (retryErr: any) {
           gsReconnectNeeded.value = true
@@ -2575,9 +2516,9 @@ async function syncFromGoogleSheets() {
             // Fresh token, still denied -> this isn't an expired-token problem, the
             // connected Google account simply has no access to this specific sheet
             // (usually created under a different account). Retrying it every page
-            // load forever won't fix that, so forget it: hide "Sync from Sheets" and
-            // stop auto-sync from ever touching this dead reference again. The user
-            // creates a new sheet (or reconnects with the right account) to resume.
+            // load forever won't fix that, so forget it: stop auto-sync from ever
+            // touching this dead reference again. The user creates a new sheet (or
+            // reconnects with the right account) to resume.
             forgetStoredSheetId()
             console.warn("This Google account doesn't have access to the linked spreadsheet. Click 'Google Sheets' to create a new one, or reconnect with the account that owns it.")
           } else {
@@ -2592,7 +2533,6 @@ async function syncFromGoogleSheets() {
     }
   } finally {
     gsIsSyncing = false
-    gsSyncLoading.value = false
   }
 }
 
@@ -2963,9 +2903,59 @@ function exportFormat(format: 'xlsx' | 'pdf') {
 }
 
 // ─── Status ──────────────────────────────────────────────────────────
-function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
+// showSaveStatus('saved') fires after every successful local edit across this whole page
+// (mark changes, student info, columns, rows, weights, paste/cut, undo/redo, ...) — which
+// makes it the one place that can trigger "push this edit to Google Sheets" for all of them
+// at once, instead of wiring up a push call at every individual edit handler. skipSheetPush
+// opts out for the few call sites where "saved" actually means "just pulled the sheet's own
+// data in", where pushing back would be pointless (or risk a pull->push->pull loop).
+function showSaveStatus(status: 'saving' | 'saved' | 'failed', opts: { skipSheetPush?: boolean } = {}) {
   saveStatus.value = status
   if (status !== 'saving') setTimeout(() => { if (saveStatus.value === status) saveStatus.value = 'idle' }, 3000)
+  if (status === 'saved' && !opts.skipSheetPush) scheduleSheetPush()
+}
+
+// ─── Push local edits to Google Sheets (debounced) ──────────────────
+// Real-time-ish app -> Sheets sync: coalesce a burst of rapid edits (typing several scores,
+// pasting a block of cells, etc.) into a single push a couple seconds after the last one,
+// rather than re-pushing the whole sheet on every keystroke.
+let sheetPushTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSheetPush() {
+  if (!gsSheetId.value) return // No linked sheet for this subject/term — nothing to push to.
+  if (sheetPushTimer) clearTimeout(sheetPushTimer)
+  sheetPushTimer = setTimeout(() => { pushCurrentDataToSheet() }, 2500)
+}
+
+function cancelScheduledSheetPush() {
+  if (sheetPushTimer) {
+    clearTimeout(sheetPushTimer)
+    sheetPushTimer = null
+  }
+}
+
+async function pushCurrentDataToSheet() {
+  sheetPushTimer = null
+  if (!gsSheetId.value) return
+
+  let token = localStorage.getItem("google_access_token")
+  if (!token) {
+    try {
+      const refreshed = await refreshGoogleToken()
+      localStorage.setItem("google_access_token", refreshed.access_token)
+      token = refreshed.access_token
+    } catch {
+      // No usable token — stay quiet here. The periodic pull already surfaces "Reconnect
+      // Google" through its own, more visible path when the connection is genuinely dead.
+      return
+    }
+  }
+
+  try {
+    await pushToGoogleSheet(subjectId.value, termId.value, gsSheetId.value, token)
+  } catch (err: any) {
+    console.warn("Could not push edit to Google Sheet:", err?.response?.data?.message || err?.message)
+  }
 }
 
 function animateImportProgress(from: number, to: number, duration: number, statusText: string): Promise<void> {
@@ -3016,6 +3006,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopAutoSync()
+  cancelScheduledSheetPush()
   gsSheetId.value = null
 })
 
@@ -3027,6 +3018,7 @@ watch([subjectId, termId], () => {
   // subject/term is no longer relevant, so drop it and reload whatever sheet
   // (if any) is stored for the new subject/term instead of continuing to poll the old one.
   stopAutoSync()
+  cancelScheduledSheetPush()
   gsSheetId.value = null
   gsReconnectNeeded.value = false
   loadStoredSheetId()

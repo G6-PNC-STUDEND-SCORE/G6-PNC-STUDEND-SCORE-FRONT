@@ -685,8 +685,23 @@ function debouncedSave(sid: number) {
       try {
         await subjectTermService.syncSubject(sid, ids)
         delete pendingChanges[sid]
-      } catch {
-        showToast('Auto-save failed. Use Save Changes button.', 'error')
+      } catch (err: any) {
+        delete pendingChanges[sid]
+        if (err?.response?.status === 404) {
+          // The subject itself no longer exists server-side (e.g. a stale cached entry for
+          // something deleted elsewhere) — the toggle the user just clicked was never real,
+          // so drop it from view instead of leaving a phantom row with a dead-end error.
+          subjects.value = subjects.value.filter(s => s.id !== sid)
+          cacheService.remove(CACHE_KEY)
+          showToast('This subject no longer exists — it has been removed from the list.', 'error')
+          return
+        }
+        // Any other failure: the toggle never actually saved, so don't leave the checkbox
+        // showing a state that isn't true server-side. Refetching reverts the optimistic
+        // change back to whatever's actually saved. There's no separate "Save Changes"
+        // button in this UI, so point at the one thing that actually works: toggling again.
+        await loadTermData()
+        showToast('Auto-save failed. Please try toggling the term again.', 'error')
       }
     }, 800)
   )
@@ -857,12 +872,17 @@ async function fetchClasses() {
 onMounted(async () => {
   const cached = cacheService.get<{ subjects: SubjectWithTerms[]; terms: TermInfo[] }>(CACHE_KEY)
   if (cached) {
+    // Paint instantly from cache, but this is stale-while-revalidate, not stale-forever —
+    // loadTermData() below always still runs to refresh it. Skipping that refresh on a cache
+    // hit (as this used to do) meant a subject deleted anywhere else stayed visible here, with
+    // a real, no-longer-existent ID, for up to the full 24h TTL — any edit on it (e.g. toggling
+    // a term) then 404'd against a subject that no longer exists.
     applyTermData(cached)
   } else {
     loading.value = true
   }
   await Promise.all([
-    cached ? Promise.resolve() : loadTermData(),
+    loadTermData(),
     fetchTeachers(),
     fetchClasses(),
   ])
