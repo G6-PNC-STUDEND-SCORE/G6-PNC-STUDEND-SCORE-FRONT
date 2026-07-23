@@ -13,9 +13,7 @@
             placeholder="Search by name..."
           />
         </div>
-      </div>
 
-      <div class="toolbar-right">
         <div class="filter-group">
           <label class="filter-label">
             <VenusAndMars :size="16" />
@@ -31,7 +29,9 @@
             </select>
           </label>
         </div>
+      </div>
 
+      <div class="toolbar-right">
         <button
           class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
           style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
@@ -83,9 +83,11 @@
                 aria-label="Select all"
               />
             </th>
+            <th class="col-index">#</th>
             <th>Name</th>
             <th>Gender</th>
             <th>Class</th>
+            <th>Generation</th>
             <th>Status</th>
             <th class="col-actions">Actions</th>
           </tr>
@@ -104,6 +106,9 @@
                 @change="toggleRow(student.id)"
                 :aria-label="`Select ${student.user?.name || student.id}`"
               />
+            </td>
+            <td class="col-index">
+              <span class="id-cell">{{ student.id }}</span>
             </td>
             <td>
               <div class="student-cell">
@@ -136,6 +141,9 @@
                 Not assigned
               </span>
             </td>
+            <td>
+              <span class="meta-cell">{{ student.generation?.name || '—' }}</span>
+            </td>
             <td class="py-3">
               <span
                 class="status-badge"
@@ -145,35 +153,19 @@
               </span>
             </td>
             <td class="col-actions" @click.stop>
-              <div class="action-dropdown">
-                <button
-                  class="action-trigger"
-                  :title="`Actions for ${student.user?.name || student.id}`"
-                  @click="toggleDropdown(student.id)"
-                >
-                  <MoreVertical :size="18" />
+              <div class="td-actions">
+                <button class="act-btn" title="View Details" @click="$emit('view', student)">
+                  <Eye :size="15" />
                 </button>
-                <Transition name="dropdown">
-                  <div v-if="openDropdownId === student.id" class="action-menu">
-                    <button class="action-item view" @click="$emit('view', student); openDropdownId = null">
-                      <Eye :size="16" />
-                      <span>View Details</span>
-                    </button>
-                    <button class="action-item edit" @click="$emit('edit', student); openDropdownId = null">
-                      <Pencil :size="16" />
-                      <span>Edit</span>
-                    </button>
-                    <button class="action-item assign" @click="$emit('assign', student); openDropdownId = null">
-                      <ArrowRightFromLine :size="16" />
-                      <span>Assign Class</span>
-                    </button>
-                    <div class="dropdown-divider"></div>
-                    <button class="action-item delete" @click="$emit('delete', student); openDropdownId = null">
-                      <Trash2 :size="16" />
-                      <span>Delete</span>
-                    </button>
-                  </div>
-                </Transition>
+                <button class="act-btn" title="Edit" @click="$emit('edit', student)">
+                  <Pencil :size="15" />
+                </button>
+                <button class="act-btn" title="Assign Class" @click="$emit('assign', student)">
+                  <ArrowRightFromLine :size="15" />
+                </button>
+                <button class="act-btn act-danger" title="Delete" @click="$emit('delete', student)">
+                  <Trash2 :size="15" />
+                </button>
               </div>
             </td>
           </tr>
@@ -238,7 +230,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import type { Student } from '@/services/studentService'
 import {
   Search,
@@ -246,7 +238,6 @@ import {
   Inbox,
   Building2,
   Minus,
-  MoreVertical,
   Eye,
   Pencil,
   ArrowRightFromLine,
@@ -256,7 +247,7 @@ import {
   Plus,
 } from '@lucide/vue'
 
-const openDropdownId = ref<number | null>(null)
+
 const currentPage = ref(1)
 const pageSize = ref(10)
 const pageSizeOptions = [10, 25, 50]
@@ -330,19 +321,6 @@ const visiblePages = computed(() => {
   return pages
 })
 
-function toggleDropdown(id: number) {
-  openDropdownId.value = openDropdownId.value === id ? null : id
-}
-
-function handleClickOutside() {
-  openDropdownId.value = null
-}
-
-window.addEventListener('click', handleClickOutside)
-onUnmounted(() => {
-  window.removeEventListener('click', handleClickOutside)
-})
-
 defineEmits<{
   'update:searchQuery': [value: string]
   'update:genderFilter': [value: string]
@@ -391,6 +369,7 @@ defineEmits<{
 .toolbar-left {
   display: flex;
   align-items: center;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -529,6 +508,26 @@ defineEmits<{
   vertical-align: middle;
 }
 
+.col-index {
+  width: 60px;
+  text-align: center;
+  padding: 10px 8px !important;
+}
+
+.student-table thead th.col-index,
+.student-table tbody td.col-index {
+  text-align: center;
+  padding: 10px 8px !important;
+  vertical-align: middle;
+}
+
+.id-cell {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
 .row-check {
   width: 16px;
   height: 16px;
@@ -539,10 +538,27 @@ defineEmits<{
 }
 
 .col-actions {
-  text-align: right;
-  padding-right: 20px !important;
-  width: 80px;
+  text-align: center;
+  width: 130px;
 }
+
+.td-actions {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.act-btn {
+  background: none;
+  border: none;
+  padding: 5px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #94a3b8;
+  transition: all 0.15s;
+}
+
+.act-btn:hover { background: #f1f5f9; color: #3b82f6; }
+.act-danger:hover { background: #fef2f2; color: #ef4444; }
 
 .student-table tbody td {
   padding: 10px 14px;
@@ -586,31 +602,31 @@ defineEmits<{
 .student-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #fff;
   background: #2563eb;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .avatar-img {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .photo-img {
@@ -623,7 +639,7 @@ defineEmits<{
 .student-name {
   font-weight: 600;
   color: #0f172a;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .class-cell {
@@ -671,116 +687,8 @@ defineEmits<{
 .badge-active { background: #dbeafe; color: #1d4ed8; }
 .badge-inactive { background: #f1f5f9; color: #64748b; }
 
-/* ==================== Action Dropdown ==================== */
-.action-dropdown {
-  position: relative;
-  display: inline-flex;
-}
+/* ==================== td-actions (icon buttons) ==================== */
 
-.action-trigger {
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: #f3f4f6;
-  color: #6b7280;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.action-trigger:hover {
-  background: #eef2ff;
-  color: #2563eb;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
-}
-
-.action-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  min-width: 190px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
-  padding: 6px;
-  z-index: 100;
-  animation: dropIn 0.18s ease-out;
-  transform-origin: top right;
-}
-
-@keyframes dropIn {
-  from {
-    opacity: 0;
-    transform: scale(0.92) translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.dropdown-enter-active {
-  transition: all 0.18s ease-out;
-}
-.dropdown-leave-active {
-  transition: all 0.12s ease-in;
-}
-.dropdown-enter-from {
-  opacity: 0;
-  transform: scale(0.92) translateY(-6px);
-}
-.dropdown-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(-3px);
-}
-
-.action-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  font-family: "Inter", "Noto Sans Khmer", sans-serif;
-  transition: all 0.15s ease;
-  text-align: left;
-  color: #374151;
-}
-
-.action-item.view:hover {
-  background: #f0f5ff;
-  color: #2563eb;
-}
-
-.action-item.edit:hover {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.action-item.assign:hover {
-  background: #f0f5ff;
-  color: #2563eb;
-}
-
-.action-item.delete:hover {
-  background: #fef2f2;
-  color: #dc2626;
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 4px 8px;
-}
 
 /* ==================== Bulk Action Bar ==================== */
 .bulk-bar {
@@ -993,14 +901,8 @@ defineEmits<{
 }
 
 @media (max-width: 768px) {
-  .action-trigger {
-    width: 30px;
-    height: 30px;
-  }
-
-  .action-menu {
-    right: auto;
-    left: 0;
+  .col-actions {
+    width: 100px;
   }
 }
 </style>

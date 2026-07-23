@@ -1203,6 +1203,42 @@ function saveEdit() {
     if (isNaN(newValue)) { cancelEdit(); return }
     if (newValue < 0 || newValue > 100) { cancelEdit(); return }
   }
+
+  // Range fill: if a multi-cell range is selected (drag or shift-click) and it includes the
+  // cell being edited, typing+committing a value applies it to every cell in the range —
+  // matching the same "fill all selected cells" behavior already applied to range paste.
+  if (isRangeSelecting.value && newValue !== null) {
+    const bounds = getSelectionBounds()
+    if (
+      bounds &&
+      (bounds.r1 !== bounds.r2 || bounds.c1 !== bounds.c2) &&
+      editingRow.value >= bounds.r1 && editingRow.value <= bounds.r2
+    ) {
+      const columnsInSelection = getSelectableColumnIds()
+      const colOrder = columnsInSelection.indexOf(detailId)
+      if (colOrder >= bounds.c1 && colOrder <= bounds.c2) {
+        const value = editValue.value.trim()
+        cancelEdit()
+        showSaveStatus('saving')
+        const promises: Promise<void>[] = []
+        for (let r = bounds.r1; r <= bounds.r2; r++) {
+          const targetRow = filteredRows.value[r]
+          if (!targetRow) continue
+          for (let c = bounds.c1; c <= bounds.c2; c++) {
+            const targetColId = columnsInSelection[c]
+            if (targetColId === undefined) continue
+            const p = pasteValueToCell(targetRow, targetColId, value)
+            if (p) promises.push(p)
+          }
+        }
+        Promise.all(promises)
+          .then(() => showSaveStatus('saved'))
+          .catch(() => showSaveStatus('failed'))
+        return
+      }
+    }
+  }
+
   if (oldValue === newValue) { cancelEdit(); return }
 
   const actualRow = rows.value.find(r => r.enrollment_id === filteredRow.enrollment_id)
@@ -1462,6 +1498,7 @@ function commitFillApply() {
     }
 
     const values = computeAutoFillValues(sourcePattern, targetRows.length, direction)
+    const fillPromises: Promise<void>[] = []
     targetRows.forEach((r, i) => {
       const targetRow = rows.value.find(tr => tr.enrollment_id === filteredRows.value[r]?.enrollment_id)
       if (!targetRow) return
@@ -1469,14 +1506,19 @@ function commitFillApply() {
       const nextValue = values[i] ?? null
       targetRow.details[srcColId] = nextValue
       recalculateRowTotal(targetRow)
+      triggerRef(data)
       const actualDetailId = getActualDetailId(targetRow, srcColId)
-      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
+      fillPromises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
         // Save rejected (e.g. invalid value) — revert so the grid doesn't show an unsaved value as if it stuck.
         targetRow.details[srcColId] = oldValue
         recalculateRowTotal(targetRow)
+        triggerRef(data)
         showSaveStatus('failed')
-      })
+        throw new Error('Failed to save fill value')
+      }))
     })
+    showSaveStatus('saving')
+    Promise.all(fillPromises).then(() => showSaveStatus('saved')).catch(() => {})
   } else {
     // Horizontal fill: continue the pattern across columns.
     const cols = columns.value
@@ -1508,19 +1550,25 @@ function commitFillApply() {
       return
     }
 
+    const fillPromises: Promise<void>[] = []
     targetColIndices.forEach((ci, i) => {
       const oldValue = targetRow.details[cols[ci].id] ?? null
       const nextValue = values[i] ?? null
       targetRow.details[cols[ci].id] = nextValue
       recalculateRowTotal(targetRow)
+      triggerRef(data)
       const actualDetailId = getActualDetailId(targetRow, cols[ci].id)
-      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
+      fillPromises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
         // Save rejected (e.g. invalid value) — revert so the grid doesn't show an unsaved value as if it stuck.
         targetRow.details[cols[ci].id] = oldValue
         recalculateRowTotal(targetRow)
+        triggerRef(data)
         showSaveStatus('failed')
-      })
+        throw new Error('Failed to save fill value')
+      }))
     })
+    showSaveStatus('saving')
+    Promise.all(fillPromises).then(() => showSaveStatus('saved')).catch(() => {})
   }
 
   fillPreviewSet.value = new Set()
@@ -2058,6 +2106,36 @@ async function onPaste(event: ClipboardEvent) {
     return
   }
 
+  // Single value paste: if a multi-cell range is selected (e.g. via drag/fill-handle-style
+  // range selection or Shift+Click), apply the value to every cell in the range — matching
+  // Excel's fill behavior — instead of only the originally-clicked/anchor cell.
+  if (isRangeSelecting.value) {
+    const bounds = getSelectionBounds()
+    if (bounds && (bounds.r1 !== bounds.r2 || bounds.c1 !== bounds.c2)) {
+      const columnsInSelection = getSelectableColumnIds()
+      const value = text.trim()
+      const promises: Promise<void>[] = []
+      showSaveStatus('saving')
+      for (let r = bounds.r1; r <= bounds.r2; r++) {
+        const targetRow = filteredRows.value[r]
+        if (!targetRow) continue
+        for (let c = bounds.c1; c <= bounds.c2; c++) {
+          const targetColId = columnsInSelection[c]
+          if (targetColId === undefined) continue
+          const p = pasteValueToCell(targetRow, targetColId, value)
+          if (p) promises.push(p)
+        }
+      }
+      try {
+        await Promise.all(promises)
+        showSaveStatus('saved')
+      } catch {
+        showSaveStatus('failed')
+      }
+      return
+    }
+  }
+
   // Single cell paste
   const row = filteredRows.value[selectedRowIndex.value]
   if (!row) return
@@ -2395,7 +2473,13 @@ function navigatePopupOrOpen(popup: Window | null, url: string) {
 // Every step here is best-effort and non-blocking — the sheet still opens even if a step
 // fails (e.g. this account isn't the owner and can't push/share on it).
 async function openExistingSheet(sheetId: string, popup: Window | null) {
+  // Navigate the popup as soon as we know the sheet's URL — the spreadsheet already exists
+  // at this URL regardless of whether the pull/push/share sync steps below have run yet, so
+  // there's no reason to make the user stare at a loading tab while those finish.
   try {
+    navigatePopupOrOpen(popup, `https://docs.google.com/spreadsheets/d/${sheetId}/edit`)
+    gsLoading.value = false
+
     let token = localStorage.getItem("google_access_token")
     if (!token) {
       try {
@@ -2404,19 +2488,28 @@ async function openExistingSheet(sheetId: string, popup: Window | null) {
         token = refreshed.access_token
       } catch {
         // No usable token at all — still open; the steps below are skipped.
+        return
       }
     }
     if (token) {
-      const pullResult = await importFromGoogleSheets(subjectId.value, termId.value, sheetId, token).catch(() => null)
-      if (pullResult?.synced) await refreshData()
-      await pushToGoogleSheet(subjectId.value, termId.value, sheetId, token).catch((err) => {
-        console.warn("Could not push latest data to Google Sheet:", err?.response?.data?.message || err?.message)
-      })
-      await ensureGoogleSheetShared(sheetId, token).catch(() => {})
+      // Fire-and-forget: these are best-effort background sync steps and must not delay or
+      // block the popup navigation above. Errors are already swallowed via .catch().
+      //
+      // Note: we deliberately do NOT pull (importFromGoogleSheets) here. At the moment the
+      // user opens the sheet from this page, the local grid is the source of truth — pulling
+      // now would race against the user continuing to edit locally and against the push below,
+      // and a background refreshData() could silently revert an in-flight local edit with stale
+      // sheet data. Periodic auto-sync (startAutoSync) already handles pulling changes made
+      // directly in the Google Sheet on its own schedule.
+      ;(async () => {
+        await pushToGoogleSheet(subjectId.value, termId.value, sheetId, token).catch((err) => {
+          console.warn("Could not push latest data to Google Sheet:", err?.response?.data?.message || err?.message)
+        })
+        await ensureGoogleSheetShared(sheetId, token).catch(() => {})
+      })()
     }
-  } finally {
-    navigatePopupOrOpen(popup, `https://docs.google.com/spreadsheets/d/${sheetId}/edit`)
-    gsLoading.value = false
+  } catch {
+    // Navigation itself is best-effort; nothing else to do here.
   }
 }
 
@@ -2458,6 +2551,14 @@ async function syncFromGoogleSheets() {
   if (gsIsSyncing) return // Prevent concurrent syncs (e.g. visibility + focus firing together)
   gsIsSyncing = true
   try {
+    // A local edit is still waiting to be pushed (debounced). Flush it first so this pull reads
+    // back our own fresh data instead of the sheet's stale pre-edit data, which would otherwise
+    // overwrite the local edit and then get pushed back out, silently reverting the user's change.
+    if (sheetPushTimer) {
+      clearTimeout(sheetPushTimer)
+      sheetPushTimer = null
+      await pushCurrentDataToSheet()
+    }
     let token = localStorage.getItem("google_access_token")
     
     // If no stored token, try backend refresh first
