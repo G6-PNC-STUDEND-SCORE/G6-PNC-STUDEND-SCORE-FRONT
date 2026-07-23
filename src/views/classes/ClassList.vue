@@ -25,7 +25,7 @@
 
     <!-- Table -->
     <div class="table-wrapper">
-      <table class="class-table">
+      <table :class="['class-table', { 'dark-mode': theme.isDark }]">
         <thead>
           <tr>
             <th>Class Name</th>
@@ -78,6 +78,10 @@
 </template>
 
 <script setup lang="ts">
+import { useThemeStore } from '@/stores/theme'
+
+const theme = useThemeStore()
+
 defineProps<{
   classes: Array<{
     id: number
@@ -291,5 +295,76 @@ defineEmits<{
 .actions-col {
   width: 120px;
   text-align: right;
+}
+
+/* ── Dark Mode ── */
+.dark-mode .class-table thead {
+  background: #0f172a;
+}
+.dark-mode .class-table th {
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+.dark-mode .class-table td {
+  color: #cbd5e1;
+  border-bottom-color: #1e293b;
+}
+.dark-mode .class-table tbody tr:hover {
+  background: rgba(59,130,246,0.05);
+}
+.dark-mode .class-table .text-dark {
+  color: #f1f5f9 !important;
+}
+.dark-mode .search-input {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+.dark-mode .search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.dark-mode .status-select {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+.dark-mode .status-select:focus {
+  border-color: #3b82f6;
+}
+.dark-mode .table-wrapper {
+  border-color: #334155;
+}
+.dark-mode .badge-active {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+}
+.dark-mode .badge-inactive {
+  background: #334155;
+  color: #64748b;
+}
+.dark-mode .action-btn.view {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .action-btn.view:hover {
+  background: #1e40af;
+}
+.dark-mode .action-btn.edit {
+  background: rgba(217, 119, 6, 0.15);
+  color: #fbbf24;
+}
+.dark-mode .action-btn.edit:hover {
+  background: rgba(217, 119, 6, 0.25);
+}
+.dark-mode .action-btn.delete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+.dark-mode .action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+.dark-mode .empty-state {
+  color: #64748b;
 }
 </style>

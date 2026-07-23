@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': theme.isDark }]">
     <!-- ── Toast ── -->
     <Transition name="toast">
       <div v-if="toast.show" class="toast-bar" :class="toast.type">
@@ -420,6 +420,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed, watch } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useSubjectStore } from '@/stores/subject'
 import type { Subject } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
@@ -482,6 +483,7 @@ const visiblePages = computed(() => {
 })
 
 // ─── Store ─────────────────────────────────────────────────────────
+const theme = useThemeStore()
 const store = useSubjectStore()
 const searchQuery = ref('')
 const statusFilter = ref('')
@@ -1267,6 +1269,311 @@ onMounted(async () => {
 /* ══════════════════════════════════════════════════════════════
    TRANSITIONS
    ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE
+   ══════════════════════════════════════════════════════════════ */
+.dark-mode .page-container {
+  color: #e2e8f0;
+}
+.dark-mode .page-title {
+  color: #f1f5f9;
+}
+.dark-mode .page-desc {
+  color: #94a3b8;
+}
+.dark-mode .page-icon {
+  background: linear-gradient(135deg, #1e3a5f, #1e40af);
+  color: #60a5fa;
+}
+.dark-mode .btn-ghost {
+  background: #334155;
+  color: #cbd5e1;
+}
+.dark-mode .btn-ghost:hover {
+  background: #475569;
+}
+.dark-mode .btn-save {
+  box-shadow: 0 2px 8px rgba(5,150,105,0.15);
+}
+.dark-mode .msg-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+.dark-mode .msg-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: #6ee7b7;
+  border-left-color: #10b981;
+}
+.dark-mode .term-stat {
+  background: #1e293b;
+  border-color: #334155;
+}
+.dark-mode .term-stat:hover {
+  border-color: #475569;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.dark-mode .ts-label {
+  color: #94a3b8;
+}
+.dark-mode .ts-count {
+  color: #f1f5f9;
+}
+.dark-mode .term-stat:has(.ts-active-dot) {
+  border-color: #1e40af;
+  background: #0f172a;
+}
+.dark-mode .subject-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+.dark-mode .tb-search {
+  background: #0f172a;
+  border-color: #334155;
+}
+.dark-mode .tb-search:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.dark-mode .tb-search :deep(svg) {
+  color: #64748b;
+}
+.dark-mode .tb-search input {
+  color: #e2e8f0;
+}
+.dark-mode .tb-search input::placeholder {
+  color: #64748b;
+}
+.dark-mode .tb-filter select {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+.dark-mode .tb-filter select:focus {
+  border-color: #3b82f6;
+}
+.dark-mode .chip {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+.dark-mode .chip:hover {
+  border-color: #3b82f6;
+  color: #60a5fa;
+  background: #0f172a;
+}
+.dark-mode .chip-on {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .loading-overlay {
+  background: rgba(15,23,42,0.8);
+}
+.dark-mode .loading-spinner-wrap {
+  color: #94a3b8;
+}
+.dark-mode .spinner {
+  border-color: #334155;
+  border-top-color: #60a5fa;
+}
+.dark-mode .tbl thead th {
+  background: #0f172a;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+.dark-mode .tbl tbody tr:hover {
+  background: rgba(59,130,246,0.05);
+}
+.dark-mode .tbl tbody td {
+  border-bottom-color: #1e293b;
+  color: #cbd5e1;
+}
+.dark-mode .subj-name {
+  color: #f1f5f9;
+}
+.dark-mode .meta-val {
+  color: #94a3b8;
+}
+.dark-mode .tog {
+  background: #0f172a;
+  border-color: #334155;
+  color: #64748b;
+}
+.dark-mode .tog:hover {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .tog-on {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .pill-on {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+}
+.dark-mode .pill-off {
+  background: #334155;
+  color: #64748b;
+}
+.dark-mode .act-btn {
+  color: #64748b;
+}
+.dark-mode .act-btn:hover {
+  background: #334155;
+  color: #60a5fa;
+}
+.dark-mode .act-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+.dark-mode .empty-state-title {
+  color: #f1f5f9;
+}
+.dark-mode .empty-state-desc {
+  color: #94a3b8;
+}
+.dark-mode .empty-state-icon-ring {
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+  color: #60a5fa;
+  box-shadow: 0 4px 12px rgba(59,130,246,0.15);
+}
+.dark-mode .empty-state-icon-ring::after {
+  border-color: rgba(59,130,246,0.15);
+}
+.dark-mode .empty-state-btn {
+  background: #334155;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+.dark-mode .empty-state-btn:hover {
+  background: #475569;
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+.dark-mode .overlay {
+  background: rgba(0,0,0,0.6);
+}
+.dark-mode .modal-card {
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+.dark-mode .modal-x {
+  color: #64748b;
+}
+.dark-mode .modal-x:hover {
+  color: #cbd5e1;
+}
+.dark-mode .field label {
+  color: #cbd5e1;
+}
+.dark-mode .field input,
+.dark-mode .field select {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .field input:focus,
+.dark-mode .field select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.dark-mode .field input.err,
+.dark-mode .field select.err {
+  border-color: #ef4444;
+}
+.dark-mode .teacher-checklist {
+  background: #0f172a;
+  border-color: #475569;
+}
+.dark-mode .teacher-check {
+  color: #cbd5e1;
+}
+.dark-mode .teacher-check:hover {
+  background: #334155;
+}
+.dark-mode .teacher-check-on {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .field-hint {
+  color: #64748b;
+}
+.dark-mode .teacher-more-chip {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+.dark-mode .pagination-bar {
+  background: #0f172a;
+  border-top-color: #334155;
+}
+.dark-mode .pagination-info {
+  color: #94a3b8;
+}
+.dark-mode .rows-selector {
+  background: #1e293b;
+}
+.dark-mode .rows-btn {
+  color: #94a3b8;
+}
+.dark-mode .rows-btn:hover {
+  color: #e2e8f0;
+}
+.dark-mode .rows-btn.active {
+  background: #334155;
+  color: #60a5fa;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.dark-mode .page-nav {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+.dark-mode .page-nav:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #60a5fa;
+  background: #1e3a5f;
+}
+.dark-mode .page-btn {
+  color: #94a3b8;
+}
+.dark-mode .page-btn:hover:not(.active) {
+  background: #334155;
+  color: #60a5fa;
+}
+.dark-mode .page-btn.active {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+}
+.dark-mode .page-dots {
+  color: #64748b;
+}
+.dark-mode .pagination-total {
+  color: #94a3b8;
+}
+.dark-mode .toast-bar.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: #6ee7b7;
+  border-left-color: #10b981;
+}
+.dark-mode .toast-bar.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
 .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
 .toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
 

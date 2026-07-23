@@ -1,5 +1,5 @@
 <template>
-  <div class="score-sheet">
+  <div :class="['score-sheet', { 'dark-mode': theme.isDark }]">
     <!-- Toolbar -->
     <div class="sheet-toolbar">
       <button class="tb-btn" @click="goBack" title="Back">
@@ -441,6 +441,7 @@
 
 <script setup lang="ts">
 import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef, onBeforeUnmount } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useRouter, useRoute } from 'vue-router'
 import { School } from '@lucide/vue'
 import {
@@ -451,6 +452,7 @@ import {
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
 
+const theme = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const subjectId = computed(() => Number(route.params.subjectId))
@@ -3790,4 +3792,88 @@ select.form-input { appearance: auto; }
 .cell-score:hover { background: #f8fafc; }
 .cell-selected { transition: outline 0.1s ease, background 0.1s ease; }
 .row-selected .cell { transition: background 0.1s ease; }
+
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE
+   ══════════════════════════════════════════════════════════════ */
+.dark-mode .score-sheet { background: #0f172a; }
+.dark-mode .sheet-toolbar { background: #1e293b; border-bottom-color: #334155; }
+.dark-mode .tb-btn { color: #94a3b8; }
+.dark-mode .tb-btn:hover { background: #334155; color: #e2e8f0; }
+.dark-mode .offering-info strong { color: #f1f5f9; }
+.dark-mode .offering-info .text-muted { color: #94a3b8 !important; }
+.dark-mode .term-badge { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .class-badge { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .search-box input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+.dark-mode .search-box input::placeholder { color: #64748b; }
+.dark-mode .search-box input:focus { border-color: #3b82f6; }
+.dark-mode .stats-bar { background: #1e293b; border-bottom-color: #334155; }
+.dark-mode .stat-label { color: #94a3b8; }
+.dark-mode .stat-value { color: #f1f5f9; }
+.dark-mode .sheet-wrapper { background: #0f172a; }
+.dark-mode .sheet-table thead th { background: #1e293b; color: #94a3b8; border-color: #334155; }
+.dark-mode .sheet-table tbody td { background: #0f172a; color: #e2e8f0; border-color: #1e293b; }
+.dark-mode .cell-frozen { background: #1e293b !important; }
+.dark-mode .row-num { color: #64748b; }
+.dark-mode .cell-value { color: #e2e8f0; }
+.dark-mode .cell-excellent .cell-value { color: #4ade80; }
+.dark-mode .cell-average .cell-value { color: #fbbf24; }
+.dark-mode .cell-low .cell-value { color: #f87171; }
+.dark-mode .cell-selected { background: rgba(59, 130, 246, 0.15) !important; }
+.dark-mode .cell-in-range { background: rgba(59, 130, 246, 0.08) !important; }
+.dark-mode .add-row-row td { background: #1e293b !important; color: #94a3b8; }
+.dark-mode .add-row-row td:hover { background: #334155 !important; color: #e2e8f0; }
+.dark-mode .context-menu { background: #1e293b; border-color: #334155; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+.dark-mode .context-menu-item { color: #cbd5e1; }
+.dark-mode .context-menu-item:hover { background: #334155; }
+.dark-mode .context-menu-item.text-danger { color: #f87171; }
+.dark-mode .context-menu-separator { background: #334155; }
+.dark-mode .table-footer { background: #1e293b; border-top-color: #334155; }
+.dark-mode .page-size-label { color: #94a3b8; }
+.dark-mode .page-size-select { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+.dark-mode .export-menu { background: #1e293b; border-color: #334155; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+.dark-mode .export-menu-item { color: #cbd5e1; }
+.dark-mode .export-menu-item:hover { background: #334155; }
+.dark-mode .save-status { color: #94a3b8; }
+.dark-mode .save-status.status-saved { color: #4ade80; }
+.dark-mode .save-status.status-failed { color: #f87171; }
+.dark-mode .save-status.status-saving { color: #60a5fa; }
+.dark-mode .modal-overlay { background: rgba(0,0,0,0.65); }
+.dark-mode .modal-content, .dark-mode .import-modal { background: #1e293b; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.dark-mode .modal-header h5 { color: #f1f5f9; }
+.dark-mode .modal-header .modal-close { color: #64748b; }
+.dark-mode .modal-header .modal-close:hover { color: #cbd5e1; }
+.dark-mode .modal-body label { color: #cbd5e1; }
+.dark-mode .form-input { background: #0f172a; border-color: #475569; color: #e2e8f0; }
+.dark-mode .form-input:focus { border-color: #3b82f6; }
+.dark-mode .btn-secondary { background: #334155; color: #cbd5e1; border-color: #475569; }
+.dark-mode .btn-secondary:hover { background: #475569; }
+.dark-mode .weight-table thead th { background: #0f172a; color: #94a3b8; border-bottom-color: #334155; }
+.dark-mode .weight-table tbody td { color: #cbd5e1; border-bottom-color: #1e293b; }
+.dark-mode .weight-name { color: #e2e8f0; }
+.dark-mode .weight-code { color: #64748b; }
+.dark-mode .weight-total-bar { background: #0f172a; color: #cbd5e1; }
+.dark-mode .weight-total-bar.weight-ok { color: #4ade80; }
+.dark-mode .import-modal-header h5 { color: #f1f5f9; }
+.dark-mode .import-modal-header p { color: #94a3b8; }
+.dark-mode .import-drop-zone { background: #0f172a; border-color: #475569; }
+.dark-mode .import-drop-zone:hover { border-color: #3b82f6; background: #1e3a5f; }
+.dark-mode .import-drop-title { color: #cbd5e1; }
+.dark-mode .import-drop-sub { color: #64748b; }
+.dark-mode .import-file-card { background: #0f172a; border-color: #334155; }
+.dark-mode .import-file-name { color: #e2e8f0; }
+.dark-mode .import-file-size { color: #64748b; }
+.dark-mode .import-btn-secondary { background: #334155; color: #cbd5e1; }
+.dark-mode .overlay { background: rgba(0,0,0,0.6); }
+.dark-mode .modal-card { background: #1e293b; }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .shortcut-group-title { color: #f1f5f9; }
+.dark-mode .shortcut-desc { color: #cbd5e1; }
+.dark-mode .shortcut-keys kbd { background: #334155; border-color: #475569; color: #e2e8f0; }
+.dark-mode .loading-overlay { background: rgba(15,23,42,0.8); }
+.dark-mode .loading-overlay .spinner { border-color: #334155; border-top-color: #60a5fa; }
+.dark-mode .loading-overlay span { color: #94a3b8; }
 </style>

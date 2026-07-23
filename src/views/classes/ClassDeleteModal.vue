@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="show" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="$emit('close')">
         <div class="modal-content-panel" style="max-width: 400px;">
           <div class="modal-header-custom">
             <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
@@ -38,6 +38,10 @@
 </template>
 
 <script setup lang="ts">
+import { useThemeStore } from '@/stores/theme'
+
+const theme = useThemeStore()
+
 defineProps<{
   show: boolean
   className: string
@@ -124,4 +128,25 @@ defineEmits<{
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-content-panel,
 .modal-leave-to .modal-content-panel { transform: scale(0.9); }
+
+/* ── Dark Mode ── */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+.dark-mode .modal-header-custom h5 {
+  color: #f1f5f9 !important;
+}
+.dark-mode .modal-header-custom p {
+  color: #94a3b8 !important;
+}
+.dark-mode .btn-cancel {
+  background: #334155;
+  color: #cbd5e1;
+}
+.dark-mode .btn-cancel:hover {
+  background: #475569;
+}
 </style>

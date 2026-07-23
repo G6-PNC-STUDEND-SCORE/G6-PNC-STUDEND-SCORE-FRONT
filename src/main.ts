@@ -22,3 +22,4 @@ authStore.init().finally(() => {
   app.mount('#app')
 })
 
+

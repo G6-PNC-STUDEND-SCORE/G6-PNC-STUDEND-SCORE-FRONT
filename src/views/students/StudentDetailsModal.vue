@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show && student" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="show && student" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="$emit('close')">
         <div class="modal-content-panel">
           <!-- Close Button -->
           <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
@@ -157,6 +157,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
+const theme = useThemeStore()
 import type { Student } from '@/services/studentService'
 
 const props = defineProps<{
@@ -496,6 +498,43 @@ const genderIconStyle = computed(() => {
 .modal-content-panel::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 2px;
+}
+
+/* ── Dark Mode ── */
+.dark-mode .modal-overlay {
+  background: rgba(0,0,0,0.65);
+}
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+.dark-mode .modal-close-btn {
+  background: #334155;
+  color: #94a3b8;
+}
+.dark-mode .modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+.dark-mode .profile-section {
+  background: linear-gradient(180deg, #1e3a5f 0%, #1e293b 100%);
+  border-bottom-color: #334155;
+}
+.dark-mode .profile-name {
+  color: #f1f5f9;
+}
+.dark-mode .profile-status-dot {
+  border-color: #1e293b;
+}
+.dark-mode .detail-card {
+  background: #0f172a;
+  border-color: #334155;
+}
+.dark-mode .detail-card:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+.dark-mode .detail-value {
+  color: #e2e8f0;
 }
 </style>
 

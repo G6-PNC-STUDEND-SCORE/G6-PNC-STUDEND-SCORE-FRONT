@@ -1,5 +1,5 @@
 <template>
-  <div class="reports-page">
+  <div :class="['reports-page', { 'dark-mode': theme.isDark }]">
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">
@@ -22,7 +22,10 @@
 </template>
 
 <script setup lang="ts">
+import { useThemeStore } from '@/stores/theme'
 import { FileText, Inbox } from '@lucide/vue'
+
+const theme = useThemeStore()
 </script>
 
 <style scoped>
@@ -101,5 +104,28 @@ import { FileText, Inbox } from '@lucide/vue'
 }
 .empty-state p {
   font-size: 0.875rem;
+}
+
+/* ── Dark Mode ── */
+.dark-mode .reports-page {
+  background: transparent;
+}
+.dark-mode .page-header-icon {
+  background: linear-gradient(135deg, #1e3a5f, #1e40af);
+  color: #60a5fa;
+}
+.dark-mode .empty-state {
+  background: #1e293b;
+  border-color: #334155;
+}
+.dark-mode .empty-state-icon {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+.dark-mode .empty-state h5 {
+  color: #f1f5f9;
+}
+.dark-mode .empty-state p {
+  color: #94a3b8;
 }
 </style>

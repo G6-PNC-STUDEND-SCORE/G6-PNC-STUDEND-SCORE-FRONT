@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="show" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="$emit('close')">
         <div class="modal-content-panel">
           <!-- Header -->
           <div class="modal-header-custom">
@@ -248,6 +248,8 @@
 </template>
 
 <script setup lang="ts">
+import { useThemeStore } from '@/stores/theme'
+const theme = useThemeStore()
 import { ref, watch } from 'vue'
 import type { SchoolClass } from '@/services/studentService'
 import {
@@ -825,5 +827,141 @@ select.modern-input {
 .modal-content-panel::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 2px;
+}
+
+/* ── Dark Mode ── */
+.dark-mode .modal-overlay {
+  background: rgba(0,0,0,0.65);
+}
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+.dark-mode .modal-header-custom h5 {
+  color: #f1f5f9;
+}
+.dark-mode .modal-subtitle {
+  color: #94a3b8;
+}
+.dark-mode .modal-close-btn {
+  background: #334155;
+  color: #94a3b8;
+}
+.dark-mode .modal-close-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+.dark-mode .form-label {
+  color: #cbd5e1;
+}
+.dark-mode .form-label :deep(svg) {
+  color: #64748b;
+}
+.dark-mode .modern-input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .modern-input:hover {
+  background: #1e293b;
+  border-color: #64748b;
+}
+.dark-mode .modern-input:focus {
+  background: #1e293b;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+.dark-mode .modern-input::placeholder {
+  color: #64748b;
+}
+.dark-mode select.modern-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+.dark-mode .gender-option {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+.dark-mode .gender-option:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+.dark-mode .gender-option.active.male-active {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+  border-color: #3b82f6;
+}
+.dark-mode .gender-option.active.female-active {
+  background: rgba(236, 72, 153, 0.1);
+  color: #f472b6;
+  border-color: #ec4899;
+}
+.dark-mode .status-option {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+.dark-mode .status-option:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+.dark-mode .status-option.active.active-on {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+  border-color: #22c55e;
+}
+.dark-mode .status-option.active.inactive-on {
+  background: #334155;
+  color: #94a3b8;
+  border-color: #64748b;
+}
+.dark-mode .error-alert {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.dark-mode .btn-outline {
+  background: #334155;
+  color: #cbd5e1;
+  border-color: #475569 !important;
+}
+.dark-mode .btn-outline:hover {
+  background: #475569;
+  border-color: #64748b !important;
+}
+.dark-mode .photo-upload-area {
+  background: #0f172a;
+  border-color: #475569;
+}
+.dark-mode .photo-upload-area:hover {
+  border-color: #3b82f6;
+  background: #1e3a5f;
+}
+.dark-mode .photo-placeholder {
+  background: linear-gradient(135deg, #334155, #475569);
+  color: #64748b;
+}
+.dark-mode .photo-upload-btn {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border-color: #1e40af;
+}
+.dark-mode .photo-upload-btn:hover {
+  background: #1e40af;
+  border-color: #3b82f6;
+}
+.dark-mode .photo-remove-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+.dark-mode .photo-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+.dark-mode .photo-hint {
+  color: #64748b;
+}
+.dark-mode .photo-error {
+  color: #fca5a5;
 }
 </style>

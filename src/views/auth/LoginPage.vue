@@ -1,5 +1,15 @@
 <template>
-  <div class="login-page">
+  <div :class="['login-page', { 'dark-mode': theme.isDark }]">
+    <!-- Theme Toggle Button -->
+    <button
+      class="login-theme-toggle"
+      @click="theme.toggle()"
+      :title="theme.isDark ? 'Switch to Light mode' : 'Switch to Dark mode'"
+    >
+      <MoonStar v-if="theme.isDark" :size="18" />
+      <Sun v-else :size="18" />
+    </button>
+
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
     <div class="blob blob-3"></div>
@@ -108,9 +118,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
 import { initGoogleClientId } from '@/services/googleAuthService'
-import { AlertTriangle, Mail, Lock, EyeOff, Eye, Check, LogIn } from '@lucide/vue'
+import { AlertTriangle, Mail, Lock, EyeOff, Eye, Check, LogIn, MoonStar, Sun } from '@lucide/vue'
 
 declare global {
   interface Window {
@@ -142,6 +153,7 @@ declare global {
 }
 
 const router = useRouter()
+const theme = useThemeStore()
 const auth = useAuthStore()
 
 const email = ref('')
@@ -221,6 +233,54 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #e8f0fe 0%, #f0f5ff 40%, #f8faff 70%, #eef4fb 100%);
   overflow: hidden;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Login Page Theme Toggle ── */
+.login-theme-toggle {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 100;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.login-theme-toggle:hover {
+  border-color: #93c5fd;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
+}
+
+.login-theme-toggle:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.login-page.dark-mode .login-theme-toggle {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(71, 85, 105, 0.4);
+  color: #94a3b8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.login-page.dark-mode .login-theme-toggle:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(96, 165, 250, 0.3);
+  color: #60a5fa;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.08);
 }
 
 .blob {
@@ -302,6 +362,7 @@ onUnmounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
   animation: cardContentIn 0.5s ease-out 0.15s both;
+  transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 @keyframes cardContentIn {
@@ -674,6 +735,110 @@ onUnmounted(() => {
   border-top: 1px solid #f3f4f6;
 }
 
+
+/* ── Dark Mode ── */
+.login-page.dark-mode {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #162032 70%, #0b1120 100%);
+}
+
+.login-page.dark-mode .blob-1 {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
+}
+
+.login-page.dark-mode .blob-2 {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(99, 102, 241, 0.2));
+}
+
+.login-page.dark-mode .blob-3 {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(56, 189, 248, 0.2));
+}
+
+.login-page.dark-mode .login-card {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(71, 85, 105, 0.4);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(59, 130, 246, 0.06),
+    0 24px 60px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+}
+
+.login-page.dark-mode .welcome-heading {
+  color: #f1f5f9;
+}
+
+.login-page.dark-mode .alert-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.login-page.dark-mode .form-label {
+  color: #cbd5e1;
+}
+
+.login-page.dark-mode .form-input {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(71, 85, 105, 0.4);
+  color: #f1f5f9;
+}
+
+.login-page.dark-mode .form-input::placeholder {
+  color: #64748b;
+}
+
+.login-page.dark-mode .form-input:hover {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(71, 85, 105, 0.6);
+}
+
+.login-page.dark-mode .form-input:focus {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.login-page.dark-mode .input-icon {
+  color: #64748b;
+}
+
+.login-page.dark-mode .input-wrapper:focus-within .input-icon {
+  color: #60a5fa;
+}
+
+.login-page.dark-mode .password-toggle {
+  color: #64748b;
+}
+
+.login-page.dark-mode .password-toggle:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #cbd5e1;
+}
+
+.login-page.dark-mode .checkbox-text {
+  color: #94a3b8;
+}
+
+.login-page.dark-mode .forgot-link {
+  color: #60a5fa;
+}
+
+.login-page.dark-mode .forgot-link:hover {
+  color: #93c5fd;
+}
+
+.login-page.dark-mode .google-divider-line {
+  background: linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.5), transparent);
+}
+
+.login-page.dark-mode .google-divider-text {
+  color: #64748b;
+}
+
+.login-page.dark-mode .copyright {
+  color: #475569;
+  border-top-color: rgba(71, 85, 105, 0.3);
+}
 
 @media (max-width: 480px) {
   .login-page {

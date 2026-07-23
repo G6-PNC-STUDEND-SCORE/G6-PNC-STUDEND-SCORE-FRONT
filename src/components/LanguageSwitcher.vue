@@ -141,7 +141,7 @@ onUnmounted(() => {
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: 100%;
   right: 0;
   background: white;
   border: 1px solid #e5e7eb;
@@ -189,5 +189,51 @@ onUnmounted(() => {
 .check-icon {
   margin-left: auto;
   color: #3b82f6;
+}
+
+/* ── Dark Mode ── */
+.dark-mode .dropdown-toggle {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.dark-mode .dropdown-toggle:hover {
+  background: rgba(71, 85, 105, 0.5);
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+.dark-mode .dropdown-toggle:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.dark-mode .chevron {
+  color: #64748b;
+}
+
+.dark-mode .dropdown-menu {
+  background: #1e293b;
+  border-color: rgba(51, 65, 85, 0.6);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .dropdown-item {
+  color: #cbd5e1;
+}
+
+.dark-mode .dropdown-item:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #e2e8f0;
+}
+
+.dark-mode .dropdown-item.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .check-icon {
+  color: #60a5fa;
 }
 </style>

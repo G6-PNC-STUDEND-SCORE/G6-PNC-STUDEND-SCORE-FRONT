@@ -1,23 +1,29 @@
 <template>
-  <div
-    :class="['kpi-card', { 'dark-mode': isDark }]"
+  <component
+    :is="to ? 'router-link' : 'div'"
+    :to="to"
+    :class="['kpi-card', { 'dark-mode': isDark, 'kpi-clickable': !!to }]"
   >
     <div class="kpi-glow"></div>
     <div class="kpi-bg-pattern"></div>
+    <span v-if="subtitle" class="kpi-badge">{{ subtitle }}</span>
     <div class="kpi-content">
       <div class="kpi-top">
         <div class="kpi-icon-wrap" :class="iconClass">
           <component :is="resolvedIcon" :size="20" />
         </div>
-        <span v-if="subtitle" class="kpi-badge">{{ subtitle }}</span>
       </div>
       <div class="kpi-value">
-        <AnimatedNumber v-if="!loading" :value="value" :decimals="decimals" />
+        <template v-if="!loading">
+          <AnimatedNumber :value="value" :decimals="decimals" />
+          <span v-if="suffix" class="kpi-suffix">{{ suffix }}</span>
+        </template>
         <div v-else class="skeleton-value skeleton-pulse" />
       </div>
       <div class="kpi-label">{{ label }}</div>
+      <div v-if="description" class="kpi-desc">{{ description }}</div>
     </div>
-  </div>
+  </component>
 </template>
 
 <script setup lang="ts">
@@ -44,12 +50,18 @@ const props = withDefaults(defineProps<{
   icon: string
   iconClass: string
   subtitle?: string
+  suffix?: string
+  description?: string
   decimals?: number
   loading?: boolean
+  to?: string
 }>(), {
   subtitle: '',
+  suffix: '',
+  description: '',
   decimals: 0,
   loading: false,
+  to: undefined,
 })
 
 const iconMap: Record<string, Component> = {
@@ -61,6 +73,7 @@ const iconMap: Record<string, Component> = {
   'calendar-check': CalendarCheck,
   'diagram-3': GitBranch,
   'building': Building2,
+  'trending-up': BarChart3,
 }
 
 const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
@@ -139,10 +152,27 @@ const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
   z-index: 1;
 }
 
+.kpi-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  white-space: nowrap;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 2;
+}
+
 .kpi-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   margin-bottom: 0.85rem;
 }
 
@@ -190,6 +220,19 @@ const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
   color: #0f172a;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
+  display: flex;
+  align-items: baseline;
+  gap: 0.15rem;
+}
+
+.kpi-suffix {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.dark-mode .kpi-suffix {
+  color: #64748b;
 }
 
 .dark-mode .kpi-value {
@@ -209,24 +252,57 @@ const resolvedIcon = computed(() => iconMap[props.icon] || BookOpen)
   color: #94a3b8;
 }
 
+.kpi-desc {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}
+
+.dark-mode .kpi-desc {
+  color: #64748b;
+}
+
 .kpi-card.dark-mode {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(30, 41, 59, 0.98));
-  border-color: rgba(71, 85, 105, 0.4);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.92), rgba(30, 41, 59, 0.96));
+  border-color: rgba(71, 85, 105, 0.3);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .kpi-card.dark-mode::before {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.4), rgba(167, 139, 250, 0.4), transparent 60%);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(167, 139, 250, 0.3), transparent 60%);
 }
 
 .kpi-card.dark-mode:hover {
-  border-color: rgba(96, 165, 250, 0.25);
+  border-color: rgba(96, 165, 250, 0.2);
   box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.3),
-    0 20px 60px rgba(0, 0, 0, 0.2);
+    0 8px 30px rgba(0, 0, 0, 0.35),
+    0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.kpi-card.kpi-clickable {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.kpi-card.kpi-clickable:hover {
+  transform: translateY(-6px) scale(1.02);
 }
 
 .kpi-card.dark-mode .kpi-glow {
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.06) 0%, transparent 70%);
+}
+
+.dark-mode .kpi-badge {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.08));
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
 }
 
 .skeleton-value {

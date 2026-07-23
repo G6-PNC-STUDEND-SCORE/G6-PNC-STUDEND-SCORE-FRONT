@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show && classData" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="show && classData" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="$emit('close')">
         <div class="modal-content-panel bg-white rounded-4 shadow-lg" style="max-width: 460px;">
           <!-- Header Section -->
           <div class="text-center pt-4 pb-3 px-4 border-bottom border-light">
@@ -75,6 +75,10 @@
 </template>
 
 <script setup lang="ts">
+import { useThemeStore } from '@/stores/theme'
+
+const theme = useThemeStore()
+
 defineProps<{
   show: boolean
   classData: {
@@ -124,4 +128,39 @@ defineEmits<{
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-content-panel,
 .modal-leave-to .modal-content-panel { transform: scale(0.9); }
+
+/* ── Dark Mode ── */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+.dark-mode .modal-content-panel {
+  background: #1e293b !important;
+}
+.dark-mode .modal-content-panel h5 {
+  color: #f1f5f9 !important;
+}
+.dark-mode .modal-content-panel .text-muted {
+  color: #94a3b8 !important;
+}
+.dark-mode .modal-content-panel .text-dark {
+  color: #e2e8f0 !important;
+}
+.dark-mode .modal-content-panel .text-secondary {
+  color: #64748b !important;
+}
+.dark-mode .modal-content-panel .border-light {
+  border-color: #334155 !important;
+}
+.dark-mode .modal-content-panel .badge.bg-light {
+  background: #334155 !important;
+  color: #e2e8f0 !important;
+}
+.dark-mode .modal-content-panel .bg-success-subtle {
+  background: rgba(22, 163, 74, 0.15) !important;
+  color: #4ade80 !important;
+}
+.dark-mode .modal-content-panel .bg-secondary-subtle {
+  background: #334155 !important;
+  color: #94a3b8 !important;
+}
 </style>

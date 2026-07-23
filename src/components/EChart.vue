@@ -14,19 +14,11 @@
       <div class="skeleton-pulse skeleton-bar" />
       <div class="skeleton-pulse skeleton-bar" />
     </div>
-    <button
-      v-if="ready && showExport"
-      class="btn btn-sm btn-outline-secondary export-btn"
-      title="Export as PNG"
-      @click="exportPng"
-    >
-      <Download :size="14" />
-    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -40,7 +32,6 @@ import {
 } from 'echarts/components'
 import type { EChartsOption } from 'echarts'
 import { useThemeStore } from '@/stores/theme'
-import { Download } from '@lucide/vue'
 
 use([
   CanvasRenderer,
@@ -58,16 +49,13 @@ use([
 const props = withDefaults(defineProps<{
   option: EChartsOption
   height?: string
-  showExport?: boolean
   loading?: boolean
 }>(), {
   height: '300px',
-  showExport: true,
   loading: false,
 })
 
 const themeStore = useThemeStore()
-const chartRef = ref<InstanceType<typeof VChart> | null>(null)
 const ready = computed(() => !props.loading && props.option?.series != null)
 const chartTheme = computed(() => themeStore.isDark ? 'dark' : '')
 
@@ -77,19 +65,6 @@ const chartOption = computed<EChartsOption>(() => ({
   animationDuration: 800,
   animationEasing: 'cubicOut',
 }))
-
-function exportPng() {
-  const url = chartRef.value?.getDataURL?.({
-    type: 'png',
-    pixelRatio: 2,
-    backgroundColor: themeStore.isDark ? '#0f172a' : '#ffffff',
-  })
-  if (!url) return
-  const link = document.createElement('a')
-  link.download = 'chart.png'
-  link.href = url
-  link.click()
-}
 </script>
 
 <style scoped>
@@ -103,21 +78,6 @@ function exportPng() {
 .chart-instance {
   width: 100%;
   height: 100%;
-}
-
-.export-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 10;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  font-size: 0.75rem;
-  padding: 0.2rem 0.4rem;
-}
-
-.echart-wrapper:hover .export-btn {
-  opacity: 1;
 }
 
 .skeleton-chart {

@@ -1,5 +1,6 @@
 <template>
-  <div class="px-4 py-4 dashboard-page">
+  <div :class="['dashboard-wrapper', { 'dark-mode': theme.isDark }]">
+    <div class="px-4 py-4 dashboard-page">
     <div class="welcome-collapse" :class="{ 'collapsed': !showWelcome }">
       <Transition name="welcome">
         <div v-if="showWelcome" class="welcome-card">
@@ -36,10 +37,10 @@
       </button>
     </div>
 
-    <FilterBar class="mb-3" />
+<FilterBar class="mb-3" />
 
     <div v-if="dashboard.loading" class="stats-grid mb-3">
-      <div v-for="i in 8" :key="i" class="skeleton-card">
+      <div v-for="i in 4" :key="i" class="skeleton-card">
         <div class="skeleton-pulse" style="height: 44px; width: 44px; border-radius: 14px; margin-bottom: 0.85rem;"></div>
         <div class="skeleton-pulse" style="height: 1.75rem; width: 70%; border-radius: 8px; margin-bottom: 0.3rem;"></div>
         <div class="skeleton-pulse" style="height: 0.8rem; width: 40%; border-radius: 6px;"></div>
@@ -72,30 +73,6 @@
         icon="bar-chart"
         iconClass="icon-orange"
         :decimals="2"
-      />
-      <KpiCard
-        label="Total Subjects"
-        :value="dashboard.kpi.total_subjects"
-        icon="book"
-        iconClass="icon-sky"
-      />
-      <KpiCard
-        label="Active Offerings"
-        :value="dashboard.kpi.active_subject_offerings"
-        icon="calendar-check"
-        iconClass="icon-mint"
-      />
-      <KpiCard
-        label="Total Enrollments"
-        :value="dashboard.kpi.total_enrollments"
-        icon="diagram-3"
-        iconClass="icon-rose"
-      />
-      <KpiCard
-        label="Total Classes"
-        :value="dashboard.kpi.total_classes"
-        icon="building"
-        iconClass="icon-amber"
       />
     </section>
 
@@ -172,6 +149,17 @@
           height="280px"
         />
       </div>
+    </section>
+
+    <section v-if="activeSection === 'overview'" class="mb-3">
+      <RecentActivity
+        title="Recent Activity"
+        :items="combinedRecentItems"
+        icon-name="Activity"
+        :max-items="10"
+        empty-text="No recent activities"
+        :dark="theme.isDark"
+      />
     </section>
 
     <section v-if="activeSection === 'performance'" class="charts-grid mb-3">
@@ -338,6 +326,7 @@
       </div>
     </section>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -348,6 +337,7 @@ import KpiCard from '@/components/KpiCard.vue'
 import FilterBar from '@/components/FilterBar.vue'
 import EChart from '@/components/EChart.vue'
 import DataTable from '@/components/DataTable.vue'
+import RecentActivity from '@/components/RecentActivity.vue'
 import type { EChartsOption } from 'echarts'
 import type {
   RecentAcademicActivity,
@@ -431,6 +421,95 @@ const studentActivityRate = computed(() => {
   if (!dashboard.kpi.total_students) return '0'
   return String(((dashboard.kpi.active_students / dashboard.kpi.total_students) * 100).toFixed(1))
 })
+
+function timeAgo(raw: string): string {
+  if (!raw) return ''
+  const now = Date.now()
+  const then = new Date(raw).getTime()
+  if (isNaN(then)) return raw
+  const diff = now - then
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h`
+  if (hours < 48) return 'Yesterday'
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}d`
+  return new Date(raw).toLocaleDateString()
+}
+
+const dotColors: Record<string, string> = {
+  enroll: 'linear-gradient(135deg, #10b981, #059669)',
+  score: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+  submit: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+  create: 'linear-gradient(135deg, #10b981, #059669)',
+  update: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+  edit: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+  delete: 'linear-gradient(135deg, #ef4444, #dc2626)',
+  remove: 'linear-gradient(135deg, #ef4444, #dc2626)',
+  login: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+  logout: 'linear-gradient(135deg, #94a3b8, #64748b)',
+  export: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+}
+
+const dotIcons: Record<string, string> = {
+  enroll: 'UserPlus',
+  score: 'PenLine',
+  submit: 'PenLine',
+  create: 'Plus',
+  update: 'Pencil',
+  edit: 'Pencil',
+  delete: 'Trash2',
+  remove: 'Trash2',
+  login: 'LogIn',
+  logout: 'LogOut',
+  export: 'FileText',
+}
+
+function actDotColor(a: string): string {
+  const s = (a || '').toLowerCase()
+  for (const [key, color] of Object.entries(dotColors)) {
+    if (s.includes(key)) return color
+  }
+  return 'linear-gradient(135deg, #f59e0b, #d97706)'
+}
+
+function actIconName(a: string): string {
+  const s = (a || '').toLowerCase()
+  for (const [key, icon] of Object.entries(dotIcons)) {
+    if (s.includes(key)) return icon
+  }
+  return 'PenLine'
+}
+
+const recentItems = computed(() =>
+  (dashboard.charts.recent_academic_activities || []).map((act) => ({
+    id: 'a-' + act.id,
+    sortKey: act.id,
+    label: (act.action || 'Score Recorded') + ' — ' + (act.student_name || 'Unknown') + (act.grade ? ' — Grade ' + act.grade : ''),
+    time: timeAgo(act.created_at_raw),
+    icon: actIconName(act.action),
+    dotColor: actDotColor(act.action),
+  }))
+)
+
+const recentUserItems = computed(() =>
+  (dashboard.charts.recent_user_activities || []).map((act) => ({
+    id: 'u-' + act.id,
+    sortKey: act.id,
+    label: (act.action || '') + (act.description ? ' — ' + act.description : ''),
+    time: timeAgo(act.created_at_raw),
+    icon: actIconName(act.action),
+    dotColor: actDotColor(act.action),
+  }))
+)
+
+const combinedRecentItems = computed(() =>
+  [...recentItems.value, ...recentUserItems.value]
+    .sort((a, b) => b.sortKey - a.sortKey)
+    .slice(0, 10)
+)
 
 function getGradeBadgeClass(grade: string): string {
   const map: Record<string, string> = {
@@ -643,11 +722,17 @@ onMounted(() => {
   updateLastUpdated()
   lastUpdatedTimer = setInterval(updateLastUpdated, 30000)
 
+  const unwatchSub = dashboard.$subscribe(() => {
+    if (!dashboard.loading && dashboard.hasData && !dashboard.error) {
+      unwatchSub()
+    }
+  })
+
   // Auto-dismiss the welcome card after 5 seconds
   if (showWelcome.value) {
     welcomeTimer = setTimeout(() => {
       showWelcome.value = false
-    }, 5000)
+    }, 3000)
   }
 })
 
@@ -660,6 +745,9 @@ onUnmounted(() => {
     clearInterval(lastUpdatedTimer)
     lastUpdatedTimer = null
   }
+  if (unwatchSub) {
+    unwatchSub()
+  }
 })
 
 function updateLastUpdated() {
@@ -669,20 +757,26 @@ function updateLastUpdated() {
 </script>
 
 <style scoped>
+.dashboard-wrapper {
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 4px 16px rgba(15,23,42,0.04);
+}
+
 .dashboard-page {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   padding-bottom: 2rem !important;
-  
 }
 
 .welcome-card {
   position: relative;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-  border-radius: 24px;
-  padding: 3.5rem 2rem;
-  margin-bottom: 1.5rem;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.5rem 1.5rem;
+  margin-bottom: 1rem;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03), 0 4px 16px rgba(15,23,42,0.06);
+  border: 1px solid #e5e7eb;
 }
 
 .welcome-bg-shapes {
@@ -698,22 +792,22 @@ function updateLastUpdated() {
 }
 
 .shape-1 {
-  top: -80px; left: -40px;
-  width: 240px; height: 240px;
+  top: -40px; left: -20px;
+  width: 120px; height: 120px;
   background: radial-gradient(circle, #3b82f6, transparent);
   animation: float 6s ease-in-out infinite;
 }
 
 .shape-2 {
-  bottom: -60px; right: 10%;
-  width: 180px; height: 180px;
+  bottom: -30px; right: 10%;
+  width: 90px; height: 90px;
   background: radial-gradient(circle, #8b5cf6, transparent);
   animation: float 8s ease-in-out infinite reverse;
 }
 
 .shape-3 {
-  top: 20%; right: -30px;
-  width: 120px; height: 120px;
+  top: 20%; right: -15px;
+  width: 60px; height: 60px;
   background: radial-gradient(circle, #14b8a6, transparent);
   animation: float 7s ease-in-out infinite 1s;
 }
@@ -726,21 +820,21 @@ function updateLastUpdated() {
 .welcome-content {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0.85rem;
   position: relative;
   z-index: 1;
 }
 
 .welcome-icon-box {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: linear-gradient(135deg, rgba(59,130,246,0.25), rgba(139,92,246,0.15));
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 16px rgba(59,130,246,0.15);
+  box-shadow: 0 4px 12px rgba(59,130,246,0.12);
 }
 
 .welcome-icon-box :deep(svg) {
@@ -758,36 +852,36 @@ function updateLastUpdated() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #60a5fa;
-  background: rgba(59,130,246,0.15);
+  color: #3b82f6;
+  background: rgba(59,130,246,0.1);
   padding: 0.15rem 0.5rem;
   border-radius: 6px;
   margin-bottom: 0.35rem;
 }
 
 .welcome-text h3 {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  color: #f1f5f9;
-  margin: 0 0 2px;
+  color: #0f172a;
+  margin: 0 0 1px;
   line-height: 1.3;
 }
 
 .welcome-text p {
-  font-size: 0.82rem;
-  color: #94a3b8;
+  font-size: 0.75rem;
+  color: #64748b;
   margin: 0;
   line-height: 1.4;
 }
 
 
 .welcome-close {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
-  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #9ca3af;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -797,8 +891,8 @@ function updateLastUpdated() {
 }
 
 .welcome-close:hover {
-  background: rgba(255,255,255,0.1);
-  color: #e2e8f0;
+  background: #f3f4f6;
+  color: #374151;
 }
 
 .welcome-collapse {
@@ -1006,18 +1100,41 @@ function updateLastUpdated() {
   border: 1px solid rgba(139,92,246,0.12);
 }
 
-.dark-mode .chart-card {
+.dashboard-wrapper.dark-mode .welcome-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+
+.dashboard-wrapper.dark-mode .welcome-text h3 { color: #f1f5f9; }
+.dashboard-wrapper.dark-mode .welcome-text p { color: #94a3b8; }
+.dashboard-wrapper.dark-mode .welcome-badge {
+  color: #60a5fa;
+  background: rgba(59,130,246,0.15);
+}
+.dashboard-wrapper.dark-mode .welcome-close {
+  border-color: #475569;
+  background: #334155;
+  color: #94a3b8;
+}
+.dashboard-wrapper.dark-mode .welcome-close:hover {
+  background: #475569;
+  color: #e2e8f0;
+}
+.dashboard-wrapper.dark-mode .welcome-icon-box :deep(svg) { color: #60a5fa; }
+
+.dashboard-wrapper.dark-mode .chart-card {
   background: rgba(30, 41, 59, 0.95);
   border-color: rgba(71, 85, 105, 0.4);
 }
 
-.dark-mode .chart-card:hover {
+.dashboard-wrapper.dark-mode .chart-card:hover {
   border-color: rgba(96, 165, 250, 0.25);
   box-shadow: 0 8px 32px rgba(0,0,0,0.25);
 }
 
-.dark-mode .chart-title { color: #f1f5f9; }
-.dark-mode .chart-desc { color: #94a3b8; }
+.dashboard-wrapper.dark-mode .chart-title { color: #f1f5f9; }
+.dashboard-wrapper.dark-mode .chart-desc { color: #94a3b8; }
 
 .grade-badge, .action-badge, .status-badge {
   font-size: 0.72rem;
@@ -1053,7 +1170,7 @@ function updateLastUpdated() {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-.dark-mode .skeleton-pulse {
+.dashboard-wrapper.dark-mode .skeleton-pulse {
   background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
   background-size: 200% 100%;
 }

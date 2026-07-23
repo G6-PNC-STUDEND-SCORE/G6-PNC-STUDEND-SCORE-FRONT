@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': theme.isDark }]">
     <!-- ── Toast ── -->
     <Transition name="toast">
       <div v-if="toast.show" class="toast-bar" :class="toast.type">
@@ -105,7 +105,7 @@
     <!-- ── Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
+        <div v-if="showDeleteModal" :class="['overlay', { 'dark-mode': theme.isDark }]" @click.self="closeDeleteModal">
           <div class="modal-card modal-sm">
             <div class="modal-head">
               <div class="modal-icon icon-danger">
@@ -136,7 +136,7 @@
     <!-- ── Bulk Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showBulkDeleteModal" class="overlay" @click.self="closeBulkDeleteModal">
+        <div v-if="showBulkDeleteModal" :class="['overlay', { 'dark-mode': theme.isDark }]" @click.self="closeBulkDeleteModal">
           <div class="modal-card modal-sm">
             <div class="modal-head">
               <div class="modal-icon icon-danger">
@@ -168,7 +168,7 @@
     <!-- ── Assign Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showAssignModal" class="overlay" @click.self="closeAssignModal">
+        <div v-if="showAssignModal" :class="['overlay', { 'dark-mode': theme.isDark }]" @click.self="closeAssignModal">
           <div class="modal-card modal-sm">
             <div class="modal-head">
               <div class="modal-icon icon-assign">
@@ -211,7 +211,7 @@
     <!-- ── Details Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDetailsModal && selectedStudent" class="overlay" @click.self="closeDetailsModal">
+        <div v-if="showDetailsModal && selectedStudent" :class="['overlay', { 'dark-mode': theme.isDark }]" @click.self="closeDetailsModal">
           <div class="modal-card">
             <div class="modal-head">
               <div class="modal-icon icon-info">
@@ -282,11 +282,13 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
 import { GraduationCap, Plus, AlertTriangle, CheckCircle, AlertCircle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
 import { useStudents } from './composables/useStudents.ts'
 
+const theme = useThemeStore()
 const {
   loading, error, searchQuery, genderFilter, formSubmitting, formError, toast,
   showCreateModal, showEditModal, showDeleteModal, showBulkDeleteModal, showAssignModal, showDetailsModal,
@@ -525,5 +527,125 @@ onMounted(() => init())
   .page-head { flex-direction: column; align-items: flex-start; }
   .page-head-right { width: 100%; }
   .page-head-right .btn { flex: 1; justify-content: center; }
+}
+
+/* ── Dark Mode ── */
+.dark-mode .page-container {
+  color: #e2e8f0;
+}
+
+.dark-mode .page-icon {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .msg-error {
+  background: rgba(127, 29, 29, 0.3);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .btn-ghost {
+  background: rgba(51, 65, 85, 0.4);
+  color: #cbd5e1;
+}
+
+.dark-mode .btn-ghost:hover {
+  background: rgba(71, 85, 105, 0.5);
+}
+
+.dark-mode .load-state {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-card {
+  background: #1e293b;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #cbd5e1;
+}
+
+.dark-mode .field label {
+  color: #cbd5e1;
+}
+
+.dark-mode .field select,
+.dark-mode .field input {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .field select:focus,
+.dark-mode .field input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .detail-user-row {
+  border-bottom-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .detail-user-row h4 {
+  color: #f1f5f9;
+}
+
+.dark-mode .detail-item {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+.dark-mode .detail-label {
+  color: #94a3b8;
+}
+
+.dark-mode .detail-value {
+  color: #e2e8f0;
+}
+
+.dark-mode .pill-off {
+  background: rgba(71, 85, 105, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .pill-male {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .pill-female {
+  background: rgba(71, 85, 105, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .toast-bar.success {
+  background: rgba(6, 95, 70, 0.5);
+  color: #6ee7b7;
+  border-left-color: #10b981;
+}
+
+.dark-mode .toast-bar.error {
+  background: rgba(127, 29, 29, 0.5);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .overlay {
+  background: rgba(0, 0, 0, 0.6);
 }
 </style>

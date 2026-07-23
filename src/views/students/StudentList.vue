@@ -1,5 +1,5 @@
 <template>
-  <div class="student-card">
+  <div :class="['student-card', { 'dark-mode': theme.isDark }]">
     <!-- Search & Filter Bar -->
     <div class="toolbar">
       <div class="toolbar-left">
@@ -244,6 +244,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import type { Student } from '@/services/studentService'
 import {
   Search,
@@ -262,6 +263,7 @@ import {
   X,
 } from '@lucide/vue'
 
+const theme = useThemeStore()
 const openDropdownId = ref<number | null>(null)
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -1058,5 +1060,234 @@ defineEmits<{
     right: auto;
     left: 0;
   }
+}
+
+/* ── Dark Mode ── */
+.dark-mode .student-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .student-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .toolbar {
+  background: transparent;
+  border-bottom-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .search-input {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .search-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .search-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.1);
+}
+
+.dark-mode .filter-label {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .filter-label:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .filter-select {
+  color: #e2e8f0;
+}
+
+.dark-mode .count-badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .student-table thead th {
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  border-bottom-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .student-table tbody td {
+  border-bottom-color: rgba(71, 85, 105, 0.2);
+  color: #cbd5e1;
+}
+
+.dark-mode .student-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .class-cell {
+  color: #cbd5e1;
+}
+
+.dark-mode .class-empty {
+  color: #64748b;
+}
+
+.dark-mode .badge-inactive {
+  background: rgba(71, 85, 105, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .badge-male {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .badge-female {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+}
+
+.dark-mode .row-male:hover,
+.dark-mode .row-female:hover {
+  background: rgba(51, 65, 85, 0.3);
+  border-left-color: #3b82f6;
+}
+
+.dark-mode .action-trigger {
+  background: rgba(51, 65, 85, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .action-trigger:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .action-menu {
+  background: #1e293b;
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .action-item {
+  color: #cbd5e1;
+}
+
+.dark-mode .action-item.view:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .action-item.edit:hover {
+  background: rgba(14, 165, 233, 0.15);
+  color: #38bdf8;
+}
+
+.dark-mode .action-item.assign:hover {
+  background: rgba(217, 119, 6, 0.15);
+  color: #f59e0b;
+}
+
+.dark-mode .action-item.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.dark-mode .dropdown-divider {
+  background: rgba(71, 85, 105, 0.5);
+}
+
+.dark-mode .bulk-bar {
+  background: rgba(30, 41, 59, 0.6);
+  border-bottom-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .bulk-count-label {
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-count-label strong {
+  color: #e2e8f0;
+}
+
+.dark-mode .bulk-btn-clear {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-btn-clear:hover {
+  background: rgba(71, 85, 105, 0.5);
+  color: #cbd5e1;
+}
+
+.dark-mode .pagination-bar {
+  background: rgba(30, 41, 59, 0.6);
+  border-top-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .pagination-info {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-selector {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.dark-mode .rows-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-btn:hover {
+  color: #e2e8f0;
+}
+
+.dark-mode .rows-btn.active {
+  background: rgba(51, 65, 85, 0.6);
+  color: #60a5fa;
+}
+
+.dark-mode .page-nav {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .page-nav:hover:not(:disabled) {
+  border-color: #60a5fa;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode .page-btn {
+  color: #cbd5e1;
+}
+
+.dark-mode .page-btn:hover:not(.active) {
+  background: rgba(51, 65, 85, 0.5);
+  color: #60a5fa;
+}
+
+.dark-mode .page-btn.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.dark-mode .page-dots {
+  color: #64748b;
+}
+
+.dark-mode .pagination-total {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-state {
+  color: #64748b;
 }
 </style>

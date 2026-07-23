@@ -48,14 +48,20 @@
 
       <!-- Theme Toggle -->
       <button
-        class="icon-btn"
-        @click="theme.toggle()"
+        class="theme-toggle-btn"
+        @click="handleThemeToggle"
         :title="theme.isDark ? 'Switch to Light mode' : 'Switch to Dark mode'"
+        :class="{ 'is-dark': theme.isDark }"
       >
-        <div class="theme-icon-wrapper" :class="{ 'rotate': theme.isDark }">
-          <MoonStar v-if="theme.isDark" :size="18" />
-          <Sun v-else :size="18" />
+        <div class="theme-toggle-track">
+          <div class="theme-toggle-thumb">
+            <div class="theme-icon-wrapper" :class="{ 'rotate': theme.isDark }">
+              <MoonStar v-if="theme.isDark" :size="14" />
+              <Sun v-else :size="14" />
+            </div>
+          </div>
         </div>
+        <span class="theme-toggle-label">{{ theme.isDark ? 'Dark' : 'Light' }}</span>
       </button>
 
 
@@ -142,7 +148,17 @@ const searchQuery = ref('')
 const searchInput = ref<HTMLInputElement | null>(null)
 const searchWrapperRef = ref<HTMLElement | null>(null)
 
+const themeToggleCooldown = ref(false)
 const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
+
+function handleThemeToggle() {
+  if (themeToggleCooldown.value) return
+  themeToggleCooldown.value = true
+  theme.toggle()
+  setTimeout(() => {
+    themeToggleCooldown.value = false
+  }, 600)
+}
 
 function toggleSidebar() {
   emit('toggle-sidebar')
@@ -356,17 +372,114 @@ onUnmounted(() => {
   color: #60a5fa;
 }
 
-/* ── Theme Toggle Animation ── */
+/* ── Theme Toggle Button ── */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 100px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.04), rgba(139, 92, 246, 0.04));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.theme-toggle-btn:hover::before {
+  opacity: 1;
+}
+
+.theme-toggle-btn:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+  transform: translateY(-1px);
+}
+
+.theme-toggle-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.theme-toggle-btn.is-dark {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.theme-toggle-btn.is-dark::before {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.06), rgba(167, 139, 250, 0.06));
+  opacity: 1;
+}
+
+.theme-toggle-btn.is-dark:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 2px 12px rgba(96, 165, 250, 0.1);
+}
+
+.theme-toggle-track {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
+  position: relative;
+  z-index: 1;
+}
+
+.is-dark .theme-toggle-track {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.theme-toggle-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  line-height: 1;
+}
+
 .theme-icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .theme-icon-wrapper.rotate {
-  transform: rotate(360deg);
+  transform: rotate(360deg) scale(1.1);
 }
+
+.theme-toggle-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  transition: color 0.3s ease;
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.is-dark .theme-toggle-label {
+  color: #94a3b8;
+}
+
+
 
 /* ── Search ── */
 .search-wrapper {

@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': theme.isDark }]">
 
 
 
@@ -226,6 +226,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useThemeStore } from '@/stores/theme'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { classService, type SchoolClass } from '@/services/classService'
 import { cacheService } from '@/services/cacheService'
@@ -237,6 +238,7 @@ import {
 
 const CACHE_KEY = 'scores-subjects'
 
+const theme = useThemeStore()
 const router = useRouter()
 
 // ── Core Data ───────────────────────────────────────────────────────
@@ -475,6 +477,10 @@ onMounted(async () => {
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
   max-width: 1440px;
+}
+
+.dark-mode .page-container {
+  color: #e2e8f0;
 }
 
 /* ── Terms Header (breadcrumb inside card) ───────────────────────── */
@@ -1054,6 +1060,208 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .classes-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Dark Mode ── */
+.dark-mode .scores-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .scores-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .toolbar,
+.dark-mode .term-toolbar {
+  background: transparent;
+  border-bottom-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .tb-search {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+}
+
+.dark-mode .tb-search input {
+  color: #e2e8f0;
+}
+
+.dark-mode .tb-search input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .tb-filter select {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .tb-filter select:focus {
+  border-color: #60a5fa;
+}
+
+.dark-mode .stat-chip {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.dark-mode .stat-chip svg {
+  color: #60a5fa;
+}
+
+.dark-mode .class-card {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .class-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .class-card-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .class-card-desc {
+  color: #94a3b8;
+}
+
+.dark-mode .class-card-badge {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+}
+
+.dark-mode .class-card-footer {
+  border-top-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .class-card-stat {
+  color: #94a3b8;
+}
+
+.dark-mode .class-card-stat svg {
+  color: #64748b;
+}
+
+.dark-mode .class-card-arrow {
+  color: #475569;
+}
+
+.dark-mode .terms-header .terms-back {
+  color: #94a3b8;
+}
+
+.dark-mode .terms-header .terms-back:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #60a5fa;
+}
+
+.dark-mode .terms-current {
+  color: #60a5fa;
+}
+
+.dark-mode .term-section {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .term-section:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .term-section-header:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+.dark-mode .term-section-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .term-section-count {
+  color: #94a3b8;
+}
+
+.dark-mode .term-year-badge {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+}
+
+.dark-mode .term-section-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .term-section-arrow {
+  color: #475569;
+}
+
+.dark-mode .sort-toggle {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.dark-mode .sort-label {
+  color: #64748b;
+}
+
+.dark-mode .sort-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .sort-btn:hover {
+  color: #e2e8f0;
+}
+
+.dark-mode .sort-btn-active {
+  background: rgba(51, 65, 85, 0.6);
+  color: #60a5fa;
+}
+
+.dark-mode .subject-chip {
+  background: rgba(51, 65, 85, 0.3);
+  border-color: rgba(71, 85, 105, 0.3);
+  color: #cbd5e1;
+}
+
+.dark-mode .subject-chip:hover {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.dark-mode .subject-chip-code {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+}
+
+.dark-mode .subject-chip-count {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .empty-state-icon {
+  background: rgba(51, 65, 85, 0.4);
+  color: #64748b;
+}
+
+.dark-mode .empty-state h5 {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-state p {
+  color: #64748b;
+}
+
+.dark-mode .loading-state {
+  color: #94a3b8;
+}
+
+.dark-mode .no-subjects-note {
+  color: #64748b;
+}
+
+.dark-mode .terms-sep {
+  color: #475569;
 }
 </style>
 

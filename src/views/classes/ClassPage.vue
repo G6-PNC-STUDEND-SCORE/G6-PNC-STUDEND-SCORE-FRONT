@@ -1,5 +1,5 @@
 <template>
-  <div class="class-page">
+  <div :class="['class-page', { 'dark-mode': theme.isDark }]">
     <!-- ── Store Messages ── -->
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
@@ -243,7 +243,7 @@
     <!-- ── Add / Edit Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+        <div v-if="showModal" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="closeModal">
           <div class="modal-content-panel">
             <div class="modal-head">
               <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-create'">
@@ -314,7 +314,7 @@
     <!-- ── Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+        <div v-if="showDeleteModal" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="closeDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
               <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
@@ -376,6 +376,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive, computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useClassStore } from '@/stores/class'
 import type { SchoolClass } from '@/services/classService'
 import { getAcademicYears } from '@/services/academicYearService'
@@ -386,6 +387,7 @@ import {
   MoreVertical, AlertCircle, CheckCircle as CheckCircleIcon, Trash, Eye,
 } from '@lucide/vue'
 
+const theme = useThemeStore()
 const store = useClassStore()
 const searchQuery = ref('')
 const statusFilter = ref('')
@@ -1522,4 +1524,323 @@ select.modern-input {
 .modal-enter-active { transition: all 0.25s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
+
+/* ── Dark Mode ── */
+.dark-mode .class-page { color: #e2e8f0; }
+
+.dark-mode .class-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .class-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .toolbar {
+  background: transparent;
+  border-bottom-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .search-input {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input::placeholder { color: #64748b; }
+.dark-mode .search-input:hover { border-color: #64748b; }
+.dark-mode .search-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.1);
+}
+
+.dark-mode .filter-label {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .filter-label:hover { border-color: #64748b; }
+
+.dark-mode .filter-select {
+  color: #e2e8f0;
+}
+
+.dark-mode .count-badge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .class-table thead th {
+  background: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  border-bottom-color: rgba(71, 85, 105, 0.4);
+}
+
+.dark-mode .class-table tbody td {
+  border-bottom-color: rgba(71, 85, 105, 0.2);
+  color: #cbd5e1;
+}
+
+.dark-mode .class-table tbody tr:hover td {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+.dark-mode .row-selected {
+  background: rgba(59, 130, 246, 0.08) !important;
+}
+
+.dark-mode .user-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .meta-val {
+  color: #94a3b8;
+}
+
+.dark-mode .badge-inactive {
+  background: rgba(71, 85, 105, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-bar {
+  background: rgba(127, 29, 29, 0.3);
+  border-bottom-color: rgba(239, 68, 68, 0.3);
+}
+
+.dark-mode .bulk-count {
+  color: #fca5a5;
+}
+
+.dark-mode .bulk-clear-btn {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-clear-btn:hover {
+  background: rgba(71, 85, 105, 0.4);
+  border-color: #64748b;
+}
+
+.dark-mode .pagination-bar {
+  background: rgba(30, 41, 59, 0.6);
+  border-top-color: rgba(71, 85, 105, 0.3);
+}
+
+.dark-mode .pagination-info {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-selector {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.dark-mode .rows-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-btn:hover {
+  color: #e2e8f0;
+}
+
+.dark-mode .rows-btn.active {
+  background: rgba(51, 65, 85, 0.6);
+  color: #60a5fa;
+}
+
+.dark-mode .page-nav {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .page-nav:hover:not(:disabled) {
+  border-color: #60a5fa;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode .page-btn {
+  color: #cbd5e1;
+}
+
+.dark-mode .page-btn:hover:not(.active) {
+  background: rgba(51, 65, 85, 0.5);
+  color: #60a5fa;
+}
+
+.dark-mode .page-btn.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.dark-mode .page-dots {
+  color: #64748b;
+}
+
+.dark-mode .pagination-total {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-state-icon-ring {
+  background: rgba(59, 130, 246, 0.12);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.dark-mode .empty-state-icon-ring::after {
+  border-color: rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode .empty-state-title {
+  color: #f1f5f9;
+}
+
+.dark-mode .empty-state-desc {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-state-desc strong {
+  color: #cbd5e1;
+}
+
+.dark-mode .empty-state-btn {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.dark-mode .empty-state-btn:hover {
+  background: rgba(71, 85, 105, 0.4);
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+
+.dark-mode .action-trigger {
+  background: rgba(51, 65, 85, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .action-trigger:hover {
+  background: rgba(71, 85, 105, 0.5);
+  color: #cbd5e1;
+}
+
+.dark-mode .action-menu {
+  background: #1e293b;
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .action-item {
+  color: #cbd5e1;
+}
+
+.dark-mode .action-item:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .action-item.edit:hover {
+  background: rgba(217, 119, 6, 0.15);
+  color: #f59e0b;
+}
+
+.dark-mode .action-item.view:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .action-item.delete {
+  color: #ef4444;
+}
+
+.dark-mode .action-item.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dark-mode .dropdown-divider {
+  background: rgba(71, 85, 105, 0.5);
+}
+
+.dark-mode .msg-error {
+  background: rgba(127, 29, 29, 0.3);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .msg-success {
+  background: rgba(6, 95, 70, 0.3);
+  color: #6ee7b7;
+  border-left-color: #10b981;
+}
+
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #cbd5e1;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1;
+}
+
+.dark-mode .modern-input {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .modern-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .modern-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+}
+
+.dark-mode .modern-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .btn-ghost {
+  background: rgba(51, 65, 85, 0.4);
+  color: #cbd5e1;
+}
+
+.dark-mode .btn-ghost:hover {
+  background: rgba(71, 85, 105, 0.5);
+}
+
+.dark-mode .toast-notification.success {
+  background: rgba(6, 95, 70, 0.5);
+  color: #6ee7b7;
+  border-top-color: rgba(16, 185, 129, 0.3);
+  border-right-color: rgba(16, 185, 129, 0.3);
+  border-bottom-color: rgba(16, 185, 129, 0.3);
+}
+
+.dark-mode .toast-notification.error {
+  background: rgba(127, 29, 29, 0.5);
+  color: #fca5a5;
+  border-top-color: rgba(239, 68, 68, 0.3);
+  border-right-color: rgba(239, 68, 68, 0.3);
+  border-bottom-color: rgba(239, 68, 68, 0.3);
+}
 </style>

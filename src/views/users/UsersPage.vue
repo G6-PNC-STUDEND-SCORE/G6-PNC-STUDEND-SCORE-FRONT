@@ -1,5 +1,5 @@
 <template>
-  <div class="users-page">
+  <div :class="['users-page', { 'dark-mode': theme.isDark }]">
     <!-- ── Store Messages ── -->
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
@@ -272,7 +272,7 @@
     <!-- Create/Edit Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showFormModal" class="modal-overlay" @click.self="closeFormModal">
+        <div v-if="showFormModal" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="closeFormModal">
           <div class="modal-content-panel">
             <!-- Header -->
             <div class="modal-head">
@@ -412,7 +412,7 @@
     <!-- Delete Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+        <div v-if="showDeleteModal" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="closeDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
               <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
@@ -449,7 +449,7 @@
     <!-- Bulk Delete Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
+        <div v-if="showBulkDeleteModal" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="closeBulkDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
               <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
@@ -486,7 +486,7 @@
     <!-- View Details Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDetailsModal && detailUser" class="modal-overlay" @click.self="closeDetailsModal">
+        <div v-if="showDetailsModal && detailUser" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="closeDetailsModal">
           <div class="modal-content-panel" style="max-width: 460px;">
             <div class="modal-head">
               <div class="modal-icon" style="background: #dbeafe; color: #2563eb;">
@@ -591,6 +591,8 @@
 </template>
 
 <script setup lang="ts">
+import { useThemeStore } from '@/stores/theme'
+const theme = useThemeStore()
 import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, SearchX } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, type Component } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -1964,6 +1966,88 @@ select.modern-input {
 .toast-icon { display: flex; flex-shrink: 0; }
 .toast-notification.success .toast-icon svg { color: #10b981; }
 .toast-notification.error .toast-icon svg { color: #ef4444; }
+
+/* ── Dark Mode ── */
+.dark-mode .users-page { background: transparent; }
+.dark-mode .msg-error { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-left-color: #ef4444; }
+.dark-mode .msg-success { background: rgba(16, 185, 129, 0.1); color: #6ee7b7; border-left-color: #10b981; }
+.dark-mode .load-state { color: #94a3b8; }
+.dark-mode .spinner { border-color: #334155; border-top-color: #60a5fa; }
+.dark-mode .user-card { background: #1e293b; border-color: #334155; }
+.dark-mode .user-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.dark-mode .toolbar { background: #1e293b; border-bottom-color: #334155; }
+.dark-mode .search-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+.dark-mode .search-input::placeholder { color: #64748b; }
+.dark-mode .search-input:hover { border-color: #475569; }
+.dark-mode .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,0.12); }
+.dark-mode .filter-label { background: #0f172a; border-color: #334155; color: #94a3b8; }
+.dark-mode .filter-label:hover { border-color: #475569; }
+.dark-mode .filter-label :deep(svg) { color: #64748b; }
+.dark-mode .filter-select { color: #cbd5e1; }
+.dark-mode .count-badge { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .bulk-bar { background: rgba(239, 68, 68, 0.1); border-bottom-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .bulk-count { color: #fca5a5; }
+.dark-mode .bulk-clear-btn { background: #334155; border-color: #475569; color: #94a3b8; }
+.dark-mode .bulk-clear-btn:hover { background: #475569; border-color: #64748b; }
+.dark-mode .user-table thead th { background: #0f172a; color: #94a3b8; border-bottom-color: #334155; }
+.dark-mode .user-table tbody td { color: #cbd5e1; border-bottom-color: #1e293b; }
+.dark-mode .user-table tbody tr:hover { background: rgba(59,130,246,0.05); }
+.dark-mode .user-name { color: #f1f5f9; }
+.dark-mode .meta-val { color: #94a3b8; }
+.dark-mode .role-admin, .dark-mode .role-teacher, .dark-mode .role-student { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .badge-male, .dark-mode .badge-female, .dark-mode .badge-other { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .badge-active { background: rgba(22, 163, 74, 0.15); color: #4ade80; }
+.dark-mode .badge-inactive { background: #334155; color: #64748b; }
+.dark-mode .badge-suspended { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.dark-mode .row-selected { background: rgba(59,130,246,0.08) !important; }
+.dark-mode .action-trigger { background: #334155; color: #94a3b8; }
+.dark-mode .action-trigger:hover { background: #475569; color: #cbd5e1; }
+.dark-mode .action-menu { background: #1e293b; border-color: #334155; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+.dark-mode .action-item { color: #cbd5e1; }
+.dark-mode .action-item:hover { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .action-item.edit:hover { background: rgba(217, 119, 6, 0.15); color: #fbbf24; }
+.dark-mode .action-item.view:hover { background: #1e3a5f; color: #60a5fa; }
+.dark-mode .action-item.delete { color: #f87171; }
+.dark-mode .action-item.delete:hover { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .dropdown-divider { background: #334155; }
+.dark-mode .pagination-bar { background: #0f172a; border-top-color: #334155; }
+.dark-mode .pagination-info { color: #94a3b8; }
+.dark-mode .rows-selector { background: #1e293b; }
+.dark-mode .rows-btn { color: #94a3b8; }
+.dark-mode .rows-btn:hover { color: #e2e8f0; }
+.dark-mode .rows-btn.active { background: #334155; color: #60a5fa; }
+.dark-mode .page-nav { background: #1e293b; border-color: #334155; color: #94a3b8; }
+.dark-mode .page-nav:hover:not(:disabled) { border-color: #3b82f6; color: #60a5fa; background: #1e3a5f; }
+.dark-mode .page-btn { color: #94a3b8; }
+.dark-mode .page-btn:hover:not(.active) { background: #334155; color: #60a5fa; }
+.dark-mode .page-btn.active { background: #2563eb; color: #fff; }
+.dark-mode .page-dots { color: #64748b; }
+.dark-mode .pagination-total { color: #94a3b8; }
+.dark-mode .empty-state-title { color: #f1f5f9; }
+.dark-mode .empty-state-desc { color: #94a3b8; }
+.dark-mode .empty-state-desc strong { color: #cbd5e1; }
+.dark-mode .empty-state-icon-ring { background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%); color: #60a5fa; box-shadow: 0 4px 12px rgba(59,130,246,0.15); }
+.dark-mode .empty-state-icon-ring::after { border-color: rgba(59,130,246,0.15); }
+.dark-mode .empty-state-btn { background: #334155; border-color: #475569; color: #cbd5e1; }
+.dark-mode .empty-state-btn:hover { background: #475569; border-color: #64748b; color: #f1f5f9; }
+.dark-mode .modal-overlay { background: rgba(0,0,0,0.65); }
+.dark-mode .modal-content-panel { background: #1e293b; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .form-label { color: #cbd5e1; }
+.dark-mode .form-label :deep(svg) { color: #64748b; }
+.dark-mode .modern-input { background: #0f172a; border-color: #475569; color: #e2e8f0; }
+.dark-mode .modern-input:hover { border-color: #64748b; }
+.dark-mode .modern-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.dark-mode .modern-input::placeholder { color: #64748b; }
+.dark-mode .error-alert { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .field-hint { color: #64748b; }
+.dark-mode .detail-label { color: #64748b; }
+.dark-mode .detail-value { color: #e2e8f0; }
+.dark-mode .toast-notification.success { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border-left-color: #10b981; }
+.dark-mode .toast-notification.error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-left-color: #ef4444; }
 
 .toast-message { flex: 1; line-height: 1.4; }
 

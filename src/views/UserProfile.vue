@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-profile-page">
+  <div :class="['admin-profile-page', { 'dark-mode': theme.isDark }]">
     <header class="page-header">
       <div>
         <h1>My Profile</h1>
@@ -195,6 +195,7 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
@@ -214,6 +215,7 @@ function invalidateProfileCache() {
   profileCacheTime = 0
 }
 
+const theme = useThemeStore()
 const auth = useAuthStore()
 let objectUrl: string | null = null
 
@@ -869,6 +871,96 @@ select:focus {
   margin: 0 auto 16px;
   border-radius: 12px;
   font-size: 14px;
+}
+
+/* ── Dark Mode ── */
+.dark-mode .admin-profile-page {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+.dark-mode .page-header h1 {
+  color: #f1f5f9;
+}
+.dark-mode .page-subtitle {
+  color: #94a3b8;
+}
+.dark-mode .loading-state,
+.dark-mode .error-state {
+  background: #1e293b;
+  border-color: #334155;
+}
+.dark-mode .error-state p {
+  color: #94a3b8;
+}
+.dark-mode .profile-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 6px 18px rgba(0,0,0,0.2);
+}
+.dark-mode .profile-name {
+  color: #f1f5f9;
+}
+.dark-mode .profile-role {
+  color: #94a3b8;
+}
+.dark-mode .profile-stats {
+  border-top-color: #334155;
+}
+.dark-mode .stat-label {
+  color: #64748b;
+}
+.dark-mode .stat-value {
+  color: #e2e8f0;
+}
+.dark-mode .card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 6px 18px rgba(0,0,0,0.2);
+}
+.dark-mode .card-title {
+  color: #f1f5f9;
+}
+.dark-mode .card h3 {
+  color: #f1f5f9;
+}
+.dark-mode .chip {
+  background: #1e3a5f;
+  color: #60a5fa;
+  border-color: #1e40af;
+}
+.dark-mode .field label {
+  color: #94a3b8;
+}
+.dark-mode input,
+.dark-mode select {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode input:hover,
+.dark-mode select:hover {
+  border-color: #64748b;
+  background: #1e293b;
+}
+.dark-mode input:focus,
+.dark-mode select:focus {
+  border-color: #3b82f6;
+  background: #1e293b;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.dark-mode .btn-ghost {
+  background: #334155;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+.dark-mode .btn-ghost:hover:not(:disabled) {
+  background: #475569;
+  border-color: #64748b;
+}
+.dark-mode .hint.success {
+  color: #6ee7b7;
+}
+.dark-mode .hint.error {
+  color: #fca5a5;
 }
 
 @media (max-width: 900px) {

@@ -1,5 +1,5 @@
 <template>
-  <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
+  <aside :class="['sidebar', { collapsed: sidebar.collapsed, 'dark-mode': theme.isDark }]">
     <!-- Logo / Brand -->
     <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 64px">
       <div class="sidebar-logo-wrap">
@@ -82,7 +82,7 @@
   <!-- Logout Confirmation Modal -->
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+      <div v-if="showLogoutModal" :class="['modal-overlay', { 'dark-mode': theme.isDark }]" @click.self="showLogoutModal = false">
         <div class="modal-dialog-custom">
           <div class="modal-header-custom">
             <div class="modal-icon">
@@ -110,6 +110,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
@@ -121,6 +122,7 @@ import {
 import type { Component } from 'vue'
 
 const router = useRouter()
+const theme = useThemeStore()
 const auth = useAuthStore()
 const sidebar = useSidebarStore()
 
@@ -183,7 +185,7 @@ function goToProfile() {
   left: 0;
   top: 0;
   z-index: 1000;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.35s ease, border-color 0.35s ease;
   overflow: hidden;
 }
 
@@ -563,5 +565,153 @@ function goToProfile() {
 .modal-enter-from .modal-dialog-custom,
 .modal-leave-to .modal-dialog-custom {
   transform: scale(0.9);
+}
+
+/* ── Dark Mode Enhanced ── */
+.sidebar.dark-mode {
+  background: linear-gradient(180deg, #1e293b 0%, #162032 100%);
+  border-right-color: rgba(51, 65, 85, 0.4);
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar.dark-mode .brand-name {
+  color: #e2e8f0;
+}
+
+.sidebar.dark-mode .menu-title {
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.sidebar.dark-mode .sidebar-link {
+  color: #94a3b8;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.sidebar.dark-mode .sidebar-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 20px;
+  background: linear-gradient(180deg, #60a5fa, #a78bfa);
+  border-radius: 0 4px 4px 0;
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar.dark-mode .sidebar-link:hover {
+  background: rgba(96, 165, 250, 0.1);
+  color: #93c5fd;
+  transform: translateX(4px);
+}
+
+.sidebar.dark-mode.collapsed .sidebar-link:hover {
+  transform: none;
+}
+
+.sidebar.dark-mode .sidebar-link:hover::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+
+.sidebar.dark-mode .sidebar-link.router-link-active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  font-weight: 600;
+  transform: translateX(4px);
+}
+
+.sidebar.dark-mode .sidebar-link.router-link-active::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+}
+
+.sidebar.dark-mode .sidebar-link.router-link-active .sidebar-link-text {
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+}
+
+.sidebar.dark-mode .toggle-sidebar-btn {
+  color: #64748b;
+}
+
+.sidebar.dark-mode .toggle-sidebar-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #60a5fa;
+}
+
+.sidebar.dark-mode .user-section {
+  background: transparent;
+  border-top-color: rgba(51, 65, 85, 0.3);
+  transition: background 0.35s ease;
+}
+
+.sidebar.dark-mode .user {
+  color: #cbd5e1;
+}
+
+.sidebar.dark-mode .user:hover {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.sidebar.dark-mode .user h6 {
+  color: #f1f5f9;
+}
+
+.sidebar.dark-mode .user small {
+  color: #94a3b8;
+}
+
+.sidebar.dark-mode .logout-icon-btn {
+  color: #64748b;
+}
+
+.sidebar.dark-mode .logout-icon-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #f87171;
+  transform: scale(1.1);
+}
+
+.sidebar.dark-mode .modal-dialog-custom {
+  background: #1e293b;
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar.dark-mode .modal-header-custom h5 {
+  color: #f1f5f9;
+}
+
+.sidebar.dark-mode .modal-header-custom p {
+  color: #94a3b8;
+}
+
+.sidebar.dark-mode .modal-icon {
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.sidebar.dark-mode .btn-cancel {
+  background: rgba(51, 65, 85, 0.5);
+  color: #cbd5e1;
+}
+
+.sidebar.dark-mode .btn-cancel:hover {
+  background: rgba(71, 85, 105, 0.5);
+  transform: translateY(-1px);
+}
+
+.sidebar.dark-mode .btn-logout {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.sidebar.dark-mode .btn-logout:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
 }
 </style>
