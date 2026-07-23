@@ -26,7 +26,6 @@
 
     <!-- ── Student List ── -->
     <StudentList
-      v-else
       ref="studentListRef"
       :students="filteredStudents"
       :search-query="searchQuery"

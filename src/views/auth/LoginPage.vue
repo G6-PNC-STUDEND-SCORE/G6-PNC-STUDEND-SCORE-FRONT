@@ -153,7 +153,7 @@ let retryTimeout: ReturnType<typeof setTimeout> | undefined
 async function onSubmit() {
   const success = await auth.login(email.value, password.value)
   if (success) {
-    await router.push('/dashboard')
+    await router.push(auth.defaultLandingPath)
   }
 }
 
@@ -161,7 +161,7 @@ function handleGoogleCredential(response: { credential: string }) {
   if (response.credential) {
     auth.loginWithGoogle(response.credential).then(success => {
       if (success) {
-        setTimeout(() => router.push('/dashboard'), 500)
+        setTimeout(() => router.push(auth.defaultLandingPath), 500)
       }
     })
   }

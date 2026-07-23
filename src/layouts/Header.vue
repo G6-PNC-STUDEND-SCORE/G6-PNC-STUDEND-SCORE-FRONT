@@ -166,9 +166,9 @@ function closeDropdown() {
   showDropdown.value = false
 }
 
-function handleLogout() {
+async function handleLogout() {
   showDropdown.value = false
-  auth.logout()
+  await auth.logout()
   router.push('/login')
 }
 

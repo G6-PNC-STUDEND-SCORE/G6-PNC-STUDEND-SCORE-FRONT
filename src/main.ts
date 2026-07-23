@@ -18,7 +18,7 @@ app.use(i18n)
 
 const authStore = useAuthStore()
 
-authStore.init().finally(() => {
+authStore.ensureReady().finally(() => {
   app.mount('#app')
 })
 

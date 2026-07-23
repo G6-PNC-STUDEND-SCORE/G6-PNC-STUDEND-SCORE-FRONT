@@ -431,6 +431,7 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed, watch, type Component } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
+import { useAuthStore } from '@/stores/auth'
 import type { Subject } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
 import { classService } from '@/services/classService'
@@ -494,6 +495,7 @@ const visiblePages = computed(() => {
 
 // ─── Store ─────────────────────────────────────────────────────────
 const store = useSubjectStore()
+const auth = useAuthStore()
 const searchQuery = ref('')
 const statusFilter = ref('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
@@ -856,6 +858,10 @@ async function loadTermData() {
 }
 
 async function fetchTeachers() {
+  // Only the Add/Edit Subject modal's teacher checklist needs this — skip the call entirely
+  // for a role that lacks view-teachers (e.g. the default teacher role) instead of firing a
+  // request that's guaranteed to 403.
+  if (!auth.hasPermission('view-teachers')) { teachers.value = []; return }
   try {
     const r = await subjectService.getTeachers()
     if (r.success) teachers.value = (r.data as { id: number; name: string }[]) || []

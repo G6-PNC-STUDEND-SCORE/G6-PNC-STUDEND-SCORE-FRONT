@@ -12,6 +12,19 @@
     </div>
 
     <div v-else class="role-card">
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-btn" :class="{ active: activeTab === 'permissions' }" @click="activeTab = 'permissions'">
+          Permissions
+        </button>
+        <button class="tab-btn" :class="{ active: activeTab === 'domains' }" @click="activeTab = 'domains'">
+          Sign-in Domains
+        </button>
+      </div>
+
+      <DomainRulesPanel v-if="activeTab === 'domains'" />
+
+      <template v-else>
       <!-- Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
@@ -213,6 +226,7 @@
           </button>
         </div>
       </div>
+      </template>
     </div>
 
     <!-- Create Role Modal -->
@@ -330,6 +344,9 @@ import {
   createRole, updateRole, deleteRole,
   type Role, type Permission, type PermissionsByGroup,
 } from '@/services/permissionService'
+import DomainRulesPanel from './DomainRulesPanel.vue'
+
+const activeTab = ref<'permissions' | 'domains'>('permissions')
 
 interface FeatureRow {
   group: string
@@ -357,7 +374,7 @@ const saving = ref(false)
 const searchQuery = ref('')
 const currentPage = ref(1)
 const perPage = ref(10)
-const pageSizeOptions = [5, 10, 25, 50]
+const pageSizeOptions = [10, 25, 50]
 
 const showCreateModal = ref(false)
 const creating = ref(false)
@@ -660,6 +677,29 @@ onMounted(loadAll)
 .role-card:hover {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
+
+/* Tabs */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px 0;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0.2rem;
+  margin-right: 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.tab-btn:hover { color: #334155; }
+.tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
 
 /* Toolbar (mirrors Users page) */
 .toolbar {

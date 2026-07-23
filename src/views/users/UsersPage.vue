@@ -611,8 +611,8 @@ function applyFilters() {
 
 // ─── Pagination ────────────────────────────────────────────────────────
 const currentPage = ref(1)
-const perPage = ref(5)
-const pageSizeOptions = [5, 10, 25, 50]
+const perPage = ref(10)
+const pageSizeOptions = [10, 25, 50]
 
 const pagination = computed(() => {
   const total = totalUsers.value

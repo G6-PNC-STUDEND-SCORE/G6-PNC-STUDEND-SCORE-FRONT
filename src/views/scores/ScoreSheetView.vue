@@ -1820,18 +1820,31 @@ function onGlobalKeydown(event: KeyboardEvent) {
       break
     case 'Tab':
       event.preventDefault()
-      if (event.shiftKey) {
-        if (currentColIdx > 0) { currentColIdx--; selectedCol.value = cols[currentColIdx].id }
-        else if (currentRow > 0) { currentRow--; selectedRowIndex.value = currentRow; currentColIdx = cols.length - 1; selectedCol.value = cols[currentColIdx].id }
-      } else {
-        if (currentColIdx < cols.length - 1) { currentColIdx++; selectedCol.value = cols[currentColIdx].id }
-        else if (currentRow < filteredRows.value.length - 1) {
-          const next = currentRow + 1; if (pageSize.value !== 'all' && next >= pageSize.value) pageSize.value = 'all'
-          currentRow = next; selectedRowIndex.value = currentRow; currentColIdx = 0; selectedCol.value = cols[currentColIdx].id
+      {
+        const allColIds = getSelectableColumnIds()
+        const currentPos = selectedCol.value !== null ? allColIds.indexOf(selectedCol.value) : -1
+        if (currentPos < 0) break
+        if (event.shiftKey) {
+          if (currentPos > 0) {
+            selectedCol.value = allColIds[currentPos - 1]
+          } else if (currentRow > 0) {
+            selectedRowIndex.value = --currentRow
+            selectedCol.value = allColIds[allColIds.length - 1]
+          }
+        } else {
+          if (currentPos < allColIds.length - 1) {
+            selectedCol.value = allColIds[currentPos + 1]
+          } else if (currentRow < filteredRows.value.length - 1) {
+            const next = currentRow + 1
+            if (pageSize.value !== 'all' && next >= pageSize.value) pageSize.value = 'all'
+            selectedRowIndex.value = next
+            selectedCol.value = allColIds[0]
+            currentRow = next
+          }
         }
+        isRangeSelecting.value = false
       }
-      isRangeSelecting.value = false
-      scrollToCell(currentRow, currentColIdx)
+      scrollToCell(selectedRowIndex.value, selectedCol.value ?? 0)
       break
     case 'Enter':
       event.preventDefault()
@@ -1921,6 +1934,14 @@ function onGlobalKeydown(event: KeyboardEvent) {
 }
 
 function onEditKeydown(event: KeyboardEvent) {
+  // This is the definitive handler while a cell is being edited — stop the event from also
+  // bubbling up to .sheet-wrapper's own @keydown="onGlobalKeydown". Without this, saveEdit()
+  // below clears editingRow/editingCol synchronously, so by the time the same Tab/Enter event
+  // reaches the wrapper, its "still editing" check is already false and it runs its own
+  // Tab/Enter navigation on top of the one this handler just did — advancing two cells per
+  // keypress instead of one.
+  event.stopPropagation()
+
   // Handle Ctrl+Z, Ctrl+Y, Ctrl+S during editing
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
@@ -1994,22 +2015,25 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 
 function handleTabNavigation(shiftKey: boolean) {
-  const cols = columns.value
-  const idx = selectedCol.value !== null ? cols.findIndex(c => c.id === selectedCol.value) : 0
+  const allColIds = getSelectableColumnIds()
+  const currentPos = selectedCol.value !== null ? allColIds.indexOf(selectedCol.value) : -1
+  if (currentPos < 0) return
   if (shiftKey) {
-    if (idx > 0) { selectedCol.value = cols[idx - 1].id }
-    else if (selectedRowIndex.value > 0) {
+    if (currentPos > 0) {
+      selectedCol.value = allColIds[currentPos - 1]
+    } else if (selectedRowIndex.value > 0) {
       selectedRowIndex.value--
-      selectedCol.value = cols[cols.length - 1].id
+      selectedCol.value = allColIds[allColIds.length - 1]
     }
   } else {
-    if (idx < cols.length - 1) { selectedCol.value = cols[idx + 1].id }
-    else if (selectedRowIndex.value < filteredRows.value.length - 1) {
+    if (currentPos < allColIds.length - 1) {
+      selectedCol.value = allColIds[currentPos + 1]
+    } else if (selectedRowIndex.value < filteredRows.value.length - 1) {
       selectedRowIndex.value++
-      selectedCol.value = cols[0].id
+      selectedCol.value = allColIds[0]
     }
   }
-  if (selectedCol.value !== null && selectedCol.value > 0) {
+  if (selectedCol.value !== null) {
     nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
   }
 }
