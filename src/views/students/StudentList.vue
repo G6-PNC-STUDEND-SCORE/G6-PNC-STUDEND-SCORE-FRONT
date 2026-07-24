@@ -85,6 +85,7 @@
             </th>
             <th class="col-index">#</th>
             <th>Name</th>
+            <th class="col-student-id">ID</th>
             <th>Gender</th>
             <th>Class</th>
             <th>Generation</th>
@@ -108,7 +109,7 @@
               />
             </td>
             <td class="col-index">
-              <span class="id-cell">{{ student.id }}</span>
+              <span class="id-cell">{{ (currentPage - 1) * pageSize + index + 1 }}</span>
             </td>
             <td>
               <div class="student-cell">
@@ -127,6 +128,10 @@
                 </div>
                 <span class="student-name">{{ student.user?.name }}</span>
               </div>
+            </td>
+            <td class="col-student-id">
+              <span v-if="student.student_id_number" class="id-number-cell">{{ student.student_id_number }}</span>
+              <span v-else class="meta-cell">—</span>
             </td>
             <td>
               <span class="meta-cell">{{ student.user?.gender || '—' }}</span>
@@ -640,6 +645,26 @@ defineEmits<{
   font-weight: 600;
   color: #0f172a;
   font-size: 0.85rem;
+}
+
+.col-student-id {
+  width: 130px;
+  white-space: nowrap;
+  padding: 10px 14px !important;
+}
+
+.student-table thead th.col-student-id,
+.student-table tbody td.col-student-id {
+  padding: 10px 14px !important;
+  vertical-align: middle;
+}
+
+.id-number-cell {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  white-space: nowrap;
 }
 
 .class-cell {

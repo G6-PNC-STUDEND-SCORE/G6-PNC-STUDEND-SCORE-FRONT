@@ -190,8 +190,11 @@ export async function importFromGoogleSheetsCSV(subjectId: number, termId: numbe
   await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
 }
 
-export async function addEnrollment(subjectId: number, termId: number, studentId: number | null, classId?: number | null): Promise<{ id: number; student_id: number; student_number: string }> {
-  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId, class_id: classId || undefined })
+export async function addEnrollment(subjectId: number, termId: number, studentId: number | null, classId?: number | null, studentName?: string | null, studentNumber?: string | null): Promise<{ id: number; student_id: number; student_number: string }> {
+  const payload: Record<string, unknown> = { student_id: studentId, class_id: classId || undefined }
+  if (studentName) payload.student_name = studentName
+  if (studentNumber) payload.student_number = studentNumber
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, payload)
   return res.data.data
 }
 

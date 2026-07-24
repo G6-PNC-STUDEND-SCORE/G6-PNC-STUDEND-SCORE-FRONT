@@ -327,11 +327,40 @@
                 </div>
                 <!-- Status -->
                 <div class="field">
-                  <label>Status</label>
-                  <select v-model="formData.status">
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
+                  <label>
+                    <ToggleLeft :size="14" />
+                    Status
+                  </label>
+                  <div class="status-toggle">
+                    <label
+                      class="status-option"
+                      :class="{ active: formData.status === 'Active' }"
+                    >
+                      <input
+                        type="radio"
+                        name="subject-status"
+                        value="Active"
+                        :checked="formData.status === 'Active'"
+                        @change="formData.status = 'Active'"
+                      />
+                      <span class="status-dot status-dot-active"></span>
+                      <span class="status-text">Active</span>
+                    </label>
+                    <label
+                      class="status-option"
+                      :class="{ active: formData.status === 'Inactive' }"
+                    >
+                      <input
+                        type="radio"
+                        name="subject-status"
+                        value="Inactive"
+                        :checked="formData.status === 'Inactive'"
+                        @change="formData.status = 'Inactive'"
+                      />
+                      <span class="status-dot status-dot-inactive"></span>
+                      <span class="status-text">Inactive</span>
+                    </label>
+                  </div>
                 </div>
               </div>
               <!-- Term assignment -->
@@ -1503,6 +1532,94 @@ onMounted(async () => {
 }
 
 .del-text { font-size: 0.9rem; color: #475569; margin: 0; }
+
+/* ── Status Toggle ── */
+.status-toggle {
+  display: flex;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.status-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #64748b;
+  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+  user-select: none;
+  margin: 0;
+}
+
+.status-option:hover {
+  color: #334155;
+  background: #f1f5f9;
+}
+
+.status-option.active {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.12);
+}
+
+.status-option.active:has(.status-dot-active) {
+  color: #059669;
+  border-color: #059669;
+  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.12);
+}
+
+.status-option.active:has(.status-dot-inactive) {
+  color: #dc2626;
+  border-color: #dc2626;
+  box-shadow: 0 1px 4px rgba(220, 38, 38, 0.12);
+}
+
+.status-option input[type="radio"] {
+  display: none;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.status-dot-active {
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.status-dot-inactive {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+}
+
+.status-option:not(.active) .status-dot-active {
+  background: #d1d5db;
+  box-shadow: none;
+}
+
+.status-option:not(.active) .status-dot-inactive {
+  background: #d1d5db;
+  box-shadow: none;
+}
+
+.status-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
 
 .modal-foot {
   display: flex;

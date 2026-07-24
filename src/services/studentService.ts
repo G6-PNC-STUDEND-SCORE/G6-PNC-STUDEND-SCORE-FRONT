@@ -3,6 +3,7 @@ import { http } from './api'
 export interface Student {
   id: number
   user_id: number
+  student_id_number: string | null
   student_number_sequence_id: number | null
   generation_id: number | null
   profile_photo: string | null

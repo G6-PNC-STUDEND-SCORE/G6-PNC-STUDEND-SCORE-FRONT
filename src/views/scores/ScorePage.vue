@@ -16,9 +16,9 @@
         <!-- ══════════════════════════════════════════════════════════ -->
         <template v-if="!selectedClass">
           <div class="scores-card">
-            <!-- Toolbar: Search + Filter + Stats -->
+            <!-- Toolbar: Search + Generation on left, Stats on right -->
             <div class="toolbar" v-if="classes.length > 0">
-              <div class="toolbar-left">
+              <div class="toolbar-left-group">
                 <div class="tb-search">
                   <Search :size="16" />
                   <input
@@ -30,8 +30,6 @@
                     <X :size="14" />
                   </button>
                 </div>
-              </div>
-              <div class="toolbar-right">
                 <div class="tb-filter" v-if="classGenerations.length > 0">
                   <select v-model="selectedGenerationFilter">
                     <option :value="null">All Generations</option>
@@ -44,8 +42,10 @@
                     </option>
                   </select>
                 </div>
+              </div>
+              <div class="toolbar-right">
                 <div class="stat-chip" v-if="filteredClasses.length > 0">
-                  <Users :size="14" />
+                  <School :size="14" />
                   <span>{{ filteredClasses.length }} Class{{ filteredClasses.length !== 1 ? 'es' : '' }}</span>
                 </div>
                 <div class="stat-chip" v-if="classGenerations.length > 0">
@@ -70,7 +70,7 @@
 
             <div v-else class="classes-grid">
               <div
-                v-for="cls in filteredClasses"
+                v-for="cls in paginatedClasses"
                 :key="cls.id"
                 class="class-card"
                 :style="{ '--card-accent': getClassAccentColor(cls) }"
@@ -93,10 +93,64 @@
                   </div>
                   <div class="class-card-stat" v-else>
                     <Calendar :size="12" />
-                    <span>{{ cls.generation?.name || 'Current' }}</span>
+                    <span>{{ cls.academicYear?.name || cls.generation?.name || 'Current' }}</span>
                   </div>
                   <div class="class-card-arrow"><ChevronRight :size="16" /></div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="filteredClasses.length > 0" class="pagination-bar">
+              <div class="pagination-info">
+                <span class="rows-label">Rows per page:</span>
+                <div class="rows-selector">
+                  <button
+                    v-for="size in classPageSizeOptions"
+                    :key="size"
+                    class="rows-btn"
+                    :class="{ active: classPerPage === size }"
+                    @click="changeClassPerPage(size)"
+                  >
+                    {{ size }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="pagination-pages">
+                <button
+                  class="page-nav"
+                  :disabled="classCurrentPage <= 1"
+                  @click="changeClassPage(classCurrentPage - 1)"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft :size="16" />
+                </button>
+
+                <template v-for="page in classVisiblePages" :key="page">
+                  <button
+                    v-if="page !== '...'"
+                    class="page-btn"
+                    :class="{ active: classCurrentPage === page }"
+                    @click="changeClassPage(page as number)"
+                  >
+                    {{ page }}
+                  </button>
+                  <span v-else class="page-dots">…</span>
+                </template>
+
+                <button
+                  class="page-nav"
+                  :disabled="classCurrentPage >= classLastPage"
+                  @click="changeClassPage(classCurrentPage + 1)"
+                  aria-label="Next page"
+                >
+                  <ChevronRight :size="16" />
+                </button>
+              </div>
+
+              <div class="pagination-total">
+                {{ classPagination.from }}-{{ classPagination.to }} of {{ classPagination.total }}
               </div>
             </div>
           </div>
@@ -120,10 +174,22 @@
               </span>
             </div>
 
-            <!-- Toolbar: Generation Filter + Sort Toggle -->
+            <!-- Toolbar: Balanced with Search | Filter | Sort -->
             <div class="term-toolbar">
-              <div class="toolbar-left">
+              <div class="tb-search term-search">
+                <Search :size="16" />
+                <input
+                  v-model="subjectSearchQuery"
+                  type="text"
+                  placeholder="Search subjects..."
+                />
+                <button v-if="subjectSearchQuery" class="tb-clear" @click="subjectSearchQuery = ''">
+                  <X :size="14" />
+                </button>
+              </div>
+              <div class="toolbar-center">
                 <div class="tb-filter" v-if="generations.length > 0">
+                  <Calendar :size="14" class="filter-icon" />
                   <select v-model="selectedGeneration">
                     <option :value="null">All Years</option>
                     <option
@@ -225,7 +291,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { classService, type SchoolClass } from '@/services/classService'
@@ -255,10 +321,70 @@ const selectedClass = ref<SchoolClass | null>(null)
 const searchQuery = ref('')
 const selectedGenerationFilter = ref<string | number | null>(null)
 
+// ── Pagination ─────────────────────────────────────────────────────
+const classCurrentPage = ref(1)
+const classPerPage = ref(10)
+const classPageSizeOptions = [10, 25, 50]
+
+const paginatedClasses = computed(() => {
+  const start = (classCurrentPage.value - 1) * classPerPage.value
+  return filteredClasses.value.slice(start, start + classPerPage.value)
+})
+
+const classLastPage = computed(() => {
+  return Math.max(1, Math.ceil(filteredClasses.value.length / classPerPage.value))
+})
+
+const classPagination = computed(() => {
+  const total = filteredClasses.value.length
+  const page = classCurrentPage.value
+  const size = classPerPage.value
+  const from = total === 0 ? 0 : (page - 1) * size + 1
+  const to = Math.min(page * size, total)
+  return { from, to, total }
+})
+
+const classVisiblePages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = classLastPage.value
+  const current = classCurrentPage.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+
+  pages.push(1)
+  if (current > 3) pages.push('...')
+
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+
+  return pages
+})
+
+function changeClassPage(page: number) {
+  classCurrentPage.value = page
+}
+
+function changeClassPerPage(size: number) {
+  classPerPage.value = size
+  classCurrentPage.value = 1
+}
+
+// Reset pagination when filters change
+watch(searchQuery, () => { classCurrentPage.value = 1 })
+watch(selectedGenerationFilter, () => { classCurrentPage.value = 1 })
+
 const classGenerations = computed(() => {
   const genSet = new Set<string>()
   classes.value.forEach((cls) => {
-    const name = cls.generation?.name
+    // Backend returns generation data under the 'academicYear' key
+    const name = cls.academicYear?.name || cls.generation?.name
     if (name) genSet.add(String(name))
   })
   return Array.from(genSet).sort((a, b) => Number(a) - Number(b))
@@ -273,7 +399,7 @@ const filteredClasses = computed(() => {
   }
   // Filter by generation
   if (selectedGenerationFilter.value !== null) {
-    list = list.filter((c) => String(c.generation?.name) === String(selectedGenerationFilter.value))
+    list = list.filter((c) => String(c.academicYear?.name || c.generation?.name) === String(selectedGenerationFilter.value))
   }
   return list
 })
@@ -319,6 +445,9 @@ function getSubjectColor(code: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
+// ── Term-level Filters ────────────────────────────────────────────
+const subjectSearchQuery = ref('')
+
 // ── Sort State ─────────────────────────────────────────────────────
 type SortMode = 'enrollment' | 'alphabetical'
 const subjectSortMode = ref<SortMode>('enrollment')
@@ -328,12 +457,21 @@ function getTermSubjects(termId: number): SubjectItem[] {
   const className = selectedClass.value?.name
   if (!className) return []
 
-  const filtered = subjectsData.value.filter((subject) => {
+  let filtered = subjectsData.value.filter((subject) => {
     const term = subject.terms.find((t) => t.term_id === termId)
     if (!term) return false
     // Check that this subject's offering for this term includes the selected class
     return term.classes.some((c) => c === className)
   })
+
+  // Filter by subject search
+  if (subjectSearchQuery.value) {
+    const q = subjectSearchQuery.value.toLowerCase()
+    filtered = filtered.filter((s) =>
+      s.name.toLowerCase().includes(q) ||
+      (s.code && s.code.toLowerCase().includes(q))
+    )
+  }
 
   // Sort based on current mode
   const sorted = [...filtered]
@@ -472,10 +610,14 @@ onMounted(async () => {
    SCORE PAGE — Consistent with SubjectPage / ClassPage
    ══════════════════════════════════════════════════════════════════ */
 .page-container {
-  padding: 1rem 0 2rem;
+  height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
   max-width: 1440px;
+  padding: 0;
 }
 
 /* ── Terms Header (breadcrumb inside card) ───────────────────────── */
@@ -547,6 +689,7 @@ onMounted(async () => {
   gap: 12px;
   padding: 4rem;
   color: #64748b;
+  flex: 1;
 }
 
 .spinner {
@@ -576,6 +719,11 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.25s ease;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .scores-card:hover {
@@ -598,11 +746,11 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-.toolbar-left {
+.toolbar-left-group {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+  gap: 10px;
+  flex: 1;
   flex-wrap: wrap;
 }
 
@@ -612,6 +760,28 @@ onMounted(async () => {
   gap: 8px;
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+.filter-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* ── Term-level search — fixed width ── */
+.term-search {
+  flex: initial;
+  width: 240px;
+  min-width: 140px;
+  max-width: 280px;
+}
+
+@media (max-width: 768px) {
+  .toolbar-left-group {
+    width: 100%;
+  }
+  .tb-search {
+    flex: 1;
+  }
 }
 
 .tb-search {
@@ -699,6 +869,10 @@ onMounted(async () => {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   padding: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
 }
 
 .class-card {
@@ -806,6 +980,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: 12px;
   padding: 14px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .term-section {
@@ -1032,6 +1209,11 @@ onMounted(async () => {
   text-align: center;
   padding: 48px 16px;
   color: #9ca3af;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state-icon {
@@ -1047,6 +1229,102 @@ onMounted(async () => {
 
 .empty-state h5 { font-weight: 600; color: #64748b; margin: 0 0 4px 0; font-size: 1rem; }
 .empty-state p { font-size: 0.8125rem; margin: 0; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/*  PAGINATION — matching TeacherPage                                  */
+/* ══════════════════════════════════════════════════════════════════ */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafbfc;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-size: 0.8125rem;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.rows-label { font-weight: 500; white-space: nowrap; }
+
+.rows-selector {
+  display: flex;
+  gap: 2px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.rows-btn {
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.rows-btn:hover { color: #334155; }
+.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.page-nav {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
+.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.page-btn {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
+.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); }
+
+.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
+.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {

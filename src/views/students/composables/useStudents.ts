@@ -73,8 +73,8 @@ const selectedBulkIds = ref<number[]>([])
     return students.value.filter((s) => {
       const studentName = s.user?.name || ''
       const matchesSearch = studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
-      const matchesStudentNumber = (s.studentNumberSequence?.student_number || '').toLowerCase().includes(searchQuery.value.toLowerCase())
-      return matchesSearch || matchesStudentNumber
+      const matchesStudentId = (s.student_id_number || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+      return matchesSearch || matchesStudentId
     })
   })
 

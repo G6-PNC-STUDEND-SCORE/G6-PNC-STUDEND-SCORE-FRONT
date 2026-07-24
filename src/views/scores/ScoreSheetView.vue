@@ -632,6 +632,45 @@
       </Transition>
     </Teleport>
 
+    <!-- Google Sheet Link Modal (fallback when popup is blocked) -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showGsLinkModal" class="modal-overlay" @click.self="showGsLinkModal = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showGsLinkModal = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+              </div>
+              <h5 class="mb-1 fw-bold">Open Google Sheet</h5>
+              <p class="modal-subtitle">Your browser blocked the popup. Click the button below to open your sheet in a new tab.</p>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-link-45deg me-1"></i>
+                  Sheet Link
+                </label>
+                <div class="input-wrapper">
+                  <input :value="gsLinkUrl" type="text" class="modern-input" readonly
+                    @click="$event.target.select()" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showGsLinkModal = false">Cancel</button>
+              <button class="btn-primary-custom" @click="openGsLinkDirectly">
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+                Open Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- Toast Notification -->
     <Teleport to="body">
       <Transition name="toast">
@@ -655,7 +694,7 @@ import {
   renameColumn, updateWeights,
   addEnrollment, deleteEnrollment, updateStudentInfo,
   changeColumnType, getStudentNumbers, importFile,
-  createGoogleSheet, getGoogleConfig,
+  createGoogleSheet, getGoogleConfig, getGoogleStatus,
   importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken, ensureGoogleSheetShared, pushToGoogleSheet,
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
@@ -2820,11 +2859,28 @@ function navigatePopupOrOpen(popup: Window | null, url: string) {
   if (popup && !popup.closed) {
     popup.location.href = url
   } else {
-    // Popup was blocked/closed early — fall back to a fresh window.open. This one may itself
-    // get blocked since we're now outside the original click's activation window, but it's
-    // the best remaining option and matches this function's previous (pre-popup-safe) behavior.
-    window.open(url, '_blank')
+    // Popup was blocked/closed early — show the link in a modal so the user can click it
+    // themselves. NEVER navigate the main page away (window.location.href = url) — that
+    // would take the user out of the app, effectively "logging them out".
+    showGoogleSheetLink(url)
   }
+}
+
+// ─── Google Sheet Link Modal (fallback when popup is blocked) ────────
+const gsLinkUrl = ref('')
+const showGsLinkModal = ref(false)
+
+function showGoogleSheetLink(url: string) {
+  gsLinkUrl.value = url
+  showGsLinkModal.value = true
+  // Copy to clipboard automatically for convenience
+  navigator.clipboard.writeText(url).catch(() => {})
+  showToast('Link copied to clipboard! Click Open to view your sheet.', 'success', 4000)
+}
+
+function openGsLinkDirectly() {
+  window.open(gsLinkUrl.value, '_blank')
+  showGsLinkModal.value = false
 }
 
 // Before opening a previously-created sheet: pull in any pending edits sitting in the
@@ -2851,7 +2907,9 @@ async function openExistingSheet(sheetId: string, popup: Window | null) {
         localStorage.setItem("google_access_token", refreshed.access_token)
         token = refreshed.access_token
       } catch {
-        // No usable token at all — still open; the steps below are skipped.
+        // No usable token — the sheet opens without sync. Show the reconnect prompt
+        // so the user knows they need to re-authenticate to enable bidirectional sync.
+        gsReconnectNeeded.value = true
         return
       }
     }
@@ -3040,7 +3098,7 @@ function onWindowFocus() {
 }
 
 // ─── Load stored Google Sheet ID from localStorage ───────────────────
-function loadStoredSheetId() {
+async function loadStoredSheetId() {
   const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
   try {
     const stored = localStorage.getItem(storageKey)
@@ -3048,7 +3106,23 @@ function loadStoredSheetId() {
       const data = JSON.parse(stored)
       gsSheetId.value = data.sheet_id || null
       if (gsSheetId.value) {
-        startAutoSync()
+        // Only start auto-sync if the user is actually connected to Google.
+        // Without this check, a stale sheet ID in localStorage triggers a
+        // /google-sheets/refresh 400 on every visit (no refresh token exists),
+        // creating noise in the console and an unnecessary failed request.
+        try {
+          const status = await getGoogleStatus()
+          if (status.connected) {
+            startAutoSync()
+          } else {
+            // Stored sheet but Google disconnected — show the reconnect prompt
+            // so the user knows they need to re-authenticate.
+            gsReconnectNeeded.value = true
+          }
+        } catch {
+          // Could not determine Google status — stay silent; the periodic pull
+          // will surface "Reconnect Google" through its own error-handling path.
+        }
       }
     }
   } catch {
