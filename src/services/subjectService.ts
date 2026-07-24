@@ -102,7 +102,7 @@ export const subjectService = {
   },
 
   async getTeachers(): Promise<{ success: boolean; data: { id: number; name: string }[] }> {
-    const response = await http.get('/teachers')
+    const response = await http.get('/teacher-options')
     return response.data
   },
 }
