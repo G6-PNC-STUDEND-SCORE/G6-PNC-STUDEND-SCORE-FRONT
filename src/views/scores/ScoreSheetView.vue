@@ -6,24 +6,36 @@
         <i class="bi bi-arrow-left"></i>
       </button>
       <div class="offering-info">
-        <strong>{{ data?.subject?.name || 'Subject' }}</strong>
-        <span class="text-muted">
-          <span class="term-badge">{{ data?.term?.name }}</span>
-          <span v-if="className" class="class-badge">
-            <School :size="12" />
-            {{ className }}
-          </span>
-          <template v-if="data?.offerings?.length">
-            · {{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}
-          </template>
+        <span class="offering-item offering-item-main">{{ data?.subject?.name || 'Subject' }}</span>
+        <span class="offering-item offering-item-badge offering-term">{{ data?.term?.name }}</span>
+        <span v-if="className" class="offering-item offering-item-badge offering-class">
+          {{ className }}
         </span>
+        <template v-if="data?.offerings?.length">
+          <span class="offering-item offering-item-teachers">{{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}</span>
+        </template>
       </div>
       <div class="toolbar-spacer"></div>
       <div class="toolbar-actions">
         <div class="btn-group">
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
-          <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading"><i :class="gsLoading ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span></button>
+          <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading">
+            <template v-if="gsLoading">
+              <i class="bi bi-arrow-repeat spinning"></i>
+            </template>
+            <template v-else>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="gs-icon">
+                <path d="M6 2h9l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#34A853"/>
+                <path d="M15 2v4h4" fill="white"/>
+                <path d="M15 2l4 4" stroke="#34A853" stroke-width="0.5"/>
+                <path d="M7.5 9.5h9M7.5 12.5h9M7.5 15.5h9M7.5 18.5h7" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M12 9.5v9" stroke="white" stroke-width="1.2"/>
+                <path d="M16.5 9.5v9" stroke="white" stroke-width="1.2"/>
+              </svg>
+            </template>
+            <span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span>
+          </button>
           <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
           <div class="export-dropdown" @click.stop>
             <button class="tb-btn" @click="showExportMenu = !showExportMenu" title="Export" ref="exportBtnRef"><i class="bi bi-download"></i> <span>Export</span> <i class="bi bi-chevron-down" style="font-size:0.6rem;margin-left:2px"></i></button>
@@ -45,13 +57,13 @@
           <i class="bi bi-search"></i>
           <input v-model="searchQuery" type="text" placeholder="Search student..." />
         </div>
+        <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
+          <i class="bi bi-keyboard"></i>
+        </button>
         <div class="save-status" :class="saveStatusClass" :title="saveStatusText">
           <i :class="saveStatusIcon"></i>
           <span class="status-text">{{ saveStatusText }}</span>
         </div>
-        <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
-          <i class="bi bi-keyboard"></i>
-        </button>
       </div>
     </div>
 
@@ -76,21 +88,18 @@
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
               <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
-              <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ minWidth: '80px' }">
+              <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ width: '140px', minWidth: '140px', maxWidth: '140px' }">
                 <div class="header-content column-header-content">
-                  <span class="column-label" :title="col.label" @lclick.stop="startRenameColumn(col)">{{ col.label }}</span>
-                  <select v-model="columnTypes[col.id]" @change="onColumnTypeChange(col, $event)" class="column-type-select" @click.stop @mousedown.stop>
-                <option value="quiz">Quiz</option>
-                <option value="assignment">Assignment</option>
-                <option value="project">Project</option>
-                <option value="midterm">Midterm</option>
-                <option value="final">Final</option>
-                <option value="custom">Custom</option>
-              </select>
-                  <div class="column-actions">
-                    <button class="col-action-btn" @click="startRenameColumn(col)" title="Rename"><i class="bi bi-pencil"></i></button>
-                    <button class="col-action-btn text-danger" @click="confirmDeleteColumn(col)" title="Delete"><i class="bi bi-trash3"></i></button>
+                  <div class="column-label-row">
+                    <span class="column-label" :title="col.label" @dblclick.stop="startRenameColumn(col)">{{ col.label }}</span>
+                    <div class="column-actions">
+                      <button class="col-action-btn" @click="startRenameColumn(col)" title="Rename"><i class="bi bi-pencil"></i></button>
+                      <button class="col-action-btn col-action-delete" @click="confirmDeleteColumn(col)" title="Delete"><i class="bi bi-trash3"></i></button>
+                    </div>
                   </div>
+                  <select v-model="columnTypes[col.id]" @change="onColumnTypeChange(col, $event)" class="column-type-select" @click.stop @mousedown.stop>
+                <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+              </select>
                 </div>
                 <div v-if="col.max_score" class="max-score-label">/ {{ col.max_score }}</div>
               </th>
@@ -101,12 +110,7 @@
                 <div v-if="showInlineAddColumn" class="inline-add-col" @click.stop>
                   <input v-model="inlineColName" placeholder="Column name" class="inline-input" @keydown.enter="doAddColumnInline" />
                   <select v-model="inlineColType" class="inline-select" @keydown.enter.prevent>
-                    <option value="quiz">Quiz</option>
-                    <option value="assignment">Assignment</option>
-                    <option value="project">Project</option>
-                    <option value="midterm">Midterm</option>
-                    <option value="final">Final</option>
-                    <option value="custom">Custom</option>
+                    <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                   </select>
                   <input v-model.number="inlineColMax" type="number" class="inline-input" placeholder="Max" @keydown.enter="doAddColumnInline" />
                   <button class="inline-btn" @click="doAddColumnInline">Add</button>
@@ -117,10 +121,10 @@
           </thead>
           <tbody>
             <tr v-for="(row, rowIndex) in visibleRows" :key="row.enrollment_id"
-              :class="{ 'row-selected': editingRow === null && isRowSelected(rowIndex) }"
+              :class="{ 'row-selected': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
               @contextmenu.prevent="showContextMenu($event, rowIndex)">
               <td class="cell cell-frozen row-num"
-                :class="{ 'row-num-highlighted': editingRow === null && isRowSelected(rowIndex) }"
+                :class="{ 'row-num-highlighted': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
                 @click.stop>{{ rowIndex + 1 }}</td>
 
               <td class="cell cell-frozen cell-student-name"
@@ -131,11 +135,16 @@
                 @dblclick.prevent.stop="startEditing(rowIndex, -1)"
               >
                 <div class="student-name-cell-inner">
-                  <div v-if="editingRow === rowIndex && editingCol === -1" class="cell-editor-wrapper">
+                  <!-- Always-rendered span keeps cell width stable -->
+                  <span class="cell-value"
+                    :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === -1 }"
+                    :title="row.student_name"
+                  >{{ row.student_name }}</span>
+                  <!-- Absolute-positioned editor overlays without affecting cell size -->
+                  <div v-if="editingRow === rowIndex && editingCol === -1" class="cell-editor-wrapper cell-editor-overlay-frozen">
                     <input ref="cellEditor" v-model="editValue" type="text" class="cell-editor"
                       @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" />
                   </div>
-                  <span v-else class="cell-value" :title="row.student_name">{{ row.student_name }}</span>
                   <div v-if="showFillHandle(rowIndex, -1)" class="fill-handle fill-handle-frozen"
                     @mousedown.prevent.stop="fillNextStudentName(rowIndex)" @click.stop title="Fill next name down">+</div>
                 </div>
@@ -150,11 +159,16 @@
                 @dblclick.prevent.stop="startEditing(rowIndex, 0)"
               >
                 <div class="student-id-cell-inner">
-                  <div v-if="editingRow === rowIndex && editingCol === 0" class="cell-editor-wrapper id-editor-wrapper">
+                  <!-- Always-rendered span keeps cell width stable -->
+                  <span class="cell-value"
+                    :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === 0 }"
+                    :title="row.student_number"
+                  >{{ row.student_number }}</span>
+                  <!-- Absolute-positioned editor overlays without affecting cell size -->
+                  <div v-if="editingRow === rowIndex && editingCol === 0" class="cell-editor-wrapper cell-editor-overlay-frozen id-editor-wrapper">
                     <input ref="cellEditor" v-model="editValue" type="text" class="cell-editor id-editor-input" list="student-numbers-list"
                       @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" placeholder="Select or type ID..." />
                   </div>
-                  <span v-else class="cell-value" :title="row.student_number">{{ row.student_number }}</span>
                   <div v-if="showFillHandle(rowIndex, 0)" class="fill-handle fill-handle-frozen"
                     @mousedown.prevent.stop="fillNextStudentId(rowIndex)" @click.stop title="Fill next ID down">+</div>
                 </div>
@@ -167,11 +181,17 @@
                 :class="getScoreCellClass(rowIndex, col)"
                 @mousedown.prevent="onCellMouseDown($event, rowIndex, col.id)"
               >
-                <div v-if="editingRow === rowIndex && editingCol === col.id" class="cell-editor-wrapper">
+                <!-- Always-rendered span keeps cell width stable -->
+                <span class="cell-value"
+                  :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === col.id }"
+                  :title="getCellTitle(col, row)"
+                >{{ formatCellValue(getCellMark(row, col.id)) }}</span>
+
+                <!-- Absolute-positioned editor overlays the cell without affecting its size -->
+                <div v-if="editingRow === rowIndex && editingCol === col.id" class="cell-editor-wrapper cell-editor-overlay">
                   <input ref="cellEditor" v-model="editValue" type="text" inputmode="decimal" class="cell-editor"
                     @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" />
                 </div>
-                <span v-else class="cell-value" :title="getCellTitle(col, row)">{{ formatCellValue(getCellMark(row, col.id)) }}</span>
 
                 <!-- Fill handle: show on active cell when not editing and not in range selection -->
                 <div v-if="showFillHandle(rowIndex, col.id)" class="fill-handle"
@@ -221,66 +241,230 @@
       <option v-for="num in studentNumbers" :key="num" :value="num"></option>
     </datalist>
 
-    <!-- Page Size Selector -->
-    <div class="table-footer">
-      <div class="page-size-selector">
-        <span class="page-size-label">Show</span>
-        <select v-model="pageSize" class="page-size-select">
-          <option :value="5">5</option>
-          <option :value="10">10</option>
-          <option :value="15">15</option>
-          <option :value="20">20</option>
-          <option :value="50">50</option>
-          <option value="all">All</option>
-        </select>
-        <span class="page-size-label">of {{ filteredRows.length }} rows</span>
+    <!-- Pagination -->
+    <div v-if="filteredRows.length > 0" class="pagination-bar">
+      <div class="pagination-info">
+        <span class="rows-label">Rows per page:</span>
+        <div class="rows-selector">
+          <button
+            v-for="size in [10, 25, 50, 75, 100]"
+            :key="size"
+            class="rows-btn"
+            :class="{ active: pageSize === size }"
+            @click="pageSize = size; currentPage = 1"
+          >{{ size }}</button>
+          
+        </div>
+      </div>
+
+      <div v-if="pageSize !== 'all'" class="pagination-pages">
+        <button
+          class="page-nav"
+          :disabled="currentPage <= 1"
+          @click="currentPage--"
+          aria-label="Previous page"
+        >
+          <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
+          <button
+            v-if="page !== '...'"
+            class="page-btn"
+            :class="{ active: currentPage === page }"
+            @click="currentPage = page as number"
+          >{{ page }}</button>
+          <span v-else class="page-dots">…</span>
+        </template>
+
+        <button
+          class="page-nav"
+          :disabled="currentPage >= totalPages"
+          @click="currentPage++"
+          aria-label="Next page"
+        >
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="pagination-total" v-if="pageSize !== 'all'">
+        {{ (currentPage - 1) * (pageSize as number) + 1 }}-{{ Math.min(currentPage * (pageSize as number), filteredRows.length) }} of {{ filteredRows.length }}
+      </div>
+      <div class="pagination-total" v-else>
+        All {{ filteredRows.length }} rows
       </div>
     </div>
 
     <!-- Modals (unchanged) -->
-    <div v-if="renamingColumn" class="modal-overlay" @click.self="renamingColumn = null">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Rename Column</h5><button class="modal-close" @click="renamingColumn = null">&times;</button></div>
-        <div class="modal-body"><div class="form-group"><label>New Label</label><input v-model="renameValue" class="form-input" ref="renameInput" @keydown.enter="doRenameColumn" /></div></div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="renamingColumn = null">Cancel</button><button class="btn btn-primary" @click="doRenameColumn">Rename</button></div>
-      </div>
-    </div>
-    <div v-if="showAddColumn" class="modal-overlay" @click.self="showAddColumn = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Add New Column</h5><button class="modal-close" @click="showAddColumn = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-group"><label>Type</label><select v-model="newColumn.type" class="form-input"><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="project">Project</option><option value="midterm">Midterm</option><option value="final">Final</option></select></div>
-          <div class="form-group"><label>Label</label><input v-model="newColumn.label" class="form-input" placeholder="e.g. Quiz 1" /></div>
-          <div class="form-group"><label>Max Score</label><input v-model.number="newColumn.max_score" type="number" min="1" class="form-input" placeholder="100" /></div>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="renamingColumn" class="modal-overlay" @click.self="renamingColumn = null">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="renamingColumn = null" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-rename">
+                <i class="bi bi-pencil-square"></i>
+              </div>
+              <h5 class="mb-1 fw-bold">Rename Column</h5>
+              <p class="modal-subtitle">Give the column a new name</p>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-fonts me-1"></i>
+                  New Label
+                </label>
+                <div class="input-wrapper">
+                  <input v-model="renameValue" ref="renameInput" type="text" class="modern-input"
+                    @keydown.enter="doRenameColumn" placeholder="Enter new column name" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="renamingColumn = null">Cancel</button>
+              <button class="btn-primary-custom" @click="doRenameColumn">
+                <i class="bi bi-check-lg me-1"></i>
+                Rename
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="showAddColumn = false">Cancel</button><button class="btn btn-primary" @click="doAddColumn">Add</button></div>
-      </div>
-    </div>
-    <div v-if="showWeights" class="modal-overlay" @click.self="showWeights = false">
-      <div class="modal-content">
-        <div class="modal-header"><h5>Weight Configuration</h5><button class="modal-close" @click="showWeights = false">&times;</button></div>
-        <div class="modal-body">
-          <table class="weight-table" v-if="assessments.length">
-            <thead><tr><th>Component</th><th>Weight (%)</th></tr></thead>
-            <tbody>
-              <tr v-for="at in assessments" :key="at.id">
-                <td><span class="weight-name">{{ at.name }}</span><span class="weight-code">{{ at.code }}</span></td>
-                <td><input v-model.number="weightEdits[at.id]" type="number" min="0" max="100" step="0.5" class="form-input weight-input" /></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">Total: {{ totalWeight.toFixed(1) }}% {{ totalWeight === 100 ? '✓' : '(must be 100%)' }}</div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showAddColumn" class="modal-overlay" @click.self="showAddColumn = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showAddColumn = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-plus-circle"></i>
+              </div>
+              <h5 class="mb-1 fw-bold">Add New Column</h5>
+              <p class="modal-subtitle">Add a new score column to the spreadsheet</p>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-tag me-1"></i>
+                  Type
+                </label>
+                <div class="input-wrapper">
+                  <select v-model="newColumn.type" class="modern-input">
+                    <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-fonts me-1"></i>
+                  Label
+                </label>
+                <div class="input-wrapper">
+                  <input v-model="newColumn.label" type="text" class="modern-input" placeholder="e.g. Quiz 1" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-arrow-up-circle me-1"></i>
+                  Max Score
+                </label>
+                <div class="input-wrapper">
+                  <input v-model.number="newColumn.max_score" type="number" min="1" class="modern-input" placeholder="100" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showAddColumn = false">Cancel</button>
+              <button class="btn-primary-custom" @click="doAddColumn">
+                <i class="bi bi-check-lg me-1"></i>
+                Add Column
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="showWeights = false">Cancel</button><button class="btn btn-primary" :disabled="totalWeight !== 100" @click="doUpdateWeights">Save & Recalculate</button></div>
-      </div>
-    </div>
-    <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Delete Column</h5><button class="modal-close" @click="deleteConfirm = null">&times;</button></div>
-        <div class="modal-body"><p>Delete "<strong>{{ deleteConfirm.label }}</strong>"? This removes it for all students.</p></div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="deleteConfirm = null">Cancel</button><button class="btn btn-danger" @click="doDeleteColumn">Delete</button></div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showWeights" class="modal-overlay" @click.self="showWeights = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showWeights = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-weights">
+                <i class="bi bi-sliders"></i>
+              </div>
+              <h5 class="mb-1 fw-bold">Weight Configuration</h5>
+              <p class="modal-subtitle">Set weight percentages for each assessment type</p>
+            </div>
+            <div class="modal-body-custom">
+              <div v-if="!assessments.length" class="no-assessments-text">
+                No assessment types available.
+              </div>
+              <div v-for="at in assessments" :key="at.id" class="weight-row">
+                <div class="weight-info">
+                  <span class="weight-name">{{ at.name }}</span>
+                  <span class="weight-code">{{ at.code }}</span>
+                </div>
+                <div class="weight-input-group">
+                  <input v-model.number="weightEdits[at.id]" type="number" min="0" max="100" step="0.5" class="modern-input weight-input-field" />
+                  <span class="weight-suffix">%</span>
+                </div>
+              </div>
+              <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">
+                <i :class="totalWeight === 100 ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'"></i>
+                <span>Total: <strong>{{ totalWeight.toFixed(1) }}%</strong></span>
+                <span v-if="totalWeight !== 100" class="weight-hint">(must equal 100%)</span>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showWeights = false">Cancel</button>
+              <button class="btn-primary-custom" :disabled="totalWeight !== 100" @click="doUpdateWeights">
+                <i class="bi bi-check-lg me-1"></i>
+                Save &amp; Recalculate
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="deleteConfirm = null" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-delete">
+                <i class="bi bi-trash3"></i>
+              </div>
+              <h5 class="mb-1 fw-bold">Delete Column</h5>
+              <p class="modal-subtitle">This action cannot be undone</p>
+            </div>
+            <div class="modal-body-custom">
+              <p class="delete-warning-text">
+                Are you sure you want to delete <strong>"{{ deleteConfirm.label }}"</strong>?
+                This removes the column and all its scores for every student.
+              </p>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="deleteConfirm = null">Cancel</button>
+              <button class="btn-danger-custom" @click="doDeleteColumn">
+                <i class="bi bi-trash3 me-1"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
     <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
       <div class="modal-content modal-sm">
         <div class="modal-header"><h5>Add Student Rows</h5><button class="modal-close" @click="showAddRowPopup = false">&times;</button></div>
@@ -296,92 +480,98 @@
         </div>
       </div>
     </div>
-    <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
-      <div class="import-modal">
-        <!-- Header -->
-        <div class="import-modal-header">
-          <div class="import-modal-header-icon"><i class="bi bi-cloud-upload"></i></div>
-          <div class="import-modal-header-text">
-            <h5>Import Scores</h5>
-            <p>Import student scores from an Excel file</p>
-          </div>
-          <button class="modal-close" @click="showImport = false; selectedFileName = ''; filePreview = null">&times;</button>
-        </div>
-
-        <div class="import-modal-body">
-          <!-- Format badges -->
-          <div class="import-format-badges">
-            <span class="import-badge import-badge-excel"><i class="bi bi-file-earmark-excel"></i> Excel</span>
-            <span class="import-badge import-badge-pdf"><i class="bi bi-filetype-pdf"></i> PDF</span>
-          </div>
-
-          <!-- Drop zone when NO file selected -->
-          <div v-if="!selectedFileName" class="import-drop-zone"
-            @drop.prevent="onFileDrop" @dragover.prevent="dragOver = true"
-            @dragleave.prevent="dragOver = false"
-            :class="{ 'import-drop-active': dragOver }"
-            @click="openFilePicker">
-            <input ref="fileInputRef" type="file" accept=".xlsx,.xls" hidden @change="onFileSelected" />
-            <div class="import-drop-icon">
-              <i class="bi bi-file-earmark-arrow-up"></i>
-            </div>
-            <div class="import-drop-text">
-              <span class="import-drop-title">Drop your file here</span>
-              <span class="import-drop-sub">or click to browse</span>
-            </div>
-          </div>
-
-          <!-- File card when file IS selected -->
-          <div v-if="selectedFileName" class="import-file-card">
-            <div class="import-file-card-main">
-              <div class="import-file-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
-              <div class="import-file-info">
-                <span class="import-file-name">{{ selectedFileName }}</span>
-                <span class="import-file-size">{{ fileSizeFormatted }}</span>
-              </div>
-              <button class="import-file-remove" @click="clearFile" title="Remove file">
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
+          <div class="modal-content-panel modal-md-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showImport = false; selectedFileName = ''; filePreview = null" aria-label="Close">
                 <i class="bi bi-x-lg"></i>
               </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-cloud-upload"></i>
+              </div>
+              <h5 class="mb-1 fw-bold">Import Scores</h5>
+              <p class="modal-subtitle">Import student scores from an Excel file</p>
             </div>
+            <div class="modal-body-custom">
+              <!-- Format badges -->
+              <div class="import-format-badges">
+                <span class="import-badge import-badge-excel"><i class="bi bi-file-earmark-excel"></i> Excel</span>
+                <span class="import-badge import-badge-pdf"><i class="bi bi-filetype-pdf"></i> PDF</span>
+              </div>
 
-            <!-- Preview section -->
-            <div v-if="filePreview" class="import-preview">
-              <div class="import-preview-divider"></div>
-              <div class="import-preview-header">
-                <i class="bi bi-table"></i>
-                <span>File Preview</span>
-              </div>
-              <div class="import-preview-grid">
-                <div class="import-preview-stat">
-                  <span class="import-preview-stat-value">{{ filePreview.rowCount }}</span>
-                  <span class="import-preview-stat-label">Students</span>
+              <!-- Drop zone when NO file selected -->
+              <div v-if="!selectedFileName" class="import-drop-zone"
+                @drop.prevent="onFileDrop" @dragover.prevent="dragOver = true"
+                @dragleave.prevent="dragOver = false"
+                :class="{ 'import-drop-active': dragOver }"
+                @click="openFilePicker">
+                <input ref="fileInputRef" type="file" accept=".xlsx,.xls,.pdf" hidden @change="onFileSelected" />
+                <div class="import-drop-icon">
+                  <i class="bi bi-file-earmark-arrow-up"></i>
                 </div>
-                <div class="import-preview-stat">
-                  <span class="import-preview-stat-value">{{ filePreview.colCount }}</span>
-                  <span class="import-preview-stat-label">Columns</span>
-                </div>
-                <div class="import-preview-stat import-preview-stat-wide">
-                  <span class="import-preview-stat-value import-preview-col-names" :title="filePreview.colNames.join(', ')">
-                    {{ filePreview.colNames.slice(0, 3).join(' · ') }}<span v-if="filePreview.colNames.length > 3"> …</span>
-                  </span>
-                  <span class="import-preview-stat-label">Detected columns</span>
+                <div class="import-drop-text">
+                  <span class="import-drop-title">Drop your file here</span>
+                  <span class="import-drop-sub">or click to browse</span>
                 </div>
               </div>
+
+              <!-- File card when file IS selected -->
+              <div v-if="selectedFileName" class="import-file-card">
+                <div class="import-file-card-main">
+                  <div class="import-file-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+                  <div class="import-file-info">
+                    <span class="import-file-name">{{ selectedFileName }}</span>
+                    <span class="import-file-size">{{ fileSizeFormatted }}</span>
+                  </div>
+                  <button class="import-file-remove" @click="clearFile" title="Remove file">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+
+                <!-- Preview section -->
+                <div v-if="filePreview" class="import-preview">
+                  <div class="import-preview-divider"></div>
+                  <div class="import-preview-header">
+                    <i class="bi bi-table"></i>
+                    <span>File Preview</span>
+                  </div>
+                  <div class="import-preview-grid">
+                    <div class="import-preview-stat">
+                      <span class="import-preview-stat-value">{{ filePreview.rowCount }}</span>
+                      <span class="import-preview-stat-label">Students</span>
+                    </div>
+                    <div class="import-preview-stat">
+                      <span class="import-preview-stat-value">{{ filePreview.colCount }}</span>
+                      <span class="import-preview-stat-label">Columns</span>
+                    </div>
+                    <div class="import-preview-stat import-preview-stat-wide">
+                      <span class="import-preview-stat-value import-preview-col-names" :title="filePreview.colNames.join(', ')">
+                        {{ filePreview.colNames.slice(0, 3).join(' · ') }}<span v-if="filePreview.colNames.length > 3"> …</span>
+                      </span>
+                      <span class="import-preview-stat-label">Detected columns</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="!selectedFileName" class="import-supported-hint">
+                <i class="bi bi-info-circle"></i>
+                <span>Supports .xlsx, .xls, and .pdf files</span>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showImport = false; selectedFileName = ''; filePreview = null">Cancel</button>
+              <button class="btn-primary-custom" :disabled="!pendingFile" @click="processImportFile">
+                <i class="bi bi-upload me-1"></i>
+                Import {{ filePreview?.rowCount ? filePreview.rowCount + ' student' + (filePreview.rowCount > 1 ? 's' : '') : 'File' }}
+              </button>
             </div>
           </div>
         </div>
-
-        <div class="import-modal-footer">
-          <button class="import-btn import-btn-secondary" @click="showImport = false; selectedFileName = ''; filePreview = null">
-            Cancel
-          </button>
-          <button class="import-btn import-btn-primary" :disabled="!pendingFile" @click="processImportFile">
-            <i class="bi bi-upload"></i>
-            <span>Import {{ filePreview?.rowCount ? filePreview.rowCount + ' student' + (filePreview.rowCount > 1 ? 's' : '') : '' }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
     <!-- Keyboard Shortcuts Modal -->
     <Teleport to="body">
       <Transition name="modal">
@@ -402,42 +592,52 @@
               <div class="shortcut-group">
                 <h4 class="shortcut-group-title"><i class="bi bi-arrows-move"></i> Navigation</h4>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></span><span class="shortcut-desc">Move between cells</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Tab</kbd> <kbd>Shift</kbd>+<kbd>Tab</kbd></span><span class="shortcut-desc">Next / previous cell</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Home</kbd></span><span class="shortcut-desc">Go to first row (same column)</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>End</kbd></span><span class="shortcut-desc">Go to last row (same column)</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Go to first cell (top-left)</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Go to last cell (bottom-right)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Tab</kbd> <kbd>Shift</kbd>+<kbd>Tab</kbd></span><span class="shortcut-desc">Next or previous cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Home</kbd></span><span class="shortcut-desc">Jump to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>End</kbd></span><span class="shortcut-desc">Jump to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Jump to first cell (top-left)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Jump to last cell (bottom-right)</span></div>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>↑</kbd></span><span class="shortcut-desc">Jump to first row</span></div>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>↓</kbd></span><span class="shortcut-desc">Jump to last row</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>←</kbd></span><span class="shortcut-desc">Go to student name</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>→</kbd></span><span class="shortcut-desc">Go to last column</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>←</kbd></span><span class="shortcut-desc">Jump to student name</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>→</kbd></span><span class="shortcut-desc">Jump to last column</span></div>
               </div>
               <!-- Selection -->
               <div class="shortcut-group">
                 <h4 class="shortcut-group-title"><i class="bi bi-ui-checks"></i> Selection</h4>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></span><span class="shortcut-desc">Extend selection in direction</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Click</kbd></span><span class="shortcut-desc">Range select from anchor to clicked cell</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Extend selection to first row</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Extend selection to last row</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Select all rows in current column</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></span><span class="shortcut-desc">Select multiple cells</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Click</kbd></span><span class="shortcut-desc">Select range from here to clicked cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Select from here to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Select from here to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Select all in current column</span></div>
               </div>
               <!-- Editing -->
               <div class="shortcut-group">
                 <h4 class="shortcut-group-title"><i class="bi bi-pencil"></i> Editing</h4>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd> <kbd>F2</kbd></span><span class="shortcut-desc">Edit the selected cell</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd></span><span class="shortcut-desc">Save edit &amp; move to next cell</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Escape</kbd></span><span class="shortcut-desc">Cancel editing</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Delete</kbd> <kbd>Backspace</kbd></span><span class="shortcut-desc">Clear cell value(s)</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>C</kbd></span><span class="shortcut-desc">Copy selected cell(s)</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>V</kbd></span><span class="shortcut-desc">Paste into selected cell(s)</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>X</kbd></span><span class="shortcut-desc">Cut selected cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd> <kbd>F2</kbd></span><span class="shortcut-desc">Edit selected cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd></span><span class="shortcut-desc">Save &amp; move down</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Escape</kbd></span><span class="shortcut-desc">Cancel edit</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Delete</kbd> <kbd>Backspace</kbd></span><span class="shortcut-desc">Clear cell value</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>C</kbd></span><span class="shortcut-desc">Copy cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>V</kbd></span><span class="shortcut-desc">Paste into cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>X</kbd></span><span class="shortcut-desc">Cut cell(s)</span></div>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Undo last change</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Y</kbd> <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Redo last undone change</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>S</kbd></span><span class="shortcut-desc">Save all changes</span></div>
-                <div class="shortcut-row"><span class="shortcut-keys">Type a digit</span><span class="shortcut-desc">Type any number to start editing the selected score cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Y</kbd> <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Redo last change</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>S</kbd></span><span class="shortcut-desc">Save changes</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys">Type a digit</span><span class="shortcut-desc">Type a number to start editing</span></div>
               </div>
             </div>
           </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Toast Notification -->
+    <Teleport to="body">
+      <Transition name="toast">
+        <div v-if="toastVisible" class="toast-notification" :class="toastType">
+          <i :class="toastIcon"></i>
+          <span class="toast-message">{{ toastMessage }}</span>
         </div>
       </Transition>
     </Teleport>
@@ -449,7 +649,7 @@
 <script setup lang="ts">
 import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef, onBeforeUnmount, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { School } from '@lucide/vue'
+
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
   renameColumn, updateWeights,
@@ -473,7 +673,8 @@ const loading = ref(false)
 const searchQuery = ref('')
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
-const pageSize = ref<number | 'all'>(20)
+const pageSize = ref<number | 'all'>(10)
+const currentPage = ref(1)
 const importProgress = ref(0)
 const importStatusText = ref('')
 
@@ -529,7 +730,10 @@ function onDocumentClick(e: MouseEvent) {
   }
 }
 onMounted(() => document.addEventListener('click', onDocumentClick))
-onBeforeUnmount(() => document.removeEventListener('click', onDocumentClick))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocumentClick)
+  if (toastTimer) clearTimeout(toastTimer)
+})
 
 // ─── Import File State ────────────────────────────────────────────────
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -553,7 +757,12 @@ function clearFile() {
   dragOver.value = false
 }
 
-async function previewExcelFile(file: File) {
+async function previewFile(file: File) {
+  const ext = file.name.split('.').pop()?.toLowerCase() || ''
+  if (ext === 'pdf') {
+    await previewPdfFile(file)
+    return
+  }
   try {
     const { read, utils } = await import('xlsx')
     const buffer = await file.arrayBuffer()
@@ -574,6 +783,53 @@ async function previewExcelFile(file: File) {
     // Preview is best-effort, ignore errors
   }
 }
+
+async function previewPdfFile(file: File) {
+  try {
+    const pdfjsLib = await import('pdfjs-dist')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+    const buffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
+    let fullText = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      fullText += content.items.map((item: any) => item.str).join(' ') + '\n'
+    }
+    // Count lines that look like data rows (contain a number or score pattern)
+    const lines = fullText.split('\n').filter(l => l.trim())
+    const dataLines = lines.filter(l => /\d/.test(l) && l.split(/\s+/).length >= 3)
+    filePreview.value = {
+      rowCount: dataLines.length || lines.length,
+      colCount: 0,
+      colNames: ['(PDF) Text data — will auto-detect columns on import'],
+    }
+  } catch {
+    // Preview is best-effort
+  }
+}
+// ─── Toast Notification ───────────────────────────────────────────────
+const toastVisible = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error'>('success')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+function showToast(message: string, type: 'success' | 'error' = 'success', duration = 2500) {
+  if (toastTimer) clearTimeout(toastTimer)
+  toastMessage.value = message
+  toastType.value = type
+  toastVisible.value = true
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false
+    toastTimer = null
+  }, duration)
+}
+
+const toastIcon = computed(() => ({
+  success: 'bi bi-check-circle-fill',
+  error: 'bi bi-exclamation-circle-fill',
+}[toastType.value]))
+
 const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
@@ -756,9 +1012,34 @@ const filteredRows = computed(() => {
   return result
 })
 
+const totalPages = computed(() => {
+  if (pageSize.value === 'all') return 1
+  return Math.max(1, Math.ceil(filteredRows.value.length / pageSize.value))
+})
+
+const visiblePages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
+
 const visibleRows = computed(() => {
   if (pageSize.value === 'all') return filteredRows.value
-  return filteredRows.value.slice(0, pageSize.value)
+  const start = (currentPage.value - 1) * (pageSize.value as number)
+  const end = start + (pageSize.value as number)
+  return filteredRows.value.slice(start, end)
 })
 
 const averageScore = computed(() => {
@@ -778,7 +1059,11 @@ const topStudent = computed(() => {
   return sorted[0]?.student_name ?? '-'
 })
 
-const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + (v || 0), 0))
+const typeOptions = computed(() =>
+  assessments.value.map(at => ({ value: at.code, label: at.name }))
+)
+
+const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + Number(v || 0), 0))
 
 const saveStatusClass = computed(() => ({
   'status-saving': saveStatus.value === 'saving',
@@ -810,7 +1095,7 @@ async function doAddRows() {
     }
     showSaveStatus('saved')
     pageSize.value = 'all'
-    await refreshData()
+    await refreshData(true)
   } catch (err) {
     showSaveStatus('failed')
     console.error('Failed to add rows:', err)
@@ -1848,15 +2133,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
       break
     case 'Enter':
       event.preventDefault()
-      if (selectedCol.value !== null && selectedCol.value > 0) {
-        // For score cells, Enter advances step by step like Tab.
-        handleTabNavigation(event.shiftKey)
-      } else if (event.shiftKey) {
-        // Shift+Enter: move up in the frozen Name/ID area.
-        if (selectedRowIndex.value > 0) selectedRowIndex.value--
-        scrollToCell(selectedRowIndex.value, currentColIdx)
-      } else if (selectedCol.value !== null) {
-        // Keep name/ID cells editable with Enter.
+      if (selectedCol.value !== null) {
+        // Enter / F2 both start editing ("Edit the selected cell").
+        // Score cells auto-edit on click, but when keyboard-navigated
+        // here via arrows they need Enter to open the editor.
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
       break
@@ -1867,7 +2147,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'Home':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+Home: go to first cell (top-left)
+        // Ctrl+Home: go to first cell (top-left) — student name on the first row
         expandAllRowsForSelection()
         if (shiftKey && !isRangeSelecting.value) {
           selectionStartRow.value = currentRow
@@ -1875,7 +2155,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
           isRangeSelecting.value = true
         }
         selectedRowIndex.value = 0
-        selectedCol.value = cols.length > 0 ? cols[0].id : -1
+        selectedCol.value = -1
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(0, 0)
       } else {
@@ -1978,19 +2258,9 @@ function onEditKeydown(event: KeyboardEvent) {
     case 'Enter':
       event.preventDefault()
       saveEdit()
-      if (selectedCol.value !== null && selectedCol.value > 0) {
-        handleTabNavigation(event.shiftKey)
-      } else if (event.shiftKey) {
-        if (selectedRowIndex.value > 0) { selectedRowIndex.value-- }
-        if (selectedCol.value !== null && selectedCol.value >= 0) {
-          nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
-        }
-      } else {
-        if (selectedRowIndex.value < filteredRows.value.length - 1) { selectedRowIndex.value++ }
-        if (selectedCol.value !== null && selectedCol.value >= 0) {
-          nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
-        }
-      }
+      // Excel-like: Enter moves DOWN (same column, next row).
+      // Shift+Enter moves UP (same column, previous row).
+      handleEnterNavigation(event.shiftKey)
       break
     case 'Tab':
       event.preventDefault()
@@ -2007,7 +2277,7 @@ function onEditKeydown(event: KeyboardEvent) {
       saveEdit()
       if (event.key === 'ArrowUp' && selectedRowIndex.value > 0) selectedRowIndex.value--
       if (event.key === 'ArrowDown' && selectedRowIndex.value < filteredRows.value.length - 1) selectedRowIndex.value++
-      if (selectedCol.value !== null && selectedCol.value >= 0) {
+      if (selectedCol.value !== null) {
         nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
       }
       break
@@ -2036,6 +2306,26 @@ function handleTabNavigation(shiftKey: boolean) {
   if (selectedCol.value !== null) {
     nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
   }
+}
+
+/**
+ * Excel-like Enter navigation: Enter moves DOWN (same column, next row),
+ * Shift+Enter moves UP (same column, previous row). The column stays the
+ * same — only the row changes.
+ */
+function handleEnterNavigation(shiftKey: boolean) {
+  if (selectedCol.value === null) return
+  if (shiftKey) {
+    if (selectedRowIndex.value > 0) {
+      selectedRowIndex.value--
+    }
+  } else {
+    if (selectedRowIndex.value < filteredRows.value.length - 1) {
+      selectedRowIndex.value++
+    }
+  }
+  scrollToCell(selectedRowIndex.value, 0)
+  nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
 }
 
 function onEditInput() { /* live validation placeholder */ }
@@ -2280,53 +2570,96 @@ function redo() {
 // ─── Data Loading ────────────────────────────────────────────────────
 function goBack() { router.push('/scores') }
 
-async function refreshData() {
+async function refreshData(silent = false) {
   if (!subjectId.value || !termId.value) return
-  loading.value = true
+  if (!silent) loading.value = true
+  // Preserve selection so it doesn't jump back to cell 1 after a save
+  const prevRow = selectedRowIndex.value
+  const prevCol = selectedCol.value
   try {
     data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value, true)
     assessments.value = data.value.assessment_types
-    assessments.value.forEach(at => { weightEdits[at.id] = at.weight_percent })
+    assessments.value.forEach(at => { weightEdits[at.id] = Number(at.weight_percent) })
     // Initialize column types dropdown values
     columns.value.forEach(col => { columnTypes[col.id] = col.type })
-    selectedRowIndex.value = 0
-    selectedCol.value = columns.value.length > 0 ? columns.value[0].id : null
+    // Restore selection, clamped to valid range
+    const rowCount = filteredRows.value.length
+    selectedRowIndex.value = prevRow < rowCount ? prevRow : Math.max(0, rowCount - 1)
+    if (prevCol !== null && columns.value.some(c => c.id === prevCol)) {
+      selectedCol.value = prevCol
+    } else if (columns.value.length > 0) {
+      selectedCol.value = columns.value[0].id
+    }
   } catch { showSaveStatus('failed') }
-  finally { loading.value = false }
+  finally { if (!silent) loading.value = false }
 }
 
 // ─── Column Management ───────────────────────────────────────────────
 function startRenameColumn(col: SpreadsheetColumn) {
   renamingColumn.value = col
   renameValue.value = col.label
-  nextTick(() => { (document.querySelector('.modal-overlay .form-input') as HTMLInputElement)?.focus() })
+  nextTick(() => { (document.querySelector('.modern-input') as HTMLInputElement)?.focus() })
 }
 
 async function doRenameColumn() {
   if (!renamingColumn.value || !renameValue.value.trim()) return
+  const { id } = renamingColumn.value
+  const label = renameValue.value.trim()
+  renamingColumn.value = null
+  showSaveStatus('saving')
   try {
-    await renameColumn(subjectId.value, termId.value, renamingColumn.value.id, renameValue.value.trim())
-    renamingColumn.value = null; showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await renameColumn(subjectId.value, termId.value, id, label)
+    showToast(`Column renamed to "${label}"`, 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to rename column', 'error')
+  }
 }
 
 function confirmDeleteColumn(col: SpreadsheetColumn) { deleteConfirm.value = { col, label: col.label } }
 
 async function doDeleteColumn() {
   if (!deleteConfirm.value) return
+  const { col, label } = deleteConfirm.value
+  deleteConfirm.value = null
+  showSaveStatus('saving')
   try {
-    await deleteColumn(subjectId.value, termId.value, deleteConfirm.value.col.id)
-    deleteConfirm.value = null; showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await deleteColumn(subjectId.value, termId.value, col.id)
+    showToast(`Column "${label}" deleted`, 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to delete column', 'error')
+  }
 }
 
 async function doAddColumn() {
   if (!newColumn.label.trim()) return
+  showAddColumn.value = false
+  const label = newColumn.label.trim()
+  const maxScore = newColumn.max_score
+
+  // Calculate order_number: place right after the last column of the same type
+  const cols = columns.value
+  const sameTypeCols = cols.filter(c => c.type === newColumn.type)
+  const orderNumber: number = sameTypeCols.length > 0
+    ? Math.max(...sameTypeCols.map(c => c.order_number ?? 0)) + 1
+    : cols.length > 0 ? Math.max(...cols.map(c => c.order_number ?? 0)) + 1 : 1
+
+  newColumn.label = ''; newColumn.max_score = null
+  showSaveStatus('saving')
   try {
-    await addColumn(subjectId.value, termId.value, { type: newColumn.type, label: newColumn.label.trim(), max_score: newColumn.max_score })
-    showAddColumn.value = false; newColumn.label = ''; newColumn.max_score = null
-    showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await addColumn(subjectId.value, termId.value, { type: newColumn.type, label, max_score: maxScore, order_number: orderNumber })
+    showToast(`Column "${label}" created successfully`, 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to create column', 'error')
+  }
 }
 
 async function doAddColumnInline() {
@@ -2334,7 +2667,7 @@ async function doAddColumnInline() {
   try {
     await addColumn(subjectId.value, termId.value, { type: inlineColType.value, label: inlineColName.value.trim(), max_score: inlineColMax.value })
     inlineColName.value = ''; inlineColType.value = 'quiz'; inlineColMax.value = 100
-    showInlineAddColumn.value = false; showSaveStatus('saved'); refreshData()
+    showInlineAddColumn.value = false; showSaveStatus('saved'); refreshData(true)
   } catch { showSaveStatus('failed') }
 }
 
@@ -2362,9 +2695,8 @@ async function insertRowAbove(rowIdx: number) {
       : -1
     pageSize.value = 'all'
     showSaveStatus('saving')
-    // Refresh to get proper ScoreDetails from server
-    await refreshData()
-    // Re-insert the new row at the target position (it came back at the bottom)
+    // Refresh to get proper ScoreDetails from server      await refreshData(true)
+      // Re-insert the new row at the target position (it came back at the bottom)
     if (actualIndex >= 0 && data.value) {
       const freshRows = [...data.value.rows]
       const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
@@ -2392,8 +2724,8 @@ async function insertRowBelow(rowIdx: number) {
       : -1
     pageSize.value = 'all'
     showSaveStatus('saving')
-    await refreshData()
-    // Re-insert the new row after the target position
+    await refreshData(true)
+      // Re-insert the new row after the target position
     if (actualIndex >= 0 && data.value) {
       const freshRows = [...data.value.rows]
       const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
@@ -2418,7 +2750,7 @@ async function deleteRow(rowIdx: number) {
   try {
     await deleteEnrollment(subjectId.value, termId.value, row.enrollment_id)
     showSaveStatus('saved')
-    await refreshData()
+    await refreshData(true)
   } catch (err) {
     showSaveStatus('failed')
     console.error('Failed to delete row:', err)
@@ -2430,7 +2762,7 @@ async function doAddRow() {
     await addEnrollment(subjectId.value, termId.value, null, classId.value)
     showSaveStatus('saved')
     pageSize.value = 'all'
-    await refreshData()
+    await refreshData(true)
   } catch (err) {
     showSaveStatus('failed')
     console.error('Failed to add row:', err)
@@ -2440,10 +2772,18 @@ async function doAddRow() {
 
 async function doUpdateWeights() {
   if (totalWeight.value !== 100) return
+  const weights = assessments.value.map(at => ({ id: at.id, weight_percent: Number(weightEdits[at.id] || 0) }))
+  showWeights.value = false
+  showSaveStatus('saving')
   try {
-    await updateWeights(assessments.value.map(at => ({ id: at.id, weight_percent: weightEdits[at.id] || 0 })))
-    showWeights.value = false; showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await updateWeights(weights)
+    showToast('Weights updated successfully', 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to update weights', 'error')
+  }
 }
 
 // ─── Google Sheets - One-Click Create & Open ─────────────────────────
@@ -2607,7 +2947,7 @@ async function syncFromGoogleSheets() {
         token
       )
       if (!result.synced) return // Nothing to sync yet (no matching tab / no data rows) — stay quiet.
-      await refreshData()
+      await refreshData(true)
       gsLastSynced.value = new Date().toLocaleTimeString()
       gsReconnectNeeded.value = false
       // This "saved" came FROM pulling the sheet's own data — pushing back here would just
@@ -2629,7 +2969,7 @@ async function syncFromGoogleSheets() {
             refreshed.access_token
           )
           if (!retryResult.synced) return
-          await refreshData()
+          await refreshData(true)
           gsLastSynced.value = new Date().toLocaleTimeString()
           gsReconnectNeeded.value = false
           showSaveStatus("saved", { skipSheetPush: true }) // Pull result — see note above.
@@ -2789,7 +3129,7 @@ function onFileSelected(event: Event) {
   if (file) {
     pendingFile.value = file
     selectedFileName.value = file.name
-    previewExcelFile(file)
+    previewFile(file)
   }
   input.value = ''
 }
@@ -2800,7 +3140,7 @@ function onFileDrop(event: DragEvent) {
     pendingFile.value = file
     selectedFileName.value = file.name
     dragOver.value = false
-    previewExcelFile(file)
+    previewFile(file)
   }
 }
 
@@ -2819,13 +3159,15 @@ async function processImportFile() {
   try {
     if (ext === 'xlsx' || ext === 'xls') {
       await importExcelFile(file)
+    } else if (ext === 'pdf') {
+      await importPdfFile(file)
     } else {
-      throw new Error('Unsupported file format. Please use Excel (.xlsx/.xls) files only.')
+      throw new Error('Unsupported file format. Please use Excel (.xlsx/.xls) or PDF (.pdf) files only.')
     }
     showSaveStatus('saved')
     pageSize.value = 'all'
     await animateImportProgress(70, 90, 500, 'Refreshing sheet...')
-    await refreshData()
+    await refreshData(true)
     await animateImportProgress(90, 100, 400, 'Import complete!')
     setTimeout(() => { importProgress.value = 0 }, 1200)
   } catch (err: any) {
@@ -2976,10 +3318,16 @@ async function exportExcel() {
 
 async function exportPDF() {
   if (!data.value) return
-  const { default: jsPDF } = await import('jspdf')
-  await import('jspdf-autotable')
-  
+  const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ])
+  // Manually register autoTable if the dynamic import didn't auto-register
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  if (typeof (doc as any).autoTable !== 'function' && autoTableModule && typeof autoTableModule.default === 'function') {
+    const autoTablePlugin = autoTableModule.default
+    ;(doc as any).autoTable = (opts: any) => autoTablePlugin(doc, opts)
+  }
   const cols = columns.value
   
   // Title
@@ -3111,7 +3459,7 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
   changeColumnType(subjectId.value, termId.value, col.label, oldType, newType)
     .then(() => {
       showSaveStatus('saved')
-      refreshData()
+      refreshData(true)
     })
     .catch(() => {
       showSaveStatus('failed')
@@ -3135,6 +3483,10 @@ onUnmounted(() => {
   gsSheetId.value = null
 })
 
+watch(searchQuery, () => {
+  currentPage.value = 1
+})
+
 watch([subjectId, termId], () => {
   if (!subjectId.value || !termId.value) return
   refreshData()
@@ -3155,63 +3507,145 @@ watch([subjectId, termId], () => {
 .score-sheet {
   position: relative;
   font-family: 'Inter', 'Segoe UI', 'Noto Sans Khmer', sans-serif;
-  height: calc(100vh - 0px);
+  height: calc(98vh - 90px);
+  width: calc(100% + 12px);
+  margin-top: -8px;
+  margin-left: -6px;
   min-height: 0;
   display: flex;
   flex-direction: column;
   color: #1e293b;
   background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
 .sheet-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
   flex-shrink: 0;
   flex-wrap: wrap;
+  border-radius: 16px 16px 0 0;
 }
 .toolbar-spacer { flex: 0; }
 .toolbar-actions { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
-.offering-info { display: flex; flex-direction: column; white-space: nowrap; }
-.offering-info strong { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
-.offering-info .text-muted { font-size: 0.7rem; color: #64748b; }
-.term-badge { display: inline-block; padding: 2px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-weight: 700; font-size: 0.75rem; margin-right: 4px; }
-.class-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; background: #f0fdf4; color: #166534; border-radius: 4px; font-weight: 600; font-size: 0.75rem; margin-left: 4px; }
+.offering-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #334155;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.offering-item {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  color: #475569;
+}
+.offering-item-main {
+  font-weight: 700;
+  color: #0f172a;
+}
+.offering-item-badge {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.offering-item-badge.offering-term {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.offering-item-badge.offering-class {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.offering-item-teachers {
+  color: #64748b;
+  font-size: 0.72rem;
+}
 
 .tb-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border: 1px solid #e2e8f0; background: #fff;
-  border-radius: 6px; cursor: pointer; font-size: 0.78rem;
-  color: #475569; transition: all 0.15s; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid #e2e8f0; background: #fff;
+  border-radius: 8px; cursor: pointer; font-size: 0.78rem;
+  color: #475569; transition: all 0.2s; white-space: nowrap;
+  font-family: inherit; font-weight: 500;
 }
-.tb-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.tb-btn:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.tb-btn:active { transform: translateY(0); box-shadow: none; }
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.kb-btn { font-size: 0.85rem; color: #64748b; }
+.tb-btn span { display: inline; }
+.kb-btn { font-size: 0.85rem; color: #64748b; padding: 6px 10px; }
 .kb-btn:hover { color: #2563eb; background: #eff6ff; border-color: #93c5fd; }
-.btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
 
-.search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 120px; }
-.search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 100px; color: #1e293b; }
-.search-box i { color: #94a3b8; font-size: 0.78rem; }
+.gs-icon {
+  flex-shrink: 0;
+}
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
 
-.toolbar-meta { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; white-space: nowrap; padding-right: 8px; }
+.search-box {
+  position: relative;
+  width: 220px;
+}
+.search-box i {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+.search-box input {
+  width: 100%;
+  padding: 0.5rem 0.8rem 0.5rem 2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: #1f2937;
+  background: #fff;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+.search-box input::placeholder { color: #9ca3af; }
+.search-box input:hover { border-color: #cbd5e1; }
+.search-box input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.toolbar-meta { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; white-space: nowrap; padding-right: 4px; }
 .gs-sync-status { display: flex; align-items: center; gap: 4px; color: #16a34a; padding: 2px 8px; background: #f0fdf4; border-radius: 4px; }
 .gs-sync-pending { color: #f59e0b; background: #fefce8; }
 .gs-reconnect-needed { color: #ea580c; background: #fff7ed; cursor: pointer; transition: background 0.15s; }
 .gs-reconnect-needed:hover { background: #ffedd5; }
 .gs-reconnect-link { color: #ea580c; text-decoration: underline; cursor: pointer; }
 .gs-reconnect-link:hover { color: #c2410c; }
-.save-status { font-size: 0.7rem; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
-.status-saving { color: #f59e0b; background: #fef3c7; }
-.status-saved { color: #16a34a; background: #dcfce7; }
-.status-failed { color: #dc2626; background: #fee2e2; }
-.status-idle { color: transparent; }
+.save-status { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 500; white-space: nowrap; padding: 3px 8px; border-radius: 6px; }
+.status-saving { color: #f59e0b; }
+.status-saved { color: #10b981; }
+.status-failed { color: #ef4444; }
+.status-idle { color: #94a3b8; }
 
-.stats-bar { display: flex; gap: 16px; padding: 6px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; flex-wrap: wrap; }
-.stat-item { display: flex; gap: 5px; font-size: 0.78rem; align-items: center; }
+.stats-bar { display: flex; gap: 20px; padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid #e9ecef; flex-shrink: 0; flex-wrap: wrap; }
+.stat-item { display: flex; gap: 6px; font-size: 0.78rem; align-items: center; }
 .stat-label { color: #64748b; font-weight: 500; }
 .stat-value { font-weight: 700; color: #0f172a; }
 
@@ -3233,6 +3667,11 @@ watch([subjectId, termId], () => {
   overflow: auto;
 }
 
+.sheet-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.sheet-scroll::-webkit-scrollbar-track { background: transparent; }
+.sheet-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.sheet-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
 /* ─── Table ────────────────────────────────────────────────────────── */
 .sheet-table {
   border-collapse: collapse;
@@ -3241,12 +3680,12 @@ watch([subjectId, termId], () => {
   font-size: 0.8rem;
 }
 
-.sheet-table thead { position: sticky; top: 0; z-index: 10; }
+.sheet-table thead { position: sticky; top: 0; z-index: 50; }
 
 .cell-header {
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  padding: 5px 8px;
+  padding: 4px 3px;
   font-weight: 700;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -3254,7 +3693,7 @@ watch([subjectId, termId], () => {
   color: #475569;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 50;
   text-align: left;
   white-space: nowrap;
   min-width: 80px;
@@ -3262,11 +3701,16 @@ watch([subjectId, termId], () => {
 }
 
 /* ─── Cell Highlights (Excel green) ─────────────────────────────────── */
-.cell-frozen { position: sticky; z-index: 20; background: #f1f5f9; }
+.cell-frozen { position: sticky; z-index: 20; background: #fff; }
 
 .row-num-header, .row-num { left: 0; width: 36px; min-width: 36px; max-width: 36px; text-align: center; z-index: 30; }
 .student-name-header, .cell-student-name { left: 36px; min-width: 160px; z-index: 25; }
-.student-id-header, .cell-student-id { left: 196px; min-width: 90px; z-index: 25; }
+.student-id-header, .cell-student-id { left: 196px; min-width: 120px; z-index: 25; }
+
+/* Ensure frozen headers always appear above frozen tbody cells */
+.row-num-header { z-index: 50; }
+.student-name-header { z-index: 50; }
+.student-id-header { z-index: 50; }
 
 /* ─── Enhanced Header Highlight ─────────────────────────────────────── */
 .header-highlighted {
@@ -3284,20 +3728,50 @@ watch([subjectId, termId], () => {
 
 /* ─── Header ────────────────────────────────────────────────────────── */
 .header-content { display: flex; align-items: center; gap: 4px; }
-.column-header-content { flex-direction: column; align-items: flex-start; gap: 1px; }
-.column-label { overflow: hidden; text-overflow: ellipsis; cursor: pointer; font-size: 0.68rem; }
+.column-header-content { flex-direction: column; align-items: stretch; gap: 1px; }
 
-.column-actions { display: none; gap: 2px; margin-top: 2px; }
-.cell-header:hover .column-actions { display: flex; }
-.col-action-btn { background: none; border: none; padding: 1px 3px; cursor: pointer; font-size: 0.6rem; color: #64748b; border-radius: 2px; }
-.col-action-btn:hover { background: #e2e8f0; }
-.text-danger { color: #ef4444 !important; }
-.max-score-label { font-size: 0.55rem; color: #94a3b8; font-weight: 400; margin-top: 1px; }
+.column-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.column-label { overflow: hidden; text-overflow: ellipsis; cursor: pointer; font-size: 0.68rem; flex: 1; min-width: 0; text-align: left; }
+
+.column-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  flex-shrink: 0;
+}
+.cell-header:hover .column-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.col-action-btn {
+  background: none; border: none; padding: 3px 5px; cursor: pointer; font-size: 0.65rem;
+  color: #64748b; border-radius: 4px; display: inline-flex; align-items: center;
+  justify-content: center; opacity: 0.7; transition: all 0.15s ease; line-height: 1;
+}
+.col-action-btn:hover { background: #e2e8f0; opacity: 1; }
+.col-action-delete:hover { color: #ef4444 !important; background: #fef2f2; }
+
+.max-score-label { font-size: 0.5rem; color: #94a3b8; font-weight: 400; line-height: 1; }
 
 /* ─── Editable Column Type Select ─────────────────────────────────── */
 .column-type-select {
-  font-size: 0.6rem;
-  padding: 1px 4px;
+  font-size: 0.55rem;
+  padding: 0px 2px;
   border: 1px solid transparent;
   border-radius: 3px;
   background: transparent;
@@ -3329,15 +3803,21 @@ watch([subjectId, termId], () => {
 /* ─── Cells ────────────────────────────────────────────────────────── */
 .cell {
   border: 1px solid #e2e8f0;
-  padding: 3px 6px;
+  padding: 3px 4px;
   font-size: 0.8rem;
   white-space: nowrap;
   cursor: pointer;
   height: 32px;
   vertical-align: middle;
   transition: background 0.05s;
+  overflow: hidden;
+}.cell-score {
+  min-width: 140px;
+  max-width: 140px;
+  width: 140px;
+  text-align: center;
+  position: relative;
 }
-.cell-score { min-width: 60px; text-align: center; position: relative; }
 .cell-score .cell-editing {
   z-index: 5;
 }
@@ -3397,6 +3877,8 @@ watch([subjectId, termId], () => {
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  overflow: hidden;
+  max-width: 100%;
 }
 .cell-editor {
   width: 100%;
@@ -3411,6 +3893,7 @@ watch([subjectId, termId], () => {
   color: #0f172a;
   box-sizing: border-box;
   min-width: 0;
+  max-width: 100%;
   line-height: 1;
 }
 
@@ -3420,15 +3903,12 @@ watch([subjectId, termId], () => {
   max-width: 160px;
   width: 160px;
 }
+
+.cell-student-name .cell-value {
+  padding: 3px 14px 3px 6px;
+}
 .cell-student-name .cell-editor-wrapper .cell-editor {
   text-align: left;
-  font-weight: 500;
-  font-size: 0.82rem;
-  color: #0f172a;
-  padding: 0 6px;
-  background: #fff;
-  height: 100%;
-  letter-spacing: 0.01em;
 }
 .cell-student-name.cell-selected {
   z-index: 25;
@@ -3444,15 +3924,9 @@ watch([subjectId, termId], () => {
   position: sticky;
 }
 .cell-student-name .cell-value {
-  font-weight: 500;
-  color: #0f172a;
   padding: 3px 14px 3px 6px;
-  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
 }
 
 /* ─── Student ID Cell & Editor - Professional Style ───────────────── */
@@ -3465,9 +3939,9 @@ watch([subjectId, termId], () => {
   box-sizing: border-box;
 }
 .cell-student-id {
-  min-width: 90px;
-  max-width: 90px;
-  width: 90px;
+  min-width: 120px;
+  max-width: 120px;
+  width: 120px;
 }
 
 .student-id-cell-inner {
@@ -3520,10 +3994,6 @@ watch([subjectId, termId], () => {
   position: sticky;
 }
 .cell-student-id .cell-value {
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-weight: 600;
-  font-size: 0.78rem;
-  color: #334155;
   padding: 3px 18px 3px 6px;
   letter-spacing: 0.02em;
   line-height: 1.4;
@@ -3544,6 +4014,26 @@ watch([subjectId, termId], () => {
   line-height: 1.4;
 }
 
+/* Keep the span in-flow to maintain cell width, but hide it visually when editing */
+.cell-value-hidden { visibility: hidden; }
+
+/* Absolute-positioned editor never affects the td's flow layout */
+.cell-editor-overlay {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+.cell-editor-overlay-frozen {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
 
 /* ─── Row States ───────────────────────────────────────────────────── */
 .row-even .cell { background-color: #fafafa; }
@@ -3608,6 +4098,25 @@ watch([subjectId, termId], () => {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinning { animation: spin 0.7s linear infinite; }
 
+.loading-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(2px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px;
+  z-index: 500;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ─── Import Progress Bar ─────────────────────────────────────────── */
 .import-progress-overlay {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
@@ -3659,6 +4168,329 @@ watch([subjectId, termId], () => {
   background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px);
   display: flex; align-items: center; justify-content: center; z-index: 1000;
 }
+
+/* ─── Modern Modal Panel (matches Class form style) ──────────────────── */
+.modal-content-panel {
+  background: #fff;
+  border-radius: 20px;
+  width: 440px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+  animation: modalBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-md-panel {
+  width: 520px;
+}
+
+@keyframes modalBounce {
+  0% { transform: scale(0.92) translateY(12px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modal-content-panel::-webkit-scrollbar { width: 4px; }
+.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
+.modal-content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+.modal-header-custom {
+  padding: 32px 32px 16px;
+  text-align: center;
+  position: relative;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.modal-close-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+.modal-header-custom .modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  margin: 0 auto 16px;
+}
+
+.modal-header-custom .modal-icon.icon-add {
+  background: linear-gradient(135deg, #eef2ff, #dbeafe);
+  color: #2563eb;
+}
+
+.modal-header-custom .modal-icon.icon-delete {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  color: #dc2626;
+}
+
+.modal-header-custom .modal-icon.icon-rename {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+  color: #0369a1;
+}
+
+.modal-header-custom .modal-icon.icon-weights {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #d97706;
+}
+
+/* ─── Weight Modal ───────────────────────────────────────────────── */
+.weight-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.weight-row:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.weight-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.weight-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+
+.weight-code {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.weight-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weight-input-group .weight-input-field {
+  width: 80px;
+  text-align: center;
+  padding: 0.5rem 0.5rem;
+  font-weight: 600;
+}
+
+.weight-suffix {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 16px;
+}
+
+.no-assessments-text {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  padding: 20px 0;
+}
+
+.weight-total-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.weight-total-bar i {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.weight-total-bar.weight-ok {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.weight-total-bar.weight-warn {
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fde68a;
+}
+
+.weight-hint {
+  font-size: 0.75rem;
+  color: #a16207;
+}
+
+.delete-warning-text {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+.delete-warning-text strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.modal-header-custom h5 {
+  font-size: 1.1rem;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.modal-subtitle {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.modal-body-custom {
+  padding: 0 32px 8px;
+}
+
+.modal-body-custom .form-group {
+  margin-bottom: 20px;
+}
+
+.modal-body-custom .form-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.modal-body-custom .form-label i {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.modal-body-custom .modern-input {
+  width: 100%;
+  padding: 0.65rem 0.875rem;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.modal-body-custom .modern-input:hover {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.modal-body-custom .modern-input:focus {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.modal-body-custom .modern-input::placeholder {
+  color: #94a3b8;
+}
+
+.modal-body-custom select.modern-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.modal-footer-custom {
+  display: flex;
+  gap: 10px;
+  padding: 16px 32px 28px;
+}
+
+.modal-footer-custom button {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+}
+
+.modal-footer-custom .btn-outline {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+}
+
+.modal-footer-custom .btn-outline:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.modal-footer-custom .btn-primary-custom {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.modal-footer-custom .btn-primary-custom:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.modal-footer-custom .btn-danger-custom {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+}
+
+.modal-footer-custom .btn-danger-custom:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+}
 .modal-content { background: #fff; border-radius: 10px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
 .modal-sm { max-width: 380px; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
@@ -3693,71 +4525,7 @@ select.form-input { appearance: auto; }
 .import-steps { font-size: 0.78rem; color: #64748b; padding-left: 18px; margin-bottom: 14px; }
 .import-steps li { margin-bottom: 4px; }
 
-/* ─── Import Modal ─────────────────────────────────────────────────── */
-.import-modal {
-  background: #fff;
-  border-radius: 14px;
-  width: 90%;
-  max-width: 440px;
-  max-height: 80vh;
-  overflow: hidden;
-  box-shadow: 0 25px 60px rgba(0,0,0,0.25);
-  display: flex;
-  flex-direction: column;
-}
-.import-modal-header {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  padding: 18px 22px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  position: relative;
-}
-.import-modal-header .modal-close {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  color: rgba(255,255,255,0.7);
-  font-size: 1.3rem;
-}
-.import-modal-header .modal-close:hover { color: #fff; }
-.import-modal-header-icon {
-  width: 42px;
-  height: 42px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.3rem;
-  color: #fff;
-  flex-shrink: 0;
-}
-.import-modal-header-text h5 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  margin: 0 0 2px;
-  color: #fff;
-}
-.import-modal-header-text p {
-  font-size: 0.78rem;
-  margin: 0;
-  color: rgba(255,255,255,0.75);
-}
-.import-modal-body {
-  padding: 18px 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.import-modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 22px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
-}
+/* ─── Import Modal (inner content styles) ──────────────────────────── */
 
 /* Format badges */
 .import-format-badges {
@@ -3992,10 +4760,43 @@ select.form-input { appearance: auto; }
   .btn-group { width: 100%; }
 }
 
-.table-footer { display: flex; align-items: center; justify-content: flex-end; padding: 10px 12px; border-top: 1px solid #e2e8f0; background: #f8fafc; gap: 8px; }
-.page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #64748b; }
-.page-size-select { padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.78rem; background: #fff; color: #1e293b; outline: none; cursor: pointer; }
-.page-size-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; border-top: 1px solid #e5e7eb;
+  background: #f8fafc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
+  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
+.rows-label { font-weight: 500; white-space: nowrap; }
+.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+.rows-btn {
+  padding: 4px 10px; border: none; background: transparent;
+  color: #64748b; border-radius: 6px; cursor: pointer;
+  font-size: 0.75rem; font-weight: 600; font-family: inherit;
+  transition: all 0.15s ease;
+}
+.rows-btn:hover { color: #334155; }
+.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.pagination-pages { display: flex; align-items: center; gap: 2px; }
+.page-nav {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 6px; cursor: pointer; transition: all 0.15s ease;
+}
+.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
+.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn {
+  min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #475569;
+  border-radius: 6px; cursor: pointer; font-size: 0.78rem;
+  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
+}
+.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
+.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
+.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
+.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
 .add-col-header { width: 40px; min-width: 40px; max-width: 40px; text-align: center; padding: 5px !important; position: relative; }
 .add-col-trigger { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; color: #64748b; transition: all 0.15s; margin: 0 auto; }
@@ -4250,4 +5051,65 @@ select.form-input { appearance: auto; }
 .cell-score:hover { background: #f8fafc; }
 .cell-selected { transition: outline 0.1s ease, background 0.1s ease; }
 .row-selected .cell { transition: background 0.1s ease; }
+
+/* ─── Toast Notification ──────────────────────────────────────────── */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  z-index: 99999;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: toastSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toast-notification i {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.toast-notification.success {
+  background: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.toast-notification.success i {
+  color: #22c55e;
+}
+
+.toast-notification.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.toast-notification.error i {
+  color: #ef4444;
+}
+
+@keyframes toastSlideIn {
+  0% {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter-active { transition: all 0.3s ease-out; }
+.toast-leave-active { transition: all 0.2s ease-in; }
+.toast-enter-from, .toast-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
+}
 </style>
