@@ -166,9 +166,9 @@ function closeDropdown() {
   showDropdown.value = false
 }
 
-function handleLogout() {
+async function handleLogout() {
   showDropdown.value = false
-  auth.logout()
+  await auth.logout()
   router.push('/login')
 }
 
@@ -214,7 +214,8 @@ onUnmounted(() => {
 <style scoped>
 /* ── Header Base ── */
 .app-header {
-  height: 64px;
+  height: 72px;
+  flex-shrink: 0;
   padding: 0 20px;
   position: sticky;
   top: 0;

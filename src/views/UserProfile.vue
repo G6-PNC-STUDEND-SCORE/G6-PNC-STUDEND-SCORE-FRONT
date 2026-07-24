@@ -487,7 +487,7 @@ onUnmounted(() => {
 .admin-profile-page {
   background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   min-height: 100vh;
-  padding: 36px;
+  padding: 36px 0;
 }
 
 .page-header {

@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -68,8 +68,15 @@ const props = withDefaults(defineProps<{
 
 const themeStore = useThemeStore()
 const chartRef = ref<InstanceType<typeof VChart> | null>(null)
-const ready = computed(() => !props.loading && props.option?.series != null)
+const laidOut = ref(false)
+const ready = computed(() => laidOut.value && !props.loading && props.option?.series != null)
 const chartTheme = computed(() => themeStore.isDark ? 'dark' : '')
+
+onMounted(() => {
+  nextTick(() => {
+    laidOut.value = true
+  })
+})
 
 const chartOption = computed<EChartsOption>(() => ({
   ...props.option,

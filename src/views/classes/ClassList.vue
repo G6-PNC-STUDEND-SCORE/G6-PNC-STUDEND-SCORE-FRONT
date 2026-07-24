@@ -212,10 +212,7 @@ defineEmits<{
   font-weight: 600;
 }
 
-.badge-active {
-  background: #dcfce7;
-  color: #16a34a;
-}
+.badge-active { background: #dbeafe; color: #1d4ed8; }
 
 .badge-inactive {
   background: #f1f5f9;

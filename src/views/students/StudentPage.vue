@@ -10,24 +10,7 @@
       </div>
     </Transition>
 
-    <!-- ── Header ── -->
-    <div class="page-head">
-      <div class="page-head-left">
-        <div class="page-icon">
-          <GraduationCap :size="22" />
-        </div>
-        <div>
-          <h1 class="page-title">Students</h1>
-          <p class="page-desc">Manage student profiles, classes, and information</p>
-        </div>
-      </div>
-      <div class="page-head-right">
-        <button class="btn btn-primary" @click="openCreateModal">
-          <Plus :size="16" />
-          <span>Add Student</span>
-        </button>
-      </div>
-    </div>
+
 
     <!-- ── Loading ── -->
     <div v-if="loading" class="load-state">
@@ -43,7 +26,6 @@
 
     <!-- ── Student List ── -->
     <StudentList
-      v-else
       ref="studentListRef"
       :students="filteredStudents"
       :search-query="searchQuery"
@@ -56,6 +38,7 @@
       @assign="openAssignModal"
       @delete="openDeleteModal"
       @bulk-delete="openBulkDeleteModal"
+      @add="openCreateModal"
     />
 
     <!-- ── Create & Edit Modals (StudentFormModal handles its own overlay) ── -->
@@ -284,7 +267,7 @@
 import { onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
-import { GraduationCap, Plus, AlertTriangle, CheckCircle, AlertCircle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
+import { AlertTriangle, CheckCircle, AlertCircle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
 import { useStudents } from './composables/useStudents.ts'
 
 const {
@@ -309,56 +292,15 @@ onMounted(() => init())
    GLOBAL
    ══════════════════════════════════════════════════════════════ */
 .page-container {
-  height: 100%;
-  min-height: 100%;
+  height: calc(100vh - 96px);
+  width: calc(100% + 12px);
+  margin-top: -6px;
+  margin-left: -6px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 1rem 1.5rem 2rem;
-  font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
-  color: #0f172a;
-  max-width: 1440px;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
-
-.page-icon {
-  width: 44px; height: 44px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  color: #2563eb;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   HEADER
-   ══════════════════════════════════════════════════════════════ */
-.page-head {
-  display: flex;
-  align-items: center; justify-content: space-between;
-  margin-bottom: 1.25rem; gap: 16px; flex-wrap: wrap;
-}
-.page-head-left { display: flex; align-items: center; gap: 14px; }
-.page-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.025em; }
-.page-desc { font-size: 0.8rem; color: #64748b; margin: 0; }
-.page-head-right { display: flex; align-items: center; gap: 10px; }
-
-/* ══════════════════════════════════════════════════════════════
-   BUTTONS
-   ══════════════════════════════════════════════════════════════ */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 0.5rem 1.125rem; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 600; cursor: pointer;
-  border: none; transition: all 0.2s; font-family: inherit;
-  white-space: nowrap;
-}
-.btn-primary { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
-.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-ghost { background: #f1f5f9; color: #475569; }
-.btn-ghost:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
 
 /* ══════════════════════════════════════════════════════════════
    MESSAGES
@@ -451,7 +393,7 @@ onMounted(() => init())
   padding: 3px 10px; border-radius: 20px;
   font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
 }
-.pill-on { background: #dcfce7; color: #16a34a; }
+.pill-on { background: #dbeafe; color: #1d4ed8; }
 .pill-off { background: #f1f5f9; color: #94a3b8; }
 .pill-male { background: #dbeafe; color: #2563eb; }
 .pill-female { background: #f1f5f9; color: #64748b; }

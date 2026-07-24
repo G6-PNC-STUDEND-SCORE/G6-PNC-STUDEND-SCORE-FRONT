@@ -1,7 +1,7 @@
 <template>
   <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
     <!-- Logo / Brand -->
-    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 64px">
+    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 72px">
       <div class="sidebar-logo-wrap">
         <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
       </div>
@@ -24,18 +24,20 @@
         <span class="sidebar-link-text">{{ link.label }}</span>
       </RouterLink>
 
-      <h6 class="menu-title mt-3 mb-2">Settings</h6>
+      <template v-if="settingsLinks.length > 0">
+        <h6 class="menu-title mt-3 mb-2">Settings</h6>
 
-      <RouterLink
-        v-for="link in settingsLinks"
-        :key="link.to"
-        :to="link.to"
-        :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
-        :title="sidebar.collapsed ? link.label : ''"
-      >
-        <component :is="link.icon" :size="20" />
-        <span class="sidebar-link-text">{{ link.label }}</span>
-      </RouterLink>
+        <RouterLink
+          v-for="link in settingsLinks"
+          :key="link.to"
+          :to="link.to"
+          :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
+          :title="sidebar.collapsed ? link.label : ''"
+        >
+          <component :is="link.icon" :size="20" />
+          <span class="sidebar-link-text">{{ link.label }}</span>
+        </RouterLink>
+      </template>
     </nav>
 
     <!-- Toggle Button -->
@@ -52,7 +54,7 @@
 
     <!-- User Section & Logout -->
     <div class="border-top">
-      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'px-3 py-2']">
+      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'justify-content-between px-3 py-2']">
         <div
           class="user d-flex align-items-center"
           :class="{ 'justify-content-center': sidebar.collapsed }"
@@ -131,22 +133,40 @@ interface NavLink {
   to: string
   label: string
   icon: Component
+  // Permission slug required to see this link — matches the `permission:` middleware
+  // guarding the page's own API calls (e.g. `view-classes` for /classes). Omit for links
+  // that aren't permission-gated server-side (Dashboard, Reports). Admins implicitly have
+  // every permission (see User::hasPermission()), so this never hides anything from them.
+  permission?: string
 }
 
-const navLinks: NavLink[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/classes', label: 'Classes', icon: Users },
-  { to: '/subjects', label: 'Subjects', icon: BookOpen },
-  { to: '/teachers', label: 'Teachers', icon: UserCheck },
-  { to: '/students', label: 'Students', icon: GraduationCap },
-  { to: '/scores', label: 'Scores', icon: ClipboardList },
-  { to: '/reports', label: 'Reports', icon: FileText },
-]
+const navLinks = computed<NavLink[]>(() => {
+  if (auth.user?.role === 'student') {
+    return [
+      { to: '/portal', label: 'My Dashboard', icon: LayoutDashboard },
+      { to: '/portal/scores', label: 'My Scores', icon: ClipboardList },
+      { to: '/portal/transcript', label: 'My Transcript', icon: FileText },
+    ]
+  }
+  const links: NavLink[] = [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/classes', label: 'Classes', icon: Users, permission: 'view-classes' },
+    { to: '/subjects', label: 'Subjects', icon: BookOpen, permission: 'view-subjects' },
+    { to: '/teachers', label: 'Teachers', icon: UserCheck, permission: 'view-teachers' },
+    { to: '/students', label: 'Students', icon: GraduationCap, permission: 'view-students' },
+    { to: '/scores', label: 'Scores', icon: ClipboardList, permission: 'view-scores' },
+    { to: '/reports', label: 'Reports', icon: FileText },
+  ]
+  return links.filter(link => !link.permission || auth.hasPermission(link.permission))
+})
 
-const settingsLinks: NavLink[] = [
-  { to: '/users', label: 'Users', icon: User },
-  { to: '/roles', label: 'Roles & Permissions', icon: Shield },
-]
+const settingsLinks = computed<NavLink[]>(() => {
+  if (auth.user?.role !== 'admin') return []
+  return [
+    { to: '/users', label: 'Users', icon: User },
+    { to: '/roles', label: 'Roles & Permissions', icon: Shield },
+  ]
+})
 
 function getUserInitials(): string {
   const name = auth.user?.name || ''
@@ -158,9 +178,9 @@ function getUserInitials(): string {
   return name.substring(0, 2).toUpperCase()
 }
 
-function handleLogout() {
+async function handleLogout() {
   showLogoutModal.value = false
-  auth.logout()
+  await auth.logout()
   router.push('/login')
 }
 
