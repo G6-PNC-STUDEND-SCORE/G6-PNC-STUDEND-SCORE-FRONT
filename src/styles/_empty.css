@@ -1,7 +1,3 @@
-/* ==========================================
-   Empty State (dashed border variant)
-   ========================================== */
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -37,9 +33,7 @@
   font-size: 0.875rem;
 }
 
-/* ==========================================
-   Empty Container (flex-centered variant)
-   ========================================== */
+
 
 .empty-container {
   flex: 1;

@@ -1,22 +1,14 @@
 <template>
   <div class="page-container">
 
-
-
-
-      <!-- ── Loading State ───────────────────────────────────────── -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
         <span>{{ !selectedClass ? 'Loading classes...' : 'Loading terms...' }}</span>
       </div>
 
       <template v-else>
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <!-- CLASS GRID                                                 -->
-        <!-- ══════════════════════════════════════════════════════════ -->
         <template v-if="!selectedClass">
           <div class="scores-card">
-            <!-- Toolbar: Search + Generation on left, Stats on right -->
             <div class="toolbar" v-if="classes.length > 0">
               <div class="toolbar-left-group">
                 <div class="tb-search">
@@ -100,7 +92,6 @@
               </div>
             </div>
 
-            <!-- Pagination -->
             <div v-if="filteredClasses.length > 0" class="pagination-bar">
               <div class="pagination-info">
                 <span class="rows-label">Rows per page:</span>
@@ -156,12 +147,8 @@
           </div>
         </template>
 
-        <!-- ══════════════════════════════════════════════════════════ -->
-        <!-- TERMS WITH SUBJECTS                                        -->
-        <!-- ══════════════════════════════════════════════════════════ -->
         <template v-else>
           <div class="scores-card">
-            <!-- ── Breadcrumb inside card ── -->
             <div class="terms-header">
               <button class="terms-back" @click="selectClass(null)">
                 <ChevronLeft :size="15" />
@@ -174,7 +161,6 @@
               </span>
             </div>
 
-            <!-- Toolbar: Balanced with Search | Filter | Sort -->
             <div class="term-toolbar">
               <div class="tb-search term-search">
                 <Search :size="16" />
@@ -189,7 +175,7 @@
               </div>
               <div class="toolbar-center">
                 <div class="tb-filter" v-if="generations.length > 0">
-                  <Calendar :size="14" class="filter-icon" />
+              
                   <select v-model="selectedGeneration">
                     <option :value="null">All Years</option>
                     <option
@@ -227,7 +213,6 @@
               </div>
             </div>
 
-            <!-- Term Cards with Subjects -->
             <div v-if="filteredTerms.length === 0" class="empty-state">
               <div class="empty-state-icon"><Inbox :size="24" /></div>
               <h5>No Terms Found</h5>
@@ -240,7 +225,6 @@
                 :key="term.id"
                 class="term-section"
               >
-                <!-- Term Header -->
                 <div class="term-section-header" @click="goToTermSubjects(term.id)">
                   <div class="term-section-header-left">
                     <div class="term-section-icon">
@@ -259,7 +243,6 @@
                   </div>
                 </div>
 
-                <!-- Subject Chips -->
                 <div class="subject-chips" v-if="getTermSubjects(term.id).length > 0">
                   <div
                     v-for="subject in getTermSubjects(term.id)"
@@ -306,22 +289,18 @@ const CACHE_KEY = 'scores-subjects'
 
 const router = useRouter()
 
-// ── Core Data ───────────────────────────────────────────────────────
 const subjectsData = ref<SubjectItem[]>([])
 const terms = ref<Array<{ id: number; name: string; academic_year: string | number | null }>>([])
 const loading = ref(false)
 const selectedGeneration = ref<string | number | null>(null)
 
-// ── Class State ─────────────────────────────────────────────────────
 const classes = ref<SchoolClass[]>([])
 const loadingClasses = ref(false)
 const selectedClass = ref<SchoolClass | null>(null)
 
-// ── Class-level Filters ────────────────────────────────────────────
 const searchQuery = ref('')
 const selectedGenerationFilter = ref<string | number | null>(null)
 
-// ── Pagination ─────────────────────────────────────────────────────
 const classCurrentPage = ref(1)
 const classPerPage = ref(10)
 const classPageSizeOptions = [10, 25, 50]
@@ -376,14 +355,12 @@ function changeClassPerPage(size: number) {
   classCurrentPage.value = 1
 }
 
-// Reset pagination when filters change
 watch(searchQuery, () => { classCurrentPage.value = 1 })
 watch(selectedGenerationFilter, () => { classCurrentPage.value = 1 })
 
 const classGenerations = computed(() => {
   const genSet = new Set<string>()
   classes.value.forEach((cls) => {
-    // Backend returns generation data under the 'academicYear' key
     const name = cls.academicYear?.name || cls.generation?.name
     if (name) genSet.add(String(name))
   })
@@ -392,7 +369,6 @@ const classGenerations = computed(() => {
 
 const filteredClasses = computed(() => {
   let list = classes.value
-  // Filter by search query
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     list = list.filter((c) => {
@@ -401,7 +377,6 @@ const filteredClasses = computed(() => {
       return name.includes(q) || room.includes(q)
     })
   }
-  // Filter by generation
   if (selectedGenerationFilter.value !== null) {
     list = list.filter((c) => String(c.academicYear?.name || c.generation?.name) === String(selectedGenerationFilter.value))
   }
@@ -413,7 +388,6 @@ const filteredTotalStudents = computed(() => {
 })
 
 function getClassGradient(cls: SchoolClass): string {
-  // SubjectPage-style blue gradients (ts-1 through ts-4)
   const gradients = [
     'linear-gradient(135deg, #2563eb, #1d4ed8)',
     'linear-gradient(135deg, #3b82f6, #2563eb)',
@@ -449,14 +423,11 @@ function getSubjectColor(code: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-// ── Term-level Filters ────────────────────────────────────────────
 const subjectSearchQuery = ref('')
 
-// ── Sort State ─────────────────────────────────────────────────────
 type SortMode = 'enrollment' | 'alphabetical'
 const subjectSortMode = ref<SortMode>('enrollment')
 
-// ── Subject helpers ─────────────────────────────────────────────────
 function getTermSubjects(termId: number): SubjectItem[] {
   const className = selectedClass.value?.name
   if (!className) return []
@@ -464,11 +435,9 @@ function getTermSubjects(termId: number): SubjectItem[] {
   let filtered = subjectsData.value.filter((subject) => {
     const term = subject.terms.find((t) => t.term_id === termId)
     if (!term) return false
-    // Check that this subject's offering for this term includes the selected class
     return term.classes.some((c) => c === className)
   })
 
-  // Filter by subject search
   if (subjectSearchQuery.value) {
     const q = subjectSearchQuery.value.toLowerCase()
     filtered = filtered.filter((s) =>
@@ -477,7 +446,6 @@ function getTermSubjects(termId: number): SubjectItem[] {
     )
   }
 
-  // Sort based on current mode
   const sorted = [...filtered]
   if (subjectSortMode.value === 'enrollment') {
     sorted.sort((a, b) => {
@@ -511,7 +479,6 @@ function goToScoreSheet(subject: SubjectItem, termId: number) {
   })
 }
 
-// ── Data fetching ───────────────────────────────────────────────────
 async function fetchClasses() {
   loadingClasses.value = true
   try {
@@ -519,7 +486,6 @@ async function fetchClasses() {
     if (response.success) {
       const data = response.data
       const raw = Array.isArray(data) ? data : [data]
-      // Only show active classes
       classes.value = raw.filter((c) => c.is_active !== false)
     }
   } catch (err) {
@@ -532,7 +498,6 @@ async function fetchClasses() {
 function selectClass(cls: SchoolClass | null) {
   selectedClass.value = cls
   selectedGeneration.value = null
-  // Reset class-level filters when navigating into a class
   searchQuery.value = ''
   selectedGenerationFilter.value = null
 }
@@ -564,7 +529,6 @@ function goToTermSubjects(termId: number) {
 function extractData(data: { subjects: SubjectItem[] }) {
   subjectsData.value = data.subjects
 
-  // Extract unique terms
   const termsMap = new Map<number, { id: number; name: string; academic_year: string | number | null }>()
   data.subjects.forEach((subject: SubjectItem) => {
     subject.terms.forEach((term) => {
@@ -579,7 +543,6 @@ function extractData(data: { subjects: SubjectItem[] }) {
   })
   terms.value = Array.from(termsMap.values()).sort((a, b) => a.id - b.id)
 
-  // Auto-select the latest generation
   if (!selectedGeneration.value && generations.value.length > 0) {
     selectedGeneration.value = generations.value[generations.value.length - 1]
   }
@@ -596,23 +559,19 @@ async function loadSubjects() {
 }
 
 onMounted(async () => {
-  // 1. Show cached data instantly
   const cached = cacheService.get<{ subjects: SubjectItem[] }>(CACHE_KEY)
   if (cached) {
     extractData(cached)
   } else {
     loading.value = true
   }
-  // 2. Fetch fresh data in background
   await Promise.all([fetchClasses(), loadSubjects()])
   loading.value = false
 })
 </script>
 
 <style scoped>
-/* ══════════════════════════════════════════════════════════════════
-   SCORE PAGE — Consistent with SubjectPage / ClassPage
-   ══════════════════════════════════════════════════════════════════ */
+
 .page-container {
   height: calc(100vh - 96px);
   display: flex;
@@ -624,7 +583,7 @@ onMounted(async () => {
   padding: 0;
 }
 
-/* ── Terms Header (breadcrumb inside card) ───────────────────────── */
+
 .terms-header {
   display: flex;
   align-items: center;
@@ -668,7 +627,7 @@ onMounted(async () => {
   font-size: 0.82rem;
 }
 
-/* ── Stats Chip ───────────────────────────────────────────────────── */
+
 .stat-chip {
   display: flex;
   align-items: center;
@@ -684,7 +643,7 @@ onMounted(async () => {
 
 .stat-chip svg { color: #3b82f6; }
 
-/* ── Loading State ────────────────────────────────────────────────── */
+
 .loading-state {
   display: flex;
   flex-direction: column;
@@ -704,9 +663,9 @@ onMounted(async () => {
   animation: spin 0.7s linear infinite;
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
-/*  SCORES CARD — matches UsersPage .user-card style                   */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
+
 .scores-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -725,9 +684,9 @@ onMounted(async () => {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
-/*  TOOLBAR — matches UsersPage .toolbar style                        */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
+
 .term-toolbar {
   display: flex;
   align-items: center;
@@ -753,7 +712,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* ── Term-level search — fixed width ── */
+
 .term-search {
   flex: initial;
   width: 240px;
@@ -847,9 +806,8 @@ onMounted(async () => {
   border-color: #93c5fd;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-/*  CLASS CARDS                                                        */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
 .classes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -959,9 +917,9 @@ onMounted(async () => {
   transform: translateX(3px);
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
-/*  TERM SECTIONS                                                      */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
+
 .term-sections {
   display: flex;
   flex-direction: column;
@@ -985,7 +943,7 @@ onMounted(async () => {
   box-shadow: 0 3px 10px rgba(59, 130, 246, 0.06);
 }
 
-/* Term section header */
+
 .term-section-header {
   display: flex;
   align-items: center;
@@ -1055,9 +1013,9 @@ onMounted(async () => {
   transform: translateX(2px);
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
-/*  SORT TOGGLE                                                        */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
+
 .sort-toggle {
   display: flex;
   align-items: center;
@@ -1104,9 +1062,9 @@ onMounted(async () => {
   color: #1d4ed8;
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
-/*  SUBJECT CHIPS                                                      */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
+
 .subject-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1189,9 +1147,9 @@ onMounted(async () => {
   color: #94a3b8;
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
-/*  EMPTY STATE — simple, like UsersPage                               */
-/* ══════════════════════════════════════════════════════════════════ */
+
+
+
 .empty-state {
   text-align: center;
   padding: 48px 16px;
@@ -1217,7 +1175,7 @@ onMounted(async () => {
 .empty-state h5 { font-weight: 600; color: #64748b; margin: 0 0 4px 0; font-size: 1rem; }
 .empty-state p { font-size: 0.8125rem; margin: 0; }
 
-/* ── Responsive ───────────────────────────────────────────────────── */
+
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
 }

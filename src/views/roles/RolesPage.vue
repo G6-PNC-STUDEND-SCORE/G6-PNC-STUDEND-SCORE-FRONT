@@ -6,7 +6,6 @@
     </div>
 
     <div class="role-card">
-      <!-- Tabs -->
       <div class="tab-bar">
         <button class="tab-btn" :class="{ active: activeTab === 'permissions' }" @click="activeTab = 'permissions'">
           Permissions
@@ -19,7 +18,6 @@
       <DomainRulesPanel v-if="activeTab === 'domains'" />
 
       <template v-else>
-      <!-- Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
           <label class="filter-label">
@@ -59,7 +57,6 @@
         </div>
       </div>
 
-      <!-- Selected role info -->
       <div v-if="selectedRole" class="role-info-bar">
         <input
           v-model="editName"
@@ -76,7 +73,6 @@
         />
       </div>
 
-      <!-- ── Empty State (no data) ── -->
       <div v-if="pagedRows.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
@@ -85,7 +81,6 @@
         </div>
       </div>
 
-      <!-- ── Table (with data) ── -->
       <div v-else class="table-wrap">
             <table class="perm-table data-table-base">
           <thead>
@@ -170,7 +165,6 @@
         </table>
       </div>
 
-      <!-- Pagination -->
       <div v-if="filteredRows.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
@@ -223,7 +217,6 @@
       </template>
     </div>
 
-    <!-- Create Role Modal -->
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
       <div class="create-modal">
         <div class="create-modal-header">
@@ -446,7 +439,6 @@ function toggleNewRolePermission(id: number) {
   newRole.value.permissionIds = new Set(newRole.value.permissionIds)
 }
 
-// ─── Per-feature "select all" (View + Create + Update + Delete + Other) ──
 function rowPermissionIds(row: FeatureRow): number[] {
   return [row.view, row.create, row.update, row.delete, ...row.other]
     .filter((p): p is Permission => p !== null)
@@ -603,15 +595,7 @@ onMounted(loadAll)
 <style scoped>
 .roles-page {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  /* Header is a fixed 72px. .main-content has 20px padding on all sides;
-     trim that down to a 14px gap on top/left/right and a 10px gap on
-     the bottom. Height is computed from the viewport (not a percentage
-     of the parent, which doesn't reliably resolve through the flex
-     chain) so the bottom edge always lands exactly 10px from the
-     screen regardless of how tall the table's content is.
-     .main-content has overflow-x: hidden as a safety net, so extending
-     6px into the left/right padding here can never cause a page-wide
-     horizontal scrollbar. */
+  
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
   margin-top: -6px;
@@ -651,7 +635,7 @@ onMounted(loadAll)
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* Tabs */
+
 .tab-bar {
   display: flex;
   gap: 4px;
@@ -674,7 +658,7 @@ onMounted(loadAll)
 .tab-btn:hover { color: #334155; }
 .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
 
-/* Toolbar (mirrors Users page) */
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -773,7 +757,7 @@ onMounted(loadAll)
 }
 .btn-icon-danger:hover { background: #fef2f2; color: #b91c1c; }
 
-/* Role info bar */
+
 .role-info-bar {
   display: flex;
   align-items: center;
@@ -819,7 +803,7 @@ onMounted(loadAll)
 }
 .role-desc-input:hover, .role-desc-input:focus { background: #f1f5f9; outline: none; }
 
-/* Table */
+
 .table-wrap { width: 100%; flex: 1; min-height: 160px; overflow-y: auto; overflow-x: auto; }
 .table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
@@ -883,7 +867,7 @@ onMounted(loadAll)
   margin: 0;
 }
 
-/* Pagination (mirrors Users page) */
+
 .pagination-bar {
   display: flex;
   align-items: center;
@@ -981,7 +965,7 @@ onMounted(loadAll)
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Modals */
+
 .create-modal {
   background: #fff;
   border-radius: 16px;

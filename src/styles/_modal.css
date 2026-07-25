@@ -1,7 +1,3 @@
-/* ==========================================
-   Modal Overlay & Panel
-   ========================================== */
-
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -44,9 +40,7 @@
   transform: scale(0.92) translateY(10px);
 }
 
-/* ==========================================
-   Modal Header / Body / Footer (form modals)
-   ========================================== */
+
 
 .modal-header-custom {
   padding: 28px 32px 20px;
@@ -143,9 +137,7 @@
   font-family: var(--font-family);
 }
 
-/* ==========================================
-   Modal Head / Body / Foot (compact)
-   ========================================== */
+
 
 .modal-head {
   display: flex;

@@ -1,23 +1,18 @@
 <template>
   <div class="page-container">
-    <!-- ── Store Messages ── -->
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
       {{ store.error }}
       <button class="msg-close" @click="store.clearMessages()">&times;</button>
     </div>
-    <!-- Success messages are shown via toast popups instead -->
 
 
-    <!-- ── Loading ── -->
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
       <span>Loading subjects…</span>
     </div>
 
-    <!-- ── Card (always visible when not loading) ── -->
     <div v-else class="subject-card">
-      <!-- Toolbar - always visible inside card -->
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box">
@@ -70,7 +65,6 @@
         </div>
       </div>
 
-      <!-- Bulk Action Bar -->
       <div v-if="selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="showBulkDeleteModal = true">
@@ -80,7 +74,6 @@
         <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
       </div>
 
-      <!-- ── Empty State (no data) ── -->
       <div v-if="filteredSubjects.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
@@ -89,7 +82,6 @@
         </div>
       </div>
 
-      <!-- ── Table (with data) ── -->
       <div v-else class="table-wrap">
         <table class="subject-table data-table-base">
           <thead>
@@ -123,14 +115,12 @@
                 />
               </td>
               <td class="col-index">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-              <!-- Subject -->
               <td class="td-subject" @click="openEditModal(subject)">
                 <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
                   <BookOpen :size="16" />
                 </div>
                 <span class="subj-name">{{ subject.name }}</span>
               </td>
-              <!-- Teacher -->
               <td class="td-meta" @click="openEditModal(subject)">
                 <div v-if="teacherNamesForSubject(subject).length === 0" class="meta-val">—</div>
                 <div v-else class="teacher-stack">
@@ -144,7 +134,6 @@
                   </span>
                 </div>
               </td>
-              <!-- Class -->
               <td class="td-meta" @click="openEditModal(subject)">
                 <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
                 <div v-else class="teacher-stack">
@@ -158,7 +147,6 @@
                   </span>
                 </div>
               </td>
-              <!-- Term Toggles -->
               <td class="td-terms">
                 <div class="tog-group" @click.stop>
                   <button
@@ -174,13 +162,11 @@
                   </button>
                 </div>
               </td>
-              <!-- Status -->
               <td class="td-status">
                 <span class="status-badge" :class="(subject.status || '').toLowerCase() === 'active' ? 'badge-active' : 'badge-inactive'">
                   {{ subject.status }}
                 </span>
               </td>
-              <!-- Actions -->
               <td class="td-actions">
                 <button class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
                   <Pencil :size="15" />
@@ -194,7 +180,6 @@
         </table>
       </div>
 
-      <!-- Pagination -->
       <div v-if="filteredSubjects.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
@@ -249,7 +234,6 @@
       </div>
     </div>
 
-    <!-- ── Add / Edit Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showModal" class="overlay" @click.self="closeModal">
@@ -266,7 +250,6 @@
               <button class="modal-x" @click="closeModal">&times;</button>
             </div>
             <form @submit.prevent="handleSubmit" class="modal-body">
-              <!-- Name -->
               <div class="field">
                 <label>
                   <BookOpen :size="15" class="field-icon" />
@@ -285,7 +268,6 @@
 
               <div class="section-divider"></div>
 
-              <!-- Teachers | Classes (side-by-side) -->
               <div class="row-2 row-2-equal">
                 <div class="field">
                   <label>
@@ -345,7 +327,6 @@
 
               <div class="section-divider"></div>
 
-              <!-- Status -->
               <div class="field">
                 <label>
                   <ToggleLeft :size="15" class="field-icon" />
@@ -359,7 +340,6 @@
                 </div>
               </div>
 
-              <!-- Assign to Terms -->
               <div class="section-divider"></div>
 
               <div class="field">
@@ -385,7 +365,6 @@
                 </div>
               </div>
 
-              <!-- Footer -->
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="store.loading">
@@ -400,7 +379,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
@@ -430,7 +408,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── Bulk Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showBulkDeleteModal" class="overlay" @click.self="closeBulkDeleteModal">
@@ -503,7 +480,6 @@ const { success: toastSuccess, error: toastError } = useToast()
 
 const CACHE_KEY = 'subject-terms'
 
-// ─── Pagination ───────────────────────────────────────────────────
 const currentPage = ref(1)
 const pageSize = ref(10)
 const pageSizeOptions = [10, 25, 50]
@@ -534,7 +510,6 @@ const visiblePages = computed(() => {
   return pages
 })
 
-// ─── Store ─────────────────────────────────────────────────────────
 const store = useSubjectStore()
 const auth = useAuthStore()
 const searchQuery = ref('')
@@ -542,14 +517,12 @@ const statusFilter = ref('')
 const termFilter = ref<number | ''>('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-// ─── Term State ────────────────────────────────────────────────────
 const loading = ref(false)
 const subjects = ref<SubjectWithTerms[]>([])
 const terms = ref<(TermInfo & { term_number?: number })[]>([])
 const pendingChanges = reactive<Record<number, number[]>>({})
 const debounceTimers = new Map<number, ReturnType<typeof setTimeout>>()
 
-// ─── CRUD State ────────────────────────────────────────────────────
 const teachers = ref<{ id: number; name: string }[]>([])
 const classes = ref<{ id: number; name: string }[]>([])
 const showModal = ref(false)
@@ -567,7 +540,6 @@ const formData = reactive({
 
 const errors = reactive({ name: '', class_ids: '' })
 
-// ─── Multi-Select & Bulk Delete ────────────────────────────────
 const selectedIds = ref<number[]>([])
 const showBulkDeleteModal = ref(false)
 
@@ -617,7 +589,6 @@ async function handleBulkDelete() {
     if (allOk) {
       store.clearMessages()
       globalShowToast('Subjects deleted successfully')
-      // Also remove from local list
       subjects.value = subjects.value.filter(s => !idsToDelete.includes(s.id))
       showBulkDeleteModal.value = false
       clearSelection()
@@ -633,7 +604,6 @@ async function handleBulkDelete() {
   }
 }
 
-// ─── Teacher list helpers ──────────────────────────────────────────
 function teacherName(t: { id: number; user?: { name?: string | null } | null }): string {
   return t.user?.name || `Teacher #${t.id}`
 }
@@ -642,7 +612,6 @@ function teacherNamesForSubject(subj: SubjectWithTerms): string[] {
   if (subj.teachers && subj.teachers.length) {
     return subj.teachers.map(teacherName)
   }
-  // Fallback to old single teacher shape for compatibility.
   const single = subj.teacher?.user?.name
   return single ? [single] : []
 }
@@ -661,7 +630,6 @@ function classNamesForSubject(subj: SubjectWithTerms): string[] {
   return classNames
 }
 
-// ─── Computed ──────────────────────────────────────────────────────
 const filteredSubjects = computed(() => {
   let r = subjects.value
   if (searchQuery.value) {
@@ -686,7 +654,6 @@ function globalShowToast(msg: string, type: 'success' | 'error' = 'success') {
   type === 'error' ? toastError(msg) : toastSuccess(msg)
 }
 
-// ─── Term Actions ──────────────────────────────────────────────────
 function toggleTerm(subj: SubjectWithTerms, tid: number) {
   const i = subj.term_ids.indexOf(tid)
   i >= 0 ? subj.term_ids.splice(i, 1) : subj.term_ids.push(tid)
@@ -722,18 +689,11 @@ function debouncedSave(sid: number) {
       } catch (err: any) {
         delete pendingChanges[sid]
         if (err?.response?.status === 404) {
-          // The subject itself no longer exists server-side (e.g. a stale cached entry for
-          // something deleted elsewhere) — the toggle the user just clicked was never real,
-          // so drop it from view instead of leaving a phantom row with a dead-end error.
           subjects.value = subjects.value.filter(s => s.id !== sid)
           cacheService.remove(CACHE_KEY)
           globalShowToast('This subject no longer exists — it has been removed from the list.', 'error')
           return
         }
-        // Any other failure: the toggle never actually saved, so don't leave the checkbox
-        // showing a state that isn't true server-side. Refetching reverts the optimistic
-        // change back to whatever's actually saved. There's no separate "Save Changes"
-        // button in this UI, so point at the one thing that actually works: toggling again.
         await loadTermData()
         globalShowToast('Auto-save failed. Please try toggling the term again.', 'error')
       }
@@ -741,12 +701,10 @@ function debouncedSave(sid: number) {
   )
 }
 
-// ─── Reset page on filter change ───────────────────────────────
 watch([searchQuery, statusFilter, termFilter], () => {
   currentPage.value = 1
 })
 
-// ─── CRUD ──────────────────────────────────────────────────────────
 function handleSearch() {
   currentPage.value = 1
 }
@@ -778,7 +736,6 @@ function openEditModal(s: any) {
     Array.isArray(s.teacher_ids) ? [...s.teacher_ids] :
     Array.isArray(s.teachers) ? s.teachers.map((t: { id: number }) => t.id) :
     s.teacher_id ? [s.teacher_id] : []
-  // Collect all unique class IDs from offerings (supports multi-class)
   const offeringClassIds = (s.offerings || [])
     .map((o: any) => o.class_id)
     .filter((id: any) => id != null)
@@ -786,7 +743,6 @@ function openEditModal(s: any) {
     ? [...new Set(offeringClassIds)]
     : s.class_id ? [s.class_id] : []
   formData.status = s.status
-  // Load current term IDs from the subject
   formData.term_ids = Array.isArray(s.term_ids)
     ? [...s.term_ids]
     : Array.isArray(s.terms)
@@ -797,9 +753,6 @@ function openEditModal(s: any) {
 
 function closeModal() {
   showModal.value = false
-  // Don't resetForm() here — let openAddModal / openEditModal reset when
-  // the modal is shown again.  This avoids resetting before async work
-  // that follows closeModal() (e.g. term sync in handleSubmit) reads formData.
 }
 
 function validateForm() {
@@ -822,7 +775,6 @@ async function handleSubmit() {
       const updatedTermIds = [...formData.term_ids]
       const updatedSubjectId = store.currentSubject.id
       closeModal(); await store.fetchSubjects(); await loadTermData()
-      // Sync terms if changed
       if (updatedTermIds.length || store.currentSubject.term_ids?.length) {
         await subjectTermService.syncSubject(updatedSubjectId, updatedTermIds)
         await loadTermData()
@@ -845,8 +797,6 @@ async function handleSubmit() {
       await loadTermData()
       store.clearMessages()
       globalShowToast('Subject created successfully')
-      // Assign terms to the newly created subject if any were picked.
-      // (newTermIds was captured BEFORE closeModal so it's not stale.)
       if (newTermIds.length) {
         const subj = subjects.value.find((s: any) => s.name === formData.name)
         if (subj) await subjectTermService.syncSubject(subj.id, newTermIds)
@@ -864,7 +814,6 @@ async function handleDelete() {
   const targetId = subjectToDelete.value.id
   await store.deleteSubject(targetId)
   if (!store.error) {
-    // Also remove from local subjects list (different from store.subjects)
     subjects.value = subjects.value.filter(s => s.id !== targetId)
     closeDeleteModal()
     store.clearMessages()
@@ -872,13 +821,11 @@ async function handleDelete() {
   }
 }
 
-// ─── Cache helpers ──────────────────────────────────────────────
 function applyTermData(data: { subjects: SubjectWithTerms[]; terms: TermInfo[] }) {
   subjects.value = data.subjects
   terms.value = data.terms.map((t, i) => ({ ...t, term_number: i + 1 }))
 }
 
-// ─── Data ──────────────────────────────────────────────────────────
 async function loadTermData() {
   try {
     const res = await subjectTermService.getAll()
@@ -886,13 +833,10 @@ async function loadTermData() {
       applyTermData(res.data)
       cacheService.set(CACHE_KEY, res.data, 24 * 60 * 60_000)
     }
-  } catch { /* store handles its own errors */ }
+  } catch {  }
 }
 
 async function fetchTeachers() {
-  // Only the Add/Edit Subject modal's teacher checklist needs this — skip the call entirely
-  // for a role that lacks view-teachers (e.g. the default teacher role) instead of firing a
-  // request that's guaranteed to 403.
   if (!auth.hasPermission('view-teachers')) { teachers.value = []; return }
   try {
     const r = await subjectService.getTeachers()
@@ -910,11 +854,7 @@ async function fetchClasses() {
 onMounted(async () => {
   const cached = cacheService.get<{ subjects: SubjectWithTerms[]; terms: TermInfo[] }>(CACHE_KEY)
   if (cached) {
-    // Paint instantly from cache, but this is stale-while-revalidate, not stale-forever —
-    // loadTermData() below always still runs to refresh it. Skipping that refresh on a cache
-    // hit (as this used to do) meant a subject deleted anywhere else stayed visible here, with
-    // a real, no-longer-existent ID, for up to the full 24h TTL — any edit on it (e.g. toggling
-    // a term) then 404'd against a subject that no longer exists.
+
     applyTermData(cached)
   } else {
     loading.value = true
@@ -929,9 +869,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ══════════════════════════════════════════════════════════════
-   GLOBAL
-   ══════════════════════════════════════════════════════════════ */
+
 .page-container {
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
@@ -943,9 +881,7 @@ onMounted(async () => {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   BUTTONS
-   ══════════════════════════════════════════════════════════════ */
+
 .btn-save {
   background: linear-gradient(135deg, #059669, #047857);
   color: #fff; box-shadow: 0 2px 8px rgba(5,150,105,0.25);
@@ -960,9 +896,7 @@ onMounted(async () => {
   background: #fbbf24; color: #92400e; font-size: 0.7rem; font-weight: 700;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   MESSAGES
-   ══════════════════════════════════════════════════════════════ */
+
 .msg {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-radius: 10px;
@@ -973,9 +907,7 @@ onMounted(async () => {
 .msg-close { margin-left: auto; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.5; padding: 0 4px; }
 .msg-close:hover { opacity: 1; }
 
-/* ══════════════════════════════════════════════════════════════
-   SEARCH CLEAR
-   ══════════════════════════════════════════════════════════════ */
+
 .tb-clear {
   position: absolute;
   right: 10px;
@@ -992,9 +924,7 @@ onMounted(async () => {
 
 .tb-clear:hover { color: #64748b; }
 
-/* ══════════════════════════════════════════════════════════════
-   LOADING
-   ══════════════════════════════════════════════════════════════ */
+
 .load-state {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
   padding: 4rem; color: #64748b;
@@ -1006,9 +936,7 @@ onMounted(async () => {
 }
 .spin { animation: spin 0.7s linear infinite; }
 
-/* ══════════════════════════════════════════════════════════════
-   CARD
-   ══════════════════════════════════════════════════════════════ */
+
 .subject-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -1090,9 +1018,7 @@ onMounted(async () => {
 
 .td-actions { white-space: nowrap; }
 
-/* ══════════════════════════════════════════════════════════════
-   MODAL
-   ══════════════════════════════════════════════════════════════ */
+
 .overlay {
   position: fixed; inset: 0;
   background: rgba(15,23,42,0.45); backdrop-filter: blur(4px);
@@ -1119,14 +1045,14 @@ onMounted(async () => {
 .icon-edit { background: #fef3c7; color: #d97706; }
 .icon-danger { background: #fee2e2; color: #ef4444; }
 
-/* ── Section Divider ── */
+
 .section-divider {
   height: 1px;
   background: linear-gradient(to right, transparent, #e2e8f0, transparent);
   margin: 14px 0 16px;
 }
 
-/* ── Fields ── */
+
 .field {
   margin-bottom: 0;
 }
@@ -1151,7 +1077,7 @@ onMounted(async () => {
   font-weight: 700;
 }
 
-/* ── Input Wrapper ── */
+
 .input-wrap {
   position: relative;
 }
@@ -1192,7 +1118,7 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-/* ── Grid ── */
+
 .row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1205,7 +1131,7 @@ onMounted(async () => {
   align-items: start;
 }
 
-/* ── Checkbox List (Teachers / Classes) ── */
+
 .check-list {
   display: flex; flex-direction: column;
   max-height: 160px; overflow-y: auto;
@@ -1316,7 +1242,7 @@ onMounted(async () => {
 
 .del-text { font-size: 0.9rem; color: #475569; margin: 0; }
 
-/* ── Status Select ── */
+
 .modern-input {
   width: 100%;
   padding: 0.55rem 0.875rem;
@@ -1347,7 +1273,7 @@ onMounted(async () => {
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
-/* ── Term Chips ── */
+
 .term-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1393,9 +1319,7 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   TRANSITIONS
-   ══════════════════════════════════════════════════════════════ */
+
 .modal-enter-active { transition: all 0.2s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
@@ -1406,9 +1330,7 @@ onMounted(async () => {
 .row-leave-to { opacity: 0; transform: translateX(20px); }
 .row-move { transition: transform 0.3s ease; }
 
-/* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
   .row-2 { grid-template-columns: 1fr; }

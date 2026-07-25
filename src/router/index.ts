@@ -16,7 +16,6 @@ router.beforeEach(async (to) => {
     return isLoginRoute ? true : '/login'
   }
 
-  // Wait for the initial /user fetch to settle so role data is available
   if (!authStore.user) {
     await authStore.ensureReady()
   }

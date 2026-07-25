@@ -370,9 +370,7 @@ onUnmounted(() => {
   border: 1px solid #bbf7d0;
 }
 
-/* ==========================================
-   Form Layout
-   ========================================== */
+
 .login-form {
   display: flex;
   flex-direction: column;
@@ -441,7 +439,7 @@ onUnmounted(() => {
   color: #3b82f6;
 }
 
-/* Password with extra padding for toggle button */
+
 .form-input[type="password"],
 .form-input[type="text"]#password {
   padding-right: 3rem;
@@ -484,7 +482,7 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
-/* Custom checkbox */
+
 .checkbox-label {
   display: flex;
   align-items: center;
@@ -610,7 +608,7 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-/* Spinner */
+
 .spinner {
   width: 1.1rem;
   height: 1.1rem;

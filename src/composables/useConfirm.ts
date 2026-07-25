@@ -12,8 +12,6 @@ interface ConfirmState extends Required<ConfirmOptions> {
   show: boolean
 }
 
-// Module-scoped singleton — one confirm dialog instance shared across the
-// whole app, rendered once by <ConfirmDialog /> in App.vue.
 const state = ref<ConfirmState>({
   show: false,
   title: 'Are you sure?',

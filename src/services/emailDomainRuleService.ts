@@ -36,8 +36,6 @@ export interface StudentEmailDomain {
   domain: string
 }
 
-// Active Sign-in Domains configured for the student role — used to let the importing
-// user pick which domain new student accounts get, instead of a synthetic placeholder email.
 export async function getStudentEmailDomains(): Promise<StudentEmailDomain[]> {
   const res = await http.get<ApiResponse<StudentEmailDomain[]>>('/email-domain-rules/student-domains')
   return res.data.data

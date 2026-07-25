@@ -1,6 +1,5 @@
 <template>
   <div class="class-list">
-    <!-- Search and Filter -->
     <div class="list-toolbar">
       <div class="search-wrapper">
         <i class="bi bi-search search-icon"></i>
@@ -23,7 +22,6 @@
       </select>
     </div>
 
-    <!-- Table -->
     <div class="table-wrapper">
       <table class="class-table data-table-base">
         <thead>

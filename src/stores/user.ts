@@ -20,7 +20,6 @@ const CACHE_TTL = 60_000 // 1 min in-memory TTL
 const LS_TTL = 24 * 60 * 60_000 // 24h localStorage TTL
 
 export const useUserStore = defineStore('user', () => {
-  // ─── State ──────────────────────────────────────────────────────────
   const users = ref<User[]>([])
   const roles = ref<UserRole[]>([])
   const totalUsers = ref(0)
@@ -32,10 +31,8 @@ export const useUserStore = defineStore('user', () => {
   let usersCacheTime = 0
   let lastParams = ''
 
-  // ─── Getters ────────────────────────────────────────────────────────
   const hasUsers = computed(() => users.value.length > 0)
 
-  // ─── Helpers ────────────────────────────────────────────────────────
   function clearMessages() {
     error.value = null
     successMessage.value = null
@@ -55,7 +52,6 @@ export const useUserStore = defineStore('user', () => {
     }, LS_TTL)
   }
 
-  // ─── Load cached data on init ────────────────────────────────────────
   function loadFromCache() {
     const cached = cacheService.get<{ users: User[]; total: number; lastPage: number }>(USERS_CACHE_KEY)
     if (cached) {
@@ -69,12 +65,10 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // ─── API: Fetch Users ───────────────────────────────────────────────
   async function fetchUsers(params?: Record<string, string | number>) {
     const now = Date.now()
     const paramsKey = JSON.stringify(params || {})
 
-    // In-memory TTL — skip if same params fetched recently
     if (paramsKey === lastParams && users.value.length > 0 && (now - usersCacheTime) < CACHE_TTL) {
       return
     }
@@ -99,9 +93,7 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // ─── API: Fetch Roles ───────────────────────────────────────────────
   async function fetchRoles() {
-    // Check localStorage first
     const cached = cacheService.get<UserRole[]>(ROLES_CACHE_KEY)
     if (cached) {
       roles.value = cached
@@ -113,11 +105,9 @@ export const useUserStore = defineStore('user', () => {
       roles.value = res.data
       cacheService.set(ROLES_CACHE_KEY, res.data, LS_TTL)
     } catch {
-      // Silently fail — roles are non-critical
     }
   }
 
-  // ─── Create ─────────────────────────────────────────────────────────
   async function createUserAction(data: CreateUserPayload): Promise<{ success: boolean; message: string }> {
     loading.value = true
     error.value = null
@@ -126,7 +116,6 @@ export const useUserStore = defineStore('user', () => {
     try {
       const res = await createUser(data)
       if (res.success) {
-        // Prepend to local list instantly
         users.value.unshift(res.data)
         totalUsers.value++
         invalidateCache()
@@ -148,7 +137,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // ─── Update ─────────────────────────────────────────────────────────
   async function updateUserAction(id: number, data: UpdateUserPayload): Promise<{ success: boolean; message: string }> {
     loading.value = true
     error.value = null
@@ -157,7 +145,6 @@ export const useUserStore = defineStore('user', () => {
     try {
       const res = await updateUser(id, data)
       if (res.success) {
-        // Update in local list instantly
         const index = users.value.findIndex(u => u.id === id)
         if (index !== -1) {
           users.value[index] = res.data
@@ -177,7 +164,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // ─── Delete ─────────────────────────────────────────────────────────
   async function deleteUserAction(id: number): Promise<{ success: boolean; message: string }> {
     loading.value = true
     error.value = null
@@ -197,7 +183,6 @@ export const useUserStore = defineStore('user', () => {
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string }; status?: number }; message?: string }
       const msg = err.response?.data?.message || err.message || ''
-      // If already deleted, still clean up locally
       if (err.response?.status === 404 || msg.toLowerCase().includes('not found')) {
         users.value = users.value.filter(u => u.id !== id)
         totalUsers.value = Math.max(0, totalUsers.value - 1)
@@ -211,7 +196,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // ─── Bulk Delete ────────────────────────────────────────────────────
   async function bulkDeleteUsersAction(ids: number[]): Promise<{ success: boolean; message: string; deletedCount: number }> {
     loading.value = true
     error.value = null
@@ -246,16 +230,12 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // ─── Init (call once on mount) ──────────────────────────────────────
   async function init() {
-    // 1. Show cached data INSTANTLY from localStorage
     loadFromCache()
 
-    // 2. Refresh from API in background
     await Promise.all([fetchUsers(), fetchRoles()])
   }
 
-  // Export
   return {
     users,
     roles,

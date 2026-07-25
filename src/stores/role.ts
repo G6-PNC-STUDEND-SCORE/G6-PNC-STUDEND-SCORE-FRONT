@@ -12,18 +12,15 @@ import {
 import { extractErrorMessage } from '@/utils'
 
 export const useRoleStore = defineStore('role', () => {
-  // ─── State ──────────────────────────────────────────────────────────
   const roles = ref<Role[]>([])
   const permissionsByGroup = ref<PermissionsByGroup>({})
   const domainRules = ref<EmailDomainRule[]>([])
   const error = ref('')
 
-  // ─── Helpers ──────────────────────────────────────────────────────
   function clearError() {
     error.value = ''
   }
 
-  // ─── Load all (roles + permissions) ─────────────────────────────
   async function loadRolesAndPermissions() {
     clearError()
     try {
@@ -35,41 +32,35 @@ export const useRoleStore = defineStore('role', () => {
     }
   }
 
-  // ─── Get role permissions ───────────────────────────────────────
   async function loadRolePermissions(roleId: number): Promise<PermissionsByGroup> {
     clearError()
     const { permissions } = await getRolePermissions(roleId)
     return permissions
   }
 
-  // ─── Create role ────────────────────────────────────────────────
   async function createRoleAction(data: { name: string; description?: string; permission_ids?: number[] }): Promise<Role> {
     clearError()
     const created = await createRole(data)
     return created
   }
 
-  // ─── Update role ────────────────────────────────────────────────
   async function updateRoleAction(roleId: number, data: { name: string; description?: string }): Promise<Role> {
     clearError()
     const updated = await updateRole(roleId, data)
     return updated
   }
 
-  // ─── Delete role ────────────────────────────────────────────────
   async function deleteRoleAction(roleId: number): Promise<void> {
     clearError()
     await deleteRole(roleId)
     roles.value = roles.value.filter(r => r.id !== roleId)
   }
 
-  // ─── Sync permissions ───────────────────────────────────────────
   async function syncPermissions(roleId: number, permissionIds: number[]): Promise<void> {
     clearError()
     await syncRolePermissions(roleId, permissionIds)
   }
 
-  // ─── Email domain rules ─────────────────────────────────────────
   async function loadDomainRules() {
     clearError()
     try {
@@ -98,7 +89,6 @@ export const useRoleStore = defineStore('role', () => {
     domainRules.value = domainRules.value.filter(r => r.id !== id)
   }
 
-  // ─── Init ───────────────────────────────────────────────────────
   async function init() {
     await Promise.all([loadRolesAndPermissions(), loadDomainRules()])
   }

@@ -107,7 +107,6 @@
       </button>
     </form>
 
-    <!-- Delete Confirm Modal -->
     <div v-if="confirmDelete" class="modal-overlay" @click.self="confirmDelete = null">
       <div class="confirm-modal">
         <h5>Delete sign-in rule for "@{{ confirmDelete.domain }}"?</h5>
@@ -142,7 +141,6 @@ const adding = ref(false)
 const confirmDelete = ref<EmailDomainRule | null>(null)
 const deleting = ref(false)
 
-// ─── Inline domain editing ───────────────────────────────────────────
 const editingDomainId = ref<number | null>(null)
 const editingDomainValue = ref('')
 

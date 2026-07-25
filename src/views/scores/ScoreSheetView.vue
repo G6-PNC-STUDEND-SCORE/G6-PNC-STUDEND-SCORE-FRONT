@@ -1,6 +1,5 @@
 <template>
   <div class="score-sheet">
-    <!-- Toolbar -->
     <div class="sheet-toolbar">
       <button class="tb-btn" @click="goBack" title="Back">
         <i class="bi bi-arrow-left"></i>
@@ -44,7 +43,6 @@
               <div class="export-menu-item" @click="exportFormat('pdf')"><i class="bi bi-filetype-pdf"></i> Export as PDF</div>
             </div>
           </div>
-          <button class="tb-btn" @click="refreshData" title="Refresh"><i class="bi bi-arrow-clockwise" :class="{ spinning: loading }"></i></button>
         </div>
         <div class="toolbar-meta">
           <span v-if="gsReconnectNeeded" class="gs-sync-status gs-reconnect-needed">
@@ -54,8 +52,8 @@
 
         </div>
         <div class="search-box">
-          <i class="bi bi-search"></i>
-          <input v-model="searchQuery" type="text" placeholder="Search student..." />
+          <i class="bi bi-search search-icon"></i>
+          <input v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
         </div>
         <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
           <i class="bi bi-keyboard"></i>
@@ -67,7 +65,6 @@
       </div>
     </div>
 
-    <!-- Stats bar -->
     <div class="stats-bar" v-if="data">
       <div class="stat-item"><span class="stat-label">Students</span><span class="stat-value">{{ filteredRows.length }}</span></div>
       <div class="stat-item"><span class="stat-label">Avg Score</span><span class="stat-value">{{ averageScore.toFixed(1) }}</span></div>
@@ -79,7 +76,6 @@
       </div>
     </div>
 
-    <!-- Spreadsheet Table -->
     <div class="sheet-wrapper" tabindex="0" @keydown="onGlobalKeydown" ref="sheetContainer" @paste="onPaste" @copy="onCopy" @cut="onCut">
       <div class="sheet-scroll" @scroll="onScroll">
         <table class="sheet-table">
@@ -135,12 +131,10 @@
                 @dblclick.prevent.stop="startEditing(rowIndex, -1)"
               >
                 <div class="student-name-cell-inner">
-                  <!-- Always-rendered span keeps cell width stable -->
                   <span class="cell-value"
                     :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === -1 }"
                     :title="row.student_name"
                   >{{ row.student_name }}</span>
-                  <!-- Absolute-positioned editor overlays without affecting cell size -->
                   <div v-if="editingRow === rowIndex && editingCol === -1" class="cell-editor-wrapper cell-editor-overlay-frozen">
                     <input ref="cellEditor" v-model="editValue" type="text" class="cell-editor"
                       @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" />
@@ -159,12 +153,10 @@
                 @dblclick.prevent.stop="startEditing(rowIndex, 0)"
               >
                 <div class="student-id-cell-inner">
-                  <!-- Always-rendered span keeps cell width stable -->
                   <span class="cell-value"
                     :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === 0 }"
                     :title="row.student_number"
                   >{{ row.student_number }}</span>
-                  <!-- Absolute-positioned editor overlays without affecting cell size -->
                   <div v-if="editingRow === rowIndex && editingCol === 0" class="cell-editor-wrapper cell-editor-overlay-frozen id-editor-wrapper">
                     <input ref="cellEditor" v-model="editValue" type="text" class="cell-editor id-editor-input" list="student-numbers-list"
                       @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" placeholder="Select or type ID..." />
@@ -181,19 +173,16 @@
                 :class="getScoreCellClass(rowIndex, col)"
                 @mousedown.prevent="onCellMouseDown($event, rowIndex, col.id)"
               >
-                <!-- Always-rendered span keeps cell width stable -->
                 <span class="cell-value"
                   :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === col.id }"
                   :title="getCellTitle(col, row)"
                 >{{ formatCellValue(getCellMark(row, col.id)) }}</span>
 
-                <!-- Absolute-positioned editor overlays the cell without affecting its size -->
                 <div v-if="editingRow === rowIndex && editingCol === col.id" class="cell-editor-wrapper cell-editor-overlay">
                   <input ref="cellEditor" v-model="editValue" type="text" inputmode="decimal" class="cell-editor"
                     @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" />
                 </div>
 
-                <!-- Fill handle: show on active cell when not editing and not in range selection -->
                 <div v-if="showFillHandle(rowIndex, col.id)" class="fill-handle"
                   @mousedown.prevent.stop="onFillHandleMouseDown($event, rowIndex, col.id)" @click.stop>+</div>
               </td>
@@ -211,7 +200,6 @@
       </div>
     </div>
 
-    <!-- Import Progress Bar (overlays the sheet, not full page) -->
     <div v-if="importProgress > 0" class="import-progress-overlay">
       <div class="import-progress-card">
         <div class="import-progress-status">{{ importStatusText }}</div>
@@ -222,7 +210,6 @@
       </div>
     </div>
 
-    <!-- Right-click Context Menu -->
     <div v-if="contextMenu" class="context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
       <div class="context-menu-item" @click="insertRowAbove(contextMenu.rowIdx)">
         <i class="bi bi-plus-lg"></i> Insert Row Above
@@ -236,12 +223,10 @@
       </div>
     </div>
 
-    <!-- Datalist for student ID suggestions (must be outside table) -->
     <datalist id="student-numbers-list">
       <option v-for="num in studentNumbers" :key="num" :value="num"></option>
     </datalist>
 
-    <!-- Pagination -->
     <div v-if="filteredRows.length > 0" class="pagination-bar">
       <div class="pagination-info">
         <span class="rows-label">Rows per page:</span>
@@ -295,7 +280,6 @@
       </div>
     </div>
 
-    <!-- Modals (unchanged) -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="renamingColumn" class="modal-overlay" @click.self="renamingColumn = null">
@@ -473,21 +457,45 @@
         </div>
       </Transition>
     </Teleport>
-    <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Add Student Rows</h5><button class="modal-close" @click="showAddRowPopup = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Number of rows to add:</label>
-            <input v-model.number="addRowCount" type="number" min="1" max="50" class="form-input" />
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showAddRowPopup = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-person-plus"></i>
+              </div>
+              <div>
+                <h5>Add Student Rows</h5>
+                <p class="modal-subtitle">Add new student enrollment rows to the score sheet</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-123 me-1"></i>
+                  Number of rows
+                </label>
+                <div class="input-wrapper">
+                  <input v-model.number="addRowCount" type="number" min="1" max="50" class="modern-input" placeholder="1" />
+                </div>
+                <p class="field-hint">Each new row creates an empty enrollment for a new student (max 50).</p>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showAddRowPopup = false">Cancel</button>
+              <button class="btn-primary-custom" @click="doAddRows">
+                <i class="bi bi-check-lg me-1"></i>
+                Add {{ addRowCount }} Row{{ addRowCount > 1 ? 's' : '' }}
+              </button>
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showAddRowPopup = false">Cancel</button>
-          <button class="btn btn-primary" @click="doAddRows">Add {{ addRowCount }} Row{{ addRowCount > 1 ? 's' : '' }}</button>
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
@@ -505,13 +513,11 @@
               </div>
             </div>
             <div class="modal-body-custom">
-              <!-- Format badges -->
               <div class="import-format-badges">
                 <span class="import-badge import-badge-excel"><i class="bi bi-file-earmark-excel"></i> Excel</span>
                 <span class="import-badge import-badge-pdf"><i class="bi bi-filetype-pdf"></i> PDF</span>
               </div>
 
-              <!-- Drop zone when NO file selected -->
               <div v-if="!selectedFileName" class="import-drop-zone"
                 @drop.prevent="onFileDrop" @dragover.prevent="dragOver = true"
                 @dragleave.prevent="dragOver = false"
@@ -527,7 +533,6 @@
                 </div>
               </div>
 
-              <!-- File card when file IS selected -->
               <div v-if="selectedFileName" class="import-file-card">
                 <div class="import-file-card-main">
                   <div class="import-file-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
@@ -540,7 +545,6 @@
                   </button>
                 </div>
 
-                <!-- Preview section -->
                 <div v-if="filePreview" class="import-preview">
                   <div class="import-preview-divider"></div>
                   <div class="import-preview-header">
@@ -570,12 +574,6 @@
                 <i class="bi bi-info-circle"></i>
                 <span>Supports .xlsx, .xls, and .pdf files</span>
               </div>
-
-              <!-- Sign-in domain picker — only shown when there's a real choice to make.
-                   New students created by this import get name@domain instead of a fake
-                   placeholder address, so they can actually sign in via Google afterward.
-                   With more than one domain configured, a choice is required — no silent
-                   default — before the Import button becomes clickable. -->
               <div v-if="selectedFileName && studentEmailDomains.length > 1" class="import-domain-picker" :class="{ 'import-domain-required': emailDomainSelectionRequired }">
                 <label class="import-domain-label" for="import-email-domain">
                   <i class="bi bi-envelope-at"></i>
@@ -606,7 +604,6 @@
         </div>
       </Transition>
     </Teleport>
-    <!-- Keyboard Shortcuts Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showKeyboardShortcuts" class="overlay" @click.self="showKeyboardShortcuts = false">
@@ -622,7 +619,6 @@
               <button class="modal-x" @click="showKeyboardShortcuts = false">&times;</button>
             </div>
             <div class="shortcuts-body">
-              <!-- Navigation -->
               <div class="shortcut-group">
                 <h4 class="shortcut-group-title"><i class="bi bi-arrows-move"></i> Navigation</h4>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></span><span class="shortcut-desc">Move between cells</span></div>
@@ -636,7 +632,6 @@
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>←</kbd></span><span class="shortcut-desc">Jump to student name</span></div>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>→</kbd></span><span class="shortcut-desc">Jump to last column</span></div>
               </div>
-              <!-- Selection -->
               <div class="shortcut-group">
                 <h4 class="shortcut-group-title"><i class="bi bi-ui-checks"></i> Selection</h4>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></span><span class="shortcut-desc">Select multiple cells</span></div>
@@ -645,7 +640,7 @@
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Select from here to last row</span></div>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Select all in current column</span></div>
               </div>
-              <!-- Editing -->
+              
               <div class="shortcut-group">
                 <h4 class="shortcut-group-title"><i class="bi bi-pencil"></i> Editing</h4>
                 <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd> <kbd>F2</kbd></span><span class="shortcut-desc">Edit selected cell</span></div>
@@ -665,8 +660,6 @@
         </div>
       </Transition>
     </Teleport>
-
-    <!-- Google Sheet Link Modal (fallback when popup is blocked) -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showGsLinkModal" class="modal-overlay" @click.self="showGsLinkModal = false">
@@ -707,7 +700,7 @@
       </Transition>
     </Teleport>
 
-    <!-- Toast Notification -->
+
     <Teleport to="body">
       <Transition name="toast">
         <div v-if="toastVisible" class="toast-notification" :class="toastType">
@@ -743,7 +736,6 @@ const termId = computed(() => Number(route.params.termId))
 const classId = computed(() => route.query.class_id ? Number(route.query.class_id) : null)
 const className = computed(() => (route.query.class_name as string) || '')
 
-// ─── Core State ──────────────────────────────────────────────────────
 const data = shallowRef<SpreadsheetResponse | null>(null)
 const loading = ref(false)
 const searchQuery = ref('')
@@ -754,16 +746,12 @@ const currentPage = ref(1)
 const importProgress = ref(0)
 const importStatusText = ref('')
 
-// ─── Sign-in domain for newly-created students on import ─────────────
 const studentEmailDomains = ref<StudentEmailDomain[]>([])
 const selectedEmailDomain = ref<string | null>(null)
 
 async function loadStudentEmailDomains() {
   try {
     studentEmailDomains.value = await getStudentEmailDomains()
-    // Only auto-pick when there's no real choice to make. With more than one domain,
-    // leave it unselected so the admin must explicitly choose before importing —
-    // silently defaulting to "the first one" risks putting students on the wrong domain.
     if (studentEmailDomains.value.length === 1) {
       selectedEmailDomain.value = studentEmailDomains.value[0].domain
     }
@@ -772,25 +760,21 @@ async function loadStudentEmailDomains() {
   }
 }
 
-// True only when the admin still needs to pick a domain before importing can proceed.
 const emailDomainSelectionRequired = computed(() =>
   studentEmailDomains.value.length > 1 && !selectedEmailDomain.value
 )
 
-// ─── Selection State ─────────────────────────────────────────────────
 const selectedRowIndex = ref(0)
 const selectedCol = ref<number | null>(null)
 const selectionStartRow = ref<number | null>(null)
 const selectionStartCol = ref<number | null>(null)
 const isRangeSelecting = ref(false)
 
-// ─── Editing State ───────────────────────────────────────────────────
 const editingRow = ref<number | null>(null)
 const editingCol = ref<number | null>(null)
 const editValue = ref('')
 const cellEditor = ref<HTMLInputElement | null>(null)
 
-// ─── Fill Handle ─────────────────────────────────────────────────────
 const fillPreviewSet = ref<Set<string>>(new Set())
 const fillDrag = ref<{
   active: boolean; sourceRow: number; sourceColId: number;
@@ -799,7 +783,6 @@ const fillDrag = ref<{
   previewDestRow: number; previewDestColId: number;
 } | null>(null)
 
-// ─── Modal State ─────────────────────────────────────────────────────
 const showAddColumn = ref(false)
 const showInlineAddColumn = ref(false)
 const inlineColName = ref('')
@@ -818,7 +801,6 @@ const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
 const contextMenu = ref<{ x: number; y: number; rowIdx: number } | null>(null)
 
-// ─── Export Dropdown State ────────────────────────────────────────────
 const showExportMenu = ref(false)
 const exportBtnRef = ref<HTMLElement | null>(null)
 const showKeyboardShortcuts = ref(false)
@@ -834,7 +816,6 @@ onBeforeUnmount(() => {
   if (toastTimer) clearTimeout(toastTimer)
 })
 
-// ─── Import File State ────────────────────────────────────────────────
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const selectedFileName = ref('')
 const pendingFile = ref<File | null>(null)
@@ -879,7 +860,6 @@ async function previewFile(file: File) {
       colNames: scoreColumns.length > 0 ? scoreColumns : header.slice(2).filter(h => !/total|grade|remark/i.test(h)),
     }
   } catch {
-    // Preview is best-effort, ignore errors
   }
 }
 
@@ -895,7 +875,6 @@ async function previewPdfFile(file: File) {
       const content = await page.getTextContent()
       fullText += content.items.map((item: any) => item.str).join(' ') + '\n'
     }
-    // Count lines that look like data rows (contain a number or score pattern)
     const lines = fullText.split('\n').filter(l => l.trim())
     const dataLines = lines.filter(l => /\d/.test(l) && l.split(/\s+/).length >= 3)
     filePreview.value = {
@@ -904,10 +883,8 @@ async function previewPdfFile(file: File) {
       colNames: ['(PDF) Text data — will auto-detect columns on import'],
     }
   } catch {
-    // Preview is best-effort
   }
 }
-// ─── Toast Notification ───────────────────────────────────────────────
 const toastVisible = ref(false)
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
@@ -935,7 +912,6 @@ const assessments = ref<AssessmentTypeWeight[]>([])
 const studentNumbers = ref<string[]>([])
 const columnTypes = reactive<Record<number, string>>({})
 
-// ─── Auto-fill next student ID ───────────────────────────────────────
 type StudentNumberSequence = {
   prefix: string
   sequence: number
@@ -1014,7 +990,6 @@ async function fillNextStudentId(rowIdx: number) {
   const currentValue = isTargetIdCell ? editValue.value.trim() : row.student_number.trim()
   const currentSequence = parseStudentNumberSequence(currentValue)
 
-  // If the current row already has a sequential ID, treat it as the seed and fill the next row.
   if (currentSequence) {
     const nextRowIdx = rowIdx + 1
     if (nextRowIdx >= filteredRows.value.length) return
@@ -1083,26 +1058,22 @@ async function fillNextStudentName(rowIdx: number) {
   editor?.select()
 }
 
-// ─── Undo/Redo ───────────────────────────────────────────────────────
 const maxUndo = 50
 const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
 const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
 
 
 
-// ─── Computed ────────────────────────────────────────────────────────
 const columns = computed(() => data.value?.columns || [])
 const rows = computed(() => data.value?.rows || [])
 
 const filteredRows = computed(() => {
   let result = rows.value
 
-  // Filter by class if a class is selected
   if (className.value) {
     result = result.filter(r => r.class_name === className.value)
   }
 
-  // Filter by search query
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
     result = result.filter(r => r.student_name.toLowerCase().includes(q) || r.student_number.toLowerCase().includes(q))
@@ -1180,7 +1151,6 @@ const saveStatusText = computed(() => ({
   saving: 'Saving...', saved: 'Saved', failed: 'Failed', idle: '',
 }[saveStatus.value]))
 
-// ─── Add Row Popup ──────────────────────────────────────────────────
 const showAddRowPopup = ref(false)
 const addRowCount = ref(1)
 
@@ -1271,7 +1241,6 @@ function getSelectionText(): string {
   return lines.join('\n')
 }
 function isEditing(rowIdx: number, colId: number): boolean { return editingRow.value === rowIdx && editingCol.value === colId }
-// ─── Selection / Range Helpers ───────────────────────────────────────
 function isInRange(rowIdx: number, colId: number): boolean {
   if (!isRangeSelecting.value || selectionStartRow.value === null || selectionStartCol.value === null || selectedCol.value === null) return false
   const r1 = Math.min(selectionStartRow.value, selectedRowIndex.value)
@@ -1313,7 +1282,6 @@ function showFillHandle(rowIdx: number, colId: number): boolean {
   if (editingRow.value !== null || editingCol.value !== null) return false
   if (!isSelectableColumn(colId)) return false
   if (isRangeSelecting.value) {
-    // Show fill handle on the last row of the range selection
     const r2 = Math.max(selectionStartRow.value ?? 0, selectedRowIndex.value)
     return rowIdx === r2 && colId === (selectedCol.value ?? 0)
   }
@@ -1358,7 +1326,6 @@ function getTotalCellClass(row: SpreadsheetRow): Record<string, boolean> {
   }
 }
 
-// ─── Cell Selection (single click = select, double click = edit) ────
 function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
 
   sheetContainer.value?.focus()
@@ -1367,7 +1334,6 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
   }
   if (colId === -2) return // row number click
 
-  // Shift+Click for range selection
   if (event.shiftKey) {
     expandAllRowsForSelection()
     if (selectionStartRow.value === null) {
@@ -1381,19 +1347,16 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
     return
   }
 
-  // Simple click: select cell; score cells still open the editor immediately.
   isRangeSelecting.value = false
   selectionStartRow.value = rowIdx
   selectionStartCol.value = colId
   selectedRowIndex.value = Math.max(0, Math.min(rowIdx, filteredRows.value.length - 1))
   selectedCol.value = colId
-  // Score cells still edit on single click; name/ID now stay selected so range selection works naturally.
   if (colId > 0) {
     if (editingRow.value !== null) cancelEdit()
     startEditing(rowIdx, colId)
   }
 
-  // Start drag selection on selectable cells
   if (isSelectableColumn(colId)) {
     const container = sheetContainer.value?.querySelector('.sheet-scroll') as HTMLElement | null
     const edgeThreshold = 48
@@ -1467,7 +1430,6 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
     }
 
     const onMouseMove = (e: MouseEvent) => {
-      // If we were editing, cancel it since user is dragging
       if (editingRow.value !== null) cancelEdit()
       lastPointer = { x: e.clientX, y: e.clientY }
       updateSelectionAtPointer(e.clientX, e.clientY)
@@ -1490,7 +1452,6 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
 
 
 
-// ─── Inline Editing (double click = edit) ────────────────────────────
 function startEditing(rowIdx: number, detailId: number) {
   if (!filteredRows.value.length) return
   if (detailId === -2) return
@@ -1575,7 +1536,6 @@ function saveEdit() {
     return
   }
 
-  // Score mark
   const oldValue = getCellMark(filteredRow, detailId)
   const newValue = editValue.value === '' ? null : parseFloat(editValue.value)
   if (newValue !== null) {
@@ -1583,9 +1543,6 @@ function saveEdit() {
     if (newValue < 0 || newValue > 100) { cancelEdit(); return }
   }
 
-  // Range fill: if a multi-cell range is selected (drag or shift-click) and it includes the
-  // cell being edited, typing+committing a value applies it to every cell in the range —
-  // matching the same "fill all selected cells" behavior already applied to range paste.
   if (isRangeSelecting.value && newValue !== null) {
     const bounds = getSelectionBounds()
     if (
@@ -1670,29 +1627,16 @@ function cancelEdit() {
   editingRow.value = null
   editingCol.value = null
   editValue.value = ''
-  // The <input class="cell-editor"> that just had focus is about to be removed from the DOM
-  // (it only exists while editingRow/editingCol are set) — when a focused element is removed,
-  // the browser drops focus to <body>, and every keyboard shortcut bound to .sheet-wrapper's
-  // @keydown (arrows, Ctrl+C/V/X/Z/Y, Delete, Home/End, ...) silently stops firing from then
-  // on, since keydown events on <body> never reach that listener. This is why shortcuts felt
-  // like they worked "sometimes" — they worked until the very first edit finished, then quietly
-  // died until something else happened to refocus the grid. Wait a tick for the input to
-  // actually unmount, then reclaim focus so the grid keeps responding to the keyboard.
   nextTick(() => sheetContainer.value?.focus())
 }
 
-// ─── Fill Handle ─────────────────────────────────────────────────────
 function computeAutoFillValues(sourceValues: (number | null)[], count: number, direction: 1 | -1 = 1): (number | null)[] {
   if (!sourceValues.length) return Array.from({ length: count }, () => null)
-  // Single value: repeat it
   if (sourceValues.length === 1) return Array.from({ length: count }, () => sourceValues[0] ?? null)
 
-  // Filter out nulls for numeric calculations
   const numeric = sourceValues.map(v => (v === null ? null : Number(v)))
   const cleanNums = numeric.filter((v): v is number => v !== null && !Number.isNaN(v))
 
-  // Infer a numeric progression when there are at least 2 values.
-  // One value repeats; 2+ values can continue as a sequence.
   if (cleanNums.length < 2) {
     const result: (number | null)[] = []
     for (let i = 0; i < count; i++) {
@@ -1702,7 +1646,6 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
     return result
   }
 
-  // Check if it's a consistent arithmetic progression
   const step = cleanNums[1] - cleanNums[0]
   let isArithmetic = true
   for (let i = 2; i < cleanNums.length; i++) {
@@ -1710,7 +1653,6 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
   }
 
   if (!isArithmetic) {
-    // Repeat the pattern
     const result: (number | null)[] = []
     for (let i = 0; i < count; i++) {
       const srcIdx = i % sourceValues.length
@@ -1719,12 +1661,10 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
     return result
   }
 
-  // Arithmetic progression: continue the sequence in the drag direction.
   const result: (number | null)[] = []
   const edgeValue = direction === 1 ? sourceValues[sourceValues.length - 1] : sourceValues[0]
   const edgeNum = edgeValue !== null ? Number(edgeValue) : null
   if (edgeNum === null || Number.isNaN(edgeNum)) {
-    // Fallback: repeat pattern
     for (let i = 0; i < count; i++) {
       const srcIdx = i % sourceValues.length
       result.push(sourceValues[srcIdx] ?? null)
@@ -1734,8 +1674,6 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
 
   for (let i = 0; i < count; i++) {
     const nextValue = direction === 1 ? edgeNum + step * (i + 1) : edgeNum - step * (i + 1)
-    // Scores are always 0-100 — an extrapolated arithmetic progression (e.g. 80, 90 -> 100, 110, 120...)
-    // must be clamped or the backend rejects the save (422) while the optimistic UI update sticks around unsaved.
     result.push(Math.min(100, Math.max(0, nextValue)))
   }
   return result
@@ -1748,14 +1686,12 @@ function onFillHandleMouseDown(e: MouseEvent, rowIdx: number, colId: number) {
   e.preventDefault()
   e.stopPropagation()
 
-  // Use sourceRow as the first row of the range (or single cell)
   let sourceRow = rowIdx
   const sourcePattern: (number | null)[] = []
 
   if (isRangeSelecting.value && selectionStartRow.value !== null) {
     const r1 = Math.min(selectionStartRow.value, selectedRowIndex.value)
     const r2 = Math.max(selectionStartRow.value, selectedRowIndex.value)
-    // Only use range if fill handle is on the last row
     if (rowIdx === r2) {
       sourceRow = r1
       for (let r = r1; r <= r2; r++) {
@@ -1765,7 +1701,6 @@ function onFillHandleMouseDown(e: MouseEvent, rowIdx: number, colId: number) {
     }
   }
 
-  // Fallback: single source cell value
   if (sourcePattern.length === 0) {
     const mark = getCellMark(filteredRows.value[rowIdx], colId)
     sourcePattern.push(mark !== undefined ? mark : null)
@@ -1780,7 +1715,6 @@ function onFillHandleMouseDown(e: MouseEvent, rowIdx: number, colId: number) {
     destRow: rowIdx, destColId: colId,
     previewDestRow: rowIdx, previewDestColId: colId,
   }
-  // Store source pattern on the fillDrag object
   ;(fillDrag.value as any).sourcePattern = sourcePattern
   updateFillPreviewFromPointer(e.clientX, e.clientY)
   window.addEventListener('mousemove', onFillHandleMouseMove)
@@ -1847,7 +1781,6 @@ function commitFillApply() {
   const destColId = fillDrag.value.previewDestColId
   const vertical = destRow !== srcRow
 
-  // Get source pattern (from range selection or single cell)
   let sourcePattern = (fillDrag.value as any).sourcePattern as (number | null)[]
   if (!sourcePattern || sourcePattern.length === 0) {
     const sourceRowObj = filteredRows.value[srcRow]
@@ -1857,7 +1790,6 @@ function commitFillApply() {
   const patternLen = sourcePattern.length
 
   if (vertical) {
-    // Vertical fill: continue the pattern away from the source range.
     const sourceStartRow = srcRow
     const sourceEndRow = srcRow + patternLen - 1
     const targetRows: number[] = []
@@ -1888,7 +1820,6 @@ function commitFillApply() {
       triggerRef(data)
       const actualDetailId = getActualDetailId(targetRow, srcColId)
       fillPromises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
-        // Save rejected (e.g. invalid value) — revert so the grid doesn't show an unsaved value as if it stuck.
         targetRow.details[srcColId] = oldValue
         recalculateRowTotal(targetRow)
         triggerRef(data)
@@ -1899,7 +1830,6 @@ function commitFillApply() {
     showSaveStatus('saving')
     Promise.all(fillPromises).then(() => showSaveStatus('saved')).catch(() => {})
   } else {
-    // Horizontal fill: continue the pattern across columns.
     const cols = columns.value
     const sIdx = cols.findIndex(c => c.id === srcColId)
     const dIdx = cols.findIndex(c => c.id === destColId)
@@ -1938,7 +1868,6 @@ function commitFillApply() {
       triggerRef(data)
       const actualDetailId = getActualDetailId(targetRow, cols[ci].id)
       fillPromises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
-        // Save rejected (e.g. invalid value) — revert so the grid doesn't show an unsaved value as if it stuck.
         targetRow.details[cols[ci].id] = oldValue
         recalculateRowTotal(targetRow)
         triggerRef(data)
@@ -1955,15 +1884,12 @@ function commitFillApply() {
   fillDrag.value = null
 }
 
-// ─── Keyboard Navigation (Excel-like) ────────────────────────────────
 function onGlobalKeydown(event: KeyboardEvent) {
-  // If editing, delegate to edit handler
   if (editingRow.value !== null && editingCol.value !== null) {
     onEditKeydown(event)
     return
   }
 
-  // Handle copy/paste/cut/undo/redo/save from here too (Ctrl+C/V/X/Z/Y/S)
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'a':
@@ -1987,7 +1913,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     }
   }
 
-  // Delete/Backspace: clear selected cell(s) in range or single selection
   if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCol.value !== null) {
     event.preventDefault()
     if (isRangeSelecting.value) {
@@ -2015,9 +1940,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
           promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
         }
       }
-      // Reflect the clear immediately (data is a shallowRef — mutating nested .details
-      // doesn't trigger a re-render on its own) instead of waiting on the network
-      // round-trip below, which is what made Delete feel laggy.
       triggerRef(data)
       if (promises.length) {
         Promise.all(promises)
@@ -2029,7 +1951,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
       }
       isRangeSelecting.value = false
     } else {
-      // Single cell delete
       const row = filteredRows.value[selectedRowIndex.value]
       if (!row) return
       const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
@@ -2051,9 +1972,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
     return
   }
 
-  // Printable character handling: type to start editing (Excel-like)
   if (selectedCol.value !== null && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-    // Only for score cells, student name (-1), and student ID (0)
     if (selectedCol.value >= -1) {
       event.preventDefault()
       startEditing(selectedRowIndex.value, selectedCol.value)
@@ -2070,7 +1989,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
   if (currentColIdx < 0) currentColIdx = 0
   const shiftKey = event.shiftKey
 
-  // Clear range selection when pressing ANY key WITHOUT Shift (Excel-like)
   if (!shiftKey) {
     isRangeSelecting.value = false
   }
@@ -2079,7 +1997,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowDown':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowDown: jump to last row
         expandAllRowsForSelection()
         selectedRowIndex.value = filteredRows.value.length - 1
         if (!shiftKey) isRangeSelecting.value = false
@@ -2100,7 +2017,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowUp':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowUp: jump to first row
         expandAllRowsForSelection()
         selectedRowIndex.value = 0
         if (!shiftKey) isRangeSelecting.value = false
@@ -2120,12 +2036,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowLeft':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowLeft: jump to first column (student name)
         selectedCol.value = -1
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(currentRow, -1)
       } else if (selectedCol.value === 0) {
-        // From student ID go to student name
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
@@ -2145,7 +2059,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
       } else if (currentColIdx === 0 && cols.length > 0 && selectedCol.value === cols[0].id) {
-        // From first score column go to student ID
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
@@ -2159,12 +2072,10 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowRight':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowRight: jump to last column
         selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : null
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(currentRow, cols.length - 1)
       } else if (selectedCol.value === -1) {
-        // From student name go to student ID
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
@@ -2174,7 +2085,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
         selectedCol.value = 0
         scrollToCell(currentRow, 0)
       } else if (selectedCol.value === 0) {
-        // From student ID go to first score column
         if (cols.length > 0) {
           if (shiftKey && !isRangeSelecting.value) {
             expandAllRowsForSelection()
@@ -2228,9 +2138,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'Enter':
       event.preventDefault()
       if (selectedCol.value !== null) {
-        // Enter / F2 both start editing ("Edit the selected cell").
-        // Score cells auto-edit on click, but when keyboard-navigated
-        // here via arrows they need Enter to open the editor.
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
       break
@@ -2241,7 +2148,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'Home':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+Home: go to first cell (top-left) — student name on the first row
         expandAllRowsForSelection()
         if (shiftKey && !isRangeSelecting.value) {
           selectionStartRow.value = currentRow
@@ -2253,7 +2159,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(0, 0)
       } else {
-        // Home: go to first row (same column)
         expandAllRowsForSelection()
         if (shiftKey && !isRangeSelecting.value) {
           selectionStartRow.value = currentRow
@@ -2268,7 +2173,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'End':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+End: go to last cell (bottom-right)
         expandAllRowsForSelection()
         if (shiftKey && !isRangeSelecting.value) {
           selectionStartRow.value = currentRow
@@ -2280,7 +2184,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(filteredRows.value.length - 1, cols.length - 1)
       } else {
-        // End: go to last row (same column)
         expandAllRowsForSelection()
         if (shiftKey && !isRangeSelecting.value) {
           selectionStartRow.value = currentRow
@@ -2308,15 +2211,8 @@ function onGlobalKeydown(event: KeyboardEvent) {
 }
 
 function onEditKeydown(event: KeyboardEvent) {
-  // This is the definitive handler while a cell is being edited — stop the event from also
-  // bubbling up to .sheet-wrapper's own @keydown="onGlobalKeydown". Without this, saveEdit()
-  // below clears editingRow/editingCol synchronously, so by the time the same Tab/Enter event
-  // reaches the wrapper, its "still editing" check is already false and it runs its own
-  // Tab/Enter navigation on top of the one this handler just did — advancing two cells per
-  // keypress instead of one.
   event.stopPropagation()
 
-  // Handle Ctrl+Z, Ctrl+Y, Ctrl+S during editing
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'z':
@@ -2339,9 +2235,6 @@ function onEditKeydown(event: KeyboardEvent) {
   }
 
 
-  // Let the native text field / datalist handle vertical navigation for
-  // the frozen Student Name / Student ID editors so long suggestion lists
-  // can scroll normally.
   if (editingCol.value !== null && editingCol.value <= 0) {
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       return
@@ -2352,8 +2245,6 @@ function onEditKeydown(event: KeyboardEvent) {
     case 'Enter':
       event.preventDefault()
       saveEdit()
-      // Excel-like: Enter moves DOWN (same column, next row).
-      // Shift+Enter moves UP (same column, previous row).
       handleEnterNavigation(event.shiftKey)
       break
     case 'Tab':
@@ -2402,11 +2293,7 @@ function handleTabNavigation(shiftKey: boolean) {
   }
 }
 
-/**
- * Excel-like Enter navigation: Enter moves DOWN (same column, next row),
- * Shift+Enter moves UP (same column, previous row). The column stays the
- * same — only the row changes.
- */
+
 function handleEnterNavigation(shiftKey: boolean) {
   if (selectedCol.value === null) return
   if (shiftKey) {
@@ -2422,17 +2309,15 @@ function handleEnterNavigation(shiftKey: boolean) {
   nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
 }
 
-function onEditInput() { /* live validation placeholder */ }
+function onEditInput() {  }
 
 function scrollToCell(rowIdx: number, colIdx: number) {
   const container = sheetContainer.value?.querySelector('.sheet-scroll')
   if (!container) return
-  // Scroll row into view (vertical)
   const rowCells = container.querySelectorAll('tbody tr')
   if (rowCells[rowIdx]) {
     rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'instant' })
   }
-  // Scroll score column into view (horizontal) using actual column ID
   const targetColId = selectedCol.value
   if (targetColId !== null && targetColId > 0) {
     const targetTd = container.querySelector<HTMLElement>(`td[data-col-id="${targetColId}"]`)
@@ -2443,10 +2328,8 @@ function scrollToCell(rowIdx: number, colIdx: number) {
 }
 
 function onScroll() {
-  // Selection remains visible while scrolling due to sticky headers and frozen columns
 }
 
-// ─── Copy / Paste ────────────────────────────────────────────────────
 function copySelection() {
   const text = getSelectionText()
   navigator.clipboard.writeText(text).catch(() => {})
@@ -2480,7 +2363,6 @@ async function onPaste(event: ClipboardEvent) {
   const isMultiRow = lines.length > 1
 
   if (isMultiRow) {
-    // Multi-cell paste: iterate over rows and columns
     expandAllRowsForSelection()
     const promises: Promise<void>[] = []
     lines.forEach((line, rowOffset) => {
@@ -2514,9 +2396,6 @@ async function onPaste(event: ClipboardEvent) {
     return
   }
 
-  // Single value paste: if a multi-cell range is selected (e.g. via drag/fill-handle-style
-  // range selection or Shift+Click), apply the value to every cell in the range — matching
-  // Excel's fill behavior — instead of only the originally-clicked/anchor cell.
   if (isRangeSelecting.value) {
     const bounds = getSelectionBounds()
     if (bounds && (bounds.r1 !== bounds.r2 || bounds.c1 !== bounds.c2)) {
@@ -2544,7 +2423,6 @@ async function onPaste(event: ClipboardEvent) {
     }
   }
 
-  // Single cell paste
   const row = filteredRows.value[selectedRowIndex.value]
   if (!row) return
   const colId = selectedCol.value
@@ -2561,7 +2439,6 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
   if (!value) return
 
   if (colId === -1) {
-    // Paste student name
     const newName = value
     if (!newName || newName === row.student_name) return
     const oldName = row.student_name
@@ -2578,7 +2455,6 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
   }
 
   if (colId === 0) {
-    // Paste student number
     const newNumber = value
     if (!newNumber || newNumber === row.student_number) return
     const oldNumber = row.student_number
@@ -2594,7 +2470,6 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
       })
   }
 
-  // Score cell paste
   if (colId > 0) {
     const numValue = parseFloat(value)
     if (isNaN(numValue)) return
@@ -2626,7 +2501,6 @@ function onCut(event: ClipboardEvent) {
   cutSelection()
 }
 
-// ─── Undo / Redo ─────────────────────────────────────────────────────
 function undo() {
   const action = undoStack.value.pop()
   if (!action) return
@@ -2661,22 +2535,18 @@ function redo() {
     .catch(() => { showSaveStatus('failed'); row.details[action.detailId] = prevValue; triggerRef(data) })
 }
 
-// ─── Data Loading ────────────────────────────────────────────────────
 function goBack() { router.push('/scores') }
 
 async function refreshData(silent = false) {
   if (!subjectId.value || !termId.value) return
   if (!silent) loading.value = true
-  // Preserve selection so it doesn't jump back to cell 1 after a save
   const prevRow = selectedRowIndex.value
   const prevCol = selectedCol.value
   try {
     data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value, true)
     assessments.value = data.value.assessment_types
     assessments.value.forEach(at => { weightEdits[at.id] = Number(at.weight_percent) })
-    // Initialize column types dropdown values
     columns.value.forEach(col => { columnTypes[col.id] = col.type })
-    // Restore selection, clamped to valid range
     const rowCount = filteredRows.value.length
     selectedRowIndex.value = prevRow < rowCount ? prevRow : Math.max(0, rowCount - 1)
     if (prevCol !== null && columns.value.some(c => c.id === prevCol)) {
@@ -2688,7 +2558,6 @@ async function refreshData(silent = false) {
   finally { if (!silent) loading.value = false }
 }
 
-// ─── Column Management ───────────────────────────────────────────────
 function startRenameColumn(col: SpreadsheetColumn) {
   renamingColumn.value = col
   renameValue.value = col.label
@@ -2736,7 +2605,6 @@ async function doAddColumn() {
   const label = newColumn.label.trim()
   const maxScore = newColumn.max_score
 
-  // Calculate order_number: place right after the last column of the same type
   const cols = columns.value
   const sameTypeCols = cols.filter(c => c.type === newColumn.type)
   const orderNumber: number = sameTypeCols.length > 0
@@ -2765,9 +2633,7 @@ async function doAddColumnInline() {
   } catch { showSaveStatus('failed') }
 }
 
-// ─── Context Menu & Row Insert ───────────────────────────────────
 function showContextMenu(event: MouseEvent, rowIdx: number) {
-  // Position menu, preventing overflow
   const x = Math.min(event.clientX, window.innerWidth - 200)
   const y = Math.min(event.clientY, window.innerHeight - 160)
   contextMenu.value = { x, y, rowIdx }
@@ -2789,8 +2655,6 @@ async function insertRowAbove(rowIdx: number) {
       : -1
     pageSize.value = 'all'
     showSaveStatus('saving')
-    // Refresh to get proper ScoreDetails from server      await refreshData(true)
-      // Re-insert the new row at the target position (it came back at the bottom)
     if (actualIndex >= 0 && data.value) {
       const freshRows = [...data.value.rows]
       const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
@@ -2819,7 +2683,6 @@ async function insertRowBelow(rowIdx: number) {
     pageSize.value = 'all'
     showSaveStatus('saving')
     await refreshData(true)
-      // Re-insert the new row after the target position
     if (actualIndex >= 0 && data.value) {
       const freshRows = [...data.value.rows]
       const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
@@ -2880,23 +2743,15 @@ async function doUpdateWeights() {
   }
 }
 
-// ─── Google Sheets - One-Click Create & Open ─────────────────────────
 function openGoogleSheetsDirect() {
   gsLoading.value = true
   gsReconnectNeeded.value = false
-  // Reuse the sheet already created for this subject/term instead of creating a new one every click.
   if (gsSheetId.value) {
-    // Open the tab synchronously, in direct response to this click — several awaited network
-    // calls happen before we know the final URL, and by then the browser no longer considers
-    // window.open() a direct result of the user's gesture, so it would likely get silently
-    // popup-blocked. Opening a blank tab now and navigating it later avoids that entirely.
     openExistingSheet(gsSheetId.value, openLoadingPopup())
     return
   }
   const storedToken = localStorage.getItem("google_access_token")
   if (storedToken) { createAndOpenSheet(storedToken, openLoadingPopup()); return }
-  // Google Identity Services owns its own popup lifecycle for the OAuth flow — no
-  // placeholder tab needed (or wanted) here.
   startGoogleAuth()
 }
 
@@ -2905,7 +2760,6 @@ function openLoadingPopup(): Window | null {
   try {
     popup?.document.write('<title>Google Sheets</title><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#64748b">Preparing your Google Sheet…</body>')
   } catch {
-    // Best-effort only — worst case the tab just stays blank until navigation below.
   }
   return popup
 }
@@ -2914,21 +2768,16 @@ function navigatePopupOrOpen(popup: Window | null, url: string) {
   if (popup && !popup.closed) {
     popup.location.href = url
   } else {
-    // Popup was blocked/closed early — show the link in a modal so the user can click it
-    // themselves. NEVER navigate the main page away (window.location.href = url) — that
-    // would take the user out of the app, effectively "logging them out".
     showGoogleSheetLink(url)
   }
 }
 
-// ─── Google Sheet Link Modal (fallback when popup is blocked) ────────
 const gsLinkUrl = ref('')
 const showGsLinkModal = ref(false)
 
 function showGoogleSheetLink(url: string) {
   gsLinkUrl.value = url
   showGsLinkModal.value = true
-  // Copy to clipboard automatically for convenience
   navigator.clipboard.writeText(url).catch(() => {})
   showToast('Link copied to clipboard! Click Open to view your sheet.', 'success', 4000)
 }
@@ -2938,19 +2787,7 @@ function openGsLinkDirectly() {
   showGsLinkModal.value = false
 }
 
-// Before opening a previously-created sheet: pull in any pending edits sitting in the
-// sheet, then push the app's current (now up-to-date) data back into it, then make sure
-// it's shared. createSheet() only ever wrote data once, at creation time — anything added
-// or changed in the app afterward (new students, new columns, edited scores) never reached
-// the sheet, so reopening it kept showing a stale snapshot from whenever it was first made.
-// Pull-before-push matters: it means nothing typed directly into Sheets since the last sync
-// gets lost just because someone reopened the link from the app side.
-// Every step here is best-effort and non-blocking — the sheet still opens even if a step
-// fails (e.g. this account isn't the owner and can't push/share on it).
 async function openExistingSheet(sheetId: string, popup: Window | null) {
-  // Navigate the popup as soon as we know the sheet's URL — the spreadsheet already exists
-  // at this URL regardless of whether the pull/push/share sync steps below have run yet, so
-  // there's no reason to make the user stare at a loading tab while those finish.
   try {
     navigatePopupOrOpen(popup, `https://docs.google.com/spreadsheets/d/${sheetId}/edit`)
     gsLoading.value = false
@@ -2962,22 +2799,11 @@ async function openExistingSheet(sheetId: string, popup: Window | null) {
         localStorage.setItem("google_access_token", refreshed.access_token)
         token = refreshed.access_token
       } catch {
-        // No usable token — the sheet opens without sync. Show the reconnect prompt
-        // so the user knows they need to re-authenticate to enable bidirectional sync.
         gsReconnectNeeded.value = true
         return
       }
     }
     if (token) {
-      // Fire-and-forget: these are best-effort background sync steps and must not delay or
-      // block the popup navigation above. Errors are already swallowed via .catch().
-      //
-      // Note: we deliberately do NOT pull (importFromGoogleSheets) here. At the moment the
-      // user opens the sheet from this page, the local grid is the source of truth — pulling
-      // now would race against the user continuing to edit locally and against the push below,
-      // and a background refreshData() could silently revert an in-flight local edit with stale
-      // sheet data. Periodic auto-sync (startAutoSync) already handles pulling changes made
-      // directly in the Google Sheet on its own schedule.
       ;(async () => {
         await pushToGoogleSheet(subjectId.value, termId.value, sheetId, token).catch((err) => {
           console.warn("Could not push latest data to Google Sheet:", err?.response?.data?.message || err?.message)
@@ -2986,33 +2812,27 @@ async function openExistingSheet(sheetId: string, popup: Window | null) {
       })()
     }
   } catch {
-    // Navigation itself is best-effort; nothing else to do here.
   }
 }
 
 async function createAndOpenSheet(token: string, popup: Window | null) {
   try {
     const result = await createGoogleSheet(subjectId.value, termId.value, token)
-    // Store the spreadsheet ID so we can sync back later
     const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
     const storageData = { sheet_id: result.spreadsheet_id, created_at: new Date().toISOString() }
     localStorage.setItem(storageKey, JSON.stringify(storageData))
     gsSheetId.value = result.spreadsheet_id
     navigatePopupOrOpen(popup, result.url)
-    // Sheet was just created with the current data — nothing new to push back yet.
     showSaveStatus("saved", { skipSheetPush: true })
-    // Data was just exported to Google Sheets — nothing to refresh in the system
     gsLastSynced.value = new Date().toLocaleTimeString()
     startAutoSync() // Begin polling immediately instead of waiting for the next page load.
     gsLoading.value = false
   } catch (err: any) {
-    // If token expired/invalid, clear it and re-authenticate
     const status = err?.response?.status
     if (status === 400 || status === 401 || status === 403) {
       console.warn("Google token expired or missing, re-authenticating...")
       localStorage.removeItem("google_access_token")
       popup?.close() // GIS will open its own popup for re-auth; don't leave our blank one hanging.
-      // Keep gsLoading=true so button shows "Creating..." during re-auth
       startGoogleAuth()
       return
     }
@@ -3023,14 +2843,10 @@ async function createAndOpenSheet(token: string, popup: Window | null) {
   }
 }
 
-// ─── Sync from Google Sheets back to system ────────────────────────
 async function syncFromGoogleSheets() {
   if (gsIsSyncing) return // Prevent concurrent syncs (e.g. visibility + focus firing together)
   gsIsSyncing = true
   try {
-    // A local edit is still waiting to be pushed (debounced). Flush it first so this pull reads
-    // back our own fresh data instead of the sheet's stale pre-edit data, which would otherwise
-    // overwrite the local edit and then get pushed back out, silently reverting the user's change.
     if (sheetPushTimer) {
       clearTimeout(sheetPushTimer)
       sheetPushTimer = null
@@ -3038,7 +2854,6 @@ async function syncFromGoogleSheets() {
     }
     let token = localStorage.getItem("google_access_token")
     
-    // If no stored token, try backend refresh first
     if (!token) {
       try {
         const refreshed = await refreshGoogleToken()
@@ -3064,18 +2879,14 @@ async function syncFromGoogleSheets() {
       await refreshData(true)
       gsLastSynced.value = new Date().toLocaleTimeString()
       gsReconnectNeeded.value = false
-      // This "saved" came FROM pulling the sheet's own data — pushing back here would just
-      // re-write the same data we just read, and risks a pointless pull->push->pull loop.
       showSaveStatus("saved", { skipSheetPush: true })
     } catch (err: any) {
       const status = err?.response?.status
       if (status === 401 || status === 403) {
-        // Token expired — try backend refresh
         localStorage.removeItem("google_access_token")
         try {
           const refreshed = await refreshGoogleToken()
           localStorage.setItem("google_access_token", refreshed.access_token)
-          // Retry import with fresh token
           const retryResult = await importFromGoogleSheets(
             subjectId.value,
             termId.value,
@@ -3093,12 +2904,6 @@ async function syncFromGoogleSheets() {
           gsReconnectNeeded.value = true
           stopAutoSync()
           if (retryErr?.response?.status === 403) {
-            // Fresh token, still denied -> this isn't an expired-token problem, the
-            // connected Google account simply has no access to this specific sheet
-            // (usually created under a different account). Retrying it every page
-            // load forever won't fix that, so forget it: stop auto-sync from ever
-            // touching this dead reference again. The user creates a new sheet (or
-            // reconnects with the right account) to resume.
             forgetStoredSheetId()
             console.warn("This Google account doesn't have access to the linked spreadsheet. Click 'Google Sheets' to create a new one, or reconnect with the account that owns it.")
           } else {
@@ -3116,16 +2921,11 @@ async function syncFromGoogleSheets() {
   }
 }
 
-// ─── Auto-sync: instant sync when returning from Google Sheets tab ──
 function startAutoSync() {
   stopAutoSync()
-  // Sync instantly when user switches back from Google Sheets tab
   document.addEventListener("visibilitychange", onVisibilityChange)
   window.addEventListener("focus", onWindowFocus)
-  // Check right away instead of waiting for the first interval tick.
   if (gsSheetId.value && editingRow.value === null) syncFromGoogleSheets()
-  // Periodic fallback sync every 8 seconds, so edits saved in Google Sheets
-  // show up here quickly even if the user never switches tabs.
   gsAutoSyncTimer = setInterval(() => {
     if (!gsSheetId.value || editingRow.value !== null) return // Don't sync while user is editing
     syncFromGoogleSheets()
@@ -3154,7 +2954,6 @@ function onWindowFocus() {
   }
 }
 
-// ─── Load stored Google Sheet ID from localStorage ───────────────────
 async function loadStoredSheetId() {
   const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
   try {
@@ -3163,32 +2962,21 @@ async function loadStoredSheetId() {
       const data = JSON.parse(stored)
       gsSheetId.value = data.sheet_id || null
       if (gsSheetId.value) {
-        // Only start auto-sync if the user is actually connected to Google.
-        // Without this check, a stale sheet ID in localStorage triggers a
-        // /google-sheets/refresh 400 on every visit (no refresh token exists),
-        // creating noise in the console and an unnecessary failed request.
         try {
           const status = await getGoogleStatus()
           if (status.connected) {
             startAutoSync()
           } else {
-            // Stored sheet but Google disconnected — show the reconnect prompt
-            // so the user knows they need to re-authenticate.
             gsReconnectNeeded.value = true
           }
         } catch {
-          // Could not determine Google status — stay silent; the periodic pull
-          // will surface "Reconnect Google" through its own error-handling path.
         }
       }
     }
   } catch {
-    // Ignore parse errors
   }
 }
 
-// Drop a sheet reference that's confirmed permanently inaccessible (403 even with a
-// fresh token) so we stop retrying it on every auto-sync tick and every future page load.
 function forgetStoredSheetId() {
   const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
   localStorage.removeItem(storageKey)
@@ -3201,8 +2989,6 @@ async function startGoogleAuth() {
     const config = await getGoogleConfig()
     if (!config.client_id) { showSaveStatus("failed"); gsLoading.value = false; return }
     await loadGoogleScript()
-    // Use the authorization-code flow (not the implicit token flow) so the backend can
-    // exchange the code for a refresh token and keep the sheet synced without re-prompting.
     const codeClient = (window as any).google.accounts.oauth2.initCodeClient({
       client_id: config.client_id,
       scope: config.scopes.join(" "),
@@ -3212,8 +2998,6 @@ async function startGoogleAuth() {
         try {
           const tokenResult = await exchangeGoogleToken(response.code)
           localStorage.setItem("google_access_token", tokenResult.access_token)
-          // No placeholder popup here (see openGoogleSheetsDirect) — GIS's own popup already
-          // closed after consent, so this falls back to a plain window.open, same as before.
           await createAndOpenSheet(tokenResult.access_token, null)
         } catch (err: any) {
           console.error("Google token exchange failed:", err?.response?.data?.message || err?.message)
@@ -3249,7 +3033,6 @@ function loadGoogleScript(): Promise<void> {
   })
 }
 
-// ─── File Import (CSV, Excel) ────────────────────────────────────────
 function openFilePicker() {
   fileInputRef.value?.click()
 }
@@ -3325,12 +3108,10 @@ async function importExcelFile(file: File) {
   await animateImportProgress(15, 35, 500, 'Parsing student data...')
   const rows = parseTabularData(jsonData as (string | number)[][])
 
-  // Start smooth progress animation while awaiting the API
   importStatusText.value = 'Importing scores to server...'
   const animPromise = animateImportProgress(35, 65, 3000, 'Importing scores to server...')
   await importFile(subjectId.value, termId.value, { rows, email_domain: selectedEmailDomain.value }, classId.value)
   importProgress.value = 70
-  // animPromise resolves in background if still running
 }
 
 function parseTabularData(jsonData: (string | number)[][]): Array<{
@@ -3341,13 +3122,11 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   if (jsonData.length < 2) throw new Error('Data must have at least a header and one row')
 
   const header = jsonData[0].map(c => String(c).trim())
-  // Find column indices: Student Name and Student ID
   let nameIdx = header.findIndex(h => /name|student/i.test(h))
   let idIdx = header.findIndex(h => /id|number|code|no/i.test(h) && !/name/i.test(h))
   if (nameIdx < 0) nameIdx = 0  // Default: first column is name
   if (idIdx < 0 || idIdx === nameIdx) idIdx = -1  // No ID column
 
-  // Parse score columns (everything after name/ID columns)
   const scoreColumns: { index: number; label: string }[] = []
   for (let i = 0; i < header.length; i++) {
     if (i === nameIdx || i === idIdx) continue
@@ -3396,7 +3175,6 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   return rows
 }
 
-// ─── Export ──────────────────────────────────────────────────────────
 function exportCSV() {
   if (!data.value) return
   const cols = columns.value
@@ -3422,12 +3200,10 @@ async function exportExcel() {
   const { utils, writeFile } = await import('xlsx')
   const cols = columns.value
   
-  // Build header row
   const header = ['Student Name', 'Student ID']
   cols.forEach(c => header.push(`${c.label} (${c.type})`))
   header.push('Total', 'Grade')
   
-  // Build data rows
   const dataRows = rows.value.map(r => {
     const row: (string | number)[] = [r.student_name, r.student_number]
     cols.forEach(c => {
@@ -3453,7 +3229,6 @@ async function exportPDF() {
     import('jspdf'),
     import('jspdf-autotable')
   ])
-  // Manually register autoTable if the dynamic import didn't auto-register
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
   if (typeof (doc as any).autoTable !== 'function' && autoTableModule && typeof autoTableModule.default === 'function') {
     const autoTablePlugin = autoTableModule.default
@@ -3461,13 +3236,11 @@ async function exportPDF() {
   }
   const cols = columns.value
   
-  // Title
   doc.setFontSize(14)
   doc.text(`${data.value.subject?.name || 'Scores'} - ${data.value.term?.name || ''}`, 14, 15)
   doc.setFontSize(9)
   doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 21)
   
-  // Build table
   const head = [['#', 'Student Name', 'Student ID', ...cols.map(c => c.label), 'Total', 'Grade']]
   const body = rows.value.map((r, i) => [
     String(i + 1),
@@ -3506,23 +3279,12 @@ function exportFormat(format: 'xlsx' | 'pdf') {
   else if (format === 'pdf') exportPDF()
 }
 
-// ─── Status ──────────────────────────────────────────────────────────
-// showSaveStatus('saved') fires after every successful local edit across this whole page
-// (mark changes, student info, columns, rows, weights, paste/cut, undo/redo, ...) — which
-// makes it the one place that can trigger "push this edit to Google Sheets" for all of them
-// at once, instead of wiring up a push call at every individual edit handler. skipSheetPush
-// opts out for the few call sites where "saved" actually means "just pulled the sheet's own
-// data in", where pushing back would be pointless (or risk a pull->push->pull loop).
 function showSaveStatus(status: 'saving' | 'saved' | 'failed', opts: { skipSheetPush?: boolean } = {}) {
   saveStatus.value = status
   if (status !== 'saving') setTimeout(() => { if (saveStatus.value === status) saveStatus.value = 'idle' }, 3000)
   if (status === 'saved' && !opts.skipSheetPush) scheduleSheetPush()
 }
 
-// ─── Push local edits to Google Sheets (debounced) ──────────────────
-// Real-time-ish app -> Sheets sync: coalesce a burst of rapid edits (typing several scores,
-// pasting a block of cells, etc.) into a single push a couple seconds after the last one,
-// rather than re-pushing the whole sheet on every keystroke.
 let sheetPushTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleSheetPush() {
@@ -3549,8 +3311,6 @@ async function pushCurrentDataToSheet() {
       localStorage.setItem("google_access_token", refreshed.access_token)
       token = refreshed.access_token
     } catch {
-      // No usable token — stay quiet here. The periodic pull already surfaces "Reconnect
-      // Google" through its own, more visible path when the connection is genuinely dead.
       return
     }
   }
@@ -3570,7 +3330,6 @@ function animateImportProgress(from: number, to: number, duration: number, statu
       const elapsed = now - startTime
       const t = Math.min(elapsed / duration, 1)
       const newValue = from + (to - from) * t
-      // Only go forward — prevents backwards jump if external code sets a higher value
       if (newValue > importProgress.value) {
         importProgress.value = newValue
       }
@@ -3581,7 +3340,6 @@ function animateImportProgress(from: number, to: number, duration: number, statu
   })
 }
 
-// ─── Lifecycle ───────────────────────────────────────────────────────
 function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
   const newType = (event.target as HTMLSelectElement).value
   if (newType === col.type) return
@@ -3622,10 +3380,6 @@ watch(searchQuery, () => {
 watch([subjectId, termId], () => {
   if (!subjectId.value || !termId.value) return
   refreshData()
-  // Route params changed but Vue Router reused this component instance (same route,
-  // different :subjectId/:termId) — the Google Sheet linked to the *previous*
-  // subject/term is no longer relevant, so drop it and reload whatever sheet
-  // (if any) is stored for the new subject/term instead of continuing to poll the old one.
   stopAutoSync()
   cancelScheduledSheetPush()
   gsSheetId.value = null
@@ -3635,7 +3389,7 @@ watch([subjectId, termId], () => {
 </script>
 
 <style scoped>
-/* ─── Layout ────────────────────────────────────────────────────────── */
+
 .score-sheet {
   position: relative;
   font-family: 'Inter', 'Segoe UI', 'Noto Sans Khmer', sans-serif;
@@ -3748,7 +3502,7 @@ watch([subjectId, termId], () => {
 .stat-label { color: #64748b; font-weight: 500; }
 .stat-value { font-weight: 700; color: #0f172a; }
 
-/* ─── Sheet Wrapper ────────────────────────────────────────────────── */
+
 .sheet-wrapper {
   position: relative;
   flex: 1;
@@ -3771,7 +3525,7 @@ watch([subjectId, termId], () => {
 .sheet-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .sheet-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-/* ─── Table ────────────────────────────────────────────────────────── */
+
 .sheet-table {
   border-collapse: collapse;
   width: max-content;
@@ -3799,21 +3553,21 @@ watch([subjectId, termId], () => {
   user-select: none;
 }
 
-/* ─── Cell Highlights (Excel green) ─────────────────────────────────── */
+
 .cell-frozen { position: sticky; z-index: 20; background: #fff; }
 
 .row-num-header, .row-num { left: 0; width: 36px; min-width: 36px; max-width: 36px; text-align: center; z-index: 30; }
 .student-name-header, .cell-student-name { left: 36px; min-width: 160px; z-index: 25; }
 .student-id-header, .cell-student-id { left: 196px; min-width: 120px; z-index: 25; }
 
-/* Ensure frozen headers always appear above frozen tbody cells */
+
 .row-num-header { z-index: 50; }
 .student-name-header { z-index: 50; }
 .student-id-header { z-index: 50; }
 
-/* ─── Enhanced Header Highlight ─────────────────────────────────────── */
+
 .header-highlighted {
-  background: #d4edda !important; /* Light green */
+  background: #d4edda !important; 
   border-color: #6cc47c !important;
   color: #155724 !important;
 }
@@ -3825,7 +3579,7 @@ watch([subjectId, termId], () => {
   font-weight: 700 !important;
 }
 
-/* ─── Header ────────────────────────────────────────────────────────── */
+
 .header-content { display: flex; align-items: center; gap: 4px; }
 .column-header-content { flex-direction: column; align-items: stretch; gap: 1px; }
 
@@ -3867,7 +3621,7 @@ watch([subjectId, termId], () => {
 
 .max-score-label { font-size: 0.5rem; color: #94a3b8; font-weight: 400; line-height: 1; }
 
-/* ─── Editable Column Type Select ─────────────────────────────────── */
+
 .column-type-select {
   font-size: 0.55rem;
   padding: 0px 2px;
@@ -3899,7 +3653,7 @@ watch([subjectId, termId], () => {
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
 
-/* ─── Cells ────────────────────────────────────────────────────────── */
+
 .cell {
   border: 1px solid #e2e8f0;
   padding: 3px 4px;
@@ -3922,23 +3676,23 @@ watch([subjectId, termId], () => {
 }
 .cell:hover { background: #f8fafc; }
 
-/* ─── Excel-style Selection: Green Border ───────────────────────────── */
+
 .cell-selected {
-  outline: 2px solid #16a34a !important; /* Excel green */
+  outline: 2px solid #16a34a !important; 
   outline-offset: -1px;
   background: #e8f5e9 !important;
   z-index: 5;
 }
-/* Keep sticky positioning for frozen selected cells */
+
 .cell-frozen.cell-selected {
   position: sticky;
 }
-/* Keep relative positioning for score selected cells */
+
 .cell-score.cell-selected {
   position: relative;
 }
 
-/* ─── Range Selection: Light green area with border ─────────────────── */
+
 .cell-in-range {
   background: #e8f5e9 !important;
   border-top-color: #a5d6a7 !important;
@@ -3947,7 +3701,7 @@ watch([subjectId, termId], () => {
   border-right-color: #a5d6a7 !important;
 }
 
-/* ─── Cell Editing State ────────────────────────────────────────────── */
+
 .cell-editing {
   outline: 2px solid #16a34a !important;
   outline-offset: -1px;
@@ -3955,21 +3709,21 @@ watch([subjectId, termId], () => {
   z-index: 5;
   padding: 0 !important;
 }
-/* For sticky editing cells: keep sticky positioning */
+
 .cell-frozen.cell-editing {
   position: sticky;
 }
-/* For score cell editing: keep relative positioning */
+
 .cell-score.cell-editing {
   position: relative;
 }
 
-/* ─── Cell Colors ──────────────────────────────────────────────────── */
+
 .cell-excellent { background: #dcfce7 !important; color: #16a34a; font-weight: 600; }
 .cell-average { background: #fef9c3 !important; color: #b45309; }
 .cell-low { background: #fee2e2 !important; color: #dc2626; }
 
-/* ─── Cell Editor ──────────────────────────────────────────────────── */
+
 .cell-editor-wrapper {
   width: 100%;
   height: 100%;
@@ -3996,7 +3750,7 @@ watch([subjectId, termId], () => {
   line-height: 1;
 }
 
-/* ─── Name Cell & Editor - Professional Spreadsheet Style ──────────── */
+
 .cell-student-name {
   min-width: 160px;
   max-width: 160px;
@@ -4028,7 +3782,7 @@ watch([subjectId, termId], () => {
   text-overflow: ellipsis;
 }
 
-/* ─── Student ID Cell & Editor - Professional Style ───────────────── */
+
 .student-name-cell-inner {
   position: relative;
   width: 100%;
@@ -4103,7 +3857,7 @@ watch([subjectId, termId], () => {
   box-sizing: border-box;
 }
 
-/* ─── Cell Value Base ───────────────────────────────────────────────── */
+
 .cell-value {
   display: block;
   padding: 3px 6px;
@@ -4113,10 +3867,10 @@ watch([subjectId, termId], () => {
   line-height: 1.4;
 }
 
-/* Keep the span in-flow to maintain cell width, but hide it visually when editing */
+
 .cell-value-hidden { visibility: hidden; }
 
-/* Absolute-positioned editor never affects the td's flow layout */
+
 .cell-editor-overlay {
   position: absolute !important;
   top: 0;
@@ -4134,12 +3888,12 @@ watch([subjectId, termId], () => {
   z-index: 10;
 }
 
-/* ─── Row States ───────────────────────────────────────────────────── */
+
 .row-even .cell { background-color: #fafafa; }
 .row-selected .cell { background-color: #f0fff4; }
 .row-selected .cell.frozen { background-color: #e8f5e9; }
 
-/* ─── Fill Handle ──────────────────────────────────────────────────── */
+
 .fill-handle {
   position: absolute;
   bottom: 0;
@@ -4170,7 +3924,7 @@ watch([subjectId, termId], () => {
   border-bottom: 2px solid #16a34a !important;
 }
 
-/* ─── Grade Colors ─────────────────────────────────────────────────── */
+
 .grade-a { color: #16a34a !important; font-weight: 700 !important; }
 .grade-b-plus { color: #2563eb !important; font-weight: 700 !important; }
 .grade-b { color: #2563eb !important; font-weight: 700 !important; }
@@ -4180,7 +3934,7 @@ watch([subjectId, termId], () => {
 .grade-f { color: #dc2626 !important; font-weight: 700 !important; }
 .grade-none { color: #94a3b8 !important; }
 
-/* ─── Loading ──────────────────────────────────────────────────────── */
+
 .loading-bar {
   position: absolute; top: 0; left: 0; right: 0; height: 3px;
   background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%);
@@ -4214,7 +3968,7 @@ watch([subjectId, termId], () => {
   to { opacity: 1; }
 }
 
-/* ─── Import Progress Bar ─────────────────────────────────────────── */
+
 .import-progress-overlay {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(255,255,255,0.8);
@@ -4259,7 +4013,7 @@ watch([subjectId, termId], () => {
   color: #64748b;
 }
 
-/* ─── Modal panel variants ──────────────────────────────────────────── */
+
 .modal-md-panel {
   width: 520px;
 }
@@ -4268,7 +4022,7 @@ watch([subjectId, termId], () => {
 .modal-content-panel::-webkit-scrollbar-track { background: transparent; }
 .modal-content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 
-/* ─── Weight Modal ───────────────────────────────────────────────── */
+
 .weight-row {
   display: flex;
   align-items: center;
@@ -4390,9 +4144,9 @@ watch([subjectId, termId], () => {
 .import-steps { font-size: 0.78rem; color: #64748b; padding-left: 18px; margin-bottom: 14px; }
 .import-steps li { margin-bottom: 4px; }
 
-/* ─── Import Modal (inner content styles) ──────────────────────────── */
 
-/* Format badges */
+
+
 .import-format-badges {
   display: flex;
   gap: 8px;
@@ -4415,7 +4169,7 @@ watch([subjectId, termId], () => {
   color: #dc2626;
 }
 
-/* Drop zone */
+
 .import-drop-zone {
   border: 2px dashed #cbd5e1;
   border-radius: 12px;
@@ -4464,7 +4218,7 @@ watch([subjectId, termId], () => {
   color: #94a3b8;
 }
 
-/* File card */
+
 .import-file-card {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
@@ -4527,7 +4281,7 @@ watch([subjectId, termId], () => {
   color: #dc2626;
 }
 
-/* Sign-in domain picker */
+
 .import-domain-picker {
   display: flex;
   align-items: center;
@@ -4579,7 +4333,7 @@ watch([subjectId, termId], () => {
   color: #b45309;
 }
 
-/* Preview */
+
 .import-preview {
   padding: 0 16px 14px;
 }
@@ -4635,7 +4389,7 @@ watch([subjectId, termId], () => {
   text-overflow: ellipsis;
 }
 
-/* Import buttons */
+
 .import-btn {
   padding: 8px 18px;
   border: none;
@@ -4727,7 +4481,7 @@ watch([subjectId, termId], () => {
 .inline-btn-cancel { position: absolute; top: 4px; right: 6px; background: none; border: none; font-size: 1.1rem; color: #94a3b8; cursor: pointer; line-height: 1; }
 .inline-btn-cancel:hover { color: #ef4444; }
 
-/* ─── Placeholder Rows (Excel-like) ─────────────────────────────── */
+
 .placeholder-row { cursor: pointer; }
 .placeholder-row:hover { background: #f8faff !important; }
 .placeholder-row:hover .placeholder-cell { border-color: #bfdbfe !important; }
@@ -4742,8 +4496,8 @@ watch([subjectId, termId], () => {
 .placeholder-hint i { margin-right: 6px; color: #3b82f6; }
 .placeholder-row:hover .placeholder-hint { color: #3b82f6; }
 
-/* ─── Add Row Button ───────────────────────────────────────────── */
-/* ─── Export Dropdown ──────────────────────────────────────────── */
+
+
 .export-dropdown { position: relative; display: inline-block; }
 .export-menu {
   position: absolute; top: 100%; right: 0; z-index: 100;
@@ -4767,8 +4521,8 @@ watch([subjectId, termId], () => {
 .add-row-cell { text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.8rem; padding: 10px !important; border: 2px dashed #bfdbfe !important; border-radius: 0 0 8px 0; }
 .add-row-cell i { margin-right: 6px; }
 
-/* ─── Right-Click Context Menu ──────────────────────────────────── */
-/* ─── Keyboard Shortcuts Modal ──────────────────────────────────── */
+
+
 .shortcuts-modal {
   max-width: 560px !important;
   max-height: 80vh;
@@ -4848,7 +4602,7 @@ watch([subjectId, termId], () => {
   flex: 1;
 }
 
-/* Shared overlay/modal-card from other pages - defined here for scoped CSS */
+
 .overlay {
   position: fixed;
   inset: 0;
@@ -4916,7 +4670,7 @@ watch([subjectId, termId], () => {
 .cell-selected { transition: outline 0.1s ease, background 0.1s ease; }
 .row-selected .cell { transition: background 0.1s ease; }
 
-/* ─── Toast Notification ──────────────────────────────────────────── */
+
 .toast-notification {
   position: fixed;
   top: 20px;

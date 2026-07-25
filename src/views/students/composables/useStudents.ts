@@ -20,7 +20,6 @@ const STUDENTS_CACHE_KEY = 'students-data'
 const CLASSES_CACHE_KEY = 'classes-data'
 
 export function useStudents() {
-  // ==================== Data ====================
   const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
   const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
 
@@ -115,24 +114,20 @@ const selectedBulkIds = ref<number[]>([])
         cacheService.set(CLASSES_CACHE_KEY, data, 24 * 60 * 60_000)
       }
     } catch {
-      // Non-critical; silently ignore
     }
   }
 
   async function init() {
-    // 1. Show cached data INSTANTLY
     const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
     const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
     if (cachedStudents) students.value = cachedStudents
     if (cachedClasses) classes.value = cachedClasses
     loading.value = !cachedStudents
 
-    // 2. Refresh from API in background
     await Promise.all([loadStudents(), loadClasses()])
     loading.value = false
   }
 
-  // Invalidate cache on mutations
   function invalidateStudentCache() {
     cacheService.remove(STUDENTS_CACHE_KEY)
     cacheService.remove(CLASSES_CACHE_KEY)
@@ -162,9 +157,7 @@ const selectedBulkIds = ref<number[]>([])
       return
     }
     formError.value = null
-    // Close modal immediately so user feels no delay
     closeCreateModal()
-    // Save in background — show toast on success, or reopen modal on error
     try {
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
@@ -173,7 +166,6 @@ const selectedBulkIds = ref<number[]>([])
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       toast.error(err.response?.data?.message || err.message || 'Failed to create student')
-      // Reopen the form with the error so user can retry
       showCreateModal.value = true
       formError.value = err.response?.data?.message || err.message || 'Failed to create student'
     }
@@ -297,7 +289,6 @@ const selectedBulkIds = ref<number[]>([])
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string }; status?: number }; message?: string }
       const msg = err.response?.data?.message || err.message || ''
-      // If already deleted, still clean up and show success
       if (err.response?.status === 404 || msg.toLowerCase().includes('not found')) {
         students.value = students.value.filter((s) => s.id !== selectedStudent.value?.id)
         invalidateStudentCache()

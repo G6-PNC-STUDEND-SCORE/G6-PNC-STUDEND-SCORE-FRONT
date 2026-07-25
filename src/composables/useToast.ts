@@ -6,8 +6,6 @@ interface ToastState {
   type: 'success' | 'error'
 }
 
-// Module-scoped singleton — one toast instance shared across the whole app,
-// rendered once by <Toast /> in App.vue.
 const state = ref<ToastState>({ show: false, message: '', type: 'success' })
 let hideTimer: ReturnType<typeof setTimeout> | null = null
 

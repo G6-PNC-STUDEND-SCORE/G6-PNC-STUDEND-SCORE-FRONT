@@ -1,7 +1,3 @@
-/**
- * Lightweight localStorage cache with TTL.
- * Data is shown instantly from cache, then refreshed from API in background.
- */
 const CACHE_PREFIX = 'fc_'
 
 interface CacheEntry<T> {
@@ -19,7 +15,6 @@ export const cacheService = {
       const raw = localStorage.getItem(getKey(name))
       if (!raw) return null
       const entry: CacheEntry<T> = JSON.parse(raw)
-      // Return data even if expired — caller can refresh in background
       return entry.data
     } catch {
       return null
@@ -34,7 +29,6 @@ export const cacheService = {
       }
       localStorage.setItem(getKey(name), JSON.stringify(entry))
     } catch {
-      // localStorage full — silently fail
     }
   },
 

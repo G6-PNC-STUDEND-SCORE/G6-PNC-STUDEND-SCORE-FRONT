@@ -17,7 +17,6 @@ defineProps<{
 }>()
 </script>
 
-<!--
   No scoped styles here on purpose — this relies on the .empty-state /
   .empty-state-icon classes already defined globally in App.vue, instead of
   every page redefining its own copy.

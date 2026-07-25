@@ -30,7 +30,6 @@ export async function getSpreadsheetSubjects(): Promise<SubjectsResponse> {
   return res.data.data
 }
 
-// Module-level variable for background refresh tracking
 let spreadsheetRefreshPromise: Promise<SpreadsheetResponse> | null = null
 
 export function getSpreadsheetRefreshPromise(): Promise<SpreadsheetResponse> | null {
@@ -40,10 +39,8 @@ export function getSpreadsheetRefreshPromise(): Promise<SpreadsheetResponse> | n
 export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number, bypassCache = false): Promise<SpreadsheetResponse> {
   const cacheKey = `spreadsheet_${subjectId}_${termId}`
 
-  // Return cached data instantly if available (while fresh data loads in background)
   const cached = bypassCache ? null : sessionStorage.getItem(cacheKey)
   if (cached) {
-    // Fire off a background refresh
     spreadsheetRefreshPromise = http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
       .then(res => {
         sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
@@ -192,7 +189,6 @@ export async function getStudents(): Promise<Array<{ id: number; name: string; s
   return res.data.data
 }
 
-// ─── Google Sheets OAuth & API ──────────────────────────────────────
 
 export async function getGoogleConfig(): Promise<GoogleConfigResponse> {
   const res = await http.get('/google-sheets/config')

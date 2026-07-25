@@ -1,6 +1,5 @@
 <template>
   <div class="users-page">
-    <!-- Loading State (only on initial load) -->
     <div v-if="loading && users.length === 0" class="text-center py-5">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
         <span class="visually-hidden">Loading...</span>
@@ -8,15 +7,12 @@
       <p class="mt-2" style="color: #6b7280;">Loading users...</p>
     </div>
 
-    <!-- Error State -->
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
       <AlertTriangle :size="16" />
       {{ error }}
     </div>
 
-    <!-- User List -->
     <div v-else class="user-card">
-      <!-- Search & Filter Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box">
@@ -67,7 +63,6 @@
         </div>
       </div>
 
-      <!-- Bulk Action Bar -->
       <div v-if="selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="openBulkDeleteModal">
@@ -77,7 +72,6 @@
         <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
       </div>
 
-      <!-- ── Empty State (no data) ── -->
       <div v-if="users.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
@@ -86,7 +80,6 @@
         </div>
       </div>
 
-      <!-- ── Table (with data) ── -->
       <div v-else class="table-wrap">
         <table class="user-table data-table-base">
           <thead>
@@ -191,7 +184,6 @@
         </table>
       </div>
 
-      <!-- Pagination -->
       <div v-if="users.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
@@ -246,12 +238,10 @@
       </div>
     </div>
 
-    <!-- Create/Edit Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showFormModal" class="modal-overlay" @click.self="closeFormModal">
           <div class="modal-content-panel">
-            <!-- Header -->
             <div class="modal-head">
               <div class="modal-icon" :class="isEditing ? 'icon-edit' : 'icon-create'">
                 <SquarePen v-if="isEditing" :size="18" />
@@ -266,13 +256,11 @@
 
             <form @submit.prevent="handleFormSubmit">
               <div class="modal-body-custom">
-                <!-- Error Alert -->
                 <div v-if="formError" class="error-alert">
                   <AlertTriangle :size="16" class="me-2" />
                   {{ formError }}
                 </div>
 
-                <!-- Full Name -->
                 <div class="form-group">
                   <label class="form-label">
                     <UserIcon :size="14" class="me-1" />
@@ -289,7 +277,6 @@
                   </div>
                 </div>
 
-                <!-- Email -->
                 <div class="form-group">
                   <label class="form-label">
                     <Mail :size="14" class="me-1" />
@@ -306,7 +293,6 @@
                   </div>
                 </div>
 
-                <!-- Password -->
                 <div class="form-group">
                   <label class="form-label">
                     <Lock :size="14" class="me-1" />
@@ -325,7 +311,6 @@
                   <p v-if="isEditing" class="field-hint">Leave blank to keep the current password</p>
                 </div>
 
-                <!-- Role -->
                 <div class="form-group">
                   <label class="form-label">
                     <ShieldCheck :size="14" class="me-1" />
@@ -339,7 +324,6 @@
                   </div>
                 </div>
 
-                <!-- Gender -->
                 <div class="form-group">
                   <label class="form-label">
                     <VenusAndMars :size="14" class="me-1" />
@@ -355,7 +339,6 @@
                   </div>
                 </div>
 
-                <!-- Status -->
                 <div class="form-group">
                   <label class="form-label">
                     <ToggleLeft :size="14" class="me-1" />
@@ -371,7 +354,6 @@
                 </div>
               </div>
 
-              <!-- Footer -->
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
@@ -386,7 +368,6 @@
       </Transition>
     </Teleport>
 
-    <!-- Delete Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
@@ -423,7 +404,6 @@
       </Transition>
     </Teleport>
 
-    <!-- Bulk Delete Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
@@ -460,7 +440,6 @@
       </Transition>
     </Teleport>
 
-    <!-- View Details Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDetailsModal && detailUser" class="modal-overlay" @click.self="closeDetailsModal">
@@ -477,7 +456,6 @@
             </div>
 
             <div class="modal-body-custom">
-              <!-- User Avatar & Name -->
               <div class="d-flex align-items-center gap-3 mb-4 pb-3" style="border-bottom: 1px solid #f1f5f9;">
                 <div
                   class="d-flex align-items-center justify-content-center rounded-3 fw-bold text-white flex-shrink-0 shadow-sm"
@@ -493,7 +471,6 @@
                 </div>
               </div>
 
-              <!-- Detail Rows -->
               <div class="detail-row">
                 <span class="detail-label">User ID</span>
                 <span class="detail-value">
@@ -561,16 +538,13 @@ import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
 import type { User } from '@/services/userService'
 
-// ─── Store ────────────────────────────────────────────────────────────
 const store = useUserStore()
 const { users, roles, loading, error, totalUsers, lastPage } = storeToRefs(store)
 const { success: toastSuccess, error: toastError } = useToast()
 
-// ─── Local State ──────────────────────────────────────────────────────
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
 
-// ─── Search & Filters ─────────────────────────────────────────────────
 const searchQuery = ref('')
 const roleFilter = ref<number | ''>('')
 const statusFilter = ref('')
@@ -580,7 +554,6 @@ function applyFilters() {
   loadUsers()
 }
 
-// ─── Pagination ────────────────────────────────────────────────────────
 const currentPage = ref(1)
 const perPage = ref(10)
 const pageSizeOptions = [10, 25, 50]
@@ -628,7 +601,6 @@ function changePerPage(size: number) {
   loadUsers()
 }
 
-// ─── Dropdown ─────────────────────────────────────────────────────────
 const openDropdownId = ref<number | null>(null)
 
 function toggleDropdown(id: number) {
@@ -647,7 +619,6 @@ onUnmounted(() => {
   window.removeEventListener('click', handleClickOutside)
 })
 
-// ─── Modal State ──────────────────────────────────────────────────────
 const showFormModal = ref(false)
 const isEditing = ref(false)
 const showDeleteModal = ref(false)
@@ -656,7 +627,6 @@ const deleteTarget = ref<User | null>(null)
 const detailUser = ref<User | null>(null)
 const editingUser = ref<User | null>(null)
 
-// ─── Form State ───────────────────────────────────────────────────────
 const initialForm = () => ({
   name: '',
   email: '',
@@ -668,7 +638,6 @@ const initialForm = () => ({
 
 const form = ref(initialForm())
 
-// ─── API Calls ────────────────────────────────────────────────────────
 async function loadUsers() {
   const params: Record<string, string | number> = {
     page: currentPage.value,
@@ -685,7 +654,6 @@ async function init() {
   await store.init()
 }
 
-// ─── Create / Edit ────────────────────────────────────────────────────
 function openCreateModal() {
   isEditing.value = false
   editingUser.value = null
@@ -776,7 +744,6 @@ async function handleFormSubmit() {
   }
 }
 
-// ─── Delete ─────────────────────────────────────────────────────────────
 function openDeleteModal(user: User) {
   deleteTarget.value = user
   showDeleteModal.value = true
@@ -812,7 +779,6 @@ async function handleDelete() {
   }
 }
 
-// ─── View Details ──────────────────────────────────────────────────────
 function viewUser(user: User) {
   detailUser.value = user
   showDetailsModal.value = true
@@ -823,7 +789,6 @@ function closeDetailsModal() {
   detailUser.value = null
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────
 function getInitials(name: string): string {
   const safeName = name || ''
   const parts = safeName.split(' ').filter(Boolean)
@@ -906,7 +871,6 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   if (type === 'error') { toastError(message) } else { toastSuccess(message) }
 }
 
-// ─── Multi-Select & Bulk Delete ───────────────────────────────────────
 const selectedIds = ref<number[]>([])
 
 const isAllPageSelected = computed(() => {
@@ -941,7 +905,6 @@ function clearSelection() {
   selectedIds.value = []
 }
 
-// ─── Bulk Delete Modal ────────────────────────────────────────────────
 const showBulkDeleteModal = ref(false)
 
 function openBulkDeleteModal() {
@@ -978,23 +941,15 @@ async function handleBulkDelete() {
   }
 }
 
-// ─── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(() => {
   init()
 })
 </script>
 
 <style scoped>
-/* ==================== Page Layout ==================== */
+
 .users-page {
-  /* Same treatment as Roles & Permissions: header is a fixed 72px,
-     .main-content has 20px padding on all sides; trim that down to a
-     14px gap on top/left/right and a 10px gap on the bottom. Height is
-     computed from the viewport (not a percentage of the parent, which
-     doesn't reliably resolve through the flex chain) so the bottom
-     edge always lands exactly 10px from the screen regardless of how
-     tall the table's content is. .main-content gets a route-based
-     `no-scroll` class for this page, so this is the only scrollbar. */
+  
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
   margin-top: -6px;
@@ -1005,7 +960,7 @@ onMounted(() => {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-/* ==================== Card ==================== */
+
 .user-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -1025,7 +980,7 @@ onMounted(() => {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* ==================== Table ==================== */
+
 
 .col-check {
   width: 48px;
@@ -1215,9 +1170,7 @@ onMounted(() => {
 .detail-label { font-size: 0.8125rem; color: #64748b; font-weight: 500; }
 .detail-value { font-size: 0.8125rem; color: #0f172a; font-weight: 600; }
 
-/* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════════════════════════ */  @media (max-width: 768px) {
+  @media (max-width: 768px) {
   .toolbar { flex-direction: column; align-items: stretch; }
   .search-box { max-width: 100%; }
   .filter-group { flex-wrap: wrap; }

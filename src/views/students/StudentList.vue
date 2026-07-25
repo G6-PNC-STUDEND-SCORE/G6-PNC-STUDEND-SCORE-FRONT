@@ -1,6 +1,5 @@
 <template>
   <div class="student-card">
-    <!-- Search & Filter Bar -->
     <div class="toolbar">
       <div class="toolbar-left">
         <div class="search-box">
@@ -47,7 +46,6 @@
       </div>
     </div>
 
-    <!-- Bulk Action Bar -->
     <div v-if="someSelected" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <div class="bulk-actions">
@@ -59,7 +57,6 @@
         </div>
       </div>
 
-    <!-- ── Empty State (no data) ── -->
     <div v-if="students.length === 0" class="empty-container">
       <div class="empty-box">
         <Inbox :size="40" />
@@ -68,7 +65,6 @@
       </div>
     </div>
 
-    <!-- ── Table (with data) ── -->
     <div v-else class="table-wrap">
       <table class="student-table data-table-base">
         <thead>
@@ -178,7 +174,6 @@
       </table>
     </div>
 
-    <!-- Pagination -->
     <div v-if="students.length > 0" class="pagination-bar">
       <div class="pagination-info">
         <span class="rows-label">Rows per page:</span>
@@ -280,7 +275,6 @@ const allSelected = computed(() =>
 
 const someSelected = computed(() => selectedIds.value.length > 0)
 
-// Expose selectedIds for parent to read after bulk delete
 defineExpose({ selectedIds })
 
 function toggleRow(id: number) {
@@ -338,7 +332,7 @@ defineEmits<{
 </script>
 
 <style scoped>
-/* ==================== Card ==================== */
+
 .student-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -358,7 +352,7 @@ defineEmits<{
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* ==================== Toolbar ==================== */
+
 .toolbar {
   display: flex;
   align-items: center;
@@ -464,7 +458,7 @@ defineEmits<{
   white-space: nowrap;
 }
 
-/* ==================== Table ==================== */
+
 .table-wrap {
   width: 100%;
   overflow: auto;
@@ -639,10 +633,10 @@ defineEmits<{
 
 
 
-/* ==================== td-actions (icon buttons) ==================== */
 
 
-/* ==================== Bulk Action Bar ==================== */
+
+
 .bulk-bar {
   display: flex;
   align-items: center;
@@ -706,7 +700,7 @@ defineEmits<{
 
 .bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
 
-/* ==================== Pagination ==================== */
+
 .pagination-bar {
   display: flex;
   align-items: center;

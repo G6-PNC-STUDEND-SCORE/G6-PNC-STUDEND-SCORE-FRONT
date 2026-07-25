@@ -10,7 +10,6 @@
       </div>
 
       <div class="modal-body">
-        <!-- Step 1: Google Account Connection -->
         <div class="gs-section">
           <div class="gs-section-title">
             <span class="gs-step-badge" :class="{ 'gs-step-done': connected }">1</span>
@@ -45,7 +44,6 @@
           </div>
         </div>
 
-        <!-- Step 2: Spreadsheet Actions -->
         <div class="gs-section" :class="{ 'gs-section-disabled': !connected }">
           <div class="gs-section-title">
             <span class="gs-step-badge" :class="{ 'gs-step-done': connected }">2</span>
@@ -56,7 +54,6 @@
           </p>
           
           <div class="gs-action-cards">
-            <!-- Create / Open Spreadsheet -->
             <div class="gs-action-card">
               <div class="gs-card-icon text-primary">
                 <i class="bi bi-file-earmark-spreadsheet"></i>
@@ -75,7 +72,6 @@
               </button>
             </div>
 
-            <!-- Sync from Sheets -->
             <div class="gs-action-card">
               <div class="gs-card-icon text-success">
                 <i class="bi bi-cloud-download"></i>
@@ -115,7 +111,6 @@
             </div>
           </div>
 
-          <!-- Last created spreadsheet info -->
           <div v-if="lastSpreadsheetUrl" class="gs-last-sheet">
             <i class="bi bi-link-45deg"></i>
             Last created: 
@@ -126,7 +121,6 @@
           </div>
         </div>
 
-        <!-- Step 3: Auto-Sync Schedule (Optional) -->
         <div class="gs-section" :class="{ 'gs-section-disabled': !connected }">
           <div class="gs-section-title">
             <span class="gs-step-badge">3</span>
@@ -188,7 +182,6 @@ const emit = defineEmits<{
   synced: []
 }>()
 
-// ─── State ──────────────────────────────────────────────────────────
 const connected = ref(false)
 const connecting = ref(false)
 const syncing = ref(false)
@@ -218,19 +211,15 @@ const statusIcon = computed(() => ({
   info: 'bi bi-info-circle-fill',
 }[statusType.value] || 'bi bi-info-circle-fill'))
 
-// True only when the admin still needs to pick a domain before importing can proceed.
 const emailDomainSelectionRequired = computed(() =>
   studentEmailDomains.value.length > 1 && !selectedEmailDomain.value
 )
 
-// ─── Lifecycle ──────────────────────────────────────────────────────
 onMounted(async () => {
   await checkConnectionStatus()
   loadSavedState()
   try {
     studentEmailDomains.value = await getStudentEmailDomains()
-    // Only auto-pick when there's no real choice — with 2+ domains, force an explicit
-    // selection rather than silently defaulting to "the first one".
     if (studentEmailDomains.value.length === 1) {
       selectedEmailDomain.value = studentEmailDomains.value[0].domain
     }
@@ -244,7 +233,6 @@ function setStatus(msg: string, type: 'success' | 'error' | 'info' = 'info') {
   statusType.value = type
 }
 
-// ─── Load saved state from localStorage ─────────────────────────────
 function loadSavedState() {
   const savedUrl = localStorage.getItem('gs_last_spreadsheet_url')
   const savedName = localStorage.getItem('gs_last_spreadsheet_name')
@@ -261,9 +249,7 @@ function saveSpreadsheetState(url: string, name: string) {
   localStorage.setItem('gs_last_spreadsheet_name', name)
 }
 
-// ─── Check connection status ────────────────────────────────────────
 async function checkConnectionStatus() {
-  // First check if we have a token in localStorage (from current session)
   const storedToken = localStorage.getItem('google_access_token')
   const storedEmail = localStorage.getItem('google_email')
   
@@ -274,30 +260,25 @@ async function checkConnectionStatus() {
     return
   }
 
-  // Check with backend for stored refresh tokens
   try {
     const status = await getGoogleStatus()
     if (status.connected) {
       connected.value = true
       if (status.has_valid_token) {
-        // Try to refresh to get a working token
         const refreshed = await refreshGoogleToken()
         accessToken.value = refreshed.access_token
         localStorage.setItem('google_access_token', refreshed.access_token)
       }
     }
   } catch {
-    // Not connected via backend either
   }
 }
 
-// ─── Google OAuth Connection ────────────────────────────────────────
 async function connectGoogle() {
   connecting.value = true
   setStatus('Opening Google authentication...', 'info')
 
   try {
-    // Get the Google Client ID from backend
     const config = await getGoogleConfig()
     const clientId = config.client_id
 
@@ -307,13 +288,10 @@ async function connectGoogle() {
       return
     }
 
-    // Use Google Identity Services for OAuth
     await loadGoogleScript()
     
     const scope = config.scopes.join(' ')
 
-    // Create the token client
-    // GSI handles the redirect internally via popup - no explicit redirect_uri needed
     tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: scope,
@@ -327,12 +305,9 @@ async function connectGoogle() {
           return
         }
 
-        // Got the access token
         accessToken.value = response.access_token
         localStorage.setItem('google_access_token', response.access_token)
 
-        // Try to exchange the auth code for a refresh token on the backend
-        // This enables auto-sync via cron job
         if (response.code) {
           try {
             const result = await exchangeGoogleToken(response.code)
@@ -345,7 +320,6 @@ async function connectGoogle() {
               console.warn('Google OAuth refresh token not configured on server')
               setStatus('Connected! Note: Auto-sync requires server-side OAuth config.', 'info')
             } else {
-              // Access token works without refresh token
               console.warn('Could not store refresh token:', msg)
             }
           }
@@ -353,7 +327,6 @@ async function connectGoogle() {
           setStatus('Connected! (without auto-sync)', 'info')
         }
 
-        // Get user email from token
         try {
           const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: { Authorization: `Bearer ${response.access_token}` }
@@ -375,7 +348,6 @@ async function connectGoogle() {
       },
     })
 
-    // Request access token with consent prompt to potentially get a refresh token code
     tokenClient.requestAccessToken({ prompt: 'consent', include_granted_scopes: true })
 
   } catch (err: any) {
@@ -384,7 +356,6 @@ async function connectGoogle() {
   }
 }
 
-// ─── Load Google Identity Services Script ───────────────────────────
 function loadGoogleScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (window.google?.accounts?.oauth2) {
@@ -397,7 +368,6 @@ function loadGoogleScript(): Promise<void> {
     script.async = true
     script.defer = true
     script.onload = () => {
-      // Wait a tiny bit for the library to initialize
       setTimeout(() => {
         if (window.google?.accounts?.oauth2) {
           resolve()
@@ -411,19 +381,15 @@ function loadGoogleScript(): Promise<void> {
   })
 }
 
-// ─── Disconnect ─────────────────────────────────────────────────────
 async function disconnectGoogle() {
   connecting.value = true
   try {
-    // Remove stored tokens
     localStorage.removeItem('google_access_token')
     localStorage.removeItem('google_email')
     
-    // Also disconnect from backend
     try {
       await disconnectGoogleAccount()
     } catch {
-      // Backend disconnect is optional
     }
 
     connected.value = false
@@ -437,7 +403,6 @@ async function disconnectGoogle() {
   }
 }
 
-// ─── Create Spreadsheet ─────────────────────────────────────────────
 async function createSpreadsheet() {
   if (!accessToken.value) {
     setStatus('Please connect your Google account first.', 'error')
@@ -452,7 +417,6 @@ async function createSpreadsheet() {
     saveSpreadsheetState(result.url, result.name)
     setStatus('Spreadsheet created successfully! Opening in new tab...', 'success')
     
-    // Open the spreadsheet in a new tab
     window.open(result.url, '_blank')
     
     emit('synced')
@@ -464,7 +428,6 @@ async function createSpreadsheet() {
   }
 }
 
-// ─── Import from Sheet ──────────────────────────────────────────────
 async function importFromSheet() {
   if (!accessToken.value) {
     setStatus('Please connect your Google account first.', 'error')
@@ -497,14 +460,12 @@ async function importFromSheet() {
   }
 }
 
-// ─── Close ──────────────────────────────────────────────────────────
 function closeModal() {
   emit('close')
 }
 </script>
 
 <script lang="ts">
-// Type declaration for Google Identity Services
 declare global {
   interface Window {
     google?: {
@@ -643,7 +604,7 @@ declare global {
   margin-top: 2px;
 }
 
-/* Action Cards */
+
 .gs-action-cards {
   margin-left: 32px;
   display: flex;
@@ -753,7 +714,7 @@ declare global {
   gap: 5px;
 }
 
-/* Last sheet link */
+
 .gs-last-sheet {
   margin-top: 12px;
   margin-left: 32px;
@@ -771,7 +732,7 @@ declare global {
   text-decoration: underline;
 }
 
-/* Auto Sync Toggle */
+
 .gs-auto-sync {
   margin-left: 32px;
 }
@@ -841,7 +802,7 @@ declare global {
   flex-shrink: 0;
 }
 
-/* Footer */
+
 .gs-status-msg {
   flex: 1;
   font-size: 0.82rem;

@@ -1,36 +1,5 @@
 <template>
   <div class="page-container">
-    <!-- ── Header ── -->
-    <div class="page-head">
-      <div class="page-head-left">
-        <div class="page-head-icon">
-          <BookOpen :size="22" />
-        </div>
-        <div>
-          <h1 class="page-title">{{ selectedTermName }}</h1>
-          <p class="page-desc">
-            <template v-if="className">
-              Subjects for <strong>{{ className }}</strong>
-            </template>
-            <template v-else>
-              Select a subject to view scores
-            </template>
-          </p>
-        </div>
-      </div>
-      <div class="page-head-right">
-        <span v-if="className" class="head-badge">
-          <School :size="14" />
-          {{ className }}
-        </span>
-        <button class="btn-back" @click="goBack">
-          <ArrowLeft :size="16" />
-          <span>Back</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Loading --->
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
       <span>Loading subjects…</span>
@@ -38,9 +7,26 @@
 
     <template v-else>
       <div class="scores-card">
-        <!-- ── Toolbar ── -->
-        <div class="term-toolbar" v-if="filteredSubjects.length > 0 || showAllClasses">
-          <div class="tb-left">
+        <div class="breadcrumb">
+          <button class="breadcrumb-back" @click="goBack">
+            <ArrowLeft :size="15" />
+            <span>All Classes</span>
+          </button>
+          <template v-if="className">
+            <ChevronRight :size="12" class="breadcrumb-sep" />
+            <span class="breadcrumb-current">
+              <School :size="13" />
+              {{ className }}
+            </span>
+          </template>
+          <ChevronRight :size="12" class="breadcrumb-sep" />
+          <span class="breadcrumb-current breadcrumb-term">
+            {{ selectedTermName }}
+          </span>
+        </div>
+
+        <div class="toolbar" v-if="filteredSubjects.length > 0 || showAllClasses">
+          <div class="toolbar-left">
             <button
               class="class-filter-btn"
               :class="{ active: showAllClasses }"
@@ -75,14 +61,12 @@
           </div>
         </div>
 
-        <!-- ── Empty State ── -->
         <div v-if="filteredSubjects.length === 0" class="empty-state">
           <div class="empty-state-icon"><Inbox :size="24" /></div>
           <h5>No Subjects Found</h5>
           <p class="text-secondary">No subjects with active offerings for this term.</p>
         </div>
 
-        <!-- ── Subjects Grid ── -->
         <div v-else class="subjects-grid">
           <div
             v-for="subject in sortedSubjects"
@@ -140,7 +124,6 @@ const termId = computed(() => Number(route.params.termId))
 const classId = computed(() => route.query.class_id ? Number(route.query.class_id) : null)
 const className = computed(() => (route.query.class_name as string) || '')
 
-// ── Sort State ─────────────────────────────────────────────────────
 type SortMode = 'enrollment' | 'alphabetical'
 const subjectSortMode = ref<SortMode>('enrollment')
 
@@ -152,12 +135,10 @@ const selectedTermName = computed(() => {
 const filteredSubjects = computed(() => {
   let result = subjects.value
 
-  // Filter by term
   if (termId.value) {
     result = result.filter((s) => s.terms.some((t) => t.term_id === termId.value))
   }
 
-  // Filter by class
   if (!showAllClasses.value && classId.value && className.value) {
     result = result.filter((s) => {
       const term = s.terms.find((t) => t.term_id === termId.value)
@@ -254,116 +235,28 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ══════════════════════════════════════════════════════════════
-   GLOBAL
-   ══════════════════════════════════════════════════════════════ */
+
 .page-container {
-  padding: 1rem 0 2rem;
+  height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
+  max-width: 1440px;
+  padding: 0;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   HEADER
-   ══════════════════════════════════════════════════════════════ */
-.page-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-  gap: 16px;
-  flex-wrap: wrap;
-}
 
-.page-head-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.page-head-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
-}
-
-.page-title {
-  font-size: 1.4rem;
-  font-weight: 800;
-  margin: 0 0 2px;
-  letter-spacing: -0.025em;
-  color: #0f172a;
-}
-
-.page-desc {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin: 0;
-}
-
-.page-desc strong {
-  color: #1e293b;
-}
-
-.page-head-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.head-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  background: #eff6ff;
-  color: #2563eb;
-  font-size: 0.78rem;
-  font-weight: 600;
-  border-radius: 8px;
-  white-space: nowrap;
-  border: 1px solid #dbeafe;
-}
-
-.btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  background: #fff;
-  color: #475569;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  font-family: inherit;
-}
-
-.btn-back:hover {
-  background: #f8fafc;
-  border-color: #93c5fd;
-  color: #2563eb;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   LOADING
-   ══════════════════════════════════════════════════════════════ */
 .load-state {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   padding: 4rem;
   color: #64748b;
+  flex: 1;
 }
 
 .spinner {
@@ -377,9 +270,7 @@ onMounted(async () => {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ══════════════════════════════════════════════════════════════
-   SCORES CARD — matches UsersPage .user-card style
-   ══════════════════════════════════════════════════════════════ */
+
 .scores-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -387,31 +278,66 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.25s ease;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .scores-card:hover {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   TOOLBAR + SORT TOGGLE
-   ══════════════════════════════════════════════════════════════ */
-.term-toolbar {
+
+.breadcrumb {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 12px 16px;
-  background: #fff;
-  border-bottom: 1px solid #e9ecef;
+  gap: 6px;
+  padding: 12px 16px 6px;
+  font-size: 0.8125rem;
 }
 
-.tb-left {
+.breadcrumb-back {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
 }
+
+.breadcrumb-back:hover {
+  background: #f1f5f9;
+  color: #2563eb;
+}
+
+.breadcrumb-sep {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.breadcrumb-current {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.breadcrumb-term {
+  color: #0f172a;
+  font-weight: 600;
+}
+
 
 .tb-result-count {
   font-size: 0.75rem;
@@ -492,14 +418,16 @@ onMounted(async () => {
 
 .sort-btn-active:hover { color: #1d4ed8; }
 
-/* ══════════════════════════════════════════════════════════════
-   SUBJECTS GRID
-   ══════════════════════════════════════════════════════════════ */
+
 .subjects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 8px;
   padding: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
 }
 
 .subject-card {
@@ -599,13 +527,16 @@ onMounted(async () => {
   transform: translateX(2px);
 }
 
-/* ══════════════════════════════════════════════════════════════
-   EMPTY STATE — simple, like UsersPage
-   ══════════════════════════════════════════════════════════════ */
+
 .empty-state {
   text-align: center;
   padding: 48px 16px;
   color: #9ca3af;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state-icon {
@@ -632,11 +563,9 @@ onMounted(async () => {
   margin: 0;
 }
 
-/* ── Responsive ───────────────────────────────────────────────────── */
+
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
-  .page-head { flex-direction: column; align-items: flex-start; }
-  .page-head-right { width: 100%; }
   .subjects-grid { grid-template-columns: 1fr; }
 }
 </style>

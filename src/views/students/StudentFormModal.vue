@@ -3,7 +3,6 @@
     <Transition name="modal">
       <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
         <div class="modal-content-panel">
-          <!-- Header -->
           <div class="modal-header-custom">
             <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
               <i class="bi bi-x-lg"></i>
@@ -19,13 +18,11 @@
 
           <form @submit.prevent="$emit('submit')">
             <div class="modal-body-custom">
-              <!-- Error Alert -->
               <div v-if="error" class="error-alert">
                 <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ error }}
               </div>
 
-              <!-- Profile Photo (Edit mode only) -->
               <div v-if="isEdit" class="form-group">
                 <label class="form-label">
                   <i class="bi bi-camera me-1"></i>
@@ -72,7 +69,6 @@
                 </div>
               </div>
 
-              <!-- Full Name -->
               <div class="form-group">
                 <label class="form-label">
                   <i class="bi bi-person me-1"></i>
@@ -90,7 +86,6 @@
                 </div>
               </div>
 
-              <!-- Email (Create mode only) -->
               <div v-if="!isEdit" class="form-group">
                 <label class="form-label">
                   <i class="bi bi-envelope me-1"></i>
@@ -108,7 +103,6 @@
                 </div>
               </div>
 
-              <!-- Password (Create mode only) -->
               <div v-if="!isEdit" class="form-group">
                 <label class="form-label">
                   <i class="bi bi-lock me-1"></i>
@@ -127,7 +121,6 @@
                 </div>
               </div>
 
-              <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
                   <i class="bi bi-gender-ambiguous me-1"></i>
@@ -146,7 +139,6 @@
                 </div>
               </div>
 
-              <!-- Class -->
               <div class="form-group">
                 <label class="form-label">
                   <i class="bi bi-building me-1"></i>
@@ -164,7 +156,6 @@
                 </div>
               </div>
 
-              <!-- Status -->
               <div class="form-group">
                 <label class="form-label">
                   <i class="bi bi-toggle-on me-1"></i>
@@ -184,7 +175,6 @@
               </div>
             </div>
 
-            <!-- Footer -->
             <div class="modal-footer-custom">
               <button type="button" class="btn-outline" @click="$emit('close')">
                 Cancel

@@ -1,18 +1,15 @@
 <template>
   <div class="page-container">
-    <!-- ── Loading ── -->
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
       <span>Loading students…</span>
     </div>
 
-    <!-- ── Error ── -->
     <div v-else-if="error" class="msg msg-error">
       <AlertTriangle :size="16" />
       {{ error }}
     </div>
 
-    <!-- ── Student List ── -->
     <StudentList
       ref="studentListRef"
       :students="filteredStudents"
@@ -29,7 +26,6 @@
       @add="openCreateModal"
     />
 
-    <!-- ── Create & Edit Modals (StudentFormModal handles its own overlay) ── -->
     <StudentFormModal
       :show="showCreateModal"
       :is-edit="false"
@@ -73,7 +69,6 @@
       @remove-photo="onEditRemovePhoto"
     />
 
-    <!-- ── Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
@@ -104,7 +99,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── Bulk Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showBulkDeleteModal" class="overlay" @click.self="closeBulkDeleteModal">
@@ -136,7 +130,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── Assign Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showAssignModal" class="overlay" @click.self="closeAssignModal">
@@ -179,7 +172,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── Details Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDetailsModal && selectedStudent" class="overlay" @click.self="closeDetailsModal">
@@ -195,7 +187,6 @@
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
             <div class="modal-body">
-              <!-- Avatar & Name -->
               <div class="detail-user-row">
                 <div v-if="selectedStudent.profile_photo_url" class="detail-avatar">
                   <img :src="selectedStudent.profile_photo_url" :alt="selectedStudent.user?.name || 'Student'" class="detail-avatar-img" />
@@ -211,7 +202,6 @@
                 </div>
               </div>
 
-              <!-- Details Grid -->
               <div class="detail-grid">
                 <div class="detail-item">
                   <span class="detail-label">Student ID</span>
@@ -276,9 +266,7 @@ onMounted(() => init())
 </script>
 
 <style scoped>
-/* ══════════════════════════════════════════════════════════════
-   GLOBAL
-   ══════════════════════════════════════════════════════════════ */
+
 .page-container {
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
@@ -290,9 +278,7 @@ onMounted(() => init())
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   MESSAGES
-   ══════════════════════════════════════════════════════════════ */
+
 .msg {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-radius: 10px;
@@ -300,9 +286,7 @@ onMounted(() => init())
 }
 .msg-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
 
-/* ══════════════════════════════════════════════════════════════
-   LOADING
-   ══════════════════════════════════════════════════════════════ */
+
 .load-state {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
   padding: 4rem; color: #64748b;
@@ -315,9 +299,7 @@ onMounted(() => init())
 .spinner-sm { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ══════════════════════════════════════════════════════════════
-   MODAL
-   ══════════════════════════════════════════════════════════════ */
+
 .overlay {
   position: fixed; inset: 0;
   background: rgba(15,23,42,0.45); backdrop-filter: blur(4px);
@@ -366,7 +348,7 @@ onMounted(() => init())
   padding: 12px 24px 20px;
 }
 
-/* ── Form Fields ── */
+
 .field { margin-bottom: 14px; }
 .field label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
 .field select, .field input {
@@ -379,7 +361,7 @@ onMounted(() => init())
 
 .del-text { font-size: 0.9rem; color: #475569; margin: 0; }
 
-/* ── Pill Badges ── */
+
 .pill {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 10px; border-radius: 20px;
@@ -390,9 +372,7 @@ onMounted(() => init())
 .pill-male { background: #dbeafe; color: #2563eb; }
 .pill-female { background: #f1f5f9; color: #64748b; }
 
-/* ══════════════════════════════════════════════════════════════
-   DETAILS MODAL
-   ══════════════════════════════════════════════════════════════ */
+
 .detail-user-row {
   display: flex; align-items: center; gap: 14px;
   padding-bottom: 16px; margin-bottom: 16px;
@@ -425,17 +405,13 @@ onMounted(() => init())
 .detail-label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
 .detail-value { font-size: 0.88rem; color: #0f172a; font-weight: 600; }
 
-/* ══════════════════════════════════════════════════════════════
-   TRANSITIONS
-   ══════════════════════════════════════════════════════════════ */
+
 .modal-enter-active { transition: all 0.2s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-card, .modal-leave-to .modal-card { transform: scale(0.92) translateY(10px); }
 
-/* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════════════════════════ */
+
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
   .page-head { flex-direction: column; align-items: flex-start; }

@@ -18,7 +18,6 @@
     </div>
 
     <div class="header-right">
-      <!-- Search Trigger -->
       <div class="search-wrapper" ref="searchWrapperRef">
         <button class="icon-btn" @click="openSearch" title="Search">
           <Search :size="18" />
@@ -43,10 +42,8 @@
         </Transition>
       </div>
 
-      <!-- Language Switcher -->
       <LanguageSwitcher class="header-language-btn" />
 
-      <!-- Theme Toggle -->
       <button
         class="icon-btn"
         @click="theme.toggle()"
@@ -60,7 +57,6 @@
 
 
 
-      <!-- User Profile Dropdown -->
       <div class="user-dropdown-container" ref="dropdownRef">
         <button
           class="user-profile-btn"
@@ -175,12 +171,10 @@ function closeSearch() {
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as Node
 
-  // Dropdown
   if (dropdownRef.value && !dropdownRef.value.contains(target)) {
     closeDropdown()
   }
 
-  // Search overlay - close if clicking outside search bar
   if (showSearch.value && searchWrapperRef.value && !searchWrapperRef.value.contains(target)) {
     closeSearch()
   }
@@ -203,7 +197,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ── Header Base ── */
+
 .app-header {
   height: 72px;
   flex-shrink: 0;
@@ -233,7 +227,7 @@ onUnmounted(() => {
   border-bottom-color: rgba(51, 65, 85, 0.6);
 }
 
-/* ── Left Section ── */
+
 .header-left {
   display: flex;
   align-items: center;
@@ -241,7 +235,7 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-/* ── Header Title ── */
+
 .header-title {
   display: flex;
   align-items: center;
@@ -270,7 +264,7 @@ onUnmounted(() => {
   color: #f1f5f9;
 }
 
-/* ── Right Section ── */
+
 .header-right {
   display: flex;
   align-items: center;
@@ -280,7 +274,7 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-/* ── Icon Button ── */
+
 .icon-btn {
   width: 38px;
   height: 38px;
@@ -314,7 +308,7 @@ onUnmounted(() => {
   color: #60a5fa;
 }
 
-/* ── Language Switcher ── */
+
 .header-language-btn :deep(.dropdown-toggle) {
   background: transparent;
   border: 1px solid transparent;
@@ -348,7 +342,7 @@ onUnmounted(() => {
   color: #60a5fa;
 }
 
-/* ── Theme Toggle Animation ── */
+
 .theme-icon-wrapper {
   display: flex;
   align-items: center;
@@ -360,7 +354,7 @@ onUnmounted(() => {
   transform: rotate(360deg);
 }
 
-/* ── Search ── */
+
 .search-wrapper {
   position: relative;
 }
@@ -457,7 +451,7 @@ onUnmounted(() => {
   color: #cbd5e1;
 }
 
-/* ── User Profile Button ── */
+
 .user-dropdown-container {
   position: relative;
 }
@@ -572,7 +566,7 @@ onUnmounted(() => {
   background: rgba(96, 165, 250, 0.06);
 }
 
-/* ── Dropdown Menu ── */
+
 .dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
@@ -721,7 +715,7 @@ onUnmounted(() => {
   background: #334155;
 }
 
-/* ── Transitions ── */
+
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -743,7 +737,7 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-/* ── Mobile ── */
+
 .mobile-menu-btn {
   display: none;
 }

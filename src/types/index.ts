@@ -11,6 +11,8 @@ export type {
   EmailDomainRule,
   UserProfile,
   ProfileUpdatePayload,
+  ProfileTeacherInfo,
+  ProfileStudentInfo,
   AvatarResponse,
   UserRole,
   UserListItem,

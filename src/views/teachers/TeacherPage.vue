@@ -1,6 +1,5 @@
 <template>
   <div class="teachers-page">
-    <!-- Loading State -->
     <div v-if="loading && teachers.length === 0" class="text-center py-5">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
         <span class="visually-hidden">Loading...</span>
@@ -8,15 +7,12 @@
       <p class="mt-2" style="color: #6b7280;">Loading teachers...</p>
     </div>
 
-    <!-- Error State -->
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
       <AlertTriangle :size="16" />
       {{ error }}
     </div>
 
-    <!-- Teacher List Card -->
     <div v-else class="teacher-card">
-      <!-- Search & Filter Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box">
@@ -71,7 +67,6 @@
         </div>
       </div>
 
-      <!-- Bulk Action Bar -->
       <div v-if="selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="openBulkDeleteModal">
@@ -81,7 +76,6 @@
         <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
       </div>
 
-      <!-- ── Empty State (no data) ── -->
       <div v-if="teachers.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
@@ -90,7 +84,6 @@
         </div>
       </div>
 
-      <!-- ── Table (with data) ── -->
       <div v-else class="table-wrap">
         <table class="teacher-table data-table-base">
           <thead>
@@ -168,7 +161,6 @@
         </table>
       </div>
 
-      <!-- Pagination -->
       <div v-if="teachers.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
@@ -223,12 +215,10 @@
       </div>
     </div>
 
-    <!-- Create/Edit Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showFormModal" class="modal-overlay" @click.self="closeFormModal">
           <div class="modal-content-panel">
-            <!-- Header -->
             <div class="modal-head">
               <div class="modal-icon" :class="isEditing ? 'icon-edit' : 'icon-create'">
                 <SquarePen v-if="isEditing" :size="18" />
@@ -243,13 +233,11 @@
 
             <form @submit.prevent="handleFormSubmit">
               <div class="modal-body-custom">
-                <!-- Error Alert -->
                 <div v-if="formError" class="error-alert">
                   <AlertTriangle :size="16" class="me-2" />
                   {{ formError }}
                 </div>
 
-                <!-- Full Name -->
                 <div class="form-group">
                   <label class="form-label">
                     <UserIcon :size="14" class="me-1" />
@@ -266,7 +254,6 @@
                   </div>
                 </div>
 
-                <!-- Email -->
                 <div class="form-group">
                   <label class="form-label">
                     <Mail :size="14" class="me-1" />
@@ -283,7 +270,6 @@
                   </div>
                 </div>
 
-                <!-- Password -->
                 <div class="form-group">
                   <label class="form-label">
                     <Lock :size="14" class="me-1" />
@@ -302,7 +288,6 @@
                   <p v-if="isEditing" class="field-hint">Leave blank to keep the current password</p>
                 </div>
 
-                <!-- Gender -->
                 <div class="form-group">
                   <label class="form-label">
                     <VenusAndMars :size="14" class="me-1" />
@@ -318,7 +303,6 @@
                   </div>
                 </div>
 
-                <!-- Status -->
                 <div class="form-group">
                   <label class="form-label">
                     <ToggleLeft :size="14" class="me-1" />
@@ -334,7 +318,6 @@
                 </div>
               </div>
 
-              <!-- Footer -->
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
@@ -349,7 +332,6 @@
       </Transition>
     </Teleport>
 
-    <!-- Delete Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
@@ -386,7 +368,6 @@
       </Transition>
     </Teleport>
 
-    <!-- Bulk Delete Confirmation Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
@@ -423,121 +404,76 @@
       </Transition>
     </Teleport>
 
-    <!-- View Details Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDetailsModal && detailTeacher" class="modal-overlay" @click.self="closeDetailsModal">
-          <div class="details-card">
-            <!-- Profile Header -->
-            <div class="details-header">
-              <div class="details-avatar">
-                {{ getInitials(detailTeacher.name) }}
+          <div class="modal-content-panel">
+            <div class="modal-head">
+              <div class="modal-icon icon-view">
+                <UserCheck :size="18" />
               </div>
-              <div class="details-header-info">
-                <h3 class="details-name">{{ detailTeacher.name }}</h3>
-                <div class="details-header-meta">
-                  <span class="details-role-tag">
-                    <UserCheck :size="12" />
-                    {{ detailTeacher.role?.name || 'Teacher' }}
-                  </span>
-                  <span class="status-badge" :class="getStatusClass(detailTeacher.status)">
-                    {{ detailTeacher.status }}
-                  </span>
-                </div>
+              <div>
+                <h3>{{ detailTeacher.name }}</h3>
+                <p>{{ detailTeacher.role?.name || 'Teacher' }} &middot; <span class="status-badge" :class="getStatusClass(detailTeacher.status)">{{ detailTeacher.status }}</span></p>
               </div>
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
 
-            <!-- Detail Sections -->
-            <div class="details-body">
-              <div class="detail-section">
-                <div class="detail-section-title">
-                  <span>Account Information</span>
-                </div>
-                <div class="detail-grid">
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <UserCheck :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Teacher ID</span>
-                      <span class="detail-item-value">#{{ detailTeacher.id }}</span>
-                    </div>
-                  </div>
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <Mail :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Email</span>
-                      <span class="detail-item-value">{{ detailTeacher.email }}</span>
-                    </div>
-                  </div>
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <VenusAndMars :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Gender</span>
-                      <span class="detail-item-value">{{ detailTeacher.gender || '—' }}</span>
-                    </div>
-                  </div>
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <ToggleLeft :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Status</span>
-                      <span class="detail-item-value">
-                        <span class="status-badge" :class="getStatusClass(detailTeacher.status)">
-                          {{ detailTeacher.status }}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <UserCheck :size="14" class="me-1" />
+                  Teacher ID
+                </label>
+                <div class="detail-value">#{{ detailTeacher.id }}</div>
               </div>
 
-              <div class="detail-section">
-                <div class="detail-section-title">
-                  <span>Activity</span>
-                </div>
-                <div class="detail-grid">
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <LogIn :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Last Login</span>
-                      <span class="detail-item-value">{{ formatDate(detailTeacher.last_login_at) }}</span>
-                    </div>
-                  </div>
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <Calendar :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Created</span>
-                      <span class="detail-item-value">{{ formatFullDate(detailTeacher.created_at) }}</span>
-                    </div>
-                  </div>
-                  <div class="detail-item">
-                    <div class="detail-item-icon">
-                      <Clock :size="14" />
-                    </div>
-                    <div class="detail-item-content">
-                      <span class="detail-item-label">Last Updated</span>
-                      <span class="detail-item-value">{{ formatFullDate(detailTeacher.updated_at) }}</span>
-                    </div>
-                  </div>
-                </div>
+              <div class="form-group">
+                <label class="form-label">
+                  <Mail :size="14" class="me-1" />
+                  Email Address
+                </label>
+                <div class="detail-value">{{ detailTeacher.email }}</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <VenusAndMars :size="14" class="me-1" />
+                  Gender
+                </label>
+                <div class="detail-value">{{ detailTeacher.gender || '—' }}</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <Clock :size="14" class="me-1" />
+                  Last Login
+                </label>
+                <div class="detail-value">{{ formatDate(detailTeacher.last_login_at) }}</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <Calendar :size="14" class="me-1" />
+                  Created
+                </label>
+                <div class="detail-value">{{ formatFullDate(detailTeacher.created_at) }}</div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">
+                  <Clock :size="14" class="me-1" />
+                  Last Updated
+                </label>
+                <div class="detail-value">{{ formatFullDate(detailTeacher.updated_at) }}</div>
               </div>
             </div>
 
-            <div class="details-footer">
-              <button type="button" class="btn btn-primary" @click="closeDetailsModal">
-                <CheckCircle :size="16" />
-                <span>Close</span>
+            <div class="modal-foot">
+              <button type="button" class="btn btn-ghost" @click="closeDetailsModal">Close</button>
+              <button type="button" class="btn btn-primary" @click="openEditModal(detailTeacher)">
+                <Pencil :size="15" />
+                <span>Edit Teacher</span>
               </button>
             </div>
           </div>
@@ -549,10 +485,10 @@
 
 <script setup lang="ts">
 import {
-  UserCheck, Plus, AlertTriangle, Search, ToggleLeft,  Eye, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen, UserPlus,
+  UserCheck, Plus, AlertTriangle, Search, ToggleLeft, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen, UserPlus,
   User as UserIcon, Mail, Lock, VenusAndMars, Check,
-  CheckCircle, AlertCircle, Trash, Inbox,
-  LogIn, Calendar, Clock,
+  AlertCircle, Trash, Inbox,
+  Calendar, Clock,
 } from '@lucide/vue'
 import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -560,17 +496,14 @@ import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
 import type { User, UserRole, CreateUserPayload, UpdateUserPayload } from '@/services/userService'
 
-// ─── Store ────────────────────────────────────────────────────────────
 const store = useUserStore()
 const { users, loading, error, totalUsers, lastPage } = storeToRefs(store)
 const { success: toastSuccess, error: toastError } = useToast()
 
-// ─── Local State ──────────────────────────────────────────────────────
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
 const teacherRoleId = ref<number | null>(null)
 
-// ─── Search & Filters ─────────────────────────────────────────────────
 const searchQuery = ref('')
 const statusFilter = ref('')
 const genderFilter = ref('')
@@ -589,7 +522,6 @@ function applyFilters() {
   loadTeachers()
 }
 
-// ─── Pagination ────────────────────────────────────────────────────────
 const currentPage = ref(1)
 const perPage = ref(10)
 const pageSizeOptions = [10, 25, 50]
@@ -637,9 +569,7 @@ function changePerPage(size: number) {
   loadTeachers()
 }
 
-// (Dropdown removed — using direct icon buttons instead)
 
-// ─── Modal State ──────────────────────────────────────────────────────
 const showFormModal = ref(false)
 const isEditing = ref(false)
 const showDeleteModal = ref(false)
@@ -649,7 +579,6 @@ const deleteTarget = ref<User | null>(null)
 const detailTeacher = ref<User | null>(null)
 const editingTeacher = ref<User | null>(null)
 
-// ─── Form State ───────────────────────────────────────────────────────
 const initialForm = () => ({
   name: '',
   email: '',
@@ -660,7 +589,6 @@ const initialForm = () => ({
 
 const form = ref(initialForm())
 
-// ─── Data Helpers ─────────────────────────────────────────────────────
 const teachers = computed(() => users.value)
 const totalTeachers = computed(() => totalUsers.value)
 
@@ -675,7 +603,6 @@ async function getTeacherRoleId(): Promise<number | null> {
   return null
 }
 
-// ─── API Calls ────────────────────────────────────────────────────────
 async function loadTeachers() {
   const roleId = await getTeacherRoleId()
   if (!roleId) return
@@ -693,7 +620,6 @@ async function loadTeachers() {
 }
 
 async function init() {
-  // Only fetch roles first (avoid loading all users), then get teacherRoleId
   await store.fetchRoles()
   await getTeacherRoleId()
   if (teacherRoleId.value) {
@@ -702,7 +628,6 @@ async function init() {
   }
 }
 
-// ─── Create / Edit ────────────────────────────────────────────────────
 function openCreateModal() {
   isEditing.value = false
   editingTeacher.value = null
@@ -796,7 +721,6 @@ async function handleFormSubmit() {
   }
 }
 
-// ─── Delete ─────────────────────────────────────────────────────────────
 function openDeleteModal(teacher: User) {
   deleteTarget.value = teacher
   showDeleteModal.value = true
@@ -832,7 +756,6 @@ async function handleDelete() {
   }
 }
 
-// ─── View Details ──────────────────────────────────────────────────────
 function viewTeacher(teacher: User) {
   detailTeacher.value = teacher
   showDetailsModal.value = true
@@ -843,7 +766,6 @@ function closeDetailsModal() {
   detailTeacher.value = null
 }
 
-// ─── Multi-Select & Bulk Delete ───────────────────────────────────────
 const selectedIds = ref<number[]>([])
 
 const isAllPageSelected = computed(() => {
@@ -912,7 +834,6 @@ async function handleBulkDelete() {
   }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────
 function formatDate(dateStr?: string | null): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr)
@@ -977,14 +898,13 @@ function showToast(message: string, type: 'success' | 'error' = 'success') {
   if (type === 'error') { toastError(message) } else { toastSuccess(message) }
 }
 
-// ─── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(() => {
   init()
 })
 </script>
 
 <style scoped>
-/* ==================== Page Layout ==================== */
+
 .teachers-page {
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
@@ -996,7 +916,7 @@ onMounted(() => {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-/* ==================== Card ==================== */
+
 .teacher-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -1016,7 +936,7 @@ onMounted(() => {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-/* ==================== Table ==================== */
+
 .col-check {
   width: 48px;
   text-align: center;
@@ -1099,187 +1019,21 @@ onMounted(() => {
 
 .td-actions { white-space: nowrap; text-align: center; }
 
-/* ==================== Details Card (View Teacher) ==================== */
-.details-card {
-  background: #fff;
-  border-radius: 16px;
-  width: 480px;
-  max-width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: modal-in 0.25s ease-out;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
 
-.details-header {
-  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
-  padding: 24px 24px 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  position: relative;
-}
-
-.details-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.details-header-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.details-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #fff;
-  margin: 0 0 6px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.details-header-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.details-role-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(4px);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.details-header .status-badge {
-  background: rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(4px);
-  color: #fff !important;
-}
-
-.details-header .modal-x {
-  color: rgba(255, 255, 255, 0.6);
-  top: 12px;
-  right: 16px;
-}
-.details-header .modal-x:hover { color: #fff; }
-
-.details-body {
-  padding: 0;
-}
-
-.detail-section {
-  padding: 20px 24px 12px;
-}
-
-.detail-section + .detail-section {
-  border-top: 1px solid #f1f5f9;
-}
-
-.detail-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.detail-section-title span {
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-}
-
-.detail-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  transition: background 0.15s ease;
-}
-
-.detail-item:hover {
+.detail-value {
+  padding: 10px 14px;
   background: #f8fafc;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #0f172a;
+  line-height: 1.4;
 }
 
-.detail-item-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+.icon-view {
   background: #eff6ff;
   color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.detail-item-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.detail-item-label {
-  display: block;
-  font-size: 0.7rem;
-  color: #94a3b8;
-  font-weight: 500;
-  margin-bottom: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.detail-item-value {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.detail-item-value .status-badge {
-  font-size: 0.7rem;
-  padding: 1px 8px;
-}
-
-.details-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 24px 20px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.details-footer .btn-primary {
-  min-width: 100px;
-  justify-content: center;
 }
 
 </style>

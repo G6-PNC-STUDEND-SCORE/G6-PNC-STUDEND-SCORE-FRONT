@@ -1,17 +1,13 @@
 <template>
   <div class="classes-page">
-    <!-- Loading State (only on initial load) -->
     <LoadingState v-if="loading && classes.length === 0" message="Loading classes..." />
 
-    <!-- Error State -->
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
       <AlertTriangle :size="16" />
       {{ error }}
     </div>
 
-    <!-- Class List Card -->
     <div v-else class="class-card">
-      <!-- Search & Filter Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
           <div class="search-box">
@@ -62,7 +58,6 @@
         </div>
       </div>
 
-      <!-- Bulk Action Bar -->
       <div v-if="selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="confirmBulkDelete">
@@ -72,7 +67,6 @@
         <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
       </div>
 
-      <!-- Empty State (no data) -->
       <div v-if="filteredClasses.length === 0" class="empty-container">
         <EmptyState
           title="No classes found"
@@ -82,7 +76,6 @@
         </EmptyState>
       </div>
 
-      <!-- Table (with data) -->
       <div v-else class="table-wrap">
         <DataTable
           :columns="columns"
@@ -150,7 +143,6 @@
         </DataTable>
       </div>
 
-      <!-- Pagination (only when data exists) -->
       <div v-if="filteredClasses.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
@@ -205,7 +197,6 @@
       </div>
     </div>
 
-    <!-- Create/Edit Modal -->
     <Modal v-model="showFormModal">
       <div class="modal-head">
         <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-create'">
@@ -221,13 +212,11 @@
 
       <form @submit.prevent="handleSubmit">
         <div class="modal-body-custom">
-          <!-- Error Alert -->
           <div v-if="formError" class="error-alert">
             <AlertTriangle :size="16" class="me-2" />
             {{ formError }}
           </div>
 
-          <!-- Class Name -->
           <div class="form-group">
             <label class="form-label">
               <Users :size="14" class="me-1" />
@@ -244,7 +233,6 @@
             </div>
           </div>
 
-          <!-- Generation -->
           <div class="form-group">
             <label class="form-label">
               <CalendarDays :size="14" class="me-1" />
@@ -258,7 +246,6 @@
             </div>
           </div>
 
-          <!-- Room -->
           <div class="form-group">
             <label class="form-label">
               <DoorOpen :size="14" class="me-1" />
@@ -274,7 +261,6 @@
             </div>
           </div>
 
-          <!-- Description -->
           <div class="form-group">
             <label class="form-label">
               <FileText :size="14" class="me-1" />
@@ -291,7 +277,6 @@
             </div>
           </div>
 
-          <!-- Status -->
           <div class="form-group">
             <label class="form-label">
               <ToggleLeft :size="14" class="me-1" />
@@ -306,7 +291,6 @@
           </div>
         </div>
 
-        <!-- Footer -->
         <div class="modal-foot">
           <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
           <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
@@ -339,27 +323,22 @@ import { useSearchFilters } from '@/composables/useSearchFilters'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
 
-// ─── Store ────────────────────────────────────────────────────────────
 const store = useClassStore()
 const { classes, loading, error, totalClasses } = storeToRefs(store)
 
-// ─── Shared UI composables ──────────────────────────────────────────
 const toast = useToast()
 const { confirm } = useConfirm()
 
-// ─── Local State ──────────────────────────────────────────────────────
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
 const academicYears = ref<{ id: number; name: string }[]>([])
 
-// ─── Search & Filters ─────────────────────────────────────────────────
 let resetPage = () => {}
 const { searchQuery, filters } = useSearchFilters(
   { status: '', generation: '' as number | '' },
   () => resetPage()
 )
 
-// ─── Client-Side Filtering ────────────────────────────────────────────
 const filteredClasses = computed(() => {
   let list = classes.value
   if (searchQuery.value) {
@@ -380,7 +359,6 @@ const filteredClasses = computed(() => {
   return list
 })
 
-// ─── Pagination ────────────────────────────────────────────────────────
 const pagination = usePagination<SchoolClass>({
   items: filteredClasses,
   pageSizeOptions: [10, 25, 50],
@@ -388,7 +366,6 @@ const pagination = usePagination<SchoolClass>({
 })
 resetPage = pagination.resetPage
 
-// ─── Table columns ──────────────────────────────────────────────────
 const columns = [
   { key: 'check', label: '', width: '48px' },
   { key: 'index', label: '#', width: '64px' },
@@ -407,12 +384,10 @@ function rowClassFor(cls: SchoolClass) {
   return { 'class-row': true, 'row-selected': selectedIds.value.includes(cls.id) }
 }
 
-// ─── Modal State ──────────────────────────────────────────────────────
 const showFormModal = ref(false)
 const isEditMode = ref(false)
 const editingClass = ref<SchoolClass | null>(null)
 
-// ─── Form State ───────────────────────────────────────────────────────
 const initialForm = () => ({
   name: '',
   generation_id: null as number | null,
@@ -423,7 +398,6 @@ const initialForm = () => ({
 
 const formData = reactive(initialForm())
 
-// ─── API Helpers ────────────────────────────────────────────────────
 async function loadAcademicYears() {
   try {
     const r = await getAcademicYears()
@@ -433,7 +407,6 @@ async function loadAcademicYears() {
   }
 }
 
-// ─── Create / Edit ────────────────────────────────────────────────────
 function openCreateModal() {
   isEditMode.value = false
   editingClass.value = null
@@ -446,8 +419,6 @@ function openEditModal(cls: SchoolClass) {
   isEditMode.value = true
   editingClass.value = cls
   formData.name = cls.name
-  // Use academicYear?.id because the API returns generation data
-  // under the 'academicYear' key (not as 'generation_id')
   formData.generation_id = cls.academicYear?.id ?? null
   formData.room = cls.room ?? ''
   formData.description = cls.description ?? ''
@@ -512,7 +483,6 @@ async function handleSubmit() {
   }
 }
 
-// ─── Delete ─────────────────────────────────────────────────────────────
 async function confirmDelete(cls: SchoolClass) {
   const ok = await confirm({
     title: 'Delete Class',
@@ -538,7 +508,6 @@ async function confirmDelete(cls: SchoolClass) {
   }
 }
 
-// ─── Multi-Select & Bulk Delete ───────────────────────────────────────
 const selectedIds = ref<number[]>([])
 
 const isAllPageSelected = computed(() => {
@@ -604,19 +573,17 @@ async function confirmBulkDelete() {
   }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────
 function getClassAvatarBg(): string {
   return '#2563eb'
 }
 
-// ─── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(async () => {
   await Promise.all([store.fetchClasses(), loadAcademicYears()])
 })
 </script>
 
 <style scoped>
-/* ==================== Page Layout ==================== */
+
 .classes-page {
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
@@ -628,7 +595,7 @@ onMounted(async () => {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-/* ==================== Card ==================== */
+
 .class-card {
   background: #fff;
   border: 1px solid #e9ecef;
@@ -650,7 +617,7 @@ onMounted(async () => {
 
 .filter-label :deep(svg) { color: #94a3b8; }
 
-/* ==================== Table ==================== */
+
 .table-wrap {
   width: 100%;
   overflow: auto;
@@ -718,7 +685,7 @@ onMounted(async () => {
   color: #64748b;
 }
 
-/* ==================== Form Modal Styles ==================== */
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -812,7 +779,7 @@ select.modern-input {
   padding: 12px 24px 20px;
 }
 
-/* ==================== Scrollbar ==================== */
+
 .table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }

@@ -191,16 +191,33 @@ export interface EmailDomainRule {
   updated_at: string
 }
 
+export interface ProfileTeacherInfo {
+  department: string | null
+  classes: string[]
+  subjects: string[]
+}
+
+export interface ProfileStudentInfo {
+  student_id_number: string | null
+  generation: string | null
+  class: string | null
+}
+
 export interface UserProfile {
   id: number
   name: string
   email: string
-  phone: string | null
-  department: string | null
-  school: string | null
+  email_verified_at: string | null
+  gender: 'Male' | 'Female' | 'Other' | null
+  date_of_birth: string | null
   role: string
   avatar: string | null
   bio: string | null
+  status: 'active' | 'inactive' | 'suspended' | string
+  last_login_at: string | null
+  permissions: string[]
+  teacher_info?: ProfileTeacherInfo
+  student_info?: ProfileStudentInfo
   created_at: string
   updated_at: string
 }
@@ -208,9 +225,8 @@ export interface UserProfile {
 export interface ProfileUpdatePayload {
   name?: string
   email?: string
-  phone?: string
-  department?: string
-  school?: string
+  gender?: 'Male' | 'Female' | 'Other'
+  date_of_birth?: string
   bio?: string
 }
 

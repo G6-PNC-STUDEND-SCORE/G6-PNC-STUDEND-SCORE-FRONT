@@ -1,7 +1,6 @@
 <template>
   <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
-    <!-- Logo / Brand -->
-    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 72px">
+    <div :class="['logo', sidebar.collapsed ? 'logo-collapsed' : 'logo-expanded', 'border-bottom']">
       <div class="sidebar-logo-wrap">
         <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
       </div>
@@ -9,9 +8,17 @@
         <span class="brand-name">Passerelles</span>
         <span class="brand-name">Numériques</span>
       </div>
+      <button
+        class="logo-toggle-btn"
+        :class="{ 'collapsed': sidebar.collapsed }"
+        @click="sidebar.toggle()"
+        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <ChevronLeft v-if="!sidebar.collapsed" :size="14" />
+        <ChevronRight v-else :size="14" />
+      </button>
     </div>
 
-    <!-- Navigation -->
     <nav class="px-2 py-2 flex-grow-1">
       <RouterLink
         v-for="link in navLinks"
@@ -40,24 +47,16 @@
       </template>
     </nav>
 
-    <!-- Toggle Button -->
-    <div class="toggle-section border-top">
-      <button
-        :class="['toggle-sidebar-btn', { collapsed: sidebar.collapsed }]"
-        @click="sidebar.toggle()"
-        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-      >
-        <PanelLeftClose :size="18" :class="{ 'rotated': sidebar.collapsed }" />
-        <span class="toggle-label">Collapse</span>
-      </button>
-    </div>
 
-    <!-- User Section & Logout -->
+
     <div class="border-top">
-      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'justify-content-between px-3 py-2']">
+      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'justify-content-between px-3 py-2', { 'user-section-active': isProfileActive }]">
         <div
           class="user d-flex align-items-center"
-          :class="{ 'justify-content-center': sidebar.collapsed }"
+          :class="[
+            { 'justify-content-center': sidebar.collapsed },
+            { 'user-active': isProfileActive }
+          ]"
           @click="goToProfile"
           @keydown.enter.prevent="goToProfile"
           role="button"
@@ -81,7 +80,6 @@
 
   </aside>
 
-  <!-- Logout Confirmation Modal -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
@@ -111,7 +109,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
@@ -119,13 +117,16 @@ import { getUserInitials } from '@/utils'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText,
-  User, Shield, LogOut, X, PanelLeftClose,
+  User, Shield, LogOut, X, ChevronLeft, ChevronRight,
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const sidebar = useSidebarStore()
+
+const isProfileActive = computed(() => route.path === '/profile')
 
 const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 const showLogoutModal = ref(false)
@@ -134,10 +135,6 @@ interface NavLink {
   to: string
   label: string
   icon: Component
-  // Permission slug required to see this link — matches the `permission:` middleware
-  // guarding the page's own API calls (e.g. `view-classes` for /classes). Omit for links
-  // that aren't permission-gated server-side (Dashboard, Reports). Admins implicitly have
-  // every permission (see User::hasPermission()), so this never hides anything from them.
   permission?: string
 }
 
@@ -181,7 +178,7 @@ function goToProfile() {
 </script>
 
 <style scoped>
-/* ── Sidebar Base ── */
+
 .sidebar {
   width: 240px;
   height: 100vh;
@@ -202,15 +199,31 @@ function goToProfile() {
   width: 72px;
 }
 
-/* ── Logo ── */.sidebar-logo-wrap {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.logo-expanded {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 0 14px;
+  height: 72px;
+}
+
+.logo-collapsed {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 72px;
+  padding: 0 0 0 14px;
+}
+
+.sidebar-logo-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-logo {
@@ -231,15 +244,17 @@ function goToProfile() {
   line-height: 1.15;
   transition: opacity 0.2s ease, transform 0.2s ease;
   transform-origin: left;
+  flex: 1;
 }
 
 .sidebar.collapsed .sidebar-brand-text {
   opacity: 0;
-  transform: translateX(-8px);
   width: 0;
-  margin: 0;
+  height: 0;
   overflow: hidden;
   pointer-events: none;
+  flex: 0;
+  margin: 0;
 }
 
 .brand-name {
@@ -266,7 +281,7 @@ function goToProfile() {
   pointer-events: none;
 }
 
-/* ── Nav Links ── */
+
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -316,73 +331,81 @@ function goToProfile() {
   pointer-events: none;
 }
 
-/* ── Toggle Button ── */
-.toggle-section {
-  padding: 0;
-}
 
-.toggle-sidebar-btn {
+.logo-toggle-btn {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 14px;
+  justify-content: center;
   border: none;
-  background: transparent;
+  background: #f3f4f6;
   color: #94a3b8;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
-  overflow: hidden;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.toggle-sidebar-btn.collapsed {
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.toggle-sidebar-btn:hover {
-  background: #f8fafc;
+.logo-toggle-btn:hover {
+  background: #eef2ff;
   color: #2563eb;
 }
 
-.toggle-sidebar-btn:active {
-  transform: scale(0.97);
+.logo-toggle-btn.collapsed {
+  width: 22px;
+  height: 36px;
+  border-radius: 6px 0 0 6px;
+  background: #eef2ff;
+  color: #2563eb;
+  margin-left: auto;
 }
 
-.toggle-sidebar-btn .rotated {
-  transform: rotate(180deg);
+.logo-toggle-btn.collapsed:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
-.toggle-label {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
 
-.sidebar.collapsed .toggle-label {
-  opacity: 0;
-  transform: translateX(-8px);
-  pointer-events: none;
-}
-
-/* ── User Section ── */
 .user-section {
   background: white;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.user-section-active {
+  background: #e8f1ff;
+}
+
 .user {
   cursor: pointer;
-  transition: background 0.2s ease;
-  border-radius: 8px;
-  padding: 4px 8px;
+  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 8px 12px;
   overflow: hidden;
+  flex: 1;
 }
 
 .user:hover {
-  background: #f8fafc;
+  background: #eef2ff;
+  color: #2563eb;
+}
+
+.user-active {
+  background: #e8f1ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.user-active .avatar {
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+.user-active .user-text h6 {
+  color: #2563eb;
+}
+
+.user-active .user-text small {
+  color: #2563eb;
 }
 
 .avatar {
@@ -436,7 +459,7 @@ function goToProfile() {
 .logout-icon-btn {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #ef4444;
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -449,11 +472,11 @@ function goToProfile() {
 }
 
 .logout-icon-btn:hover {
-  background: #f1f5f9;
-  color: #ef4444;
+  background: #fef2f2;
+  color: #dc2626;
 }
 
-/* ── Logout Modal ── */
+
 .modal-overlay {
   position: fixed;
   top: 0;

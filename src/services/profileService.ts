@@ -1,7 +1,7 @@
 import { http } from './apiHttp'
-import type { UserProfile, ProfileUpdatePayload, AvatarResponse, ApiResponse } from '@/types'
+import type { UserProfile, ProfileUpdatePayload, AvatarResponse, ProfileTeacherInfo, ProfileStudentInfo, ApiResponse } from '@/types'
 
-export type { UserProfile, ProfileUpdatePayload, AvatarResponse }
+export type { UserProfile, ProfileUpdatePayload, AvatarResponse, ProfileTeacherInfo, ProfileStudentInfo }
 
 export async function getProfile(): Promise<UserProfile> {
   const res = await http.get<ApiResponse<UserProfile>>('/profile')
