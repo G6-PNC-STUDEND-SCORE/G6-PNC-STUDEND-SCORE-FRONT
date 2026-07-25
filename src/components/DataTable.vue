@@ -11,7 +11,7 @@
         <thead>
           <tr>
             <th v-for="col in columns" :key="col.key" :style="{ width: col.width }">
-              {{ col.label }}
+              <slot :name="`header-${col.key}`">{{ col.label }}</slot>
             </th>
           </tr>
         </thead>
@@ -21,7 +21,12 @@
               <Inbox :size="16" class="me-1" /> No data available
             </td>
           </tr>
-          <tr v-for="(row, index) in data" :key="index">
+          <tr
+            v-for="(row, index) in data"
+            :key="rowKey ? rowKey(row, index) : index"
+            :class="rowClass ? rowClass(row, index) : undefined"
+            @dblclick="$emit('row-dblclick', row, index)"
+          >
             <td v-for="col in columns" :key="col.key">
               <slot :name="`cell-${col.key}`" :row="row" :index="index">
                 {{ formatCell(row, col.key) }}
@@ -46,6 +51,12 @@ defineProps<{
   title?: string
   columns: { key: string; label: string; width?: string }[]
   data: T[]
+  rowKey?: (row: T, index: number) => string | number
+  rowClass?: (row: T, index: number) => string | Record<string, boolean>
+}>()
+
+defineEmits<{
+  'row-dblclick': [row: T, index: number]
 }>()
 
 import { Inbox } from '@lucide/vue'

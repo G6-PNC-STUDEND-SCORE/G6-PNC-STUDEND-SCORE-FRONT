@@ -36,7 +36,7 @@
               @input="handleSearch"
               type="text"
               class="search-input"
-              placeholder="Search subjects..."
+              placeholder="Search by name, teacher, class, or term..."
             />
             <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''; handleSearch()">
               <X :size="14" />
@@ -53,6 +53,16 @@
               </select>
             </label>
           </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <CalendarDays :size="16" />
+              <span>Term</span>
+              <select v-model="termFilter" @change="handleFilter" class="filter-select">
+                <option value="">All</option>
+                <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.name }}</option>
+              </select>
+            </label>
+          </div>
         </div>
         <div class="toolbar-right">
           <button
@@ -64,7 +74,7 @@
             Add Subject
           </button>
           <span class="count-badge">
-            {{ subjects.length }} subject{{ subjects.length !== 1 ? 's' : '' }}
+            {{ filteredSubjects.length }} / {{ subjects.length }} subject{{ subjects.length !== 1 ? 's' : '' }}
           </span>
         </div>
       </div>
@@ -252,7 +262,7 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showModal" class="overlay" @click.self="closeModal">
-          <div class="modal-card">
+          <div class="modal-card modal-card-wide">
             <div class="modal-head">
               <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-add'">
                 <SquarePen v-if="isEditMode" :size="20" />
@@ -267,49 +277,63 @@
             <form @submit.prevent="handleSubmit" class="modal-body">
               <!-- Name -->
               <div class="field">
-                <label>Subject Name <span class="req">*</span></label>
-                <input
-                  v-model="formData.name"
-                  :class="{ err: errors.name }"
-                  placeholder="e.g. Web Development"
-                  required
-                />
+                <label>
+                  <BookOpen :size="15" class="field-icon" />
+                  Subject Name <span class="req">*</span>
+                </label>
+                <div class="input-wrap">
+                  <input
+                    v-model="formData.name"
+                    :class="{ err: errors.name }"
+                    placeholder="e.g. Web Development"
+                    required
+                  />
+                </div>
                 <span v-if="errors.name" class="field-err">{{ errors.name }}</span>
               </div>
-              <!-- Teacher (multi-select via checkbox list) -->
-              <div class="field">
-                <label>Teachers <span class="opt">(optional — pick one or more)</span></label>
-                <div v-if="teachers.length" class="teacher-checklist">
-                  <label
-                    v-for="t in teachers"
-                    :key="t.id"
-                    class="teacher-check"
-                    :class="{ 'teacher-check-on': formData.teacher_ids.includes(t.id) }"
-                  >
-                    <input
-                      type="checkbox"
-                      :value="t.id"
-                      :checked="formData.teacher_ids.includes(t.id)"
-                      @change="toggleFormTeacher(t.id)"
-                    />
-                    <span class="teacher-check-name">{{ t.name }}</span>
-                  </label>
-                </div>
-                <p v-else class="field-hint">No teachers available yet.</p>
-                <p v-if="formData.teacher_ids.length" class="field-hint">
-                  {{ formData.teacher_ids.length }} teacher{{ formData.teacher_ids.length > 1 ? 's' : '' }} selected
-                </p>
-              </div>
-              <div class="row-2">
-                <!-- Classes (multi-select via checkbox list) -->
+
+              <div class="section-divider"></div>
+
+              <!-- Teachers | Classes (side-by-side) -->
+              <div class="row-2 row-2-equal">
                 <div class="field">
-                  <label>Classes <span class="opt">(optional — pick one or more)</span></label>
-                  <div v-if="classes.length" class="teacher-checklist">
+                  <label>
+                    <Users :size="15" class="field-icon" />
+                    Teachers
+                  </label>
+                  <div v-if="teachers.length" class="check-list">
+                    <label
+                      v-for="t in teachers"
+                      :key="t.id"
+                      class="check-item"
+                      :class="{ 'check-item-on': formData.teacher_ids.includes(t.id) }"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="t.id"
+                        :checked="formData.teacher_ids.includes(t.id)"
+                        @change="toggleFormTeacher(t.id)"
+                      />
+                      <span class="check-dot"></span>
+                      <span class="check-label">{{ t.name }}</span>
+                    </label>
+                  </div>
+                  <p v-else class="field-hint">No teachers available yet.</p>
+                  <p v-if="formData.teacher_ids.length" class="field-count">
+                    {{ formData.teacher_ids.length }} selected
+                  </p>
+                </div>
+                <div class="field">
+                  <label>
+                    <Layers :size="15" class="field-icon" />
+                    Classes
+                  </label>
+                  <div v-if="classes.length" class="check-list">
                     <label
                       v-for="c in classes"
                       :key="c.id"
-                      class="teacher-check"
-                      :class="{ 'teacher-check-on': formData.class_ids.includes(c.id) }"
+                      class="check-item"
+                      :class="{ 'check-item-on': formData.class_ids.includes(c.id) }"
                     >
                       <input
                         type="checkbox"
@@ -317,76 +341,66 @@
                         :checked="formData.class_ids.includes(c.id)"
                         @change="toggleFormClass(c.id)"
                       />
-                      <span class="teacher-check-name">{{ c.name }}</span>
+                      <span class="check-dot"></span>
+                      <span class="check-label">{{ c.name }}</span>
                     </label>
                   </div>
                   <p v-else class="field-hint">No classes available yet.</p>
-                  <p v-if="formData.class_ids.length" class="field-hint">
-                    {{ formData.class_ids.length }} class{{ formData.class_ids.length > 1 ? 'es' : '' }} selected
+                  <p v-if="formData.class_ids.length" class="field-count">
+                    {{ formData.class_ids.length }} selected
                   </p>
                 </div>
-                <!-- Status -->
-                <div class="field">
-                  <label>
-                    <ToggleLeft :size="14" />
-                    Status
-                  </label>
-                  <div class="status-toggle">
-                    <label
-                      class="status-option"
-                      :class="{ active: formData.status === 'Active' }"
-                    >
-                      <input
-                        type="radio"
-                        name="subject-status"
-                        value="Active"
-                        :checked="formData.status === 'Active'"
-                        @change="formData.status = 'Active'"
-                      />
-                      <span class="status-dot status-dot-active"></span>
-                      <span class="status-text">Active</span>
-                    </label>
-                    <label
-                      class="status-option"
-                      :class="{ active: formData.status === 'Inactive' }"
-                    >
-                      <input
-                        type="radio"
-                        name="subject-status"
-                        value="Inactive"
-                        :checked="formData.status === 'Inactive'"
-                        @change="formData.status = 'Inactive'"
-                      />
-                      <span class="status-dot status-dot-inactive"></span>
-                      <span class="status-text">Inactive</span>
-                    </label>
-                  </div>
+              </div>
+
+              <div class="section-divider"></div>
+
+              <!-- Status -->
+              <div class="field">
+                <label>
+                  <ToggleLeft :size="15" class="field-icon" />
+                  Status
+                </label>
+                <div class="input-wrap">
+                  <select v-model="formData.status" class="modern-input">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
-              <!-- Term assignment -->
+
+              <!-- Assign to Terms -->
+              <div class="section-divider"></div>
+
               <div class="field">
-                <label>Assign to Terms</label>
-                <div class="tog-group tog-form">
+                <label>
+                  <CalendarDays :size="15" class="field-icon" />
+                  Assign to Terms
+                </label>
+                <div class="term-chips">
                   <button
                     v-for="term in terms"
                     :key="term.id"
                     type="button"
-                    class="tog"
-                    :class="{ 'tog-on': formData.term_ids.includes(term.id) }"
+                    class="term-chip"
+                    :class="{ 'term-chip-on': formData.term_ids.includes(term.id) }"
                     @click="toggleFormTerm(term.id)"
                   >
-                    <CheckCircle v-if="formData.term_ids.includes(term.id)" :size="14" />
-                    <Circle v-else :size="14" />
+                    <span class="chip-icon-wrap">
+                      <CheckCircle v-if="formData.term_ids.includes(term.id)" :size="13" />
+                      <Circle v-else :size="13" />
+                    </span>
                     <span>{{ term.name }}</span>
                   </button>
                 </div>
               </div>
+
               <!-- Footer -->
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="store.loading">
                   <span v-if="store.loading" class="spinner-sm"></span>
-                  {{ isEditMode ? 'Update Subject' : 'Create Subject' }}
+                  <Check v-else :size="16" />
+                  {{ isEditMode ? 'Save Changes' : 'Create Subject' }}
                 </button>
               </div>
             </form>
@@ -486,6 +500,10 @@ import {
   CirclePlus,
   ChevronLeft,
   ChevronRight,
+  Users,
+  Layers,
+  CalendarDays,
+  Check,
 } from '@lucide/vue'
 import { cacheService } from '@/services/cacheService'
 
@@ -527,6 +545,7 @@ const store = useSubjectStore()
 const auth = useAuthStore()
 const searchQuery = ref('')
 const statusFilter = ref('')
+const termFilter = ref<number | ''>('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 // ─── Term State ────────────────────────────────────────────────────
@@ -662,9 +681,16 @@ const filteredSubjects = computed(() => {
   let r = subjects.value
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
-    r = r.filter((s) => s.name.toLowerCase().includes(q))
+    r = r.filter((s) => {
+      const name = (s.name || '').toLowerCase()
+      const teachers = teacherNamesForSubject(s).join(' ').toLowerCase()
+      const classes = classNamesForSubject(s).join(' ').toLowerCase()
+      const termNames = (s.terms || []).map(t => t.name).join(' ').toLowerCase()
+      return name.includes(q) || teachers.includes(q) || classes.includes(q) || termNames.includes(q)
+    })
   }
   if (statusFilter.value) r = r.filter((s) => s.status?.toLowerCase() === statusFilter.value.toLowerCase())
+  if (termFilter.value !== '') r = r.filter((s) => s.term_ids.includes(termFilter.value as number))
   return r
 })  // ─── Helpers ───────────────────────────────────────────────────────
 function getSubjectIcon(_name: string): Component {
@@ -739,7 +765,7 @@ function debouncedSave(sid: number) {
 }
 
 // ─── Reset page on filter change ───────────────────────────────
-watch([searchQuery, statusFilter], () => {
+watch([searchQuery, statusFilter, termFilter], () => {
   currentPage.value = 1
 })
 
@@ -1272,6 +1298,7 @@ onMounted(async () => {
 .th-status, .td-status { width: 90px; }
 .th-terms { min-width: 280px; }
 
+
 .td-subject { cursor: pointer; }
 .subj-avatar {
   width: 34px; height: 34px;
@@ -1364,6 +1391,9 @@ onMounted(async () => {
   box-shadow: 0 20px 60px rgba(0,0,0,0.15);
   overflow: hidden; animation: modal-in 0.25s ease-out;
 }
+.modal-card-wide {
+  max-width: 580px;
+}
 .modal-sm { max-width: 380px; }
 @keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
 
@@ -1391,35 +1421,47 @@ onMounted(async () => {
 .modal-x:hover { color: #475569; }
 
 .modal-body {
-  padding: 20px 24px 16px;
+  padding: 18px 24px 4px;
 }
 
-.field {
-  margin-bottom: 18px;
+/* ── Section Divider ── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+  margin: 14px 0 16px;
 }
-.field:last-of-type {
+
+/* ── Fields ── */
+.field {
   margin-bottom: 0;
 }
+
 .field label {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.82rem;
+  font-size: 0.81rem;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
+
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
 .req {
   color: #ef4444;
   font-weight: 700;
 }
-.opt {
-  color: #94a3b8;
-  font-weight: 400;
-  font-size: 0.75rem;
+
+/* ── Input Wrapper ── */
+.input-wrap {
+  position: relative;
 }
 
-.field input, .field select {
+.input-wrap input {
   width: 100%;
   padding: 10px 12px;
   border: 1.5px solid #d1d5db;
@@ -1432,20 +1474,21 @@ onMounted(async () => {
   background: #fff;
   color: #0f172a;
 }
-.field input::placeholder {
+.input-wrap input::placeholder {
   color: #adb5bd;
 }
-.field input:hover, .field select:hover {
+.input-wrap input:hover {
   border-color: #9ca3af;
 }
-.field input:focus, .field select:focus {
+.input-wrap input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
 }
-.field input.err, .field select.err {
+.input-wrap input.err {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
 }
+
 .field-err {
   display: block;
   font-size: 0.75rem;
@@ -1454,70 +1497,115 @@ onMounted(async () => {
   font-weight: 500;
 }
 
+/* ── Grid ── */
 .row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.row-2-equal > * {
+  min-width: 0;
+}
+.row-2-auto {
+  align-items: start;
+}
 
-/* ── Multi-select checkbox list (Teachers / Classes) ── */
-.teacher-checklist {
+/* ── Checkbox List (Teachers / Classes) ── */
+.check-list {
   display: flex; flex-direction: column;
-  max-height: 180px; overflow-y: auto;
+  max-height: 160px; overflow-y: auto;
   border: 1.5px solid #e2e8f0; border-radius: 10px;
   background: #fff;
-  padding: 6px;
-  gap: 2px;
+  padding: 4px;
+  gap: 1px;
 }
-.teacher-checklist::-webkit-scrollbar { width: 4px; }
-.teacher-checklist::-webkit-scrollbar-track { background: transparent; }
-.teacher-checklist::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.check-list::-webkit-scrollbar { width: 4px; }
+.check-list::-webkit-scrollbar-track { background: transparent; }
+.check-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 
-.teacher-check {
+.check-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: #475569;
-  border-left: 3px solid transparent;
   transition: all 0.15s ease;
   margin: 0;
+  position: relative;
 }
-.teacher-check:hover {
+.check-item:hover {
   background: #f8fafc;
 }
-.teacher-check-on {
+.check-item-on {
   background: #f0f5ff;
   color: #1d4ed8;
-  border-left-color: #2563eb;
 }
-.teacher-check-on:hover {
+.check-item-on:hover {
   background: #e8effe;
 }
-.teacher-check input[type="checkbox"] {
-  width: 17px;
-  height: 17px;
-  accent-color: #2563eb;
-  cursor: pointer;
+
+.check-item input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.check-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid #cbd5e1;
   flex-shrink: 0;
-  margin: 0;
-}
-.teacher-check-name {
-  flex: 1;
-  font-weight: 500;
-}
-.field-hint {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin: 6px 0 0;
-  font-weight: 500;
+  transition: all 0.18s ease;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  background: #fff;
+}
+
+.check-item-on .check-dot {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.check-dot::after {
+  content: '';
+  display: none;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.check-item-on .check-dot::after {
+  display: block;
+}
+
+.check-label {
+  flex: 1;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 6px 0 0;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.field-count {
+  font-size: 0.72rem;
+  color: #2563eb;
+  margin: 5px 0 0;
+  font-weight: 600;
 }
 
 .teacher-stack {
@@ -1533,101 +1621,91 @@ onMounted(async () => {
 
 .del-text { font-size: 0.9rem; color: #475569; margin: 0; }
 
-/* ── Status Toggle ── */
-.status-toggle {
-  display: flex;
-  gap: 6px;
+/* ── Status Select ── */
+.modern-input {
+  width: 100%;
+  padding: 0.55rem 0.875rem;
+  font-size: 0.875rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  padding: 4px;
-}
-
-.status-option {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #64748b;
+  outline: none;
   transition: all 0.2s ease;
-  border: 1.5px solid transparent;
-  user-select: none;
-  margin: 0;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 
-.status-option:hover {
-  color: #334155;
-  background: #f1f5f9;
+.modern-input:hover {
+  background: #fff;
+  border-color: #cbd5e1;
 }
 
-.status-option.active {
+.modern-input:focus {
   background: #fff;
   border-color: #2563eb;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
-.status-option.active:has(.status-dot-active) {
-  color: #059669;
-  border-color: #059669;
-  box-shadow: 0 1px 4px rgba(5, 150, 105, 0.12);
+/* ── Term Chips ── */
+.term-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
-.status-option.active:has(.status-dot-inactive) {
-  color: #dc2626;
-  border-color: #dc2626;
-  box-shadow: 0 1px 4px rgba(220, 38, 38, 0.12);
-}
-
-.status-option input[type="radio"] {
-  display: none;
-}
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.term-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.2s ease;
+  font-family: inherit;
 }
 
-.status-dot-active {
-  background: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+.term-chip:hover {
+  border-color: #93c5fd;
+  background: #f8faff;
+  color: #3b82f6;
 }
 
-.status-dot-inactive {
-  background: #ef4444;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-}
-
-.status-option:not(.active) .status-dot-active {
-  background: #d1d5db;
-  box-shadow: none;
-}
-
-.status-option:not(.active) .status-dot-inactive {
-  background: #d1d5db;
-  box-shadow: none;
-}
-
-.status-text {
-  font-size: 0.82rem;
+.term-chip-on {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);
 }
 
+.chip-icon-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.chip-icon-wrap :deep(svg) {
+  flex-shrink: 0;
+}
+
+/* ── Footer ── */
 .modal-foot {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 16px 24px 20px;
+  padding: 18px 24px 20px;
   border-top: 1px solid #f1f5f9;
-  margin-top: 4px;
+  margin-top: 20px;
 }
 
 /* ══════════════════════════════════════════════════════════════

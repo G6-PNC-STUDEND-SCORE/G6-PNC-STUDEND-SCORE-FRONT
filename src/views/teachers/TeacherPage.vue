@@ -32,7 +32,7 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email, or gender..."
               @input="onSearchInput"
             />
           </div>
@@ -45,6 +45,18 @@
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="suspended">Suspended</option>
+              </select>
+            </label>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <VenusAndMars :size="16" />
+              <span>Gender</span>
+              <select v-model="genderFilter" class="filter-select" @change="applyFilters">
+                <option value="">All</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
               </select>
             </label>
           </div>
@@ -566,7 +578,7 @@ import {
 import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
-import { getRoles, type User, type UserRole, type CreateUserPayload, type UpdateUserPayload } from '@/services/userService'
+import type { User, UserRole, CreateUserPayload, UpdateUserPayload } from '@/services/userService'
 
 // ─── Store ────────────────────────────────────────────────────────────
 const store = useUserStore()
@@ -581,6 +593,7 @@ const teacherRoleId = ref<number | null>(null)
 // ─── Search & Filters ─────────────────────────────────────────────────
 const searchQuery = ref('')
 const statusFilter = ref('')
+const genderFilter = ref('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 function onSearchInput() {
@@ -673,16 +686,12 @@ const totalTeachers = computed(() => totalUsers.value)
 
 async function getTeacherRoleId(): Promise<number | null> {
   if (teacherRoleId.value) return teacherRoleId.value
-  try {
-    const res = await getRoles()
-    if (res.success) {
-      const teacherRole = res.data.find((r: UserRole) => r.slug === 'teacher')
-      if (teacherRole) {
-        teacherRoleId.value = teacherRole.id
-        return teacherRole.id
-      }
-    }
-  } catch { /* ignore */ }
+  await store.fetchRoles()
+  const teacherRole = store.roles.find((r: UserRole) => r.slug === 'teacher')
+  if (teacherRole) {
+    teacherRoleId.value = teacherRole.id
+    return teacherRole.id
+  }
   return null
 }
 
@@ -698,6 +707,7 @@ async function loadTeachers() {
   }
   if (searchQuery.value) params.search = searchQuery.value
   if (statusFilter.value) params.status = statusFilter.value
+  if (genderFilter.value) params.gender = genderFilter.value
 
   await store.fetchUsers(params)
 }
@@ -1315,7 +1325,7 @@ onMounted(() => {
 }
 
 .teacher-name {
-  font-weight: 500;
+  font-weight: 600;
   color: #0f172a;
 }
 

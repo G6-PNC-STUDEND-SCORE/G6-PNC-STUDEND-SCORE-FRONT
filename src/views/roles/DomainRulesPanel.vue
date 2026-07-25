@@ -33,8 +33,21 @@
                   class="domain-edit-input"
                   @keyup.enter="onDomainSave(rule)"
                   @keyup.escape="onDomainCancel"
-                  @blur="onDomainSave(rule)"
                 />
+                <button
+                  class="btn-save-domain"
+                  title="Save changes"
+                  @click="onDomainSave(rule)"
+                >
+                  <Check :size="14" />
+                </button>
+                <button
+                  class="btn-cancel-domain"
+                  title="Cancel"
+                  @click="onDomainCancel"
+                >
+                  <X :size="14" />
+                </button>
               </div>
               <span v-else class="domain-text" @dblclick="onDomainEditStart(rule)">
                 <span class="domain-prefix">@</span>{{ rule.domain }}
@@ -114,16 +127,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
-import { AlertTriangle, Plus, Trash2, Pencil } from '@lucide/vue'
-import {
-  getEmailDomainRules, createEmailDomainRule, updateEmailDomainRule, deleteEmailDomainRule,
-  type EmailDomainRule,
-} from '@/services/emailDomainRuleService'
-import { getRoles, type Role } from '@/services/permissionService'
+import { AlertTriangle, Plus, Trash2, Pencil, Check, X } from '@lucide/vue'
+import { storeToRefs } from 'pinia'
+import { useRoleStore } from '@/stores/role'
+import type { EmailDomainRule } from '@/services/emailDomainRuleService'
 
-const rules = ref<EmailDomainRule[]>([])
-const roles = ref<Role[]>([])
-const error = ref('')
+const store = useRoleStore()
+const { domainRules: rules, roles, error } = storeToRefs(store)
 
 const newDomain = ref('')
 const newRoleId = ref<number | null>(null)
@@ -140,7 +150,6 @@ async function onDomainEditStart(rule: EmailDomainRule) {
   editingDomainId.value = rule.id
   editingDomainValue.value = rule.domain
   await nextTick()
-  // Query the input directly — template refs inside v-if + v-for are unreliable
   document.querySelector<HTMLInputElement>('.domain-edit-input')?.focus()
 }
 
@@ -151,32 +160,21 @@ function onDomainCancel() {
 
 async function onDomainSave(rule: EmailDomainRule) {
   if (editingDomainId.value !== rule.id) return
-  const newDomain = editingDomainValue.value.trim().toLowerCase()
-  if (!newDomain || newDomain === rule.domain) {
+  const newDomainVal = editingDomainValue.value.trim().toLowerCase()
+  if (!newDomainVal || newDomainVal === rule.domain) {
     onDomainCancel()
     return
   }
   
   const oldDomain = rule.domain
-  rule.domain = newDomain
+  rule.domain = newDomainVal
   editingDomainId.value = null
   
   try {
-    await updateEmailDomainRule(rule.id, { domain: newDomain, role_id: rule.role_id, is_active: rule.is_active })
+    await store.updateDomainRule(rule.id, { domain: newDomainVal, role_id: rule.role_id, is_active: rule.is_active })
   } catch (e: any) {
     rule.domain = oldDomain
-    error.value = e?.response?.data?.message || 'Failed to update domain.'
-  }
-}
-
-async function loadAll() {
-  error.value = ''
-  try {
-    const [ruleList, roleList] = await Promise.all([getEmailDomainRules(), getRoles()])
-    rules.value = ruleList
-    roles.value = roleList
-  } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to load sign-in domain rules.'
+    store.error = e?.response?.data?.message || 'Failed to update domain.'
   }
 }
 
@@ -184,10 +182,10 @@ async function onRoleChange(rule: EmailDomainRule, roleId: string) {
   const oldRoleId = rule.role_id
   rule.role_id = Number(roleId)
   try {
-    await updateEmailDomainRule(rule.id, { domain: rule.domain, role_id: rule.role_id, is_active: rule.is_active })
+    await store.updateDomainRule(rule.id, { domain: rule.domain, role_id: rule.role_id, is_active: rule.is_active })
   } catch (e: any) {
     rule.role_id = oldRoleId
-    error.value = e?.response?.data?.message || 'Failed to update rule.'
+    store.error = e?.response?.data?.message || 'Failed to update rule.'
   }
 }
 
@@ -195,24 +193,24 @@ async function onActiveChange(rule: EmailDomainRule, active: boolean) {
   const old = rule.is_active
   rule.is_active = active
   try {
-    await updateEmailDomainRule(rule.id, { domain: rule.domain, role_id: rule.role_id, is_active: active })
+    await store.updateDomainRule(rule.id, { domain: rule.domain, role_id: rule.role_id, is_active: active })
   } catch (e: any) {
     rule.is_active = old
-    error.value = e?.response?.data?.message || 'Failed to update rule.'
+    store.error = e?.response?.data?.message || 'Failed to update rule.'
   }
 }
 
 async function submitAdd() {
   if (!newDomain.value.trim() || !newRoleId.value) return
   adding.value = true
-  error.value = ''
+  store.clearError()
   try {
-    const created = await createEmailDomainRule({ domain: newDomain.value.trim(), role_id: newRoleId.value })
+    const created = await store.createDomainRule({ domain: newDomain.value.trim(), role_id: newRoleId.value })
     rules.value.push(created)
     newDomain.value = ''
     newRoleId.value = null
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to add rule.'
+    store.error = e?.response?.data?.message || 'Failed to add rule.'
   } finally {
     adding.value = false
   }
@@ -221,19 +219,20 @@ async function submitAdd() {
 async function doDelete() {
   if (!confirmDelete.value) return
   deleting.value = true
-  error.value = ''
+  store.clearError()
   try {
-    await deleteEmailDomainRule(confirmDelete.value.id)
-    rules.value = rules.value.filter(r => r.id !== confirmDelete.value!.id)
+    await store.deleteDomainRule(confirmDelete.value.id)
     confirmDelete.value = null
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to delete rule.'
+    store.error = e?.response?.data?.message || 'Failed to delete rule.'
   } finally {
     deleting.value = false
   }
 }
 
-onMounted(loadAll)
+onMounted(async () => {
+  await store.loadDomainRules()
+})
 </script>
 
 <style scoped>
@@ -303,7 +302,7 @@ onMounted(loadAll)
 .domain-text:hover .btn-edit-domain { opacity: 1; }
 .btn-edit-domain:hover { background: #e2e8f0; color: #2563eb; }
 
-.domain-edit-wrap { display: inline-flex; align-items: center; gap: 2px; }
+.domain-edit-wrap { display: inline-flex; align-items: center; gap: 4px; }
 .domain-edit-input {
   padding: 0.25rem 0.45rem;
   font-size: 0.85rem;
@@ -317,6 +316,28 @@ onMounted(loadAll)
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
   min-width: 200px;
 }
+
+.btn-save-domain, .btn-cancel-domain {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-save-domain {
+  background: #2563eb;
+  color: #fff;
+}
+.btn-save-domain:hover { background: #1d4ed8; }
+.btn-cancel-domain {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.btn-cancel-domain:hover { background: #e2e8f0; color: #475569; }
 
 .col-active { text-align: center; width: 80px; }
 .col-actions { text-align: right; width: 60px; }

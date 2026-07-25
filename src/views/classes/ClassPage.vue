@@ -1,12 +1,7 @@
 <template>
   <div class="classes-page">
     <!-- Loading State (only on initial load) -->
-    <div v-if="loading && classes.length === 0" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p class="mt-2" style="color: #6b7280;">Loading classes...</p>
-    </div>
+    <LoadingState v-if="loading && classes.length === 0" message="Loading classes..." />
 
     <!-- Error State -->
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
@@ -25,18 +20,27 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search by class name..."
-              @input="onSearchInput"
+              placeholder="Search by name, generation, or room..."
             />
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <ToggleLeft :size="16" />
               <span>Status</span>
-              <select v-model="statusFilter" class="filter-select" @change="applyFilters">
+              <select v-model="filters.status" class="filter-select">
                 <option value="">All</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <CalendarDays :size="16" />
+              <span>Generation</span>
+              <select v-model="filters.generation" class="filter-select">
+                <option value="">All</option>
+                <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
               </select>
             </label>
           </div>
@@ -61,7 +65,7 @@
       <!-- Bulk Action Bar -->
       <div v-if="selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
-        <button class="bulk-delete-btn" @click="openBulkDeleteModal">
+        <button class="bulk-delete-btn" @click="confirmBulkDelete">
           <Trash :size="16" />
           Delete Selected
         </button>
@@ -70,85 +74,80 @@
 
       <!-- Empty State (no data) -->
       <div v-if="filteredClasses.length === 0" class="empty-container">
-        <div class="empty-box">
-          <Inbox :size="40" />
-          <h5>No classes found</h5>
-          <p>{{ searchQuery ? 'Try a different search term.' : 'No classes match the current filter.' }}</p>
-        </div>
+        <EmptyState
+          title="No classes found"
+          :message="searchQuery ? 'Try a different search term.' : 'No classes match the current filter.'"
+        >
+          <template #icon><Inbox :size="24" /></template>
+        </EmptyState>
       </div>
 
       <!-- Table (with data) -->
       <div v-else class="table-wrap">
-        <table class="class-table">
-          <thead>
-            <tr>
-              <th class="col-check">
-                <input
-                  type="checkbox"
-                  class="table-checkbox"
-                  :checked="isAllPageSelected"
-                  :indeterminate="isIndeterminate"
-                  @change="toggleSelectAll"
-                />
-              </th>
-              <th class="col-index">#</th>
-              <th>Class Name</th>
-              <th>Generation</th>
-              <th>Room</th>
-              <th>Status</th>
-              <th class="col-actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(cls, index) in paginatedClasses"
-              :key="cls.id"
-              class="class-row"
-              :class="{ 'row-selected': selectedIds.includes(cls.id) }"
-              @dblclick="openEditModal(cls)"
+        <DataTable
+          :columns="columns"
+          :data="pagination.paginatedItems.value"
+          :row-key="(row) => (row as SchoolClass).id"
+          :row-class="(row) => rowClassFor(row as SchoolClass)"
+          @row-dblclick="(row) => openEditModal(row as SchoolClass)"
+        >
+          <template #header-check>
+            <div class="col-check" @click.stop @dblclick.stop>
+              <input
+                type="checkbox"
+                class="table-checkbox"
+                :checked="isAllPageSelected"
+                :indeterminate="isIndeterminate"
+                @change="toggleSelectAll"
+              />
+            </div>
+          </template>
+          <template #cell-check="{ row }">
+            <div class="col-check" @click.stop @dblclick.stop>
+              <input
+                type="checkbox"
+                class="table-checkbox"
+                :checked="selectedIds.includes((row as SchoolClass).id)"
+                @change="toggleSelectClass((row as SchoolClass).id)"
+              />
+            </div>
+          </template>
+          <template #cell-index="{ index }">
+            <span class="col-index">{{ (pagination.currentPage.value - 1) * pagination.pageSize.value + index + 1 }}</span>
+          </template>
+          <template #cell-name="{ row }">
+            <div class="class-cell">
+              <div class="class-avatar" :style="{ background: getClassAvatarBg() }">
+                <Users :size="16" />
+              </div>
+              <span class="class-name">{{ (row as SchoolClass).name }}</span>
+            </div>
+          </template>
+          <template #cell-generation="{ row }">
+            <span class="meta-cell">{{ generationLabel(row as SchoolClass) }}</span>
+          </template>
+          <template #cell-room="{ row }">
+            <span class="meta-cell">{{ (row as SchoolClass).room || '—' }}</span>
+          </template>
+          <template #cell-status="{ row }">
+            <span
+              class="status-badge"
+              :class="(row as SchoolClass).is_active ? 'badge-active' : 'badge-inactive'"
             >
-              <td class="col-check" @dblclick.stop>
-                <input
-                  type="checkbox"
-                  class="table-checkbox"
-                  :checked="selectedIds.includes(cls.id)"
-                  @change="toggleSelectClass(cls.id)"
-                />
-              </td>
-              <td class="col-index">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-              <td>
-                <div class="class-cell">
-                  <div class="class-avatar" :style="{ background: getClassAvatarBg() }">
-                    <Users :size="16" />
-                  </div>
-                  <span class="class-name">{{ cls.name }}</span>
-                </div>
-              </td>
-              <td>
-                <span class="meta-cell">{{ cls.academicYear?.name || cls.generation?.name || cls.generation?.year || '—' }}</span>
-              </td>
-              <td>
-                <span class="meta-cell">{{ cls.room || '—' }}</span>
-              </td>
-              <td>
-                <span
-                  class="status-badge"
-                  :class="cls.is_active ? 'badge-active' : 'badge-inactive'"
-                >
-                  {{ cls.is_active ? 'Active' : 'Inactive' }}
-                </span>
-              </td>
-              <td class="col-actions" @click.stop>
-                <button class="act-btn" @click="openEditModal(cls)" title="Edit">
-                  <Pencil :size="15" />
-                </button>
-                <button class="act-btn act-danger" @click="confirmDelete(cls)" title="Delete">
-                  <Trash2 :size="15" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              {{ (row as SchoolClass).is_active ? 'Active' : 'Inactive' }}
+            </span>
+          </template>
+          <template #cell-actions="{ row }">
+            <div class="actions-cell" @click.stop @dblclick.stop>
+              <button class="act-btn" @click="openEditModal(row as SchoolClass)" title="Edit">
+                <Pencil :size="15" />
+              </button>
+              <button class="act-btn act-danger" @click="confirmDelete(row as SchoolClass)" title="Delete">
+                <Trash2 :size="15" />
+              </button>
+            </div>
+          </template>
+        </DataTable>
       </div>
 
       <!-- Pagination (only when data exists) -->
@@ -157,11 +156,11 @@
           <span class="rows-label">Rows per page:</span>
           <div class="rows-selector">
             <button
-              v-for="size in pageSizeOptions"
+              v-for="size in pagination.pageSizeOptions"
               :key="size"
               class="rows-btn"
-              :class="{ active: pageSize === size }"
-              @click="changePageSize(size)"
+              :class="{ active: pagination.pageSize.value === size }"
+              @click="pagination.changePageSize(size)"
             >
               {{ size }}
             </button>
@@ -171,19 +170,19 @@
         <div class="pagination-pages">
           <button
             class="page-nav"
-            :disabled="currentPage <= 1"
-            @click="changePage(currentPage - 1)"
+            :disabled="pagination.currentPage.value <= 1"
+            @click="pagination.changePage(pagination.currentPage.value - 1)"
             aria-label="Previous page"
           >
             <ChevronLeft :size="16" />
           </button>
 
-          <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
+          <template v-for="(page, idx) in pagination.visiblePages.value" :key="'vp-' + idx">
             <button
               v-if="page !== '...'"
               class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="changePage(page as number)"
+              :class="{ active: pagination.currentPage.value === page }"
+              @click="pagination.changePage(page as number)"
             >
               {{ page }}
             </button>
@@ -192,8 +191,8 @@
 
           <button
             class="page-nav"
-            :disabled="currentPage >= totalPages"
-            @click="changePage(currentPage + 1)"
+            :disabled="pagination.currentPage.value >= pagination.totalPages.value"
+            @click="pagination.changePage(pagination.currentPage.value + 1)"
             aria-label="Next page"
           >
             <ChevronRight :size="16" />
@@ -201,317 +200,216 @@
         </div>
 
         <div class="pagination-total">
-          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredClasses.length) }} of {{ filteredClasses.length }}
+          {{ (pagination.currentPage.value - 1) * pagination.pageSize.value + 1 }}-{{ Math.min(pagination.currentPage.value * pagination.pageSize.value, filteredClasses.length) }} of {{ filteredClasses.length }}
         </div>
       </div>
     </div>
 
     <!-- Create/Edit Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showFormModal" class="modal-overlay" @click.self="closeFormModal">
-          <div class="modal-content-panel">
-            <!-- Header -->
-            <div class="modal-head">
-              <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-create'">
-                <SquarePen v-if="isEditMode" :size="18" />
-                <Plus v-else :size="18" />
-              </div>
-              <div>
-                <h3>{{ isEditMode ? 'Edit Class' : 'Add New Class' }}</h3>
-                <p>{{ isEditMode ? 'Update class information' : 'Fill in the new class details' }}</p>
-              </div>
-              <button class="modal-x" @click="closeFormModal">&times;</button>
-            </div>
-
-            <form @submit.prevent="handleSubmit">
-              <div class="modal-body-custom">
-                <!-- Error Alert -->
-                <div v-if="formError" class="error-alert">
-                  <AlertTriangle :size="16" class="me-2" />
-                  {{ formError }}
-                </div>
-
-                <!-- Class Name -->
-                <div class="form-group">
-                  <label class="form-label">
-                    <Users :size="14" class="me-1" />
-                    Class Name
-                  </label>
-                  <div class="input-wrapper">
-                    <input
-                      v-model="formData.name"
-                      type="text"
-                      class="modern-input"
-                      placeholder="e.g. Class A"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <!-- Generation -->
-                <div class="form-group">
-                  <label class="form-label">
-                    <CalendarDays :size="14" class="me-1" />
-                    Generation
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model.number="formData.generation_id" class="modern-input" required>
-                      <option :value="null">— Select generation —</option>
-                      <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- Room -->
-                <div class="form-group">
-                  <label class="form-label">
-                    <DoorOpen :size="14" class="me-1" />
-                    Room
-                  </label>
-                  <div class="input-wrapper">
-                    <input
-                      v-model="formData.room"
-                      type="text"
-                      class="modern-input"
-                      placeholder="e.g. B12"
-                    />
-                  </div>
-                </div>
-
-                <!-- Description -->
-                <div class="form-group">
-                  <label class="form-label">
-                    <FileText :size="14" class="me-1" />
-                    Description
-                  </label>
-                  <div class="input-wrapper">
-                    <textarea
-                      v-model="formData.description"
-                      class="modern-input"
-                      placeholder="Optional notes..."
-                      rows="3"
-                      style="resize: vertical; min-height: 60px;"
-                    ></textarea>
-                  </div>
-                </div>
-
-                <!-- Status -->
-                <div class="form-group">
-                  <label class="form-label">
-                    <ToggleLeft :size="14" class="me-1" />
-                    Status
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="formData.is_active" class="modern-input">
-                      <option :value="true">Active</option>
-                      <option :value="false">Inactive</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Footer -->
-              <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
-                <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
-                  <span v-if="formSubmitting" class="spinner-sm"></span>
-                  <Check v-else :size="16" />
-                  <span>{{ isEditMode ? 'Save Changes' : 'Create Class' }}</span>
-                </button>
-              </div>
-            </form>
-          </div>
+    <Modal v-model="showFormModal">
+      <div class="modal-head">
+        <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-create'">
+          <SquarePen v-if="isEditMode" :size="18" />
+          <Plus v-else :size="18" />
         </div>
-      </Transition>
-    </Teleport>
+        <div>
+          <h3>{{ isEditMode ? 'Edit Class' : 'Add New Class' }}</h3>
+          <p>{{ isEditMode ? 'Update class information' : 'Fill in the new class details' }}</p>
+        </div>
+        <button class="modal-x" @click="closeFormModal">&times;</button>
+      </div>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-          <div class="modal-content-panel" style="max-width: 400px;">
-            <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
-                <AlertTriangle :size="20" />
-              </div>
-              <div>
-                <h3 style="color: #dc2626;">Delete Class</h3>
-                <p>This action cannot be undone.</p>
-              </div>
-              <button class="modal-x" @click="closeDeleteModal">&times;</button>
+      <form @submit.prevent="handleSubmit">
+        <div class="modal-body-custom">
+          <!-- Error Alert -->
+          <div v-if="formError" class="error-alert">
+            <AlertTriangle :size="16" class="me-2" />
+            {{ formError }}
+          </div>
+
+          <!-- Class Name -->
+          <div class="form-group">
+            <label class="form-label">
+              <Users :size="14" class="me-1" />
+              Class Name
+            </label>
+            <div class="input-wrapper">
+              <input
+                v-model="formData.name"
+                type="text"
+                class="modern-input"
+                placeholder="e.g. Class A"
+                required
+              />
             </div>
-            <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
-                Are you sure you want to delete <strong>{{ classToDelete?.name }}</strong>?
-              </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; margin: 8px 0 0;">
-                <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
-                <span style="vertical-align: middle;">The class and all associated data will be permanently removed.</span>
-              </p>
+          </div>
+
+          <!-- Generation -->
+          <div class="form-group">
+            <label class="form-label">
+              <CalendarDays :size="14" class="me-1" />
+              Generation
+            </label>
+            <div class="input-wrapper">
+              <select v-model.number="formData.generation_id" class="modern-input" required>
+                <option :value="null">— Select generation —</option>
+                <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
+              </select>
             </div>
-            <div class="modal-foot">
-              <button type="button" class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
-              <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleDelete">
-                <span v-if="formSubmitting" class="spinner-sm"></span>
-                <Trash2 v-else :size="16" />
-                <span>Delete</span>
-              </button>
+          </div>
+
+          <!-- Room -->
+          <div class="form-group">
+            <label class="form-label">
+              <DoorOpen :size="14" class="me-1" />
+              Room
+            </label>
+            <div class="input-wrapper">
+              <input
+                v-model="formData.room"
+                type="text"
+                class="modern-input"
+                placeholder="e.g. B12"
+              />
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label class="form-label">
+              <FileText :size="14" class="me-1" />
+              Description
+            </label>
+            <div class="input-wrapper">
+              <textarea
+                v-model="formData.description"
+                class="modern-input"
+                placeholder="Optional notes..."
+                rows="3"
+                style="resize: vertical; min-height: 60px;"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label class="form-label">
+              <ToggleLeft :size="14" class="me-1" />
+              Status
+            </label>
+            <div class="input-wrapper">
+              <select v-model="formData.is_active" class="modern-input">
+                <option :value="true">Active</option>
+                <option :value="false">Inactive</option>
+              </select>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
 
-    <!-- Bulk Delete Confirmation Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
-          <div class="modal-content-panel" style="max-width: 400px;">
-            <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
-                <AlertTriangle :size="20" />
-              </div>
-              <div>
-                <h3 style="color: #dc2626;">Delete Classes</h3>
-                <p>This action cannot be undone.</p>
-              </div>
-              <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
-            </div>
-            <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
-                Are you sure you want to delete <strong>{{ selectedIds.length }} class(es)</strong>?
-              </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; line-height: 1.4; margin: 8px 0 0;">
-                <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
-                <span style="vertical-align: middle;">These classes and all associated data will be permanently removed.</span>
-              </p>
-            </div>
-            <div class="modal-foot">
-              <button type="button" class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
-              <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleBulkDelete">
-                <span v-if="formSubmitting" class="spinner-sm"></span>
-                <Trash2 v-else :size="16" />
-                <span>Delete {{ selectedIds.length }} class(es)</span>
-              </button>
-            </div>
-          </div>
+        <!-- Footer -->
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
+            <span v-if="formSubmitting" class="spinner-sm"></span>
+            <Check v-else :size="16" />
+            <span>{{ isEditMode ? 'Save Changes' : 'Create Class' }}</span>
+          </button>
         </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Toast Notification -->
-    <Teleport to="body">
-      <Transition name="toast">
-        <div v-if="toast.show" class="toast-notification" :class="toast.type">
-          <div class="toast-icon">
-            <CheckCircle v-if="toast.type === 'success'" :size="18" />
-            <AlertCircle v-else :size="18" />
-          </div>
-          <span class="toast-message">{{ toast.message }}</span>
-          <button class="toast-close" @click="toast.show = false">&times;</button>
-        </div>
-      </Transition>
-    </Teleport>
+      </form>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, reactive } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { storeToRefs } from 'pinia'
 import {
-  Users, Plus, AlertTriangle, Search, ToggleLeft,  Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen,
-  Check, CheckCircle, AlertCircle, Inbox, Trash, CalendarDays, DoorOpen, FileText,
+  Users, Plus, AlertTriangle, Search, ToggleLeft, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen,
+  Check, Inbox, Trash, CalendarDays, DoorOpen, FileText,
 } from '@lucide/vue'
 import { useClassStore } from '@/stores/class'
 import type { SchoolClass } from '@/services/classService'
 import { getAcademicYears } from '@/services/academicYearService'
+import DataTable from '@/components/DataTable.vue'
+import Modal from '@/components/Modal.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import { usePagination } from '@/composables/usePagination'
+import { useSearchFilters } from '@/composables/useSearchFilters'
+import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 
 // ─── Store ────────────────────────────────────────────────────────────
 const store = useClassStore()
 const { classes, loading, error, totalClasses } = storeToRefs(store)
 
+// ─── Shared UI composables ──────────────────────────────────────────
+const toast = useToast()
+const { confirm } = useConfirm()
+
 // ─── Local State ──────────────────────────────────────────────────────
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
-const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
 const academicYears = ref<{ id: number; name: string }[]>([])
 
 // ─── Search & Filters ─────────────────────────────────────────────────
-const searchQuery = ref('')
-const statusFilter = ref('')
-
-function onSearchInput() {
-  // debounce handled by watch below
-}
-
-function applyFilters() {
-  currentPage.value = 1
-}
+let resetPage = () => {}
+const { searchQuery, filters } = useSearchFilters(
+  { status: '', generation: '' as number | '' },
+  () => resetPage()
+)
 
 // ─── Client-Side Filtering ────────────────────────────────────────────
 const filteredClasses = computed(() => {
   let list = classes.value
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase().trim()
-    list = list.filter(c => c.name.toLowerCase().includes(q))
+    list = list.filter(c => {
+      const name = (c.name || '').toLowerCase()
+      const generation = (c.academicYear?.name || c.generation?.name || c.generation?.year || '').toLowerCase()
+      const room = (c.room || '').toLowerCase()
+      return name.includes(q) || generation.includes(q) || room.includes(q)
+    })
   }
-  if (statusFilter.value === 'active') list = list.filter(c => c.is_active === true)
-  if (statusFilter.value === 'inactive') list = list.filter(c => c.is_active === false)
+  if (filters.status === 'active') list = list.filter(c => c.is_active === true)
+  if (filters.status === 'inactive') list = list.filter(c => c.is_active === false)
+  if (filters.generation !== '') {
+    const gid = filters.generation as number
+    list = list.filter(c => (c.academicYear?.id || c.generation?.id) === gid)
+  }
   return list
 })
 
 // ─── Pagination ────────────────────────────────────────────────────────
-const currentPage = ref(1)
-const pageSize = ref(10)
-const pageSizeOptions = [10, 25, 50]
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredClasses.value.length / pageSize.value)))
-
-const paginatedClasses = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredClasses.value.slice(start, end)
+const pagination = usePagination<SchoolClass>({
+  items: filteredClasses,
+  pageSizeOptions: [10, 25, 50],
+  initialPageSize: 10,
 })
+resetPage = pagination.resetPage
 
-const visiblePages = computed(() => {
-  const pages: (number | string)[] = []
-  const total = totalPages.value
-  const current = currentPage.value
+// ─── Table columns ──────────────────────────────────────────────────
+const columns = [
+  { key: 'check', label: '', width: '48px' },
+  { key: 'index', label: '#', width: '64px' },
+  { key: 'name', label: 'Class Name' },
+  { key: 'generation', label: 'Generation' },
+  { key: 'room', label: 'Room' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions', width: '90px' },
+]
 
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i)
-    return pages
-  }
-
-  pages.push(1)
-  if (current > 3) pages.push('...')
-
-  const start = Math.max(2, current - 1)
-  const end = Math.min(total - 1, current + 1)
-  for (let i = start; i <= end; i++) pages.push(i)
-
-  if (current < total - 2) pages.push('...')
-  pages.push(total)
-
-  return pages
-})
-
-function changePage(page: number) {
-  currentPage.value = page
+function generationLabel(cls: SchoolClass): string {
+  return cls.academicYear?.name || cls.generation?.name || cls.generation?.year || '—'
 }
 
-function changePageSize(size: number) {
-  pageSize.value = size
-  currentPage.value = 1
+function rowClassFor(cls: SchoolClass) {
+  return { 'class-row': true, 'row-selected': selectedIds.value.includes(cls.id) }
 }
 
 // ─── Modal State ──────────────────────────────────────────────────────
 const showFormModal = ref(false)
 const isEditMode = ref(false)
-const showDeleteModal = ref(false)
-const showBulkDeleteModal = ref(false)
-const classToDelete = ref<SchoolClass | null>(null)
 const editingClass = ref<SchoolClass | null>(null)
 
 // ─── Form State ───────────────────────────────────────────────────────
@@ -586,7 +484,7 @@ async function handleSubmit() {
         is_active: formData.is_active,
       })
       if (ok) {
-        showToast('Class updated successfully')
+        toast.success('Class updated successfully')
         closeFormModal()
       } else {
         formError.value = store.error || 'Failed to update class'
@@ -600,7 +498,7 @@ async function handleSubmit() {
         is_active: formData.is_active,
       } as Partial<SchoolClass>)
       if (ok) {
-        showToast('Class created successfully')
+        toast.success('Class created successfully')
         closeFormModal()
       } else {
         formError.value = store.error || 'Failed to create class'
@@ -615,36 +513,28 @@ async function handleSubmit() {
 }
 
 // ─── Delete ─────────────────────────────────────────────────────────────
-function confirmDelete(cls: SchoolClass) {
-  classToDelete.value = cls
-  showDeleteModal.value = true
-}
+async function confirmDelete(cls: SchoolClass) {
+  const ok = await confirm({
+    title: 'Delete Class',
+    message: `Are you sure you want to delete "${cls.name}"? The class and all associated data will be permanently removed.`,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
+  if (!ok) return
 
-function closeDeleteModal() {
-  showDeleteModal.value = false
-  classToDelete.value = null
-}
-
-async function handleDelete() {
-  if (!classToDelete.value) return
-  formSubmitting.value = true
-  const targetId = classToDelete.value.id
   try {
-    const ok = await store.deleteClass(targetId)
-    if (ok) {
-      showToast('Class deleted successfully')
-      closeDeleteModal()
-      if (paginatedClasses.value.length === 0 && currentPage.value > 1) {
-        currentPage.value--
+    const deleted = await store.deleteClass(cls.id)
+    if (deleted) {
+      toast.success('Class deleted successfully')
+      if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
+        pagination.changePage(pagination.currentPage.value - 1)
       }
     } else {
-      showToast(store.error || 'Failed to delete class', 'error')
+      toast.error(store.error || 'Failed to delete class')
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    showToast(err.response?.data?.message || err.message || 'Failed to delete class', 'error')
-  } finally {
-    formSubmitting.value = false
+    toast.error(err.response?.data?.message || err.message || 'Failed to delete class')
   }
 }
 
@@ -652,21 +542,22 @@ async function handleDelete() {
 const selectedIds = ref<number[]>([])
 
 const isAllPageSelected = computed(() => {
-  return paginatedClasses.value.length > 0 && paginatedClasses.value.every(c => selectedIds.value.includes(c.id))
+  return pagination.paginatedItems.value.length > 0 &&
+    pagination.paginatedItems.value.every(c => selectedIds.value.includes(c.id))
 })
 
 const isIndeterminate = computed(() => {
-  const some = paginatedClasses.value.some(c => selectedIds.value.includes(c.id))
+  const some = pagination.paginatedItems.value.some(c => selectedIds.value.includes(c.id))
   return some && !isAllPageSelected.value
 })
 
 function toggleSelectAll() {
   if (isAllPageSelected.value) {
-    const pageIds = new Set(paginatedClasses.value.map(c => c.id))
+    const pageIds = new Set(pagination.paginatedItems.value.map(c => c.id))
     selectedIds.value = selectedIds.value.filter(id => !pageIds.has(id))
   } else {
     const currentIds = new Set(selectedIds.value)
-    paginatedClasses.value.forEach(c => currentIds.add(c.id))
+    pagination.paginatedItems.value.forEach(c => currentIds.add(c.id))
     selectedIds.value = Array.from(currentIds)
   }
 }
@@ -684,36 +575,32 @@ function clearSelection() {
   selectedIds.value = []
 }
 
-function openBulkDeleteModal() {
-  showBulkDeleteModal.value = true
-}
+async function confirmBulkDelete() {
+  const count = selectedIds.value.length
+  const ok = await confirm({
+    title: 'Delete Classes',
+    message: `Are you sure you want to delete ${count} class(es)? These classes and all associated data will be permanently removed.`,
+    confirmLabel: `Delete ${count} class(es)`,
+    danger: true,
+  })
+  if (!ok) return
 
-function closeBulkDeleteModal() {
-  showBulkDeleteModal.value = false
-}
-
-async function handleBulkDelete() {
-  if (selectedIds.value.length === 0) return
-  formSubmitting.value = true
   const idsToDelete = [...selectedIds.value]
   try {
     const results = await Promise.allSettled(idsToDelete.map(id => store.deleteClass(id)))
     const allOk = results.every(r => r.status === 'fulfilled')
     if (allOk) {
-      showToast(`${idsToDelete.length} class(es) deleted successfully`)
-      closeBulkDeleteModal()
+      toast.success(`${idsToDelete.length} class(es) deleted successfully`)
       clearSelection()
-      if (paginatedClasses.value.length === 0 && currentPage.value > 1) {
-        currentPage.value--
+      if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
+        pagination.changePage(pagination.currentPage.value - 1)
       }
     } else {
-      showToast('Failed to delete some classes', 'error')
+      toast.error('Failed to delete some classes')
     }
   } catch (e: unknown) {
     const err = e as { message?: string }
-    showToast(err.message || 'Failed to delete classes', 'error')
-  } finally {
-    formSubmitting.value = false
+    toast.error(err.message || 'Failed to delete classes')
   }
 }
 
@@ -721,16 +608,6 @@ async function handleBulkDelete() {
 function getClassAvatarBg(): string {
   return '#2563eb'
 }
-
-function showToast(message: string, type: 'success' | 'error' = 'success') {
-  toast.value = { show: true, message, type }
-  setTimeout(() => { toast.value.show = false }, 3000)
-}
-
-// ─── Reset page on search / filter ────────────────────────────
-watch([searchQuery, statusFilter], () => {
-  currentPage.value = 1
-})
 
 // ─── Lifecycle ─────────────────────────────────────────────────────────
 onMounted(async () => {
@@ -944,40 +821,20 @@ onMounted(async () => {
   min-height: 0;
 }
 
-.class-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.875rem;
+.table-wrap :deep(.data-table-wrapper) {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.class-table thead th {
+.table-wrap :deep(.data-table thead th) {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f8fafc;
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
 }
 
 .col-check {
-  width: 48px;
   text-align: center;
-  padding: 12px 8px !important;
-}
-
-.class-table thead th.col-check,
-.class-table tbody td.col-check {
-  text-align: center;
-  padding: 12px 8px !important;
-  vertical-align: middle;
 }
 
 .table-checkbox {
@@ -990,26 +847,14 @@ onMounted(async () => {
 }
 
 .col-index {
-  width: 64px;
   color: #94a3b8;
   font-weight: 600;
 }
 
-.col-actions {
+.actions-cell {
   text-align: center;
   white-space: nowrap;
-  width: 90px;
 }
-
-.class-table tbody td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  color: #475569;
-  vertical-align: middle;
-  font-weight: 500;
-}
-
-.class-table tbody tr:last-child td { border-bottom: none; }
 
 .empty-container {
   flex: 1;
@@ -1017,27 +862,6 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-}
-
-.empty-container .empty-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: #94a3b8;
-}
-
-.empty-container .empty-box h5 {
-  font-weight: 700;
-  color: #64748b;
-  margin: 0;
-  font-size: 1rem;
-}
-
-.empty-container .empty-box p {
-  font-size: 0.85rem;
-  margin: 0;
 }
 
 .class-cell {
@@ -1071,14 +895,14 @@ onMounted(async () => {
   color: #64748b;
 }
 
-.class-row {
+.table-wrap :deep(.class-row) {
   transition: background 0.2s ease, border-left 0.2s ease;
   border-left: 3px solid transparent;
 }
 
-.class-row:hover { background: #f8fafc; border-left-color: #2563eb; }
+.table-wrap :deep(.class-row:hover) { background: #f8fafc; border-left-color: #2563eb; }
 
-.row-selected {
+.table-wrap :deep(.row-selected) {
   background: #f0f5ff !important;
   border-left-color: #2563eb !important;
 }
@@ -1203,34 +1027,7 @@ onMounted(async () => {
 .page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
 .pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
-/* ==================== Modal Styles ==================== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(6px);
-  padding: 1rem;
-}
-
-.modal-content-panel {
-  background: #fff;
-  border-radius: 16px;
-  width: 480px;
-  max-width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  animation: modal-in 0.25s ease-out;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
-
-@keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
-
-/* ── Modal Head ── */
+/* ==================== Form Modal Styles ==================== */
 .modal-head {
   display: flex;
   align-items: flex-start;
@@ -1270,7 +1067,6 @@ onMounted(async () => {
 .icon-edit { background: #fef3c7; color: #d97706; }
 
 .modal-body-custom { padding: 16px 24px 20px; }
-.modal-body { padding: 16px 24px 0; }
 
 .form-group { margin-bottom: 14px; }
 
@@ -1341,9 +1137,6 @@ select.modern-input {
 .btn-primary { background: #2563eb; color: #fff; }
 .btn-primary:hover { background: #1d4ed8; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
-.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-ghost { background: #f1f5f9; color: #475569; }
 .btn-ghost:hover { background: #e2e8f0; }
 
@@ -1360,97 +1153,9 @@ select.modern-input {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ==================== Toast Styles ==================== */
-.toast-notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 12px 18px;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  z-index: 99999;
-  max-width: 400px;
-  animation: toastPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-  border-left: 4px solid transparent;
-}
-
-.toast-notification.success {
-  background: #ecfdf5;
-  color: #065f46;
-  border-left-color: #10b981;
-  border-top: 1px solid #a7f3d0;
-  border-right: 1px solid #a7f3d0;
-  border-bottom: 1px solid #a7f3d0;
-}
-
-.toast-notification.error {
-  background: #fef2f2;
-  color: #991b1b;
-  border-left-color: #ef4444;
-  border-top: 1px solid #fecaca;
-  border-right: 1px solid #fecaca;
-  border-bottom: 1px solid #fecaca;
-}
-
-.toast-icon {
-  display: flex;
-  flex-shrink: 0;
-}
-
-.toast-notification.success .toast-icon svg {
-  color: #10b981;
-}
-
-.toast-notification.error .toast-icon svg {
-  color: #ef4444;
-}
-
-.toast-message {
-  flex: 1;
-}
-
-.toast-close {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.5;
-  padding: 0;
-}
-
-.toast-close:hover {
-  opacity: 1;
-}
-
-/* ==================== Transitions ==================== */
-.modal-enter-active { transition: all 0.2s ease-out; }
-.modal-leave-active { transition: all 0.15s ease-in; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-from .modal-content-panel,
-.modal-leave-to .modal-content-panel { transform: scale(0.92) translateY(10px); }
-
-.modal-enter-active .modal-content-panel,
-.modal-leave-active .modal-content-panel { transition: transform 0.25s ease-out; }
-
-.toast-enter-active { transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.toast-leave-active { transition: all 0.2s ease-in; }
-.toast-enter-from { opacity: 0; transform: translateX(40px) scale(0.95); }
-.toast-leave-to { opacity: 0; transform: translateX(40px) scale(0.95); }
-
 /* ==================== Scrollbar ==================== */
 .table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-
-.modal-content-panel::-webkit-scrollbar { width: 4px; }
-.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
-.modal-content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
 </style>

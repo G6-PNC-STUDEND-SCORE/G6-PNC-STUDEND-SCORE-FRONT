@@ -5,13 +5,7 @@
       {{ error }}
     </div>
 
-    <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status" style="width: 2.25rem; height: 2.25rem;">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
-
-    <div v-else class="role-card">
+    <div class="role-card">
       <!-- Tabs -->
       <div class="tab-bar">
         <button class="tab-btn" :class="{ active: activeTab === 'permissions' }" @click="activeTab = 'permissions'">
@@ -339,12 +333,13 @@ import {
   ShieldCheck, Inbox, Plus, Trash2, Check, AlertTriangle,
   Search, ChevronLeft, ChevronRight,
 } from '@lucide/vue'
-import {
-  getPermissions, getRoles, getRolePermissions, syncRolePermissions,
-  createRole, updateRole, deleteRole,
-  type Role, type Permission, type PermissionsByGroup,
-} from '@/services/permissionService'
+import { storeToRefs } from 'pinia'
+import { useRoleStore } from '@/stores/role'
+import type { Permission } from '@/services/permissionService'
 import DomainRulesPanel from './DomainRulesPanel.vue'
+
+const store = useRoleStore()
+const { roles, permissionsByGroup, error } = storeToRefs(store)
 
 const activeTab = ref<'permissions' | 'domains'>('permissions')
 
@@ -358,13 +353,8 @@ interface FeatureRow {
   other: Permission[]
 }
 
-const loading = ref(true)
-const error = ref('')
-const roles = ref<Role[]>([])
-const permissionsByGroup = ref<PermissionsByGroup>({})
-
 const selectedRoleId = ref<number | null>(null)
-const selectedRole = ref<Role | null>(null)
+const selectedRole = ref<typeof roles.value[number] | null>(null)
 const selectedPermissionIds = ref<Set<number>>(new Set())
 const originalPermissionIds = ref<Set<number>>(new Set())
 const editName = ref('')
@@ -382,7 +372,7 @@ const newRole = ref<{ name: string; description: string; permissionIds: Set<numb
   name: '', description: '', permissionIds: new Set(),
 })
 
-const confirmDelete = ref<Role | null>(null)
+const confirmDelete = ref<typeof roles.value[number] | null>(null)
 const deleting = ref(false)
 
 function formatGroupName(group: string): string {
@@ -508,37 +498,30 @@ function toggleNewRoleRow(row: FeatureRow, checked: boolean) {
 }
 
 async function loadAll() {
-  loading.value = true
-  error.value = ''
-  try {
-    const [perms, roleList] = await Promise.all([getPermissions(), getRoles()])
-    permissionsByGroup.value = perms
-    roles.value = roleList
-    if (roleList.length > 0) {
-      const toSelect = selectedRoleId.value ? roleList.find(r => r.id === selectedRoleId.value) ?? roleList[0]! : roleList[0]!
-      await selectRole(toSelect)
-    }
-  } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to load roles & permissions.'
-  } finally {
-    loading.value = false
+  store.clearError()
+  await store.loadRolesAndPermissions()
+  if (roles.value.length > 0) {
+    const toSelect = selectedRoleId.value
+      ? roles.value.find(r => r.id === selectedRoleId.value) ?? roles.value[0]!
+      : roles.value[0]!
+    await selectRole(toSelect)
   }
 }
 
-async function selectRole(role: Role) {
+async function selectRole(role: typeof roles.value[number]) {
   selectedRole.value = role
   selectedRoleId.value = role.id
   editName.value = role.name
   editDescription.value = role.description || ''
   currentPage.value = 1
   try {
-    const { permissions } = await getRolePermissions(role.id)
+    const permissions = await store.loadRolePermissions(role.id)
     const ids = new Set<number>()
     Object.values(permissions).forEach(group => group.forEach(p => ids.add(p.id)))
     selectedPermissionIds.value = ids
     originalPermissionIds.value = new Set(ids)
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to load permissions for this role.'
+    store.error = e?.response?.data?.message || 'Failed to load permissions for this role.'
   }
 }
 
@@ -550,15 +533,15 @@ function onRoleChange() {
 async function savePermissions() {
   if (!selectedRole.value) return
   saving.value = true
-  error.value = ''
+  store.clearError()
   try {
     const ids = Array.from(selectedPermissionIds.value)
-    await syncRolePermissions(selectedRole.value.id, ids)
+    await store.syncPermissions(selectedRole.value.id, ids)
     originalPermissionIds.value = new Set(selectedPermissionIds.value)
     const role = roles.value.find(r => r.id === selectedRole.value!.id)
     if (role) role.permissions = ids.map(id => ({ id } as Permission))
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to save permissions.'
+    store.error = e?.response?.data?.message || 'Failed to save permissions.'
   } finally {
     saving.value = false
   }
@@ -569,7 +552,7 @@ async function renameRole() {
   if (!editName.value.trim()) { editName.value = selectedRole.value.name; return }
   if (editName.value === selectedRole.value.name && editDescription.value === (selectedRole.value.description || '')) return
   try {
-    const updated = await updateRole(selectedRole.value.id, {
+    const updated = await store.updateRole(selectedRole.value.id, {
       name: editName.value.trim(),
       description: editDescription.value.trim() || undefined,
     })
@@ -577,7 +560,7 @@ async function renameRole() {
     if (idx !== -1) roles.value[idx] = { ...roles.value[idx], ...updated }
     if (selectedRole.value) { selectedRole.value.name = updated.name; selectedRole.value.description = updated.description }
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to update role.'
+    store.error = e?.response?.data?.message || 'Failed to update role.'
   }
 }
 
@@ -589,9 +572,9 @@ function openCreateModal() {
 async function submitCreateRole() {
   if (!newRole.value.name.trim()) return
   creating.value = true
-  error.value = ''
+  store.clearError()
   try {
-    const created = await createRole({
+    const created = await store.createRole({
       name: newRole.value.name.trim(),
       description: newRole.value.description.trim() || undefined,
       permission_ids: Array.from(newRole.value.permissionIds),
@@ -601,7 +584,7 @@ async function submitCreateRole() {
     const role = roles.value.find(r => r.id === created.id)
     if (role) await selectRole(role)
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to create role.'
+    store.error = e?.response?.data?.message || 'Failed to create role.'
   } finally {
     creating.value = false
   }
@@ -610,15 +593,15 @@ async function submitCreateRole() {
 async function doDeleteRole() {
   if (!confirmDelete.value) return
   deleting.value = true
-  error.value = ''
+  store.clearError()
   try {
-    await deleteRole(confirmDelete.value.id)
+    await store.deleteRole(confirmDelete.value.id)
     const wasSelected = selectedRole.value?.id === confirmDelete.value.id
     confirmDelete.value = null
     if (wasSelected) { selectedRole.value = null; selectedRoleId.value = null }
     await loadAll()
   } catch (e: any) {
-    error.value = e?.response?.data?.message || 'Failed to delete role.'
+    store.error = e?.response?.data?.message || 'Failed to delete role.'
   } finally {
     deleting.value = false
   }

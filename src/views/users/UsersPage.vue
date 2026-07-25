@@ -33,7 +33,7 @@
               type="text"
               class="search-input"
               placeholder="Search by name or email..."
-              @input="onSearchInput"
+              @input="applyFilters"
             />
           </div>
           <div class="filter-group">
@@ -594,15 +594,6 @@ const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'er
 const searchQuery = ref('')
 const roleFilter = ref<number | ''>('')
 const statusFilter = ref('')
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
-
-function onSearchInput() {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    currentPage.value = 1
-    loadUsers()
-  }, 400)
-}
 
 function applyFilters() {
   currentPage.value = 1
@@ -1362,7 +1353,7 @@ onMounted(() => {
 }
 
 .user-name {
-  font-weight: 500;
+  font-weight: 600;
   color: #0f172a;
 }
 

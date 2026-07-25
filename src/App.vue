@@ -7,6 +7,8 @@
         <router-view />
       </main>
     </div>
+    <Toast />
+    <ConfirmDialog />
   </div>
 </template>
 
@@ -16,6 +18,8 @@ import { useRoute } from 'vue-router'
 import { useSidebarStore } from './stores/sidebar.ts'
 import Navigation from './components/Navigation.vue'
 import Header from './layouts/Header.vue'
+import Toast from './components/Toast.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 
 const route = useRoute()
 const sidebar = useSidebarStore()

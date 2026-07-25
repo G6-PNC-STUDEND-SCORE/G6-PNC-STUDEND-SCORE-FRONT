@@ -24,7 +24,7 @@
                   <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search classes..."
+                    placeholder="Search by name or room..."
                   />
                   <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
                     <X :size="14" />
@@ -395,7 +395,11 @@ const filteredClasses = computed(() => {
   // Filter by search query
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
-    list = list.filter((c) => c.name.toLowerCase().includes(q))
+    list = list.filter((c) => {
+      const name = (c.name || '').toLowerCase()
+      const room = (c.room || '').toLowerCase()
+      return name.includes(q) || room.includes(q)
+    })
   }
   // Filter by generation
   if (selectedGenerationFilter.value !== null) {
@@ -879,11 +883,11 @@ onMounted(async () => {
   background: #fff;
   border-radius: 14px;
   border: 1px solid #e2e8f0;
-  overflow: hidden;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  min-height: 180px;
 }
 
 .class-card:hover {
@@ -900,7 +904,7 @@ onMounted(async () => {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 18px 18px 0;
+  padding: 20px 20px 0;
 }
 
 .class-card-icon {
@@ -923,7 +927,7 @@ onMounted(async () => {
   color: #64748b;
 }
 
-.class-card-body { padding: 14px 18px; flex: 1; }
+.class-card-body { padding: 18px 20px; flex: 1; }
 
 .class-card-name {
   font-size: 1.05rem;
@@ -946,8 +950,9 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 14px 20px;
   border-top: 1px solid #f1f5f9;
+  min-height: 48px;
 }
 
 .class-card-stat {
@@ -1325,6 +1330,35 @@ onMounted(async () => {
 
 .page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
 .pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/*  SCROLLBAR — thin style matching SubjectPage / ClassPage / UsersPage */
+/* ══════════════════════════════════════════════════════════════════ */
+.classes-grid::-webkit-scrollbar,
+.term-sections::-webkit-scrollbar,
+.page-container::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.classes-grid::-webkit-scrollbar-track,
+.term-sections::-webkit-scrollbar-track,
+.page-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.classes-grid::-webkit-scrollbar-thumb,
+.term-sections::-webkit-scrollbar-thumb,
+.page-container::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+
+.classes-grid::-webkit-scrollbar-thumb:hover,
+.term-sections::-webkit-scrollbar-thumb:hover,
+.page-container::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
