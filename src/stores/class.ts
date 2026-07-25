@@ -71,7 +71,6 @@ export const useClassStore = defineStore('class', () => {
   }
 
   function invalidateCache() {
-    localStorage.removeItem('classes_cache')
     classesCacheTime = 0
     lastSearch = ''
   }
@@ -82,7 +81,7 @@ export const useClassStore = defineStore('class', () => {
     clearMessages()
 
     try {
-      const response = await classService.createClass(classData as any)
+      const response = await classService.createClass(classData)
       if (response.success) {
         invalidateCache()
         await fetchClasses(undefined, true)
@@ -111,7 +110,7 @@ export const useClassStore = defineStore('class', () => {
     clearMessages()
 
     try {
-      const response = await classService.updateClass(id, classData as any)
+      const response = await classService.updateClass(id, classData)
       if (response.success) {
         invalidateCache()
         await fetchClasses(undefined, true)

@@ -87,16 +87,29 @@
                   Enter the Spreadsheet ID from the URL: 
                   <code>docs.google.com/spreadsheets/d/<strong>SPREADSHEET_ID</strong>/edit</code>
                 </div>
+                <div v-if="studentEmailDomains.length > 1" class="gs-domain-row">
+                  <label for="gs-email-domain">New student accounts sign in with</label>
+                  <select id="gs-email-domain" v-model="selectedEmailDomain" @click.stop>
+                    <option :value="null" disabled>Select a domain…</option>
+                    <option v-for="d in studentEmailDomains" :key="d.id" :value="d.domain">@{{ d.domain }}</option>
+                  </select>
+                </div>
+                <div v-else-if="studentEmailDomains.length === 1" class="gs-domain-row gs-domain-static">
+                  New student accounts sign in with <strong>@{{ studentEmailDomains[0].domain }}</strong>
+                </div>
                 <div class="gs-import-form">
-                  <input v-model="spreadsheetId" type="text" class="form-input" 
-                    placeholder="Paste Spreadsheet ID here..." 
+                  <input v-model="spreadsheetId" type="text" class="form-input"
+                    placeholder="Paste Spreadsheet ID here..."
                     @click.stop />
-                  <button class="btn btn-success btn-sm" @click="importFromSheet" 
-                    :disabled="importing || !spreadsheetId.trim()">
+                  <button class="btn btn-success btn-sm" @click="importFromSheet"
+                    :disabled="importing || !spreadsheetId.trim() || emailDomainSelectionRequired">
                     <i v-if="importing" class="bi bi-arrow-repeat spinning"></i>
                     <i v-else class="bi bi-cloud-download"></i>
                     {{ importing ? 'Importing...' : 'Import' }}
                   </button>
+                </div>
+                <div v-if="emailDomainSelectionRequired" class="gs-domain-warning">
+                  <i class="bi bi-exclamation-triangle"></i> Choose a sign-in domain before importing.
                 </div>
               </div>
             </div>
@@ -161,6 +174,7 @@ import {
   createGoogleSheet,
   importFromGoogleSheets,
 } from '@/services/scoreService'
+import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
 
 const props = defineProps<{
   subjectId: number
@@ -187,6 +201,8 @@ const autoSyncEnabled = ref(false)
 const statusMessage = ref('')
 const statusType = ref<'success' | 'error' | 'info'>('info')
 const accessToken = ref('')
+const studentEmailDomains = ref<StudentEmailDomain[]>([])
+const selectedEmailDomain = ref<string | null>(null)
 
 let tokenClient: any = null
 
@@ -202,10 +218,25 @@ const statusIcon = computed(() => ({
   info: 'bi bi-info-circle-fill',
 }[statusType.value] || 'bi bi-info-circle-fill'))
 
+// True only when the admin still needs to pick a domain before importing can proceed.
+const emailDomainSelectionRequired = computed(() =>
+  studentEmailDomains.value.length > 1 && !selectedEmailDomain.value
+)
+
 // ─── Lifecycle ──────────────────────────────────────────────────────
 onMounted(async () => {
   await checkConnectionStatus()
   loadSavedState()
+  try {
+    studentEmailDomains.value = await getStudentEmailDomains()
+    // Only auto-pick when there's no real choice — with 2+ domains, force an explicit
+    // selection rather than silently defaulting to "the first one".
+    if (studentEmailDomains.value.length === 1) {
+      selectedEmailDomain.value = studentEmailDomains.value[0].domain
+    }
+  } catch {
+    studentEmailDomains.value = []
+  }
 })
 
 function setStatus(msg: string, type: 'success' | 'error' | 'info' = 'info') {
@@ -450,10 +481,11 @@ async function importFromSheet() {
 
   try {
     const result = await importFromGoogleSheets(
-      props.subjectId, 
-      props.termId, 
-      spreadsheetId.value.trim(), 
-      accessToken.value
+      props.subjectId,
+      props.termId,
+      spreadsheetId.value.trim(),
+      accessToken.value,
+      selectedEmailDomain.value
     )
     setStatus(result.message || 'Scores imported successfully!', 'success')
     emit('synced')
@@ -687,6 +719,38 @@ declare global {
 .gs-import-form .form-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+.gs-domain-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  color: #475569;
+}
+
+.gs-domain-row select {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  cursor: pointer;
+}
+
+.gs-domain-static strong {
+  color: #1e3a8a;
+}
+
+.gs-domain-warning {
+  margin-top: 6px;
+  font-size: 0.74rem;
+  color: #b45309;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 /* Last sheet link */

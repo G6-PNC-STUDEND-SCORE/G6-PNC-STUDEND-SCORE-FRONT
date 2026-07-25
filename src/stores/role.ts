@@ -3,12 +3,13 @@ import { ref } from 'vue'
 import {
   getPermissions, getRoles, getRolePermissions, syncRolePermissions,
   createRole, updateRole, deleteRole,
-  type Role, type Permission, type PermissionsByGroup,
+  type Role, type PermissionsByGroup,
 } from '@/services/permissionService'
 import {
   getEmailDomainRules, createEmailDomainRule, updateEmailDomainRule, deleteEmailDomainRule,
   type EmailDomainRule,
 } from '@/services/emailDomainRuleService'
+import { extractErrorMessage } from '@/utils'
 
 export const useRoleStore = defineStore('role', () => {
   // ─── State ──────────────────────────────────────────────────────────
@@ -29,8 +30,8 @@ export const useRoleStore = defineStore('role', () => {
       const [perms, roleList] = await Promise.all([getPermissions(), getRoles()])
       permissionsByGroup.value = perms
       roles.value = roleList
-    } catch (e: any) {
-      error.value = e?.response?.data?.message || 'Failed to load roles & permissions.'
+    } catch (e: unknown) {
+      error.value = extractErrorMessage(e) || 'Failed to load roles & permissions.'
     }
   }
 
@@ -74,8 +75,8 @@ export const useRoleStore = defineStore('role', () => {
     try {
       const ruleList = await getEmailDomainRules()
       domainRules.value = ruleList
-    } catch (e: any) {
-      error.value = e?.response?.data?.message || 'Failed to load sign-in domain rules.'
+    } catch (e: unknown) {
+      error.value = extractErrorMessage(e) || 'Failed to load sign-in domain rules.'
     }
   }
 

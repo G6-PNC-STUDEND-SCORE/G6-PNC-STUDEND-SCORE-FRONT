@@ -704,15 +704,6 @@ onMounted(async () => {
   animation: spin 0.7s linear infinite;
 }
 
-.spinner-sm {
-  width: 16px; height: 16px;
-  border: 2px solid #e2e8f0;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
 /* ══════════════════════════════════════════════════════════════════ */
 /*  SCORES CARD — matches UsersPage .user-card style                   */
 /* ══════════════════════════════════════════════════════════════════ */
@@ -737,7 +728,6 @@ onMounted(async () => {
 /* ══════════════════════════════════════════════════════════════════ */
 /*  TOOLBAR — matches UsersPage .toolbar style                        */
 /* ══════════════════════════════════════════════════════════════════ */
-.toolbar,
 .term-toolbar {
   display: flex;
   align-items: center;
@@ -755,14 +745,6 @@ onMounted(async () => {
   align-items: center;
   gap: 10px;
   flex: 1;
-  flex-wrap: wrap;
-}
-
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
   flex-wrap: wrap;
 }
 
@@ -865,7 +847,7 @@ onMounted(async () => {
   border-color: #93c5fd;
 }
 
-/* ══════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════
 /*  CLASS CARDS                                                        */
 /* ══════════════════════════════════════════════════════════════════ */
 .classes-grid {
@@ -1234,131 +1216,6 @@ onMounted(async () => {
 
 .empty-state h5 { font-weight: 600; color: #64748b; margin: 0 0 4px 0; font-size: 1rem; }
 .empty-state p { font-size: 0.8125rem; margin: 0; }
-
-/* ══════════════════════════════════════════════════════════════════ */
-/*  PAGINATION — matching TeacherPage                                  */
-/* ══════════════════════════════════════════════════════════════════ */
-.pagination-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 20px;
-  border-top: 1px solid #e5e7eb;
-  background: #fafbfc;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  font-size: 0.8125rem;
-  gap: 12px;
-  flex-wrap: wrap;
-  flex-shrink: 0;
-}
-
-.pagination-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #64748b;
-}
-
-.rows-label { font-weight: 500; white-space: nowrap; }
-
-.rows-selector {
-  display: flex;
-  gap: 2px;
-  background: #f1f5f9;
-  border-radius: 8px;
-  padding: 2px;
-}
-
-.rows-btn {
-  padding: 4px 10px;
-  border: none;
-  background: transparent;
-  color: #64748b;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-family: inherit;
-  transition: all 0.15s ease;
-}
-
-.rows-btn:hover { color: #334155; }
-.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
-
-.pagination-pages {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.page-nav {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
-.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.page-btn {
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: #475569;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  font-weight: 500;
-  font-family: inherit;
-  transition: all 0.15s ease;
-}
-
-.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
-.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); }
-
-.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
-.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
-
-/* ══════════════════════════════════════════════════════════════════ */
-/*  SCROLLBAR — thin style matching SubjectPage / ClassPage / UsersPage */
-/* ══════════════════════════════════════════════════════════════════ */
-.classes-grid::-webkit-scrollbar,
-.term-sections::-webkit-scrollbar,
-.page-container::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-.classes-grid::-webkit-scrollbar-track,
-.term-sections::-webkit-scrollbar-track,
-.page-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.classes-grid::-webkit-scrollbar-thumb,
-.term-sections::-webkit-scrollbar-thumb,
-.page-container::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 2px;
-}
-
-.classes-grid::-webkit-scrollbar-thumb:hover,
-.term-sections::-webkit-scrollbar-thumb:hover,
-.page-container::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
 
 /* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {

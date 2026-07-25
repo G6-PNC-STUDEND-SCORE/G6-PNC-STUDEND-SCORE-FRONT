@@ -1,55 +1,7 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type { Student, SchoolClass } from '@/types'
 
-export interface Student {
-  id: number
-  user_id: number
-  student_id_number: string | null
-  student_number_sequence_id: number | null
-  generation_id: number | null
-  profile_photo: string | null
-  profile_photo_url: string | null
-  class_id?: number | null
-  academic_year_id?: number | null
-  enrollment_date?: string | null
-  gender?: string | null
-  created_at: string
-  updated_at: string
-  user?: {
-    id: number
-    name: string
-    email: string
-    gender: string | null
-    status: string
-    avatar: string | null
-  } | null
-  classHistories?: Array<{
-    id: number
-    class_id: number
-    status: string
-    class?: {
-      id: number
-      name: string
-    } | null
-  }> | null
-  class?: {
-    id: number
-    name: string
-  } | null
-  generation?: {
-    id: number
-    name: string
-  } | null
-  studentNumberSequence?: {
-    id: number
-    student_number: string
-    intake_year: number
-  } | null
-}
-
-export interface SchoolClass {
-  id: number
-  name: string
-}
+export type { Student, SchoolClass }
 
 export interface StudentsResponse {
   students: Student[]
@@ -57,10 +9,6 @@ export interface StudentsResponse {
 
 export interface StudentResponse {
   student: Student
-}
-
-export interface ClassesResponse {
-  classes: SchoolClass[]
 }
 
 export async function getStudents(): Promise<StudentsResponse> {
@@ -94,7 +42,7 @@ export async function updateStudent(
     status?: string
     generation_id?: number | null
     class_id?: number | null
-  }
+  },
 ): Promise<StudentResponse> {
   const payload: Record<string, unknown> = {}
   if (data.name !== undefined) payload.name = data.name
@@ -113,7 +61,7 @@ export async function deleteStudent(id: number): Promise<{ message: string }> {
 
 export async function assignStudentToClass(
   id: number,
-  classId: number
+  classId: number,
 ): Promise<StudentResponse> {
   const res = await http.put<StudentResponse>(`/students/${id}/assign-class`, {
     class_id: classId,
@@ -123,12 +71,11 @@ export async function assignStudentToClass(
 
 export async function uploadStudentPhoto(
   id: number,
-  file: File
+  file: File,
 ): Promise<StudentResponse> {
   const formData = new FormData()
   formData.append('profile_photo', file)
 
-  // Ensure we send multipart/form-data
   const res = await http.post<StudentResponse>(`/students/${id}/photo`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -137,14 +84,14 @@ export async function uploadStudentPhoto(
   return res.data
 }
 
-export async function bulkDeleteStudents(ids: number[]): Promise<{ message: string; data: { deleted_count: number } }> {
+export async function bulkDeleteStudents(
+  ids: number[],
+): Promise<{ message: string; data: { deleted_count: number } }> {
   const res = await http.post('/students/bulk-delete', { ids })
   return res.data
 }
 
-export async function deleteStudentPhoto(
-  id: number
-): Promise<StudentResponse> {
+export async function deleteStudentPhoto(id: number): Promise<StudentResponse> {
   const res = await http.delete<StudentResponse>(`/students/${id}/photo`)
   return res.data
 }

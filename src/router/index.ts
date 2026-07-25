@@ -7,26 +7,22 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach(async (to, _from) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  const publicRoutes = ['/login']
+  const isLoginRoute = to.name === 'login'
 
   if (!authStore.isAuthenticated) {
-    return publicRoutes.includes(to.path) ? true : '/login'
+    return isLoginRoute ? true : '/login'
   }
 
-  // The router resolves its first navigation as soon as it's installed — before init()'s
-  // /user fetch has necessarily resolved. Wait for that same in-flight (or already-settled)
-  // call so every role-dependent decision below always sees the real user, never a
-  // transient null (which is what caused an earlier infinite redirect loop).
+  // Wait for the initial /user fetch to settle so role data is available
   if (!authStore.user) {
     await authStore.ensureReady()
   }
 
-  if (publicRoutes.includes(to.path)) {
-    // Authenticated and hitting /login directly — bounce to wherever this role actually lands.
-    return authStore.isAuthenticated ? authStore.defaultLandingPath : true
+  if (isLoginRoute) {
+    return authStore.defaultLandingPath
   }
 
   const allowedRoles = to.meta.roles

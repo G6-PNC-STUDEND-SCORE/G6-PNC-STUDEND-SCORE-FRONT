@@ -14,7 +14,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="rules-table">
+      <table class="rules-table data-table-base">
         <thead>
           <tr>
             <th>Email Domain</th>
@@ -24,7 +24,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="rule in rules" :key="rule.id" class="rule-row">
+          <tr v-for="rule in rules" :key="rule.id" class="data-row">
             <td>
               <div v-if="editingDomainId === rule.id" class="domain-edit-wrap">
                 <span class="domain-prefix">@</span>
@@ -256,30 +256,6 @@ onMounted(async () => {
 
 .table-wrap { width: 100%; flex: 1; min-height: 120px; overflow-y: auto; padding: 16px 20px 0; }
 
-.rules-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
-.rules-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f8fafc;
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
-}
-.rules-table tbody td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  color: #475569;
-  vertical-align: middle;
-}
-.rules-table tbody tr:last-child td { border-bottom: none; }
-.rule-row:hover { background: #f8fafc; }
-
 .domain-prefix { color: #94a3b8; font-weight: 600; }
 
 .domain-text { cursor: default; padding: 0.2rem 0.4rem; border-radius: 6px; transition: background 0.15s; display: inline-flex; align-items: center; gap: 4px; }
@@ -340,7 +316,7 @@ onMounted(async () => {
 .btn-cancel-domain:hover { background: #e2e8f0; color: #475569; }
 
 .col-active { text-align: center; width: 80px; }
-.col-actions { text-align: right; width: 60px; }
+.col-actions { text-align: center; width: 110px; }
 
 .role-select {
   padding: 0.35rem 0.6rem;

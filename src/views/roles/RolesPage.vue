@@ -47,7 +47,7 @@
             v-if="selectedRole && selectedRole.slug !== 'admin'"
             class="btn-icon-danger"
             title="Delete role"
-            @click="confirmDelete = selectedRole"
+            @click="doDeleteRole(selectedRole!)"
           >
             <Trash2 :size="15" />
           </button>
@@ -87,7 +87,7 @@
 
       <!-- ── Table (with data) ── -->
       <div v-else class="table-wrap">
-        <table class="perm-table">
+            <table class="perm-table data-table-base">
           <thead>
             <tr>
               <th class="col-all">All</th>
@@ -100,7 +100,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in pagedRows" :key="row.group" class="perm-row">
+            <tr v-for="row in pagedRows" :key="row.group" class="data-row">
               <td class="col-all">
                 <input
                   type="checkbox"
@@ -241,7 +241,7 @@
           </div>
 
           <div class="table-wrap modal-table-wrap">
-            <table class="perm-table">
+        <table class="perm-table data-table-base">
               <thead>
                 <tr>
                   <th class="col-all">All</th>
@@ -254,7 +254,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in featureRows" :key="row.group" class="perm-row">
+                <tr v-for="row in featureRows" :key="row.group" class="data-row">
                   <td class="col-all">
                     <input
                       type="checkbox"
@@ -308,22 +308,6 @@
       </div>
     </div>
 
-    <!-- Delete Confirm Modal -->
-    <div v-if="confirmDelete" class="modal-overlay" @click.self="confirmDelete = null">
-      <div class="confirm-modal">
-        <h5>Delete "{{ confirmDelete.name }}"?</h5>
-        <p class="text-secondary">
-          Users currently assigned this role will keep it, but it will no longer appear as an option.
-          This can't be undone.
-        </p>
-        <div class="confirm-modal-actions">
-          <button class="btn-cancel" @click="confirmDelete = null">Cancel</button>
-          <button class="btn-delete-confirm" :disabled="deleting" @click="doDeleteRole">
-            {{ deleting ? 'Deleting...' : 'Delete Role' }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -335,11 +319,13 @@ import {
 } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { useRoleStore } from '@/stores/role'
+import { useConfirm } from '@/composables/useConfirm'
 import type { Permission } from '@/services/permissionService'
 import DomainRulesPanel from './DomainRulesPanel.vue'
 
 const store = useRoleStore()
 const { roles, permissionsByGroup, error } = storeToRefs(store)
+const { confirm } = useConfirm()
 
 const activeTab = ref<'permissions' | 'domains'>('permissions')
 
@@ -372,7 +358,6 @@ const newRole = ref<{ name: string; description: string; permissionIds: Set<numb
   name: '', description: '', permissionIds: new Set(),
 })
 
-const confirmDelete = ref<typeof roles.value[number] | null>(null)
 const deleting = ref(false)
 
 function formatGroupName(group: string): string {
@@ -590,14 +575,19 @@ async function submitCreateRole() {
   }
 }
 
-async function doDeleteRole() {
-  if (!confirmDelete.value) return
+async function doDeleteRole(role: typeof roles.value[number]) {
+  const ok = await confirm({
+    title: `Delete "${role.name}"?`,
+    message: 'Users currently assigned this role will keep it, but it will no longer appear as an option. This can\'t be undone.',
+    confirmLabel: 'Delete Role',
+    danger: true,
+  })
+  if (!ok) return
   deleting.value = true
   store.clearError()
   try {
-    await store.deleteRole(confirmDelete.value.id)
-    const wasSelected = selectedRole.value?.id === confirmDelete.value.id
-    confirmDelete.value = null
+    await store.deleteRole(role.id)
+    const wasSelected = selectedRole.value?.id === role.id
     if (wasSelected) { selectedRole.value = null; selectedRoleId.value = null }
     await loadAll()
   } catch (e: any) {
@@ -836,31 +826,7 @@ onMounted(loadAll)
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-.perm-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
-.perm-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f8fafc;
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
-}
 .perm-table thead th.col-action { text-align: center; }
-.perm-table tbody td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  color: #475569;
-  vertical-align: middle;
-}
-.perm-table tbody tr:last-child td { border-bottom: none; }
-.perm-row { transition: background 0.15s ease; }
-.perm-table tbody tr:hover { background: #f8fafc; }
 
 .col-all { text-align: center; width: 50px; }
 .col-feature { min-width: 160px; }
@@ -1016,17 +982,6 @@ onMounted(loadAll)
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Modals */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(6px);
-  padding: 1rem;
-}
 .create-modal {
   background: #fff;
   border-radius: 16px;
@@ -1059,12 +1014,4 @@ onMounted(loadAll)
 .create-modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.4rem; border-top: 1px solid #f1f5f9; }
 .btn-cancel { background: #f1f5f9; color: #475569; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 .btn-cancel:hover { background: #e2e8f0; }
-
-.confirm-modal { background: #fff; border-radius: 16px; width: 100%; max-width: 420px; padding: 1.5rem; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15); animation: modal-in 0.25s ease-out; }
-.confirm-modal h5 { margin: 0 0 0.5rem; font-weight: 700; color: #0f172a; }
-.confirm-modal p { font-size: 0.85rem; margin-bottom: 1.25rem; }
-.confirm-modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; }
-.btn-delete-confirm { background: #dc2626; color: #fff; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
-.btn-delete-confirm:hover:not(:disabled) { background: #b91c1c; }
-.btn-delete-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

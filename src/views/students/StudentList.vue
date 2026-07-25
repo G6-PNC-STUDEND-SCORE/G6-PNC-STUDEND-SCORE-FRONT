@@ -70,13 +70,13 @@
 
     <!-- ── Table (with data) ── -->
     <div v-else class="table-wrap">
-      <table class="student-table">
+      <table class="student-table data-table-base">
         <thead>
           <tr>
             <th class="col-check">
               <input
                 type="checkbox"
-                class="row-check"
+                class="table-checkbox"
                 :checked="allSelected"
                 :indeterminate="someSelected && !allSelected"
                 @change="toggleAll"
@@ -96,13 +96,13 @@
         <tbody>
           <tr
             v-for="(student, index) in paginatedStudents"
-            :key="student.id"            class="student-row"
+            :key="student.id"            class="data-row"
             :class="{ 'row-selected': selectedIds.includes(student.id) }"
           >
             <td class="col-check">
               <input
                 type="checkbox"
-                class="row-check"
+                class="table-checkbox"
                 :checked="selectedIds.includes(student.id)"
                 @change="toggleRow(student.id)"
                 :aria-label="`Select ${student.user?.name || student.id}`"
@@ -477,29 +477,6 @@ defineEmits<{
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
-.student-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.875rem;
-}
-
-.student-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f8fafc;
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-
 .col-check {
   width: 48px;
   text-align: center;
@@ -514,16 +491,9 @@ defineEmits<{
 }
 
 .col-index {
-  width: 60px;
-  text-align: center;
-  padding: 10px 8px !important;
-}
-
-.student-table thead th.col-index,
-.student-table tbody td.col-index {
-  text-align: center;
-  padding: 10px 8px !important;
-  vertical-align: middle;
+  width: 64px;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
 .id-cell {
@@ -533,7 +503,7 @@ defineEmits<{
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
 
-.row-check {
+.table-checkbox {
   width: 16px;
   height: 16px;
   accent-color: #2563eb;
@@ -542,9 +512,10 @@ defineEmits<{
   margin: 0 auto;
 }
 
+
 .col-actions {
   text-align: center;
-  width: 130px;
+  width: 110px;
 }
 
 .td-actions {
@@ -552,28 +523,7 @@ defineEmits<{
   text-align: center;
 }
 
-.act-btn {
-  background: none;
-  border: none;
-  padding: 5px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #94a3b8;
-  transition: all 0.15s;
-}
 
-.act-btn:hover { background: #f1f5f9; color: #3b82f6; }
-.act-danger:hover { background: #fef2f2; color: #ef4444; }
-
-.student-table tbody td {
-  padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  color: #475569;
-  vertical-align: middle;
-  font-weight: 500;
-}
-
-.student-table tbody tr:last-child td { border-bottom: none; }
 
 .empty-container {
   flex: 1;
@@ -682,35 +632,12 @@ defineEmits<{
   color: #9ca3af;
 }
 
-.student-row {
-  transition: background 0.2s ease, border-left 0.2s ease;
-  border-left: 3px solid transparent;
-}
-
-.student-row:hover { background: #f8fafc; border-left-color: #2563eb; }
-
-.row-selected {
-  background: #f0f5ff !important;
-  border-left-color: #2563eb !important;
-}
-
 .meta-cell {
   font-size: 0.8125rem;
   color: #64748b;
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 100px;
-  letter-spacing: 0.01em;
-}
 
-.badge-active { background: #dbeafe; color: #1d4ed8; }
-.badge-inactive { background: #f1f5f9; color: #64748b; }
 
 /* ==================== td-actions (icon buttons) ==================== */
 

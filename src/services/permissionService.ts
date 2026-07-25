@@ -1,52 +1,48 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type { Role, Permission, PermissionsByGroup, ApiResponse } from '@/types'
 
-export interface Permission {
-  id: number
-  name: string
-  slug: string
-  group: string
-  description: string | null
-}
-
-export interface Role {
-  id: number
-  name: string
-  slug: string
-  description: string | null
-  is_active: boolean
-  permissions?: Permission[]
-  created_at: string
-  updated_at: string
-}
-
-export type PermissionsByGroup = Record<string, Permission[]>
+export type { Role, Permission, PermissionsByGroup }
 
 export async function getPermissions(): Promise<PermissionsByGroup> {
-  const res = await http.get<{ success: boolean; data: PermissionsByGroup }>('/permissions')
+  const res = await http.get<ApiResponse<PermissionsByGroup>>('/permissions')
   return res.data.data
 }
 
 export async function getRoles(): Promise<Role[]> {
-  const res = await http.get<{ success: boolean; data: Role[] }>('/roles')
+  const res = await http.get<ApiResponse<Role[]>>('/roles')
   return res.data.data
 }
 
-export async function getRolePermissions(roleId: number): Promise<{ role: Role; permissions: PermissionsByGroup }> {
-  const res = await http.get<{ role: Role; permissions: PermissionsByGroup }>(`/roles/${roleId}/permissions`)
+export async function getRolePermissions(
+  roleId: number,
+): Promise<{ role: Role; permissions: PermissionsByGroup }> {
+  const res = await http.get<{ role: Role; permissions: PermissionsByGroup }>(
+    `/roles/${roleId}/permissions`,
+  )
   return res.data
 }
 
-export async function syncRolePermissions(roleId: number, permissionIds: number[]): Promise<void> {
+export async function syncRolePermissions(
+  roleId: number,
+  permissionIds: number[],
+): Promise<void> {
   await http.put(`/roles/${roleId}/permissions`, { permission_ids: permissionIds })
 }
 
-export async function createRole(data: { name: string; description?: string; permission_ids?: number[] }): Promise<Role> {
-  const res = await http.post<{ success: boolean; data: Role }>('/roles', data)
+export async function createRole(data: {
+  name: string
+  description?: string
+  permission_ids?: number[]
+}): Promise<Role> {
+  const res = await http.post<ApiResponse<Role>>('/roles', data)
   return res.data.data
 }
 
-export async function updateRole(roleId: number, data: { name: string; description?: string }): Promise<Role> {
-  const res = await http.put<{ success: boolean; data: Role }>(`/roles/${roleId}`, data)
+export async function updateRole(
+  roleId: number,
+  data: { name: string; description?: string },
+): Promise<Role> {
+  const res = await http.put<ApiResponse<Role>>(`/roles/${roleId}`, data)
   return res.data.data
 }
 

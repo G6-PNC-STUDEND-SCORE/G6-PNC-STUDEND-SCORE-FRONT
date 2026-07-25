@@ -1,4 +1,4 @@
-import { http } from './api'
+import { http } from './apiHttp'
 
 export interface TermInfo {
   id: number
@@ -10,7 +10,7 @@ export interface SubjectWithTerms {
   name: string
   status: string
   term_ids: number[]
-  terms: TermInfo[]
+  terms: Array<{ id: number; name: string }>
   teacher?: { user?: { name?: string | null } } | null
   teachers?: Array<{ id: number; user?: { name?: string | null } }>
   teacher_ids?: number[]
@@ -28,7 +28,7 @@ export interface SubjectTermResponse {
   success: boolean
   data: {
     subjects: SubjectWithTerms[]
-    terms: TermInfo[]
+    terms: Array<{ id: number; name: string }>
   }
 }
 
@@ -38,19 +38,11 @@ export interface SyncResult {
 }
 
 export const subjectTermService = {
-  /**
-   * GET /subject-terms
-   * Get all subjects with their assigned terms.
-   */
   async getAll(): Promise<SubjectTermResponse> {
     const res = await http.get('/subject-terms')
     return res.data
   },
 
-  /**
-   * PUT /subject-terms/{subject}
-   * Update terms for a single subject.
-   */
   async syncSubject(subjectId: number, termIds: number[]): Promise<SyncResult> {
     const res = await http.put(`/subject-terms/${subjectId}`, {
       term_ids: termIds,
@@ -58,12 +50,8 @@ export const subjectTermService = {
     return res.data
   },
 
-  /**
-   * POST /subject-terms/sync
-   * Batch update all subject-term assignments.
-   */
   async syncBatch(
-    assignments: { subject_id: number; term_ids: number[] }[]
+    assignments: { subject_id: number; term_ids: number[] }[],
   ): Promise<SyncResult> {
     const res = await http.post('/subject-terms/sync', {
       assignments,

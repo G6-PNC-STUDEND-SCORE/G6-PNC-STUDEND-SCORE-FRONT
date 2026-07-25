@@ -3,15 +3,8 @@ import { ref, computed } from 'vue'
 import { login as loginApi, logout as logoutApi, me } from '@/services/authService'
 import { googleLogin as googleLoginApi } from '@/services/googleAuthService'
 import { setAuthToken, clearAuthToken } from '@/services/apiHttp'
+import type { User } from '@/types'
 import router from '@/router'
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-  [key: string]: unknown
-}
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token') || null)

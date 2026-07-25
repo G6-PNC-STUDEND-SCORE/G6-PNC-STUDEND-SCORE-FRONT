@@ -81,25 +81,4 @@ const { confirmState, accept, cancel } = useConfirm()
   gap: 8px;
   padding: 20px 24px;
 }
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0.5rem 1.125rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
-  font-family: inherit;
-  white-space: nowrap;
-}
-.btn-primary { background: #2563eb; color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
-.btn-ghost { background: #f1f5f9; color: #475569; }
-.btn-ghost:hover { background: #e2e8f0; }
 </style>

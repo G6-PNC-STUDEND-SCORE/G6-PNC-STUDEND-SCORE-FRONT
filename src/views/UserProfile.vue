@@ -1,187 +1,249 @@
 <template>
-  <div class="admin-profile-page">
-    <header class="page-header">
-      <div>
-        <h1>My Profile</h1>
-        <p class="page-subtitle">Manage your institutional profile and security preferences.</p>
-      </div>
-    </header>
-
+  <div>
     <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p>Loading profile...</p>
+    <div v-if="loading" class="empty-container">
+      <div class="spinner-sm" style="width: 32px; height: 32px; border-width: 3px;"></div>
+      <p style="color: #94a3b8; margin-top: 12px;">Loading profile...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="fetchError" class="error-state">
-      <AlertTriangle :size="32" style="color: #dc2626; margin-bottom: 12px;" />
-      <p>{{ fetchError }}</p>
-      <button class="btn btn-primary" @click="loadProfile">Retry</button>
+    <div v-else-if="fetchError" class="empty-container" style="border: none; background: #fff; border-radius: 16px;">
+      <i class="bi bi-exclamation-triangle" style="font-size: 2rem; color: #ef4444;"></i>
+      <p style="color: #64748b; margin: 12px 0 16px;">{{ fetchError }}</p>
+      <button class="btn btn-primary-custom" @click="loadProfile">
+        <i class="bi bi-arrow-clockwise me-1"></i> Retry
+      </button>
     </div>
 
     <template v-else>
-      <!-- Success Message -->
-      <div v-if="successMessage" class="alert alert-success d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <CheckCircle :size="18" />
+      <!-- Alerts -->
+      <div v-if="successMessage" class="profile-alert profile-alert-success">
+        <i class="bi bi-check-circle-fill me-2"></i>
         {{ successMessage }}
-        <button type="button" class="btn-close" @click="successMessage = ''" aria-label="Close"></button>
+        <button type="button" class="profile-alert-close" @click="successMessage = ''">&times;</button>
       </div>
-
-      <!-- Error Message -->
-      <div v-if="saveError" class="alert alert-danger d-flex align-items-center gap-2 alert-dismissible fade show" role="alert">
-        <AlertTriangle :size="18" />
+      <div v-if="saveError" class="profile-alert profile-alert-error">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
         {{ saveError }}
-        <button type="button" class="btn-close" @click="saveError = ''" aria-label="Close"></button>
+        <button type="button" class="profile-alert-close" @click="saveError = ''">&times;</button>
       </div>
 
-      <!-- Profile Card -->
-      <div class="profile-card">
-        <div class="profile-body">
-          <div class="avatar-wrap" @click="triggerUpload" role="button" tabindex="0" @keydown.enter.prevent="triggerUpload" :title="avatarUploading ? 'Uploading...' : 'Click to change photo'">
-            <div class="avatar">
-              <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="avatar" />
-              <div v-else class="avatar-fallback">{{ initials }}</div>
+      <div class="profile-grid">
+        <!-- Left: Profile Card -->
+        <div class="profile-card">
+          <!-- Gradient Header -->
+          <div class="profile-header">
+            <div class="profile-avatar" @click="triggerUpload" role="button" tabindex="0" @keydown.enter.prevent="triggerUpload" :title="avatarUploading ? 'Uploading...' : 'Click to change photo'">
+              <img v-if="avatarUrl" :src="avatarUrl" alt="avatar" />
+              <span v-else>{{ initials }}</span>
+              <div class="profile-avatar-hover">
+                <i class="bi bi-camera-fill"></i>
+              </div>
             </div>
-            <span class="avatar-hint">
-              <template v-if="avatarUploading">
-                <span class="spinner-border spinner-border-sm" role="status"></span>
-                Uploading...
-              </template>
-              <template v-else>
-                <Camera :size="14" class="me-1" /> Change photo
-              </template>
-            </span>
+            <div class="profile-header-info">
+              <h2>{{ form.name || 'User' }}</h2>
+              <div class="profile-header-meta">
+                <span class="profile-role-tag">
+                  <i class="bi bi-shield-lock"></i>
+                  {{ form.role || 'N/A' }}
+                </span>
+              </div>
+            </div>
+            <span v-if="avatarUploading" class="spinner-sm" style="width: 18px; height: 18px; border-width: 2px; color: rgba(255,255,255,0.7);"></span>
           </div>
 
-          <div class="profile-meta">
-            <h2 class="profile-name">{{ form.name || 'User' }}</h2>
-            <p class="profile-role">{{ form.role || 'N/A' }}</p>
-
-
-          </div>
-        </div>
-
-        <div class="profile-stats">
-          <div class="stat">
-            <span class="stat-label">Department</span>
-            <span class="stat-value">{{ form.department || '—' }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">School</span>
-            <span class="stat-value">{{ form.school || '—' }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Joined</span>
-            <span class="stat-value">{{ formattedDate || '—' }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Role</span>
-            <span class="stat-value">{{ form.role || '—' }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bottom Section -->
-      <div class="content-grid">
-        <!-- Personal Information -->
-        <section class="card">
-          <header class="card-header">
-            <h3>Personal Information</h3>
-            <span class="chip">Primary Contact</span>
-          </header>
-
-          <div class="form-grid">
-            <div class="field">
-              <label>Full Name</label>
-              <input type="text" v-model="form.name" placeholder="Your full name" />
+          <!-- Info Section -->
+          <div class="profile-detail-section">
+            <div class="profile-detail-section-title">
+              <span>Personal Information</span>
             </div>
-            <div class="field">
-              <label>Email Address</label>
-              <input type="email" v-model="form.email" placeholder="you@example.com" />
-            </div>
-            <div class="field">
-              <label>Phone</label>
-              <input type="text" v-model="form.phone" placeholder="+1 555-0001" />
-            </div>
-            <div class="field">
-              <label>Department</label>
-              <input type="text" v-model="form.department" placeholder="e.g. Information Technology" />
-            </div>
-            <div class="field">
-              <label>School</label>
-              <input type="text" v-model="form.school" placeholder="e.g. PNC" />
-            </div>
-            <div class="field">
-              <label>Role</label>
-              <input type="text" :value="form.role" disabled class="disabled-input" />
+            <div class="profile-detail-grid">
+              <div class="profile-detail-item">
+                <div class="profile-detail-item-icon"><i class="bi bi-person"></i></div>
+                <div class="profile-detail-item-content">
+                  <span class="profile-detail-item-label">Full Name</span>
+                  <span class="profile-detail-item-value">{{ form.name || '—' }}</span>
+                </div>
+              </div>
+              <div class="profile-detail-item">
+                <div class="profile-detail-item-icon"><i class="bi bi-envelope"></i></div>
+                <div class="profile-detail-item-content">
+                  <span class="profile-detail-item-label">Email</span>
+                  <span class="profile-detail-item-value">{{ form.email || '—' }}</span>
+                </div>
+              </div>
+              <div class="profile-detail-item">
+                <div class="profile-detail-item-icon"><i class="bi bi-telephone"></i></div>
+                <div class="profile-detail-item-content">
+                  <span class="profile-detail-item-label">Phone</span>
+                  <span class="profile-detail-item-value">{{ form.phone || '—' }}</span>
+                </div>
+              </div>
+              <div class="profile-detail-item">
+                <div class="profile-detail-item-icon"><i class="bi bi-building"></i></div>
+                <div class="profile-detail-item-content">
+                  <span class="profile-detail-item-label">Department</span>
+                  <span class="profile-detail-item-value">{{ form.department || '—' }}</span>
+                </div>
+              </div>
+              <div class="profile-detail-item">
+                <div class="profile-detail-item-icon"><i class="bi bi-bank"></i></div>
+                <div class="profile-detail-item-content">
+                  <span class="profile-detail-item-label">School</span>
+                  <span class="profile-detail-item-value">{{ form.school || '—' }}</span>
+                </div>
+              </div>
+              <div class="profile-detail-item">
+                <div class="profile-detail-item-icon"><i class="bi bi-calendar3"></i></div>
+                <div class="profile-detail-item-content">
+                  <span class="profile-detail-item-label">Joined</span>
+                  <span class="profile-detail-item-value">{{ formattedDate || '—' }}</span>
+                </div>
+              </div>
             </div>
           </div>
 
-
-
-          <div class="card-actions">
-            <button class="btn btn-ghost" @click="resetForm" :disabled="saving">Reset</button>
-            <button class="btn btn-primary" @click="saveProfile" :disabled="saving">
-              <span v-if="saving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-              <Check v-else :size="16" class="me-1" />
-              {{ saving ? 'Saving...' : 'Save Changes' }}
+          <!-- Edit Button -->
+          <div class="profile-card-footer">
+            <button class="btn btn-primary-custom" @click="showEditModal = true">
+              <i class="bi bi-pencil-square me-1"></i> Edit Profile
             </button>
           </div>
-        </section>
+        </div>
 
-        <!-- Change Password -->
-        <section class="card">
-          <h3 class="card-title">Change Password</h3>
+        <!-- Right: Password Card -->
+        <div class="profile-card">
+          <div class="profile-section-header">
+            <div class="profile-section-icon" style="background: #fef3c7; color: #d97706;">
+              <i class="bi bi-key-fill"></i>
+            </div>
+            <div>
+              <h3>Change Password</h3>
+              <p>Keep your account secure</p>
+            </div>
+          </div>
 
-          <div class="stacked-form">
-            <div class="field">
-              <label>Current Password</label>
-              <div class="password-input">
-                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="Enter current password" />
-                <button type="button" class="password-toggle" :aria-label="showCurrent ? 'Hide password' : 'Show password'" @click="showCurrent = !showCurrent">
-                  <EyeOff v-if="showCurrent" :size="18" />
-                  <Eye v-else :size="18" />
+          <div class="profile-password-stack">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-lock me-1"></i> Current Password
+              </label>
+              <div class="input-wrapper">
+                <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" class="modern-input" placeholder="Enter current password" style="padding-right: 40px;" />
+                <button type="button" class="password-eye" @click="showCurrent = !showCurrent">
+                  <i :class="showCurrent ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                 </button>
               </div>
             </div>
-            <div class="field">
-              <label>New Password</label>
-              <div class="password-input">
-                <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="Enter new password (min 8 chars)" minlength="8" />
-                <button type="button" class="password-toggle" :aria-label="showNew ? 'Hide password' : 'Show password'" @click="showNew = !showNew">
-                  <EyeOff v-if="showNew" :size="18" />
-                  <Eye v-else :size="18" />
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-lock-fill me-1"></i> New Password
+              </label>
+              <div class="input-wrapper">
+                <input :type="showNew ? 'text' : 'password'" v-model="password.new" class="modern-input" placeholder="Enter new password (min 8 chars)" minlength="8" style="padding-right: 40px;" />
+                <button type="button" class="password-eye" @click="showNew = !showNew">
+                  <i :class="showNew ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                 </button>
               </div>
             </div>
-            <div class="field">
-              <label>Confirm Password</label>
-              <div class="password-input">
-                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="Confirm new password" />
-                <button type="button" class="password-toggle" :aria-label="showConfirm ? 'Hide password' : 'Show password'" @click="showConfirm = !showConfirm">
-                  <EyeOff v-if="showConfirm" :size="18" />
-                  <Eye v-else :size="18" />
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-lock-fill me-1"></i> Confirm Password
+              </label>
+              <div class="input-wrapper">
+                <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" class="modern-input" placeholder="Confirm new password" style="padding-right: 40px;" />
+                <button type="button" class="password-eye" @click="showConfirm = !showConfirm">
+                  <i :class="showConfirm ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="card-actions">
-            <button class="btn btn-ghost" @click="resetPassword">Clear</button>
-            <button class="btn btn-primary" @click="updatePassword" :disabled="passwordSaving">
-              <span v-if="passwordSaving" class="spinner-border spinner-border-sm me-1" role="status"></span>
-              <Lock v-else :size="16" class="me-1" />
+          <div class="profile-card-actions">
+            <button class="btn btn-ghost" @click="resetPassword">
+              <i class="bi bi-x-lg me-1"></i> Clear
+            </button>
+            <button class="btn btn-primary-custom" @click="updatePassword" :disabled="passwordSaving">
+              <span v-if="passwordSaving" class="spinner-sm" style="width: 14px; height: 14px; border-width: 2px;"></span>
+              <i v-else class="bi bi-shield-check me-1"></i>
               {{ passwordSaving ? 'Updating...' : 'Update Password' }}
             </button>
           </div>
 
-          <p v-if="passwordMessage" class="hint" :class="passwordStatus">{{ passwordMessage }}</p>
-        </section>
+          <p v-if="passwordMessage" class="profile-hint" :class="passwordStatus === 'success' ? 'profile-hint-success' : 'profile-hint-error'">
+            <i :class="passwordStatus === 'success' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'" class="me-1"></i>
+            {{ passwordMessage }}
+          </p>
+        </div>
       </div>
     </template>
+
+    <!-- Edit Profile Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+          <div class="modal-content-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showEditModal = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-edit">
+                <i class="bi bi-pencil-square"></i>
+              </div>
+              <div>
+                <h5>Edit Profile</h5>
+                <p class="modal-subtitle">Update your personal information</p>
+              </div>
+            </div>
+
+            <form @submit.prevent="saveProfile">
+              <div class="modal-body-custom">
+                <div class="profile-edit-grid">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="bi bi-person me-1"></i> Full Name
+                    </label>
+                    <input type="text" v-model="form.name" class="modern-input" placeholder="Your full name" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="bi bi-envelope me-1"></i> Email Address
+                    </label>
+                    <input type="email" v-model="form.email" class="modern-input" placeholder="you@example.com" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="bi bi-telephone me-1"></i> Phone
+                    </label>
+                    <input type="text" v-model="form.phone" class="modern-input" placeholder="+1 555-0001" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <i class="bi bi-building me-1"></i> Department
+                    </label>
+                    <input type="text" v-model="form.department" class="modern-input" placeholder="e.g. Information Technology" />
+                  </div>
+                  <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">
+                      <i class="bi bi-bank me-1"></i> School
+                    </label>
+                    <input type="text" v-model="form.school" class="modern-input" placeholder="e.g. PNC" />
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer-custom">
+                <button type="button" class="btn btn-ghost" @click="resetForm; showEditModal = false">Cancel</button>
+                <button type="submit" class="btn btn-primary-custom" :disabled="saving">
+                  <span v-if="saving" class="spinner-sm" style="width: 14px; height: 14px; border-width: 2px;"></span>
+                  <i v-else class="bi bi-check-lg me-1"></i>
+                  {{ saving ? 'Saving...' : 'Save Changes' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <input
       ref="fileInput"
@@ -198,8 +260,7 @@ import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
-import { http } from '@/services/api'
-import { AlertTriangle, CheckCircle, Camera, Check, EyeOff, Eye, Lock } from '@lucide/vue'
+import { http } from '@/services/apiHttp'
 
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
@@ -223,6 +284,7 @@ const fetchError = ref('')
 const saveError = ref('')
 const successMessage = ref('')
 const avatarUploading = ref(false)
+const showEditModal = ref(false)
 
 const form = reactive({
   name: '',
@@ -275,8 +337,6 @@ const formattedDate = computed(() => {
   if (isNaN(d.getTime())) return ''
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 })
-
-
 
 function applyProfile(profile: UserProfile) {
   form.name = profile.name || ''
@@ -338,6 +398,7 @@ async function saveProfile() {
     cachedProfile = updated
     profileCacheTime = Date.now()
     applyProfile(updated)
+    showEditModal.value = false
     successMessage.value = 'Profile updated successfully!'
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
@@ -367,13 +428,11 @@ async function onFileChange(event: Event) {
   const file = input.files?.[0]
   if (!file) return
 
-  // Validate file size (2MB max)
   if (file.size > 2 * 1024 * 1024) {
     saveError.value = 'Image must be less than 2MB'
     return
   }
 
-  // Validate file type
   const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
     saveError.value = 'Only JPEG, PNG, GIF, and WebP images are allowed'
@@ -386,7 +445,6 @@ async function onFileChange(event: Event) {
   try {
     const result = await uploadAvatar(file)
     avatarUrl.value = storageUrl(result.avatar)
-    // Keep the sidebar avatar in sync
     if (auth.user) {
       auth.user.avatar = result.avatar
     }
@@ -401,7 +459,6 @@ async function onFileChange(event: Event) {
     }
   } finally {
     avatarUploading.value = false
-    // Reset file input so the same file can be re-selected
     if (fileInput.value) {
       fileInput.value.value = ''
     }
@@ -479,377 +536,320 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-* {
-  box-sizing: border-box;
-  font-family: 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-}
-
-.admin-profile-page {
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
-  min-height: 100vh;
-  padding: 36px 0;
-}
-
-.page-header {
-  max-width: 1200px;
-  margin: 0 auto 32px;
-}
-
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-}
-
-.page-subtitle {
-  color: #64748b;
-  margin: 6px 0 0;
-  font-size: 14px;
-}
-
-.loading-state,
-.error-state {
-  max-width: 1200px;
-  margin: 60px auto;
-  text-align: center;
-  padding: 40px;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-}
-
-.error-state p {
-  color: #64748b;
-  margin-bottom: 16px;
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
 }
 
 .profile-card {
-  max-width: 1200px;
-  margin: 0 auto 28px;
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
 }
 
-.profile-body {
+/* Gradient Header (same as TeacherPage details-header) */
+.profile-header {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+  padding: 28px 24px 24px;
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
+  position: relative;
 }
 
-.avatar-wrap {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  outline: none;
-}
-
-.avatar-wrap:focus-visible .avatar {
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.4);
-}
-
-.avatar {
-  width: 92px;
-  height: 92px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1565d8, #1e40af);
-  color: white;
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 26px rgba(21, 101, 216, 0.25);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
-.avatar-wrap:hover .avatar {
-  transform: scale(1.05);
-  box-shadow: 0 12px 30px rgba(21, 101, 216, 0.35);
+.profile-avatar:hover {
+  transform: scale(1.04);
 }
 
-.avatar-img {
+.profile-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
-.avatar-fallback {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+.profile-avatar-hover {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.1rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.avatar-hint {
-  font-size: 12px;
-  color: #64748b;
-  transition: color 0.2s ease;
+.profile-avatar:hover .profile-avatar-hover {
+  opacity: 1;
 }
 
-.avatar-wrap:hover .avatar-hint {
-  color: #1565d8;
-}
-
-.profile-meta {
+.profile-header-info {
   flex: 1;
   min-width: 0;
 }
 
-.profile-name {
-  font-size: 20px;
+.profile-header-info h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.profile-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-role-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Detail Section */
+.profile-detail-section {
+  padding: 20px 24px 12px;
+}
+
+.profile-detail-section-title {
+  margin-bottom: 12px;
+}
+
+.profile-detail-section-title span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+
+.profile-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.profile-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.profile-detail-item:hover {
+  background: #f8fafc;
+}
+
+.profile-detail-item-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
+.profile-detail-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-detail-item-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-detail-item-value {
+  display: block;
+  font-size: 0.875rem;
+  color: #0f172a;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Card Footer */
+.profile-card-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Password Section */
+.profile-section-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 24px 0;
+}
+
+.profile-section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.profile-section-header h3 {
+  font-size: 1rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
 
-.profile-role {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 13px;
-  text-transform: capitalize;
-}
-
-.profile-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-label {
+.profile-section-header p {
+  font-size: 0.8125rem;
   color: #94a3b8;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  margin: 2px 0 0;
 }
 
-.stat-value {
-  color: #0f172a;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.content-grid {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 28px;
-}
-
-.card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.04);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.card-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0 0 24px;
-}
-
-.chip {
-  background: #eff6ff;
-  color: #1565d8;
-  border: 1px solid #dbeafe;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.stacked-form {
+.profile-password-stack {
+  padding: 20px 24px 0;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
-.password-input {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.password-input input {
-  width: 100%;
-  padding-right: 46px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #94a3b8;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease;
-}
-
-.password-toggle:hover {
-  color: #1565d8;
-  background: #eff6ff;
-}
-
-.password-toggle:active {
-  transform: translateY(-50%) scale(0.92);
-}
-
-.password-toggle:focus-visible {
-  color: #1565d8;
-  background: #eff6ff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.2);
-}
-
-.password-input input:focus ~ .password-toggle {
-  color: #1565d8;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 8px;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-input,
-select {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  font-size: 14px;
-  outline: none;
-  background: #f8fafc;
-  color: #0f172a;
-  transition: all 0.15s ease;
-}
-
-input:hover,
-select:hover {
-  border-color: #cbd5e1;
-  background: #ffffff;
-}
-
-input:focus,
-select:focus {
-  border-color: #1565d8;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 216, 0.1);
-}
-
-.disabled-input {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.card-actions {
+.profile-card-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 28px;
+  gap: 10px;
+  padding: 20px 24px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 20px;
 }
 
-.btn {
-  border: none;
-  padding: 12px 22px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  display: inline-flex;
+.profile-alert {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  display: flex;
   align-items: center;
+  margin-bottom: 16px;
 }
 
-.btn:disabled {
+.profile-alert-success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.profile-alert-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.profile-alert-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
   opacity: 0.6;
-  cursor: not-allowed;
+  line-height: 1;
 }
 
-.btn-ghost {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
+.profile-alert-close:hover {
+  opacity: 1;
 }
 
-.btn-ghost:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
-
-.btn-primary {
-  background: #1565d8;
-  color: #ffffff;
-  box-shadow: 0 6px 16px rgba(21, 101, 216, 0.25);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #104dae;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(21, 101, 216, 0.3);
-}
-
-.hint {
-  margin-top: 14px;
-  font-size: 12px;
-  min-height: 18px;
+.profile-hint {
+  padding: 0 24px 20px;
+  margin: 0;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
-.hint.success {
+.profile-hint-success {
   color: #059669;
 }
 
-.hint.error {
+.profile-hint-error {
   color: #dc2626;
+}
+
+.password-eye {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.password-eye:hover {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+/* Edit Modal */
+.profile-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
 .sr-only {
@@ -864,28 +864,26 @@ select:focus {
   border-width: 0;
 }
 
-.alert {
-  max-width: 1200px;
-  margin: 0 auto 16px;
-  border-radius: 12px;
-  font-size: 14px;
-}
-
 @media (max-width: 900px) {
-  .admin-profile-page {
-    padding: 20px;
-  }
-
-  .content-grid,
-  .profile-stats,
-  .form-grid {
+  .profile-grid {
     grid-template-columns: 1fr;
   }
 
-  .profile-body {
+  .profile-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-header {
     flex-direction: column;
     text-align: center;
   }
 
+  .profile-header-meta {
+    justify-content: center;
+  }
 }
 </style>

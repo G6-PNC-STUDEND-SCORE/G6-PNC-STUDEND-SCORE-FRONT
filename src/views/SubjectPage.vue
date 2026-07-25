@@ -1,14 +1,5 @@
 <template>
   <div class="page-container">
-    <!-- ── Toast ── -->
-    <Transition name="toast">
-      <div v-if="toast.show" class="toast-bar" :class="toast.type">
-        <component :is="toastIconComponent" :size="16" />
-        <span>{{ toast.message }}</span>
-        <button class="toast-close" @click="toast.show = false">&times;</button>
-      </div>
-    </Transition>
-
     <!-- ── Store Messages ── -->
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
@@ -25,7 +16,7 @@
     </div>
 
     <!-- ── Card (always visible when not loading) ── -->
-    <div v-else class="table-wrap">
+    <div v-else class="subject-card">
       <!-- Toolbar - always visible inside card -->
       <div class="toolbar">
         <div class="toolbar-left">
@@ -99,8 +90,8 @@
       </div>
 
       <!-- ── Table (with data) ── -->
-      <div v-else class="tbl-scroll">
-        <table class="tbl">
+      <div v-else class="table-wrap">
+        <table class="subject-table data-table-base">
           <thead>
             <tr>
               <th class="col-check">
@@ -122,7 +113,7 @@
             </tr>
           </thead>
           <TransitionGroup name="row" tag="tbody">
-            <tr v-for="(subject, index) in paginatedSubjects" :key="subject.id" :class="{ 'row-selected': selectedIds.includes(subject.id) }">
+            <tr v-for="(subject, index) in paginatedSubjects" :key="subject.id" :class="['data-row', { 'row-selected': selectedIds.includes(subject.id) }]">
               <td class="col-check" @click.stop>
                 <input
                   type="checkbox"
@@ -185,7 +176,7 @@
               </td>
               <!-- Status -->
               <td class="td-status">
-                <span class="pill" :class="(subject.status || '').toLowerCase() === 'active' ? 'pill-on' : 'pill-off'">
+                <span class="status-badge" :class="(subject.status || '').toLowerCase() === 'active' ? 'badge-active' : 'badge-inactive'">
                   {{ subject.status }}
                 </span>
               </td>
@@ -472,7 +463,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed, watch, type Component } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
 import { useAuthStore } from '@/stores/auth'
 import type { Subject } from '@/services/subjectService'
@@ -506,6 +497,9 @@ import {
   Check,
 } from '@lucide/vue'
 import { cacheService } from '@/services/cacheService'
+import { useToast } from '@/composables/useToast'
+
+const { success: toastSuccess, error: toastError } = useToast()
 
 const CACHE_KEY = 'subject-terms'
 
@@ -554,15 +548,6 @@ const subjects = ref<SubjectWithTerms[]>([])
 const terms = ref<(TermInfo & { term_number?: number })[]>([])
 const pendingChanges = reactive<Record<number, number[]>>({})
 const debounceTimers = new Map<number, ReturnType<typeof setTimeout>>()
-
-const toast = reactive({
-  show: false,
-  message: '',
-  type: 'success' as 'success' | 'error',
-  icon: CheckCircle,
-})
-
-const toastIconComponent = computed(() => toast.type === 'success' ? CheckCircle : AlertTriangle)
 
 // ─── CRUD State ────────────────────────────────────────────────────
 const teachers = ref<{ id: number; name: string }[]>([])
@@ -631,7 +616,7 @@ async function handleBulkDelete() {
     const allOk = results.every(r => r.status === 'fulfilled')
     if (allOk) {
       store.clearMessages()
-      showToast('Subjects deleted successfully')
+      globalShowToast('Subjects deleted successfully')
       // Also remove from local list
       subjects.value = subjects.value.filter(s => !idsToDelete.includes(s.id))
       showBulkDeleteModal.value = false
@@ -641,10 +626,10 @@ async function handleBulkDelete() {
       }
     } else {
       store.clearMessages()
-      showToast('Failed to delete some subjects', 'error')
+      globalShowToast('Failed to delete some subjects', 'error')
     }
   } catch {
-    showToast('Failed to delete subjects', 'error')
+    globalShowToast('Failed to delete subjects', 'error')
   }
 }
 
@@ -693,20 +678,12 @@ const filteredSubjects = computed(() => {
   if (termFilter.value !== '') r = r.filter((s) => s.term_ids.includes(termFilter.value as number))
   return r
 })  // ─── Helpers ───────────────────────────────────────────────────────
-function getSubjectIcon(_name: string): Component {
-  return BookOpen
-}
-
 function subjectIconBg(_name: string): string {
   return '#2563eb'
 }
 
-// ─── Toast ─────────────────────────────────────────────────────────
-function showToast(msg: string, type: 'success' | 'error' = 'success') {
-  toast.message = msg
-  toast.type = type
-  toast.show = true
-  setTimeout(() => { toast.show = false }, 3000)
+function globalShowToast(msg: string, type: 'success' | 'error' = 'success') {
+  type === 'error' ? toastError(msg) : toastSuccess(msg)
 }
 
 // ─── Term Actions ──────────────────────────────────────────────────
@@ -750,7 +727,7 @@ function debouncedSave(sid: number) {
           // so drop it from view instead of leaving a phantom row with a dead-end error.
           subjects.value = subjects.value.filter(s => s.id !== sid)
           cacheService.remove(CACHE_KEY)
-          showToast('This subject no longer exists — it has been removed from the list.', 'error')
+          globalShowToast('This subject no longer exists — it has been removed from the list.', 'error')
           return
         }
         // Any other failure: the toggle never actually saved, so don't leave the checkbox
@@ -758,7 +735,7 @@ function debouncedSave(sid: number) {
         // change back to whatever's actually saved. There's no separate "Save Changes"
         // button in this UI, so point at the one thing that actually works: toggling again.
         await loadTermData()
-        showToast('Auto-save failed. Please try toggling the term again.', 'error')
+        globalShowToast('Auto-save failed. Please try toggling the term again.', 'error')
       }
     }, 800)
   )
@@ -851,7 +828,7 @@ async function handleSubmit() {
         await loadTermData()
       }
       store.clearMessages()
-      showToast('Subject updated successfully')
+      globalShowToast('Subject updated successfully')
     }
   } else {
     const newTermIds = [...formData.term_ids]
@@ -867,7 +844,7 @@ async function handleSubmit() {
       await store.fetchSubjects()
       await loadTermData()
       store.clearMessages()
-      showToast('Subject created successfully')
+      globalShowToast('Subject created successfully')
       // Assign terms to the newly created subject if any were picked.
       // (newTermIds was captured BEFORE closeModal so it's not stale.)
       if (newTermIds.length) {
@@ -891,7 +868,7 @@ async function handleDelete() {
     subjects.value = subjects.value.filter(s => s.id !== targetId)
     closeDeleteModal()
     store.clearMessages()
-    showToast('Subject deleted successfully')
+    globalShowToast('Subject deleted successfully')
   }
 }
 
@@ -969,21 +946,6 @@ onMounted(async () => {
 /* ══════════════════════════════════════════════════════════════
    BUTTONS
    ══════════════════════════════════════════════════════════════ */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 0.5rem 1.125rem; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 600; cursor: pointer;
-  border: none; transition: all 0.2s; font-family: inherit;
-  white-space: nowrap;
-}
-.btn-primary { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
-.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-ghost { background: #f1f5f9; color: #475569; }
-.btn-ghost:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
-
 .btn-save {
   background: linear-gradient(135deg, #059669, #047857);
   color: #fff; box-shadow: 0 2px 8px rgba(5,150,105,0.25);
@@ -1012,69 +974,8 @@ onMounted(async () => {
 .msg-close:hover { opacity: 1; }
 
 /* ══════════════════════════════════════════════════════════════
-   TOOLBAR (inside card)
+   SEARCH CLEAR
    ══════════════════════════════════════════════════════════════ */
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #e9ecef;
-  flex-shrink: 0;
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.search-box {
-  position: relative;
-  width: 260px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.6rem 0.9rem 0.6rem 2.4rem;
-  font-size: 0.8125rem;
-  font-family: inherit;
-  color: #1f2937;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.search-input::placeholder { color: #9ca3af; }
-.search-input:hover { border-color: #cbd5e1; }
-.search-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-}
-
 .tb-clear {
   position: absolute;
   right: 10px;
@@ -1091,112 +992,6 @@ onMounted(async () => {
 
 .tb-clear:hover { color: #64748b; }
 
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #64748b;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
-  transition: all 0.2s ease;
-}
-
-.filter-label:hover { border-color: #cbd5e1; }
-.filter-label :deep(svg) { color: #94a3b8; }
-
-.filter-select {
-  border: none;
-  background: transparent;
-  font-size: 0.8125rem;
-  font-family: inherit;
-  font-weight: 600;
-  color: #334155;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  outline: none;
-}
-
-.count-badge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #2563eb;
-  background: #eff6ff;
-  padding: 0.4rem 0.85rem;
-  border-radius: 100px;
-  white-space: nowrap;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   BULK ACTION BAR
-   ══════════════════════════════════════════════════════════════ */
-.bulk-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 20px;
-  background: #fef2f2;
-  border-bottom: 1px solid #fecaca;
-  animation: slideDown 0.2s ease-out;
-  flex-shrink: 0;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.bulk-count {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #991b1b;
-}
-
-.bulk-delete-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border: none;
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
-
-.bulk-delete-btn:hover { background: #dc2626; }
-
-.bulk-clear-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
-
-.bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
-
 /* ══════════════════════════════════════════════════════════════
    LOADING
    ══════════════════════════════════════════════════════════════ */
@@ -1209,42 +1004,29 @@ onMounted(async () => {
   border: 3px solid #e2e8f0; border-top-color: #3b82f6;
   border-radius: 50%; animation: spin 0.7s linear infinite;
 }
-.spinner-sm { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
 .spin { animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ══════════════════════════════════════════════════════════════
    CARD
    ══════════════════════════════════════════════════════════════ */
-.table-wrap {
-  background: #fff; border-radius: 16px;
+.subject-card {
+  background: #fff;
   border: 1px solid #e9ecef;
+  border-radius: 16px;
+  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   flex: 1;
   height: 1px;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
   transition: box-shadow 0.25s ease;
 }
 
-.table-wrap:hover {
+.subject-card:hover {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
-
-.tbl-scroll {
-  flex: 1;
-  overflow: auto;
-  min-height: 0;
-}
-
-.tbl-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-.tbl-scroll::-webkit-scrollbar-track { background: transparent; }
-.tbl-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
-.tbl-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
-
-.tbl { width: 100%; border-collapse: separate; border-spacing: 0; }
 
 .col-check {
   width: 48px;
@@ -1252,8 +1034,8 @@ onMounted(async () => {
   padding: 12px 8px !important;
 }
 
-.tbl thead th.col-check,
-.tbl tbody td.col-check {
+.subject-table thead th.col-check,
+.subject-table tbody td.col-check {
   text-align: center;
   padding: 12px 8px !important;
   vertical-align: middle;
@@ -1270,32 +1052,12 @@ onMounted(async () => {
 
 .col-index {
   width: 64px;
-  color: #64748b;
+  color: #94a3b8;
+  font-weight: 600;
 }
 
-.row-selected {
-  background: #f0f5ff !important;
-  border-left-color: #2563eb !important;
-}
-
-.tbl thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  padding: 10px 14px;
-  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: #64748b;
-  background: #f8fafc; border-bottom: 1px solid #e5e7eb;
-  text-align: left; white-space: nowrap;
-}
-
-.tbl tbody tr { transition: background 0.2s ease, border-left 0.2s ease; border-left: 3px solid transparent; }
-.tbl tbody tr:hover { background: #f8fafc; border-left-color: #2563eb; }
-.tbl tbody td { padding: 10px 14px; border-bottom: 1px solid #f1f3f5; }
-.tbl tbody tr:last-child td { border-bottom: none; }
-
-.th-actions, .td-actions { width: 80px; text-align: center; }
-.th-status, .td-status { width: 90px; }
+.th-actions, .td-actions { width: 110px; text-align: center; }
+.th-status, .td-status { min-width: 90px; }
 .th-terms { min-width: 280px; }
 
 
@@ -1326,55 +1088,7 @@ onMounted(async () => {
 .tog-form .tog { padding: 6px 14px; font-size: 0.8rem; gap: 5px; }
 .tog-form { gap: 6px; }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-.pill-on { background: #dbeafe; color: #1d4ed8; }
-.pill-off { background: #f1f5f9; color: #64748b; }
-
 .td-actions { white-space: nowrap; }
-.act-btn {
-  background: none; border: none; padding: 5px 6px;
-  border-radius: 6px; cursor: pointer; color: #94a3b8;
-  transition: all 0.15s;
-}
-.act-btn:hover { background: #f1f5f9; color: #3b82f6; }
-.act-danger:hover { background: #fef2f2; color: #ef4444; }
-
-.empty-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.empty-container .empty-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: #94a3b8;
-}
-
-.empty-container .empty-box h5 {
-  font-weight: 700;
-  color: #64748b;
-  margin: 0;
-  font-size: 1rem;
-}
-
-.empty-container .empty-box p {
-  font-size: 0.85rem;
-  margin: 0;
-}
 
 /* ══════════════════════════════════════════════════════════════
    MODAL
@@ -1395,14 +1109,6 @@ onMounted(async () => {
   max-width: 580px;
 }
 .modal-sm { max-width: 380px; }
-@keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
-
-.modal-head {
-  display: flex; align-items: flex-start; gap: 14px;
-  padding: 20px 24px 0; position: relative;
-}
-.modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
-.modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
 
 .modal-icon {
   width: 42px; height: 42px; border-radius: 12px;
@@ -1412,17 +1118,6 @@ onMounted(async () => {
 .icon-add { background: #dbeafe; color: #2563eb; }
 .icon-edit { background: #fef3c7; color: #d97706; }
 .icon-danger { background: #fee2e2; color: #ef4444; }
-
-.modal-x {
-  position: absolute; top: 16px; right: 16px;
-  background: none; border: none; font-size: 1.5rem;
-  color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px;
-}
-.modal-x:hover { color: #475569; }
-
-.modal-body {
-  padding: 18px 24px 4px;
-}
 
 /* ── Section Divider ── */
 .section-divider {
@@ -1698,25 +1393,9 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-/* ── Footer ── */
-.modal-foot {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 18px 24px 20px;
-  border-top: 1px solid #f1f5f9;
-  margin-top: 20px;
-}
-
 /* ══════════════════════════════════════════════════════════════
    TRANSITIONS
    ══════════════════════════════════════════════════════════════ */
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
-
-.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.25s ease; }
-.slide-fade-enter-from, .slide-fade-leave-to { opacity: 0; transform: translateX(-10px); }
-
 .modal-enter-active { transition: all 0.2s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
@@ -1728,69 +1407,10 @@ onMounted(async () => {
 .row-move { transition: transform 0.3s ease; }
 
 /* ══════════════════════════════════════════════════════════════
-   TOAST BAR
-   ══════════════════════════════════════════════════════════════ */
-.toast-bar {
-  position: fixed; top: 20px; right: 20px; z-index: 99999;
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 18px; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 500;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 400px;
-}
-.toast-bar.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-.toast-bar.error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-.toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.6; margin-left: auto; padding: 0 4px; }
-.toast-close:hover { opacity: 1; }
-
-/* ══════════════════════════════════════════════════════════════
    RESPONSIVE
    ══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
-  .toolbar { flex-direction: column; align-items: stretch; }
   .row-2 { grid-template-columns: 1fr; }
-  .pagination-bar { flex-direction: column; align-items: center; gap: 8px; }
-  .pagination-info { width: 100%; justify-content: center; }
 }
-
-/* ══════════════════════════════════════════════════════════════
-   PAGINATION
-   ══════════════════════════════════════════════════════════════ */
-.pagination-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 20px; border-top: 1px solid #e5e7eb;
-  background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
-  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
-  flex-shrink: 0;
-  margin-top: auto;
-}
-.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
-.rows-label { font-weight: 500; white-space: nowrap; }
-.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
-.rows-btn {
-  padding: 4px 10px; border: none; background: transparent;
-  color: #64748b; border-radius: 6px; cursor: pointer;
-  font-size: 0.75rem; font-weight: 600; font-family: inherit;
-  transition: all 0.15s ease;
-}
-.rows-btn:hover { color: #334155; }
-.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.pagination-pages { display: flex; align-items: center; gap: 2px; }
-.page-nav {
-  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-  border-radius: 6px; cursor: pointer; transition: all 0.15s ease;
-}
-.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
-.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
-.page-btn {
-  min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-  border: none; background: transparent; color: #475569;
-  border-radius: 6px; cursor: pointer; font-size: 0.78rem;
-  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
-}
-.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
-.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
-.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
-.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 </style>

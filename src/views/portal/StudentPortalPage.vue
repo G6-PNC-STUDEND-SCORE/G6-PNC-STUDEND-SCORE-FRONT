@@ -30,7 +30,7 @@
       <div class="section-card">
         <h3 class="section-title">Current Subjects</h3>
         <div class="table-wrap">
-          <table class="subjects-table">
+          <table class="subjects-table data-table-base">
             <thead>
               <tr>
                 <th>Subject</th>
@@ -120,19 +120,8 @@ onMounted(async () => {
 .section-title { font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0 0 12px; }
 
 .table-wrap { width: 100%; overflow-x: auto; }
-.subjects-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
-.subjects-table thead th {
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-}
-.subjects-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f3f5; color: #475569; }
-.subjects-table tbody tr:last-child td { border-bottom: none; }
+.subjects-table thead th { padding: 10px 14px; }
+.subjects-table tbody td { padding: 10px 14px; }
 .col-num { text-align: right; }
 .grade-badge {
   display: inline-block;

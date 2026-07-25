@@ -1,80 +1,34 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type {
+  PortalData,
+  TermScores,
+  TranscriptData,
+  ApiResponse,
+} from '@/types'
 
-export interface PortalSummaryItem {
-  label: string
-  value: number
-  decimals: number
-  icon: string
-  iconClass: string
-  subtitle: string
-}
-
-export interface PortalProfile {
-  name: string | null
-  studentId: string | null
-  email: string | null
-  class: string | null
-  generation: string | null
-  department: string | null
-  currentTerm: string | null
-  academicStatus: string | null
-  avatar: string | null
-}
-
-export interface PortalCurrentSubject {
-  id: number
-  name: string | null
-  teacher: string | null
-  credits: number
-  currentScore: number
-  grade: string | null
-  progress: number
-}
-
-export interface PortalData {
-  profile: PortalProfile
-  summary: PortalSummaryItem[]
-  currentSubjects: PortalCurrentSubject[]
-}
-
-export interface TermScoreSubject {
-  subject: string | null
-  total: number | null
-  grade: string | null
-  quiz: number | null
-  assignment: number | null
-  midterm: number | null
-  final: number | null
-}
-
-export interface TermScores {
-  term: string
-  subjects: TermScoreSubject[]
-}
-
-export interface TranscriptTerm {
-  term: string
-  average: number
-  subjects: TermScoreSubject[]
-}
-
-export interface TranscriptData {
-  student: { name: string | null; studentId: string | null; generation: string | null }
-  terms: TranscriptTerm[]
-}
+export type {
+  PortalData,
+  PortalProfile,
+  PortalSummaryItem,
+  PortalCurrentSubject,
+  TermScoreSubject,
+  TermScores,
+  TranscriptTerm,
+  TranscriptData,
+} from '@/types'
 
 export async function getPortal(): Promise<PortalData> {
-  const res = await http.get<{ success: boolean; data: PortalData }>('/student/portal')
+  const res = await http.get<ApiResponse<PortalData>>('/student/portal')
   return res.data.data
 }
 
 export async function getScores(): Promise<TermScores[]> {
-  const res = await http.get<{ success: boolean; data: TermScores[] }>('/student/scores')
+  const res = await http.get<ApiResponse<TermScores[]>>('/student/scores')
   return res.data.data
 }
 
 export async function getTranscript(): Promise<TranscriptData> {
-  const res = await http.get<{ success: boolean; data: TranscriptData }>('/student/transcript')
+  const res = await http.get<ApiResponse<TranscriptData>>('/student/transcript')
   return res.data.data
 }
 

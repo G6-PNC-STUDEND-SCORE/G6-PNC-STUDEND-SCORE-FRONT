@@ -5,9 +5,9 @@
         <h3 class="table-title">{{ title }}</h3>
       </slot>
     </div>
-    
+
     <div class="table-responsive">
-      <table class="table table-hover data-table mb-0">
+      <table class="data-table mb-0">
         <thead>
           <tr>
             <th v-for="col in columns" :key="col.key" :style="{ width: col.width }">
@@ -24,7 +24,7 @@
           <tr
             v-for="(row, index) in data"
             :key="rowKey ? rowKey(row, index) : index"
-            :class="rowClass ? rowClass(row, index) : undefined"
+            :class="['data-row', rowClass ? rowClass(row, index) : undefined]"
             @dblclick="$emit('row-dblclick', row, index)"
           >
             <td v-for="col in columns" :key="col.key">
@@ -36,7 +36,7 @@
         </tbody>
       </table>
     </div>
-    
+
     <div class="table-footer" v-if="$slots.footer">
       <slot name="footer" />
     </div>
@@ -68,7 +68,6 @@ function formatCell(row: T, key: string): unknown {
   return (row as Record<string, unknown>)[key] ?? ''
 }
 
-// Expose slots with dynamic cell names using type assertion
 defineOptions({
   inheritAttrs: false,
 })
@@ -115,19 +114,26 @@ defineOptions({
 }
 
 .data-table {
-  font-size: 0.82rem;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
   margin-bottom: 0;
 }
 
 .data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   background: #f8fafc;
-  color: #334155;
-  font-weight: 600;
-  font-size: 0.75rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid #eef2f7;
+  color: #64748b;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
 }
 
@@ -138,10 +144,11 @@ defineOptions({
 }
 
 .data-table tbody td {
-  padding: 0.65rem 0.75rem;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f3f5;
+  color: #475569;
   vertical-align: middle;
+  font-weight: 500;
 }
 
 .dark-mode .data-table tbody td {
@@ -150,15 +157,30 @@ defineOptions({
 }
 
 .data-table tbody tr:last-child td {
-  border-bottom: 0;
+  border-bottom: none;
 }
 
-.data-table tbody tr:hover {
+.data-row {
+  transition: background 0.2s ease, border-left 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.data-row:hover {
   background: #f8fafc;
+  border-left-color: #2563eb;
 }
 
-.dark-mode .data-table tbody tr:hover {
+.dark-mode .data-row:hover {
   background: rgba(51, 65, 85, 0.3);
+}
+
+:global(.row-selected) {
+  background: #f0f5ff !important;
+  border-left-color: #2563eb !important;
+}
+
+.dark-mode :global(.row-selected) {
+  background: rgba(37, 99, 235, 0.15) !important;
 }
 
 .table-footer {

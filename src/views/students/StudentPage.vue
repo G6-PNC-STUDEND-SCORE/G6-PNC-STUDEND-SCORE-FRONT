@@ -1,17 +1,5 @@
 <template>
   <div class="page-container">
-    <!-- ── Toast ── -->
-    <Transition name="toast">
-      <div v-if="toast.show" class="toast-bar" :class="toast.type">
-        <CheckCircle v-if="toast.type === 'success'" :size="16" />
-        <AlertCircle v-else :size="16" />
-        <span>{{ toast.message }}</span>
-        <button class="toast-close" @click="toast.show = false">&times;</button>
-      </div>
-    </Transition>
-
-
-
     <!-- ── Loading ── -->
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
@@ -267,11 +255,11 @@
 import { onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
-import { AlertTriangle, CheckCircle, AlertCircle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
+import { AlertTriangle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
 import { useStudents } from './composables/useStudents.ts'
 
 const {
-  loading, error, searchQuery, genderFilter, formSubmitting, formError, toast,
+  loading, error, searchQuery, genderFilter, formSubmitting, formError,
   showCreateModal, showEditModal, showDeleteModal, showBulkDeleteModal, showAssignModal, showDetailsModal,
   selectedStudent, selectedBulkIds, createForm, editForm, assignForm, existingPhotoUrl, onEditPhotoSelected, onEditRemovePhoto,
   classes, filteredStudents, getInitials,
@@ -346,8 +334,12 @@ onMounted(() => init())
 @keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
 
 .modal-head {
-  display: flex; align-items: flex-start; gap: 14px;
-  padding: 20px 24px 0; position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 0;
+  position: relative;
+  flex-wrap: nowrap;
 }
 .modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
 .modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
@@ -434,26 +426,8 @@ onMounted(() => init())
 .detail-value { font-size: 0.88rem; color: #0f172a; font-weight: 600; }
 
 /* ══════════════════════════════════════════════════════════════
-   TOAST BAR
-   ══════════════════════════════════════════════════════════════ */
-.toast-bar {
-  position: fixed; top: 20px; right: 20px; z-index: 99999;
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 18px; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 500;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 400px;
-}
-.toast-bar.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-.toast-bar.error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-.toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.6; margin-left: auto; padding: 0 4px; }
-.toast-close:hover { opacity: 1; }
-
-/* ══════════════════════════════════════════════════════════════
    TRANSITIONS
    ══════════════════════════════════════════════════════════════ */
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
-
 .modal-enter-active { transition: all 0.2s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }

@@ -1,0 +1,71 @@
+/* ==========================================
+   Empty State (dashed border variant)
+   ========================================== */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1.5px dashed var(--color-border);
+}
+
+.empty-state-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #eef2ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h5 {
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.empty-state p {
+  font-size: 0.875rem;
+}
+
+/* ==========================================
+   Empty Container (flex-centered variant)
+   ========================================== */
+
+.empty-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.empty-container .empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #94a3b8;
+}
+
+.empty-container .empty-box h5 {
+  font-weight: 700;
+  color: #64748b;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.empty-container .empty-box p {
+  font-size: 0.85rem;
+  margin: 0;
+}

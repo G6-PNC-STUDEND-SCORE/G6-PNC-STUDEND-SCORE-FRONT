@@ -70,7 +70,7 @@
         >
           <div class="user-avatar">
             <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-            <span v-else class="initials">{{ getUserInitials() }}</span>
+            <span v-else class="initials">{{ getUserInitials(auth.user?.name) }}</span>
           </div>
           <div class="user-info">
             <div class="user-name">{{ auth.user?.name }}</div>
@@ -84,7 +84,7 @@
             <div class="dropdown-header">
               <div class="dropdown-user-avatar">
                 <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-                <span v-else class="initials">{{ getUserInitials() }}</span>
+                <span v-else class="initials">{{ getUserInitials(auth.user?.name) }}</span>
               </div>
               <div>
                 <div class="dropdown-user-name">{{ auth.user?.name }}</div>
@@ -118,6 +118,7 @@ import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
 import { storageUrl } from '@/services/apiHttp'
+import { getUserInitials } from '@/utils'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import {
   ChevronDown,
@@ -146,16 +147,6 @@ const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | u
 
 function toggleSidebar() {
   emit('toggle-sidebar')
-}
-
-function getUserInitials(): string {
-  const name = auth.user?.name || ''
-  if (!name) return 'U'
-  const parts = name.split(' ').filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-  }
-  return name.substring(0, 2).toUpperCase()
 }
 
 function toggleDropdown() {

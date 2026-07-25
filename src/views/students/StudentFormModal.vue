@@ -6,32 +6,32 @@
           <!-- Header -->
           <div class="modal-header-custom">
             <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
-              <X :size="14" />
+              <i class="bi bi-x-lg"></i>
             </button>
             <div class="modal-icon" :class="isEdit ? 'icon-edit' : 'icon-create'">
-              <SquarePen v-if="isEdit" :size="22" />
-              <UserPlus v-else :size="22" />
+              <i :class="isEdit ? 'bi bi-pencil-square' : 'bi bi-person-plus'"></i>
             </div>
-            <h5 class="mb-1 fw-bold">{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h5>
-            <p class="modal-subtitle">{{ isEdit ? 'Update student information' : 'Fill in the student details' }}</p>
+            <div>
+              <h5>{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h5>
+              <p class="modal-subtitle">{{ isEdit ? 'Update student information' : 'Fill in the student details' }}</p>
+            </div>
           </div>
 
           <form @submit.prevent="$emit('submit')">
             <div class="modal-body-custom">
               <!-- Error Alert -->
               <div v-if="error" class="error-alert">
-                <AlertTriangle :size="16" class="me-2" />
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
                 {{ error }}
               </div>
 
               <!-- Profile Photo (Edit mode only) -->
               <div v-if="isEdit" class="form-group">
                 <label class="form-label">
-                  <Camera :size="14" class="me-1" />
+                  <i class="bi bi-camera me-1"></i>
                   Profile Photo
                 </label>
                 <div class="photo-upload-area">
-                  <!-- Preview -->
                   <div class="photo-preview-wrapper">
                     <div v-if="photoPreview" class="photo-preview">
                       <img :src="photoPreview" alt="Preview" class="preview-img" />
@@ -40,12 +40,12 @@
                       <img :src="existingPhotoUrl" alt="Current photo" class="preview-img" />
                     </div>
                     <div v-else class="photo-placeholder">
-                      <User :size="32" />
+                      <i class="bi bi-person" style="font-size: 2rem;"></i>
                     </div>
                   </div>
                   <div class="photo-actions">
                     <label class="photo-upload-btn">
-                      <CloudUpload :size="14" class="me-1" />
+                      <i class="bi bi-cloud-arrow-up me-1"></i>
                       {{ existingPhotoUrl || photoPreview ? 'Change Photo' : 'Upload Photo' }}
                       <input
                         type="file"
@@ -60,12 +60,12 @@
                       class="photo-remove-btn"
                       @click="onRemovePhoto"
                     >
-                      <Trash2 :size="14" class="me-1" />
+                      <i class="bi bi-trash me-1"></i>
                       Remove
                     </button>
                   </div>
                   <p v-if="photoError" class="photo-error">
-                    <AlertCircle :size="14" class="me-1" />
+                    <i class="bi bi-exclamation-circle me-1"></i>
                     {{ photoError }}
                   </p>
                   <p v-else class="photo-hint">JPEG, PNG, JPG, GIF, or WebP. Max 2MB.</p>
@@ -75,7 +75,7 @@
               <!-- Full Name -->
               <div class="form-group">
                 <label class="form-label">
-                  <User :size="14" class="me-1" />
+                  <i class="bi bi-person me-1"></i>
                   Full Name
                 </label>
                 <div class="input-wrapper">
@@ -93,7 +93,7 @@
               <!-- Email (Create mode only) -->
               <div v-if="!isEdit" class="form-group">
                 <label class="form-label">
-                  <Mail :size="14" class="me-1" />
+                  <i class="bi bi-envelope me-1"></i>
                   Email Address
                 </label>
                 <div class="input-wrapper">
@@ -111,7 +111,7 @@
               <!-- Password (Create mode only) -->
               <div v-if="!isEdit" class="form-group">
                 <label class="form-label">
-                  <Lock :size="14" class="me-1" />
+                  <i class="bi bi-lock me-1"></i>
                   Password
                 </label>
                 <div class="input-wrapper">
@@ -127,48 +127,29 @@
                 </div>
               </div>
 
-
-
               <!-- Gender -->
               <div class="form-group">
                 <label class="form-label">
-                  <VenusAndMars :size="14" class="me-1" />
+                  <i class="bi bi-gender-ambiguous me-1"></i>
                   Gender
                 </label>
-                <div class="gender-toggle">
-                  <label
-                    class="gender-option"
-                    :class="{ active: gender === 'Male', 'male-active': gender === 'Male' }"
+                <div class="input-wrapper">
+                  <select
+                    :value="gender"
+                    @change="$emit('update:gender', ($event.target as HTMLSelectElement).value as 'Male' | 'Female')"
+                    class="modern-input"
+                    required
                   >
-                    <input
-                      type="radio"
-                      :checked="gender === 'Male'"
-                      @change="$emit('update:gender', 'Male')"
-                      class="visually-hidden"
-                    />
-                    <span class="gender-dot male"></span>
-                    <span class="gender-text">Male</span>
-                  </label>
-                  <label
-                    class="gender-option"
-                    :class="{ active: gender === 'Female', 'female-active': gender === 'Female' }"
-                  >
-                    <input
-                      type="radio"
-                      :checked="gender === 'Female'"
-                      @change="$emit('update:gender', 'Female')"
-                      class="visually-hidden"
-                    />
-                    <span class="gender-dot female"></span>
-                    <span class="gender-text">Female</span>
-                  </label>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
                 </div>
               </div>
 
               <!-- Class -->
               <div class="form-group">
                 <label class="form-label">
-                  <Building2 :size="14" class="me-1" />
+                  <i class="bi bi-building me-1"></i>
                   Assign to Class
                 </label>
                 <div class="input-wrapper">
@@ -186,36 +167,19 @@
               <!-- Status -->
               <div class="form-group">
                 <label class="form-label">
-                  <ToggleLeft :size="14" class="me-1" />
+                  <i class="bi bi-toggle-on me-1"></i>
                   Status
                 </label>
-                <div class="status-toggle">
-                  <label
-                    class="status-option"
-                    :class="{ active: status === 'active', 'active-on': status === 'active' }"
+                <div class="input-wrapper">
+                  <select
+                    :value="status"
+                    @change="$emit('update:status', ($event.target as HTMLSelectElement).value as 'active' | 'inactive')"
+                    class="modern-input"
+                    required
                   >
-                    <input
-                      type="radio"
-                      :checked="status === 'active'"
-                      @change="$emit('update:status', 'active')"
-                      class="visually-hidden"
-                    />
-                    <span class="status-dot active"></span>
-                    <span class="status-text">Active</span>
-                  </label>
-                  <label
-                    class="status-option"
-                    :class="{ active: status === 'inactive', 'inactive-on': status === 'inactive' }"
-                  >
-                    <input
-                      type="radio"
-                      :checked="status === 'inactive'"
-                      @change="$emit('update:status', 'inactive')"
-                      class="visually-hidden"
-                    />
-                    <span class="status-dot inactive"></span>
-                    <span class="status-text">Inactive</span>
-                  </label>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -235,7 +199,7 @@
                   {{ isEdit ? 'Saving...' : 'Creating...' }}
                 </template>
                 <template v-else>
-                  <Check :size="16" class="me-1" />
+                  <i class="bi bi-check-lg me-1"></i>
                   {{ isEdit ? 'Save Changes' : 'Create Student' }}
                 </template>
               </button>
@@ -250,23 +214,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import type { SchoolClass } from '@/services/studentService'
-import {
-  X,
-  SquarePen,
-  UserPlus,
-  AlertTriangle,
-  Camera,
-  User,
-  CloudUpload,
-  Trash2,
-  AlertCircle,
-  Mail,
-  Lock,
-  VenusAndMars,
-  Building2,
-  ToggleLeft,
-  Check,
-} from '@lucide/vue'
 
 const props = defineProps<{
   show: boolean
@@ -279,7 +226,6 @@ const props = defineProps<{
   submitting: boolean
   error: string | null
   existingPhotoUrl?: string | null
-  // Create-only fields
   email?: string
   password?: string
 }>()
@@ -300,7 +246,6 @@ const emit = defineEmits<{
 const photoPreview = ref<string | null>(null)
 const photoError = ref<string | null>(null)
 
-// Reset photo preview when modal opens
 watch(() => props.show, (newVal) => {
   if (newVal) {
     photoPreview.value = null
@@ -308,7 +253,6 @@ watch(() => props.show, (newVal) => {
   }
 })
 
-// Watch for existingPhotoUrl changes (when editing different students)
 watch(() => props.existingPhotoUrl, () => {
   photoPreview.value = null
   photoError.value = null
@@ -321,7 +265,6 @@ function onPhotoSelected(event: Event) {
   const file = target.files[0]
   photoError.value = null
 
-  // Validate file type (extra client-side validation)
   const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
     photoError.value = 'Invalid file type. Allowed: JPEG, PNG, JPG, GIF, WebP.'
@@ -329,14 +272,12 @@ function onPhotoSelected(event: Event) {
     return
   }
 
-  // Validate file size (max 2MB)
   if (file.size > 2 * 1024 * 1024) {
     photoError.value = 'File is too large. Maximum size is 2MB.'
     target.value = ''
     return
   }
 
-  // Create preview
   const reader = new FileReader()
   reader.onload = (e) => {
     photoPreview.value = e.target?.result as string
@@ -344,8 +285,6 @@ function onPhotoSelected(event: Event) {
   reader.readAsDataURL(file)
 
   emit('update:photo', file)
-
-  // Reset input so the same file can be re-selected
   target.value = ''
 }
 
@@ -357,347 +296,6 @@ function onRemovePhoto() {
 </script>
 
 <style scoped>
-/* ==================== Overlay ==================== */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(6px);
-  padding: 1rem;
-}
-
-.modal-content-panel {
-  background: #fff;
-  border-radius: 20px;
-  width: 460px;
-  max-width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
-  animation: modalBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
-
-@keyframes modalBounce {
-  0% {
-    transform: scale(0.92) translateY(12px);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-
-/* ==================== Header ==================== */
-.modal-header-custom {
-  padding: 32px 32px 20px;
-  text-align: center;
-  position: relative;
-}
-
-.modal-close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: #f3f4f6;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.modal-close-btn:hover {
-  background: #fee2e2;
-  color: #ef4444;
-  transform: rotate(90deg);
-}
-
-.modal-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-}
-
-.icon-create {
-  background: linear-gradient(135deg, #eef2ff, #dbeafe);
-  color: #2563eb;
-}
-
-.icon-edit {
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-  color: #0369a1;
-}
-
-.modal-header-custom h5 {
-  font-size: 1.1rem;
-  color: #0f172a;
-  letter-spacing: -0.01em;
-}
-
-.modal-subtitle {
-  font-size: 0.8125rem;
-  color: #64748b;
-  margin: 0;
-}
-
-/* ==================== Body ==================== */
-.modal-body-custom {
-  padding: 0 32px 8px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 6px;
-}
-
-.form-label :deep(svg) {
-  color: #94a3b8;
-}
-
-/* ==================== Inputs ==================== */
-.input-wrapper {
-  position: relative;
-}
-
-.modern-input {
-  width: 100%;
-  padding: 0.65rem 0.875rem;
-  font-size: 0.875rem;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  color: #0f172a;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  outline: none;
-  transition: all 0.2s ease;
-  appearance: none;
-}
-
-.modern-input:hover {
-  background: #fff;
-  border-color: #cbd5e1;
-}
-
-.modern-input:focus {
-  background: #fff;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-}
-
-.modern-input::placeholder {
-  color: #94a3b8;
-}
-
-select.modern-input {
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
-}
-
-/* ==================== Gender Toggle ==================== */
-.gender-toggle {
-  display: flex;
-  gap: 10px;
-}
-
-.gender-option {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0.65rem 1rem;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #64748b;
-}
-
-.gender-option:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.gender-option.active.male-active {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-}
-
-.gender-option.active.female-active {
-  background: #fdf2f8;
-  color: #be185d;
-  border-color: #ec4899;
-  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.12);
-}
-
-.gender-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.gender-dot.male { background: #3b82f6; }
-.gender-dot.female { background: #ec4899; }
-
-.gender-text {
-  font-size: 0.8125rem;
-}
-
-/* ==================== Status Toggle ==================== */
-.status-toggle {
-  display: flex;
-  gap: 10px;
-}
-
-.status-option {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 0.65rem 1rem;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #64748b;
-}
-
-.status-option:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.status-option.active.active-on {
-  background: #ecfdf5;
-  color: #15803d;
-  border-color: #22c55e;
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
-}
-
-.status-option.active.inactive-on {
-  background: #f8fafc;
-  color: #64748b;
-  border-color: #94a3b8;
-  box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.status-dot.active { background: #22c55e; }
-.status-dot.inactive { background: #94a3b8; }
-
-.status-text {
-  font-size: 0.8125rem;
-}
-
-/* ==================== Error Alert ==================== */
-.error-alert {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 0.8125rem;
-  color: #991b1b;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  margin-bottom: 20px;
-}
-
-/* ==================== Footer ==================== */
-.modal-footer-custom {
-  display: flex;
-  gap: 10px;
-  padding: 16px 32px 28px;
-}
-
-.modal-footer-custom button {
-  flex: 1;
-  padding: 0.65rem 1rem;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: none;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
-
-.btn-outline {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1.5px solid #e2e8f0 !important;
-}
-
-.btn-outline:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1 !important;
-}
-
-.btn-primary-custom {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
-}
-
-.btn-primary-custom:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-}
-
-.btn-primary-custom:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* ==================== Photo Upload ==================== */
 .photo-upload-area {
   display: flex;
   flex-direction: column;
@@ -810,20 +408,5 @@ select.modern-input {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.modal-enter-active { transition: all 0.25s ease-out; }
-.modal-leave-active { transition: all 0.15s ease-in; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.modal-enter-from .modal-content-panel,
-.modal-leave-to .modal-content-panel {
-  transform: scale(0.92) translateY(12px);
-}
-
-.modal-content-panel::-webkit-scrollbar { width: 4px; }
-.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
-.modal-content-panel::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 2px;
 }
 </style>

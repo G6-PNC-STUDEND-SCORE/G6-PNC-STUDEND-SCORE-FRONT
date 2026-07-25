@@ -1,68 +1,19 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type {
+  UserListItem,
+  UserRole,
+  CreateUserPayload,
+  UpdateUserPayload,
+  PaginatedResponse,
+  ApiResponse,
+} from '@/types'
 
-export interface UserRole {
-  id: number
-  name: string
-  slug: string
-}
+export type { UserListItem as User, UserRole, CreateUserPayload, UpdateUserPayload }
 
-export interface User {
-  id: number
-  name: string
-  email: string
-  phone: string | null
-  gender: string | null
-  status: string
-  role: UserRole | null
-  avatar: string | null
-  last_login_at: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface UsersResponse {
-  success: boolean
-  data: {
-    current_page: number
-    data: User[]
-    last_page: number
-    per_page: number
-    total: number
-    from: number
-    to: number
-  }
-}
-
-export interface UserResponse {
-  success: boolean
-  message?: string
-  data: User
-}
-
-export interface RolesResponse {
-  success: boolean
-  data: UserRole[]
-}
-
-export interface CreateUserPayload {
-  name: string
-  email: string
-  password: string
-  role_id: number
-  phone?: string
-  gender?: string
-  status?: string
-}
-
-export interface UpdateUserPayload {
-  name: string
-  email: string
-  password?: string
-  role_id: number
-  phone?: string
-  gender?: string
-  status?: string
-}
+export interface UsersResponse extends ApiResponse<PaginatedResponse<UserListItem>> {}
+export interface UserResponse extends ApiResponse<UserListItem> {}
+export interface RolesResponse extends ApiResponse<UserRole[]> {}
+export interface BulkDeleteResponse extends ApiResponse<{ deleted_count: number }> {}
 
 export async function getUsers(params?: {
   search?: string
@@ -80,12 +31,31 @@ export async function getUser(id: number): Promise<UserResponse> {
   return res.data
 }
 
-export async function createUser(data: CreateUserPayload): Promise<UserResponse> {
+export async function createUser(data: {
+  name: string
+  email: string
+  password: string
+  role_id: number
+  phone?: string
+  gender?: string
+  status?: string
+}): Promise<UserResponse> {
   const res = await http.post<UserResponse>('/users', data)
   return res.data
 }
 
-export async function updateUser(id: number, data: UpdateUserPayload): Promise<UserResponse> {
+export async function updateUser(
+  id: number,
+  data: {
+    name: string
+    email: string
+    password?: string
+    role_id: number
+    phone?: string
+    gender?: string
+    status?: string
+  },
+): Promise<UserResponse> {
   const res = await http.put<UserResponse>(`/users/${id}`, data)
   return res.data
 }
@@ -93,12 +63,6 @@ export async function updateUser(id: number, data: UpdateUserPayload): Promise<U
 export async function deleteUser(id: number): Promise<{ success: boolean; message: string }> {
   const res = await http.delete<{ success: boolean; message: string }>(`/users/${id}`)
   return res.data
-}
-
-export interface BulkDeleteResponse {
-  success: boolean
-  message: string
-  data: { deleted_count: number }
 }
 
 export async function bulkDeleteUsers(ids: number[]): Promise<BulkDeleteResponse> {

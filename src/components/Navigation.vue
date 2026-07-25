@@ -66,7 +66,7 @@
         >
           <div class="avatar">
             <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-            <span v-else class="initials">{{ getUserInitials() }}</span>
+            <span v-else class="initials">{{ getUserInitials(auth.user?.name) }}</span>
           </div>
           <div class="ms-2 user-text">
             <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name }}</h6>
@@ -115,6 +115,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
+import { getUserInitials } from '@/utils'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText,
@@ -167,16 +168,6 @@ const settingsLinks = computed<NavLink[]>(() => {
     { to: '/roles', label: 'Roles & Permissions', icon: Shield },
   ]
 })
-
-function getUserInitials(): string {
-  const name = auth.user?.name || ''
-  if (!name) return 'U'
-  const parts = name.split(' ').filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-  }
-  return name.substring(0, 2).toUpperCase()
-}
 
 async function handleLogout() {
   showLogoutModal.value = false

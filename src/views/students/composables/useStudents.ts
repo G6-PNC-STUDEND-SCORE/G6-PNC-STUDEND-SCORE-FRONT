@@ -11,7 +11,8 @@ import {
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
-
+import { getUserInitials } from '@/utils'
+import { useToast } from '@/composables/useToast'
 import { classService } from '@/services/classService'
 import { cacheService } from '@/services/cacheService'
 
@@ -30,15 +31,14 @@ export function useStudents() {
   const searchQuery = ref('')
   const formSubmitting = ref(false)
   const formError = ref<string | null>(null)
+  const toast = useToast()
 
-const toast = ref({ show: false, message: '', type: 'success' as 'success' | 'error' })
-
-const showCreateModal = ref(false)
-const showEditModal = ref(false)
-const showDeleteModal = ref(false)
-const showBulkDeleteModal = ref(false)
-const showAssignModal = ref(false)
-const showDetailsModal = ref(false)
+  const showCreateModal = ref(false)
+  const showEditModal = ref(false)
+  const showDeleteModal = ref(false)
+  const showBulkDeleteModal = ref(false)
+  const showAssignModal = ref(false)
+  const showDetailsModal = ref(false)
 const selectedStudent = ref<Student | null>(null)
 const selectedBulkIds = ref<number[]>([])
 
@@ -79,11 +79,7 @@ const selectedBulkIds = ref<number[]>([])
   })
 
   function getInitials(name: string): string {
-    const safeName = name || ''
-    const parts = safeName.split(' ').filter(Boolean)
-    return parts.length >= 2
-      ? (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
-      : safeName.substring(0, 2).toUpperCase()
+    return getUserInitials(name)
   }
 
   function formatDate(dateStr?: string): string {
@@ -95,11 +91,6 @@ const selectedBulkIds = ref<number[]>([])
       hour: '2-digit',
       minute: '2-digit',
     })
-  }
-
-  function showToast(message: string, type: 'success' | 'error' = 'success') {
-    toast.value = { show: true, message, type }
-    setTimeout(() => { toast.value.show = false }, 3000)
   }
 
   async function loadStudents() {
@@ -178,10 +169,10 @@ const selectedBulkIds = ref<number[]>([])
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
       invalidateStudentCache()
-      showToast('Student created successfully')
+      toast.success('Student created successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      showToast(err.response?.data?.message || err.message || 'Failed to create student', 'error')
+      toast.error(err.response?.data?.message || err.message || 'Failed to create student')
       // Reopen the form with the error so user can retry
       showCreateModal.value = true
       formError.value = err.response?.data?.message || err.message || 'Failed to create student'
@@ -247,7 +238,7 @@ const selectedBulkIds = ref<number[]>([])
       if (index !== -1) students.value[index] = updatedStudent
       invalidateStudentCache()
       closeEditModal()
-      showToast('Student updated successfully')
+      toast.success('Student updated successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
       formError.value = err.response?.data?.message || err.message || 'Failed to update student'
@@ -275,10 +266,10 @@ const selectedBulkIds = ref<number[]>([])
       students.value = students.value.filter((s) => !ids.includes(s.id))
       invalidateStudentCache()
       closeBulkDeleteModal()
-      showToast(res.message || 'Student deleted successfully')
+      toast.success(res.message || 'Student deleted successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      showToast(err.response?.data?.message || err.message || 'Failed to delete students', 'error')
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete students')
     } finally {
       formSubmitting.value = false
     }
@@ -302,7 +293,7 @@ const selectedBulkIds = ref<number[]>([])
       students.value = students.value.filter((s) => s.id !== selectedStudent.value!.id)
       invalidateStudentCache()
       closeDeleteModal()
-      showToast(res.message || 'Student deleted successfully')
+      toast.success(res.message || 'Student deleted successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string }; status?: number }; message?: string }
       const msg = err.response?.data?.message || err.message || ''
@@ -311,9 +302,9 @@ const selectedBulkIds = ref<number[]>([])
         students.value = students.value.filter((s) => s.id !== selectedStudent.value?.id)
         invalidateStudentCache()
         closeDeleteModal()
-        showToast('Student deleted successfully')
+        toast.success('Student deleted successfully')
       } else {
-        showToast(msg || 'Failed to delete student', 'error')
+        toast.error(msg || 'Failed to delete student')
       }
     } finally {
       formSubmitting.value = false
@@ -340,10 +331,10 @@ const selectedBulkIds = ref<number[]>([])
       if (index !== -1) students.value[index] = res.student
       invalidateStudentCache()
       closeAssignModal()
-      showToast('Student assigned to class successfully')
+      toast.success('Student assigned to class successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      showToast(err.response?.data?.message || err.message || 'Failed to assign class', 'error')
+      toast.error(err.response?.data?.message || err.message || 'Failed to assign class')
     } finally {
       formSubmitting.value = false
     }
@@ -367,7 +358,6 @@ const selectedBulkIds = ref<number[]>([])
     searchQuery,
     formSubmitting,
     formError,
-    toast,
     showCreateModal,
     showEditModal,
     showDeleteModal,
@@ -385,7 +375,6 @@ const selectedBulkIds = ref<number[]>([])
     filteredStudents,
     getInitials,
     formatDate,
-    showToast,
     init,
     invalidateStudentCache,
     openCreateModal,

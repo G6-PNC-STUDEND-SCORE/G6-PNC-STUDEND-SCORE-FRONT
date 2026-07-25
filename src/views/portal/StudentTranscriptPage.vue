@@ -29,7 +29,7 @@
           <span class="term-avg">Average: {{ termBlock.average.toFixed(2) }}</span>
         </div>
         <div class="table-wrap">
-          <table class="scores-table">
+          <table class="scores-table data-table-base">
             <thead>
               <tr>
                 <th>Subject</th>
@@ -154,20 +154,8 @@ onMounted(async () => {
 .term-avg { font-size: 0.8125rem; font-weight: 600; color: #2563eb; }
 
 .table-wrap { width: 100%; overflow-x: auto; }
-.scores-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
-.scores-table thead th {
-  text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: #64748b;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-.scores-table tbody td { padding: 10px 12px; border-bottom: 1px solid #f1f3f5; color: #475569; }
-.scores-table tbody tr:last-child td { border-bottom: none; }
+.scores-table thead th { padding: 10px 14px; white-space: nowrap; }
+.scores-table tbody td { padding: 10px 14px; }
 .col-num { text-align: right; }
 .total-cell { font-weight: 700; color: #0f172a; }
 .grade-badge {

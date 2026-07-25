@@ -26,43 +26,6 @@ import { FileText, Inbox } from '@lucide/vue'
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-}
-.page-header-left {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.page-header-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #dbeafe);
-  color: #2563eb;
-  border-radius: 12px;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-.page-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 2px;
-  letter-spacing: -0.02em;
-}
-.page-subtitle {
-  font-size: 0.8125rem;
-  color: #64748b;
-  margin: 0;
-  font-weight: 400;
-}
 .empty-state {
   display: flex;
   flex-direction: column;

@@ -307,8 +307,10 @@
               <div class="modal-icon icon-rename">
                 <i class="bi bi-pencil-square"></i>
               </div>
-              <h5 class="mb-1 fw-bold">Rename Column</h5>
-              <p class="modal-subtitle">Give the column a new name</p>
+              <div>
+                <h5>Rename Column</h5>
+                <p class="modal-subtitle">Give the column a new name</p>
+              </div>
             </div>
             <div class="modal-body-custom">
               <div class="form-group">
@@ -344,8 +346,10 @@
               <div class="modal-icon icon-add">
                 <i class="bi bi-plus-circle"></i>
               </div>
-              <h5 class="mb-1 fw-bold">Add New Column</h5>
-              <p class="modal-subtitle">Add a new score column to the spreadsheet</p>
+              <div>
+                <h5>Add New Column</h5>
+                <p class="modal-subtitle">Add a new score column to the spreadsheet</p>
+              </div>
             </div>
             <div class="modal-body-custom">
               <div class="form-group">
@@ -400,8 +404,10 @@
               <div class="modal-icon icon-weights">
                 <i class="bi bi-sliders"></i>
               </div>
-              <h5 class="mb-1 fw-bold">Weight Configuration</h5>
-              <p class="modal-subtitle">Set weight percentages for each assessment type</p>
+              <div>
+                <h5>Weight Configuration</h5>
+                <p class="modal-subtitle">Set weight percentages for each assessment type</p>
+              </div>
             </div>
             <div class="modal-body-custom">
               <div v-if="!assessments.length" class="no-assessments-text">
@@ -445,8 +451,10 @@
               <div class="modal-icon icon-delete">
                 <i class="bi bi-trash3"></i>
               </div>
-              <h5 class="mb-1 fw-bold">Delete Column</h5>
-              <p class="modal-subtitle">This action cannot be undone</p>
+              <div>
+                <h5>Delete Column</h5>
+                <p class="modal-subtitle">This action cannot be undone</p>
+              </div>
             </div>
             <div class="modal-body-custom">
               <p class="delete-warning-text">
@@ -491,8 +499,10 @@
               <div class="modal-icon icon-add">
                 <i class="bi bi-cloud-upload"></i>
               </div>
-              <h5 class="mb-1 fw-bold">Import Scores</h5>
-              <p class="modal-subtitle">Import student scores from an Excel file</p>
+              <div>
+                <h5>Import Scores</h5>
+                <p class="modal-subtitle">Import student scores from an Excel file</p>
+              </div>
             </div>
             <div class="modal-body-custom">
               <!-- Format badges -->
@@ -560,10 +570,34 @@
                 <i class="bi bi-info-circle"></i>
                 <span>Supports .xlsx, .xls, and .pdf files</span>
               </div>
+
+              <!-- Sign-in domain picker — only shown when there's a real choice to make.
+                   New students created by this import get name@domain instead of a fake
+                   placeholder address, so they can actually sign in via Google afterward.
+                   With more than one domain configured, a choice is required — no silent
+                   default — before the Import button becomes clickable. -->
+              <div v-if="selectedFileName && studentEmailDomains.length > 1" class="import-domain-picker" :class="{ 'import-domain-required': emailDomainSelectionRequired }">
+                <label class="import-domain-label" for="import-email-domain">
+                  <i class="bi bi-envelope-at"></i>
+                  New student accounts sign in with
+                </label>
+                <select id="import-email-domain" v-model="selectedEmailDomain" class="import-domain-select">
+                  <option :value="null" disabled>Select a domain…</option>
+                  <option v-for="d in studentEmailDomains" :key="d.id" :value="d.domain">@{{ d.domain }}</option>
+                </select>
+              </div>
+              <div v-if="selectedFileName && emailDomainSelectionRequired" class="import-domain-warning">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>Choose a sign-in domain before importing.</span>
+              </div>
+              <div v-else-if="selectedFileName && studentEmailDomains.length === 1" class="import-domain-hint">
+                <i class="bi bi-envelope-at"></i>
+                <span>New student accounts will sign in with <strong>@{{ studentEmailDomains[0].domain }}</strong></span>
+              </div>
             </div>
             <div class="modal-footer-custom">
               <button class="btn-outline" @click="showImport = false; selectedFileName = ''; filePreview = null">Cancel</button>
-              <button class="btn-primary-custom" :disabled="!pendingFile" @click="processImportFile">
+              <button class="btn-primary-custom" :disabled="!pendingFile || emailDomainSelectionRequired" @click="processImportFile">
                 <i class="bi bi-upload me-1"></i>
                 Import {{ filePreview?.rowCount ? filePreview.rowCount + ' student' + (filePreview.rowCount > 1 ? 's' : '') : 'File' }}
               </button>
@@ -644,8 +678,10 @@
               <div class="modal-icon icon-add">
                 <i class="bi bi-file-earmark-spreadsheet"></i>
               </div>
-              <h5 class="mb-1 fw-bold">Open Google Sheet</h5>
-              <p class="modal-subtitle">Your browser blocked the popup. Click the button below to open your sheet in a new tab.</p>
+              <div>
+                <h5>Open Google Sheet</h5>
+                <p class="modal-subtitle">Your browser blocked the popup. Click the button below to open your sheet in a new tab.</p>
+              </div>
             </div>
             <div class="modal-body-custom">
               <div class="form-group">
@@ -698,6 +734,7 @@ import {
   importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken, ensureGoogleSheetShared, pushToGoogleSheet,
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
+import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
 
 const router = useRouter()
 const route = useRoute()
@@ -716,6 +753,29 @@ const pageSize = ref<number | 'all'>(10)
 const currentPage = ref(1)
 const importProgress = ref(0)
 const importStatusText = ref('')
+
+// ─── Sign-in domain for newly-created students on import ─────────────
+const studentEmailDomains = ref<StudentEmailDomain[]>([])
+const selectedEmailDomain = ref<string | null>(null)
+
+async function loadStudentEmailDomains() {
+  try {
+    studentEmailDomains.value = await getStudentEmailDomains()
+    // Only auto-pick when there's no real choice to make. With more than one domain,
+    // leave it unselected so the admin must explicitly choose before importing —
+    // silently defaulting to "the first one" risks putting students on the wrong domain.
+    if (studentEmailDomains.value.length === 1) {
+      selectedEmailDomain.value = studentEmailDomains.value[0].domain
+    }
+  } catch {
+    studentEmailDomains.value = []
+  }
+}
+
+// True only when the admin still needs to pick a domain before importing can proceed.
+const emailDomainSelectionRequired = computed(() =>
+  studentEmailDomains.value.length > 1 && !selectedEmailDomain.value
+)
 
 // ─── Selection State ─────────────────────────────────────────────────
 const selectedRowIndex = ref(0)
@@ -1143,8 +1203,7 @@ async function doAddRows() {
   addRowCount.value = 1
 }
 
-// ─── Helper Functions ────────────────────────────────────────────────
-// Returns the student-specific ScoreDetail ID for a given canonical column ID
+
 function getActualDetailId(row: SpreadsheetRow, colId: number): number {
   return row.detail_ids[colId] ?? colId
 }
@@ -1301,11 +1360,7 @@ function getTotalCellClass(row: SpreadsheetRow): Record<string, boolean> {
 
 // ─── Cell Selection (single click = select, double click = edit) ────
 function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
-  // Reclaim keyboard focus on every cell click, not just after finishing an edit — focus can
-  // land elsewhere from clicking a toolbar button, closing a modal, etc., and a plain <td>
-  // (name/ID cells that are only selected, not edited) doesn't grab focus on its own. Without
-  // this, arrow keys/Delete/Ctrl+C and the rest silently stop responding until something else
-  // happens to refocus .sheet-wrapper, which is exactly the "works sometimes" symptom.
+
   sheetContainer.value?.focus()
   if (editingRow.value !== null) {
     saveEdit()
@@ -1482,7 +1537,7 @@ function saveEdit() {
     if (!newName || newName === filteredRow.student_name) { cancelEdit(); return }
     const oldName = filteredRow.student_name
     showSaveStatus('saving')
-    updateStudentInfo(subjectId.value, termId.value, filteredRow.enrollment_id, { student_name: newName })
+    updateStudentInfo(subjectId.value, termId.value, filteredRow.enrollment_id, { student_name: newName, email_domain: selectedEmailDomain.value })
       .then(() => {
         showSaveStatus('saved')
         filteredRow.student_name = newName
@@ -2513,7 +2568,7 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
     row.student_name = newName
     const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
     if (actualRow) actualRow.student_name = newName
-    return updateStudentInfo(subjectId.value, termId.value, row.enrollment_id, { student_name: newName })
+    return updateStudentInfo(subjectId.value, termId.value, row.enrollment_id, { student_name: newName, email_domain: selectedEmailDomain.value })
       .then(() => {})
       .catch(() => {
         row.student_name = oldName
@@ -3002,7 +3057,8 @@ async function syncFromGoogleSheets() {
         subjectId.value,
         termId.value,
         gsSheetId.value!,
-        token
+        token,
+        selectedEmailDomain.value
       )
       if (!result.synced) return // Nothing to sync yet (no matching tab / no data rows) — stay quiet.
       await refreshData(true)
@@ -3024,7 +3080,8 @@ async function syncFromGoogleSheets() {
             subjectId.value,
             termId.value,
             gsSheetId.value!,
-            refreshed.access_token
+            refreshed.access_token,
+            selectedEmailDomain.value
           )
           if (!retryResult.synced) return
           await refreshData(true)
@@ -3271,7 +3328,7 @@ async function importExcelFile(file: File) {
   // Start smooth progress animation while awaiting the API
   importStatusText.value = 'Importing scores to server...'
   const animPromise = animateImportProgress(35, 65, 3000, 'Importing scores to server...')
-  await importFile(subjectId.value, termId.value, { rows }, classId.value)
+  await importFile(subjectId.value, termId.value, { rows, email_domain: selectedEmailDomain.value }, classId.value)
   importProgress.value = 70
   // animPromise resolves in background if still running
 }
@@ -3544,6 +3601,7 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
 onMounted(() => {
   refreshData()
   loadStoredSheetId()
+  loadStudentEmailDomains()
   getStudentNumbers().then(nums => { studentNumbers.value = nums }).catch(() => {})
   nextTick(() => {
     const container = document.querySelector('.sheet-wrapper') as HTMLElement
@@ -3671,39 +3729,6 @@ watch([subjectId, termId], () => {
   flex-shrink: 0;
 }
 .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
-
-.search-box {
-  position: relative;
-  width: 220px;
-}
-.search-box i {
-  position: absolute;
-  left: 11px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-  font-size: 0.8rem;
-  pointer-events: none;
-}
-.search-box input {
-  width: 100%;
-  padding: 0.5rem 0.8rem 0.5rem 2rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  font-size: 0.8125rem;
-  font-family: inherit;
-  color: #1f2937;
-  background: #fff;
-  outline: none;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-.search-box input::placeholder { color: #9ca3af; }
-.search-box input:hover { border-color: #cbd5e1; }
-.search-box input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
 
 .toolbar-meta { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; white-space: nowrap; padding-right: 4px; }
 .gs-sync-status { display: flex; align-items: center; gap: 4px; color: #16a34a; padding: 2px 8px; background: #f0fdf4; border-radius: 4px; }
@@ -4168,8 +4193,6 @@ watch([subjectId, termId], () => {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
-.spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 .spinning { animation: spin 0.7s linear infinite; }
 
 .loading-overlay {
@@ -4236,98 +4259,14 @@ watch([subjectId, termId], () => {
   color: #64748b;
 }
 
-/* ─── Modal ────────────────────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
-}
-
-/* ─── Modern Modal Panel (matches Class form style) ──────────────────── */
-.modal-content-panel {
-  background: #fff;
-  border-radius: 20px;
-  width: 440px;
-  max-width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
-  animation: modalBounce 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
+/* ─── Modal panel variants ──────────────────────────────────────────── */
 .modal-md-panel {
   width: 520px;
-}
-
-@keyframes modalBounce {
-  0% { transform: scale(0.92) translateY(12px); opacity: 0; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .modal-content-panel::-webkit-scrollbar { width: 4px; }
 .modal-content-panel::-webkit-scrollbar-track { background: transparent; }
 .modal-content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-
-.modal-header-custom {
-  padding: 32px 32px 16px;
-  text-align: center;
-  position: relative;
-}
-
-.modal-close-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: #f3f4f6;
-  color: #6b7280;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.75rem;
-}
-
-.modal-close-btn:hover {
-  background: #fee2e2;
-  color: #ef4444;
-  transform: rotate(90deg);
-}
-
-.modal-header-custom .modal-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-  margin: 0 auto 16px;
-}
-
-.modal-header-custom .modal-icon.icon-add {
-  background: linear-gradient(135deg, #eef2ff, #dbeafe);
-  color: #2563eb;
-}
-
-.modal-header-custom .modal-icon.icon-delete {
-  background: linear-gradient(135deg, #fef2f2, #fee2e2);
-  color: #dc2626;
-}
-
-.modal-header-custom .modal-icon.icon-rename {
-  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
-  color: #0369a1;
-}
-
-.modal-header-custom .modal-icon.icon-weights {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  color: #d97706;
-}
 
 /* ─── Weight Modal ───────────────────────────────────────────────── */
 .weight-row {
@@ -4438,154 +4377,6 @@ watch([subjectId, termId], () => {
   font-weight: 700;
 }
 
-.modal-header-custom h5 {
-  font-size: 1.1rem;
-  color: #0f172a;
-  margin: 0 0 4px;
-}
-
-.modal-subtitle {
-  font-size: 0.8125rem;
-  color: #64748b;
-  margin: 0;
-}
-
-.modal-body-custom {
-  padding: 0 32px 8px;
-}
-
-.modal-body-custom .form-group {
-  margin-bottom: 20px;
-}
-
-.modal-body-custom .form-label {
-  display: block;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 6px;
-}
-
-.modal-body-custom .form-label i {
-  font-size: 0.75rem;
-  color: #94a3b8;
-}
-
-.input-wrapper {
-  position: relative;
-}
-
-.modal-body-custom .modern-input {
-  width: 100%;
-  padding: 0.65rem 0.875rem;
-  font-size: 0.875rem;
-  color: #0f172a;
-  background: #f8fafc;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  outline: none;
-  transition: all 0.2s ease;
-  appearance: none;
-  box-sizing: border-box;
-}
-
-.modal-body-custom .modern-input:hover {
-  background: #fff;
-  border-color: #cbd5e1;
-}
-
-.modal-body-custom .modern-input:focus {
-  background: #fff;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
-}
-
-.modal-body-custom .modern-input::placeholder {
-  color: #94a3b8;
-}
-
-.modal-body-custom select.modern-input {
-  cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
-}
-
-.modal-footer-custom {
-  display: flex;
-  gap: 10px;
-  padding: 16px 32px 28px;
-}
-
-.modal-footer-custom button {
-  flex: 1;
-  padding: 0.65rem 1rem;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: none;
-}
-
-.modal-footer-custom .btn-outline {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1.5px solid #e2e8f0;
-}
-
-.modal-footer-custom .btn-outline:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-}
-
-.modal-footer-custom .btn-primary-custom {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: white;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
-}
-
-.modal-footer-custom .btn-primary-custom:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-}
-
-.modal-footer-custom .btn-danger-custom {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: white;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-}
-
-.modal-footer-custom .btn-danger-custom:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-}
-.modal-content { background: #fff; border-radius: 10px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.modal-sm { max-width: 380px; }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
-.modal-header h5 { font-size: 0.95rem; font-weight: 700; margin: 0; }
-.modal-close { background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer; padding: 0; line-height: 1; }
-.modal-body { padding: 18px; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 18px; border-top: 1px solid #e2e8f0; }
-.form-group { margin-bottom: 12px; }
-.form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
-.form-input { width: 100%; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.85rem; outline: none; transition: border-color 0.15s; box-sizing: border-box; }
-.form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-select.form-input { appearance: auto; }
-.btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
-.btn-primary { background: #2563eb; color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
-.btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-.btn-secondary { background: #f1f5f9; color: #475569; }
-.btn-secondary:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
-.btn-block { width: 100%; justify-content: center; }
 
 .weight-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .weight-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; font-size: 0.72rem; text-transform: uppercase; }
@@ -4734,6 +4525,58 @@ select.form-input { appearance: auto; }
 .import-file-remove:hover {
   background: #fee2e2;
   color: #dc2626;
+}
+
+/* Sign-in domain picker */
+.import-domain-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-top: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+}
+.import-domain-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+.import-domain-select {
+  border: 1px solid #bfdbfe;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  cursor: pointer;
+}
+.import-domain-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  margin-top: 12px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+.import-domain-picker.import-domain-required {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+.import-domain-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 0;
+  font-size: 0.76rem;
+  color: #b45309;
 }
 
 /* Preview */
@@ -5031,59 +4874,6 @@ select.form-input { appearance: auto; }
 @keyframes modal-in {
   0% { opacity: 0; transform: scale(0.92) translateY(10px); }
   100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.modal-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 20px 24px 0;
-  position: relative;
-}
-
-.modal-head h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin: 0 0 2px;
-}
-
-.modal-head p {
-  font-size: 0.82rem;
-  color: #64748b;
-  margin: 0;
-}
-
-.modal-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.icon-add {
-  background: #dbeafe;
-  color: #2563eb;
-}
-
-.modal-x {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #94a3b8;
-  cursor: pointer;
-  line-height: 1;
-  padding: 4px;
-}
-
-.modal-x:hover {
-  color: #475569;
 }
 
 .context-menu {
