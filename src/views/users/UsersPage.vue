@@ -49,6 +49,7 @@
 
         <div class="toolbar-right">
           <button
+            v-if="canCreate"
             class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
             style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
             @click="openCreateModal"
@@ -63,7 +64,7 @@
         </div>
       </div>
 
-      <div v-if="selectedIds.length > 0" class="bulk-bar">
+      <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="openBulkDeleteModal">
           <Trash :size="16" />
@@ -84,7 +85,7 @@
         <table class="user-table data-table-base">
           <thead>
             <tr>
-              <th class="col-check">
+              <th v-if="canDelete" class="col-check">
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -102,15 +103,15 @@
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <TransitionGroup name="row" tag="tbody">
             <tr
               v-for="(user, index) in users"
               :key="user.id"
               class="data-row"
               :class="[{ 'row-selected': selectedIds.includes(user.id) }]"
-              @dblclick="openEditModal(user)"
+              @dblclick="canUpdate && openEditModal(user)"
             >
-              <td class="col-check" @dblclick.stop>
+              <td v-if="canDelete" class="col-check" @dblclick.stop>
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -166,12 +167,12 @@
                         <Eye :size="16" />
                         <span>View Details</span>
                       </button>
-                      <button class="action-item edit" @click="openEditModal(user); openDropdownId = null">
+                      <button v-if="canUpdate" class="action-item edit" @click="openEditModal(user); openDropdownId = null">
                         <Pencil :size="16" />
                         <span>Edit</span>
                       </button>
-                      <div class="dropdown-divider"></div>
-                      <button class="action-item delete" @click="openDeleteModal(user); openDropdownId = null">
+                      <div v-if="canUpdate && canDelete" class="dropdown-divider"></div>
+                      <button v-if="canDelete" class="action-item delete" @click="openDeleteModal(user); openDropdownId = null">
                         <Trash2 :size="16" />
                         <span>Delete</span>
                       </button>
@@ -180,7 +181,7 @@
                 </div>
               </td>
             </tr>
-          </tbody>
+          </TransitionGroup>
         </table>
       </div>
 
@@ -263,93 +264,110 @@
 
                 <div class="form-group">
                   <label class="form-label">
-                    <UserIcon :size="14" class="me-1" />
-                    Full Name
+                    <UserIcon :size="15" class="field-icon" />
+                    Full Name <span class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
+                  <div class="input-wrap">
                     <input
                       v-model="form.name"
                       type="text"
-                      class="modern-input"
+                      class="styled-input"
+                      :class="{ err: formError && !form.name.trim() }"
                       placeholder="e.g. John Smith"
                       required
                     />
                   </div>
+                  <span v-if="formError && !form.name.trim()" class="field-err">Full name is required</span>
                 </div>
+
+                <div class="section-divider"></div>
 
                 <div class="form-group">
                   <label class="form-label">
-                    <Mail :size="14" class="me-1" />
-                    Email Address
+                    <Mail :size="15" class="field-icon" />
+                    Email Address <span class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
+                  <div class="input-wrap">
                     <input
                       v-model="form.email"
                       type="email"
-                      class="modern-input"
+                      class="styled-input"
+                      :class="{ err: formError && !form.email.trim() }"
                       placeholder="user@example.com"
                       required
                     />
                   </div>
+                  <span v-if="formError && !form.email.trim()" class="field-err">Email is required</span>
                 </div>
+
+                <div class="section-divider"></div>
 
                 <div class="form-group">
                   <label class="form-label">
-                    <Lock :size="14" class="me-1" />
-                    Password
+                    <Lock :size="15" class="field-icon" />
+                    Password <span v-if="!isEditing" class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
+                  <div class="input-wrap">
                     <input
                       v-model="form.password"
                       type="password"
-                      class="modern-input"
+                      class="styled-input"
+                      :class="{ err: formError && !isEditing && (!form.password || form.password.length < 8) }"
                       :placeholder="isEditing ? 'Leave blank to keep current' : 'Min. 8 characters'"
                       :required="!isEditing"
                       minlength="8"
                     />
                   </div>
                   <p v-if="isEditing" class="field-hint">Leave blank to keep the current password</p>
+                  <span v-if="formError && !isEditing && (!form.password || form.password.length < 8)" class="field-err">Password must be at least 8 characters</span>
                 </div>
+
+                <div class="section-divider"></div>
 
                 <div class="form-group">
                   <label class="form-label">
-                    <ShieldCheck :size="14" class="me-1" />
-                    Role
+                    <ShieldCheck :size="15" class="field-icon" />
+                    Role <span class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.role_id" class="modern-input" required>
+                  <div class="input-wrap">
+                    <select v-model="form.role_id" class="styled-input" required>
                       <option :value="null" disabled>— Select a role —</option>
                       <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
                     </select>
                   </div>
+                  <span v-if="formError && !form.role_id" class="field-err">Please select a role</span>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">
-                    <VenusAndMars :size="14" class="me-1" />
-                    Gender
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.gender" class="modern-input">
-                      <option value="">— Select gender —</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
+                <div class="section-divider"></div>
+
+                <div class="row-2 row-2-equal">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <VenusAndMars :size="15" class="field-icon" />
+                      Gender
+                    </label>
+                    <div class="input-wrap">
+                      <select v-model="form.gender" class="styled-input">
+                        <option value="">— Select gender —</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                <div class="form-group">
-                  <label class="form-label">
-                    <ToggleLeft :size="14" class="me-1" />
-                    Status
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.status" class="modern-input" required>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <ToggleLeft :size="15" class="field-icon" />
+                      Status <span class="req">*</span>
+                    </label>
+                    <div class="input-wrap">
+                      <select v-model="form.status" class="styled-input" required>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -373,20 +391,20 @@
         <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
+              <div class="modal-icon icon-danger">
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3 style="color: #dc2626;">Delete User</h3>
+                <h3>Delete User</h3>
                 <p>This action cannot be undone.</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
+              <p class="del-text">
                 Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?
               </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; margin: 8px 0 0;">
+              <p class="del-warning">
                 <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
                 <span style="vertical-align: middle;">The user, their profile, and all associated data will be permanently removed.</span>
               </p>
@@ -409,25 +427,24 @@
         <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
+              <div class="modal-icon icon-danger">
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3 style="color: #dc2626;">Delete Users</h3>
+                <h3>Delete Users</h3>
                 <p>This action cannot be undone.</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
+              <p class="del-text">
                 Are you sure you want to delete <strong>{{ selectedIds.length }} user(s)</strong>?
               </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; line-height: 1.4; margin: 8px 0 0;">
+              <p class="del-warning">
                 <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
                 <span style="vertical-align: middle;">These users, their profiles, and all associated data will be permanently removed.</span>
               </p>
-            </div>
-            <div class="modal-foot" style="padding-top: 16px;">
+            </div>              <div class="modal-foot">
               <button type="button" class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
               <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleBulkDelete">
                 <span v-if="formSubmitting" class="spinner-sm"></span>
@@ -445,7 +462,7 @@
         <div v-if="showDetailsModal && detailUser" class="modal-overlay" @click.self="closeDetailsModal">
           <div class="modal-content-panel" style="max-width: 460px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #dbeafe; color: #2563eb;">
+              <div class="modal-icon icon-info">
                 <IdCard :size="18" />
               </div>
               <div>
@@ -532,7 +549,8 @@
 
 <script setup lang="ts">
 import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, Inbox } from '@lucide/vue'
-import { ref, computed, onMounted, onUnmounted, type Component } from 'vue'
+import { ref, computed, onMounted, onUnmounted, TransitionGroup, type Component } from 'vue'
+import { usePermission } from '@/composables/usePermission'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
@@ -541,6 +559,11 @@ import type { User } from '@/services/userService'
 const store = useUserStore()
 const { users, roles, loading, error, totalUsers, lastPage } = storeToRefs(store)
 const { success: toastSuccess, error: toastError } = useToast()
+
+const { hasPermission } = usePermission()
+const canCreate = computed(() => hasPermission('create-users'))
+const canUpdate = computed(() => hasPermission('update-users'))
+const canDelete = computed(() => hasPermission('delete-users'))
 
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
@@ -985,13 +1008,13 @@ onMounted(() => {
 .col-check {
   width: 48px;
   text-align: center;
-  padding: 12px 8px !important;
+  padding: 10px 8px !important;
 }
 
 .user-table thead th.col-check,
 .user-table tbody td.col-check {
   text-align: center;
-  padding: 12px 8px !important;
+  padding: 10px 8px !important;
   vertical-align: middle;
 }
 
@@ -1018,27 +1041,28 @@ onMounted(() => {
 .user-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
   background: #2563eb;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .user-name {
   font-weight: 600;
   color: #0f172a;
+  font-size: 0.85rem;
 }
 
 .email-cell {
@@ -1157,6 +1181,7 @@ onMounted(() => {
 
 .icon-create { background: #dbeafe; color: #2563eb; }
 .icon-edit { background: #fef3c7; color: #d97706; }
+.icon-info { background: #dbeafe; color: #2563eb; }
 
 .detail-row {
   display: flex;
@@ -1178,5 +1203,128 @@ onMounted(() => {
   .pagination-info { width: 100%; justify-content: center; }
   .modal-content-panel { width: 100%; margin: 0 8px; }
   .gender-toggle, .status-toggle { flex-wrap: wrap; }
+}
+
+.form-group { margin-bottom: 0; }
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 7px;
+}
+
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.req {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.field-err {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.styled-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.styled-input:hover { border-color: #9ca3af; }
+.styled-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.styled-input::placeholder { color: #adb5bd; }
+
+.styled-input.err {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+}
+
+select.styled-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+  margin: 14px 0 16px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.row-2-equal > * {
+  min-width: 0;
+}
+
+.del-text {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+}
+
+.del-warning {
+  font-size: 0.75rem;
+  color: #ef4444;
+  background: #fef2f2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 8px 0 0;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-enter-active,
+.row-leave-active {
+  transition: all 0.3s ease;
+}
+
+.row-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.row-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.row-move {
+  transition: transform 0.3s ease;
 }
 </style>

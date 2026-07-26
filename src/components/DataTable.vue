@@ -15,8 +15,8 @@
             </th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-if="data.length === 0">
+        <TransitionGroup name="row" tag="tbody">
+          <tr v-if="data.length === 0" key="empty">
             <td :colspan="columns.length" class="text-center text-muted py-4">
               <Inbox :size="16" class="me-1" /> No data available
             </td>
@@ -33,7 +33,7 @@
               </slot>
             </td>
           </tr>
-        </tbody>
+        </TransitionGroup>
       </table>
     </div>
 
@@ -60,6 +60,7 @@ defineEmits<{
 }>()
 
 import { Inbox } from '@lucide/vue'
+import { TransitionGroup } from 'vue'
 
 const themeStore = useThemeStore()
 const isDark = computed(() => themeStore.isDark)
@@ -190,5 +191,25 @@ defineOptions({
 
 .dark-mode .table-footer {
   border-top-color: #334155;
+}
+
+/* Row transition animations */
+:deep(.row-enter-active),
+:deep(.row-leave-active) {
+  transition: all 0.3s ease;
+}
+
+:deep(.row-enter-from) {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+:deep(.row-leave-to) {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+:deep(.row-move) {
+  transition: transform 0.3s ease;
 }
 </style>

@@ -1,16 +1,16 @@
 import { ref, computed } from 'vue'
 import {
   getStudents,
+  getStudent,
   createStudent,
   updateStudent,
   deleteStudent,
   bulkDeleteStudents,
   assignStudentToClass,
-  uploadStudentPhoto,
-  deleteStudentPhoto,
   type Student,
   type SchoolClass,
 } from '@/services/studentService'
+import { getGenerations, type Generation } from '@/services/generationService'
 import { getUserInitials } from '@/utils'
 import { useToast } from '@/composables/useToast'
 import { classService } from '@/services/classService'
@@ -25,6 +25,7 @@ export function useStudents() {
 
   const students = ref<Student[]>(cachedStudents ?? [])
   const classes = ref<SchoolClass[]>(cachedClasses ?? [])
+  const generations = ref<Generation[]>([])
   const loading = ref(true)
   const error = ref<string | null>(null)
   const searchQuery = ref('')
@@ -42,6 +43,7 @@ const selectedStudent = ref<Student | null>(null)
 const selectedBulkIds = ref<number[]>([])
 
   const genderFilter = ref('')
+  const generationFilter = ref<number | ''>('')
 
   const initialCreateForm = () => ({
     name: '',
@@ -49,8 +51,8 @@ const selectedBulkIds = ref<number[]>([])
     password: '',
     gender: 'Male' as 'Male' | 'Female',
     status: 'active' as 'active' | 'inactive',
-    class_id: null as number | null,
     generation_id: null as number | null,
+    class_id: null as number | null,
   })
 
   const createForm = ref(initialCreateForm())
@@ -60,6 +62,7 @@ const selectedBulkIds = ref<number[]>([])
     gender: 'Male' as 'Male' | 'Female',
     status: 'active' as 'active' | 'inactive',
     class_id: null as number | null,
+    generation_id: null as number | null,
     academic_year_id: null as number | null,
     enrollment_date: null as string | null,
   })
@@ -73,7 +76,10 @@ const selectedBulkIds = ref<number[]>([])
       const studentName = s.user?.name || ''
       const matchesSearch = studentName.toLowerCase().includes(searchQuery.value.toLowerCase())
       const matchesStudentId = (s.student_id_number || '').toLowerCase().includes(searchQuery.value.toLowerCase())
-      return matchesSearch || matchesStudentId
+      if (!matchesSearch && !matchesStudentId) return false
+      if (genderFilter.value && (s.user?.gender || '') !== genderFilter.value) return false
+      if (generationFilter.value !== '' && (s.generation_id ?? null) !== generationFilter.value) return false
+      return true
     })
   })
 
@@ -117,6 +123,14 @@ const selectedBulkIds = ref<number[]>([])
     }
   }
 
+  async function loadGenerations() {
+    try {
+      const res = await getGenerations()
+      generations.value = res.data
+    } catch {
+    }
+  }
+
   async function init() {
     const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
     const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
@@ -124,7 +138,7 @@ const selectedBulkIds = ref<number[]>([])
     if (cachedClasses) classes.value = cachedClasses
     loading.value = !cachedStudents
 
-    await Promise.all([loadStudents(), loadClasses()])
+    await Promise.all([loadStudents(), loadClasses(), loadGenerations()])
     loading.value = false
   }
 
@@ -171,9 +185,6 @@ const selectedBulkIds = ref<number[]>([])
     }
   }
 
-  const photoFile = ref<File | null>(null)
-  const removePhotoFlag = ref(false)
-
   function openEditModal(student: Student) {
     selectedStudent.value = student
     editForm.value = {
@@ -182,32 +193,17 @@ const selectedBulkIds = ref<number[]>([])
       gender: (student.user?.gender as 'Male' | 'Female') ?? 'Male',
       status: (student.user?.status as 'active' | 'inactive') ?? 'active',
       class_id: student.class_id ?? student.classHistories?.find((h: any) => h.status === 'active')?.class_id ?? null,
+      generation_id: student.generation_id ?? null,
       academic_year_id: student.academic_year_id ?? null,
       enrollment_date: student.enrollment_date ?? null,
     }
     formError.value = null
-    photoFile.value = null
-    removePhotoFlag.value = false
     showEditModal.value = true
   }
 
   function closeEditModal() {
     showEditModal.value = false
     selectedStudent.value = null
-    photoFile.value = null
-    removePhotoFlag.value = false
-  }
-
-  function onEditPhotoSelected(file: File | null) {
-    photoFile.value = file
-    if (file) {
-      removePhotoFlag.value = false
-    }
-  }
-
-  function onEditRemovePhoto() {
-    photoFile.value = null
-    removePhotoFlag.value = true
   }
 
   async function handleEdit() {
@@ -216,18 +212,8 @@ const selectedBulkIds = ref<number[]>([])
     formError.value = null
     try {
       const res = await updateStudent(selectedStudent.value.id, editForm.value)
-      let updatedStudent = res.student
-
-      if (photoFile.value) {
-        const photoRes = await uploadStudentPhoto(selectedStudent.value.id, photoFile.value)
-        updatedStudent = photoRes.student
-      } else if (removePhotoFlag.value) {
-        const photoRes = await deleteStudentPhoto(selectedStudent.value.id)
-        updatedStudent = photoRes.student
-      }
-
       const index = students.value.findIndex((s) => s.id === selectedStudent.value!.id)
-      if (index !== -1) students.value[index] = updatedStudent
+      if (index !== -1) students.value[index] = res.student
       invalidateStudentCache()
       closeEditModal()
       toast.success('Student updated successfully')
@@ -331,8 +317,13 @@ const selectedBulkIds = ref<number[]>([])
     }
   }
 
-  function viewDetails(student: Student) {
-    selectedStudent.value = student
+  async function viewDetails(student: Student) {
+    try {
+      const res = await getStudent(student.id)
+      selectedStudent.value = res.student
+    } catch {
+      selectedStudent.value = student
+    }
     showDetailsModal.value = true
   }
 
@@ -344,6 +335,7 @@ const selectedBulkIds = ref<number[]>([])
   return {
     students,
     classes,
+    generations,
     loading,
     error,
     searchQuery,
@@ -358,11 +350,10 @@ const selectedBulkIds = ref<number[]>([])
     selectedStudent,
     selectedBulkIds,
     genderFilter,
+    generationFilter,
     createForm,
     editForm,
     assignForm,
-    photoFile,
-    existingPhotoUrl: computed(() => selectedStudent.value?.profile_photo_url ?? null),
     filteredStudents,
     getInitials,
     formatDate,
@@ -374,8 +365,6 @@ const selectedBulkIds = ref<number[]>([])
     openEditModal,
     closeEditModal,
     handleEdit,
-    onEditPhotoSelected,
-    onEditRemovePhoto,
     openDeleteModal,
     closeDeleteModal,
     handleDelete,

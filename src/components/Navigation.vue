@@ -116,7 +116,7 @@ import { storageUrl } from '@/services/apiHttp'
 import { getUserInitials } from '@/utils'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
-  GraduationCap, ClipboardList, FileText,
+  GraduationCap, ClipboardList, FileText, History,
   User, Shield, LogOut, X, ChevronLeft, ChevronRight,
 } from '@lucide/vue'
 import type { Component } from 'vue'
@@ -154,16 +154,21 @@ const navLinks = computed<NavLink[]>(() => {
     { to: '/students', label: 'Students', icon: GraduationCap, permission: 'view-students' },
     { to: '/scores', label: 'Scores', icon: ClipboardList, permission: 'view-scores' },
     { to: '/reports', label: 'Reports', icon: FileText },
+    { to: '/activity-logs', label: 'Activity Log', icon: History, permission: 'view-activity-logs' },
   ]
   return links.filter(link => !link.permission || auth.hasPermission(link.permission))
 })
 
 const settingsLinks = computed<NavLink[]>(() => {
   if (auth.user?.role !== 'admin') return []
-  return [
-    { to: '/users', label: 'Users', icon: User },
-    { to: '/roles', label: 'Roles & Permissions', icon: Shield },
-  ]
+  const links: NavLink[] = []
+  if (auth.hasPermission('view-users')) {
+    links.push({ to: '/users', label: 'Users', icon: User })
+  }
+  if (auth.hasPermission('manage-roles-permissions')) {
+    links.push({ to: '/roles', label: 'Roles & Permissions', icon: Shield })
+  }
+  return links
 })
 
 async function handleLogout() {
@@ -297,6 +302,20 @@ function goToProfile() {
   font-family: "Inter", "Noto Sans Khmer", sans-serif;
   white-space: nowrap;
   overflow: hidden;
+  position: relative;
+}
+
+.sidebar-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 20px;
+  background: #2563eb;
+  border-radius: 0 4px 4px 0;
+  transition: transform 0.2s ease;
 }
 
 .sidebar-link.collapsed {
@@ -306,15 +325,28 @@ function goToProfile() {
   margin-right: 4px;
 }
 
+.sidebar-link.collapsed:hover {
+  padding-left: 0;
+}
+
 .sidebar-link:hover {
-  background: #eef2ff;
+  background: #f8fafc;
   color: #2563eb;
+  padding-left: 20px;
+}
+
+.sidebar-link:hover::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .sidebar-link.router-link-active {
   background: #e8f1ff;
   color: #2563eb;
   font-weight: 600;
+}
+
+.sidebar-link.router-link-active::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .sidebar-link-text {

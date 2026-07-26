@@ -19,6 +19,7 @@ export async function getUsers(params?: {
   search?: string
   role_id?: number
   status?: string
+  gender?: string
   page?: number
   per_page?: number
 }): Promise<UsersResponse> {

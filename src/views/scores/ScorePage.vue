@@ -61,13 +61,14 @@
             </div>
 
             <div v-else class="classes-grid">
-              <div
-                v-for="cls in paginatedClasses"
-                :key="cls.id"
-                class="class-card"
-                :style="{ '--card-accent': getClassAccentColor(cls) }"
-                @click="selectClass(cls)"
-              >
+              <TransitionGroup name="card" tag="div" class="classes-grid-inner">
+                <div
+                  v-for="cls in paginatedClasses"
+                  :key="cls.id"
+                  class="class-card"
+                  :style="{ '--card-accent': getClassAccentColor(cls) }"
+                  @click="selectClass(cls)"
+                >
                 <div class="class-card-top">
                   <div class="class-card-icon" :style="{ background: getClassGradient(cls) }">
                     <Users :size="22" />
@@ -90,6 +91,7 @@
                   <div class="class-card-arrow"><ChevronRight :size="16" /></div>
                 </div>
               </div>
+              </TransitionGroup>
             </div>
 
             <div v-if="filteredClasses.length > 0" class="pagination-bar">
@@ -173,21 +175,7 @@
                   <X :size="14" />
                 </button>
               </div>
-              <div class="toolbar-center">
-                <div class="tb-filter" v-if="generations.length > 0">
-              
-                  <select v-model="selectedGeneration">
-                    <option :value="null">All Years</option>
-                    <option
-                      v-for="gen in generations"
-                      :key="gen"
-                      :value="gen"
-                    >
-                      {{ gen }}
-                    </option>
-                  </select>
-                </div>
-              </div>
+
               <div class="toolbar-right">
                 <div class="sort-toggle">
                   <span class="sort-label">Sort by</span>
@@ -220,11 +208,12 @@
             </div>
 
             <div v-else class="term-sections">
-              <div
-                v-for="term in filteredTerms"
-                :key="term.id"
-                class="term-section"
-              >
+              <TransitionGroup name="section" tag="div" class="term-sections-inner">
+                <div
+                  v-for="term in filteredTerms"
+                  :key="term.id"
+                  class="term-section"
+                >
                 <div class="term-section-header" @click="goToTermSubjects(term.id)">
                   <div class="term-section-header-left">
                     <div class="term-section-icon">
@@ -266,6 +255,7 @@
                   <span>No subjects for this term</span>
                 </div>
               </div>
+              </TransitionGroup>
             </div>
           </div>
         </template>
@@ -275,6 +265,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { TransitionGroup } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { classService, type SchoolClass } from '@/services/classService'
@@ -292,7 +283,6 @@ const router = useRouter()
 const subjectsData = ref<SubjectItem[]>([])
 const terms = ref<Array<{ id: number; name: string; academic_year: string | number | null }>>([])
 const loading = ref(false)
-const selectedGeneration = ref<string | number | null>(null)
 
 const classes = ref<SchoolClass[]>([])
 const loadingClasses = ref(false)
@@ -497,25 +487,11 @@ async function fetchClasses() {
 
 function selectClass(cls: SchoolClass | null) {
   selectedClass.value = cls
-  selectedGeneration.value = null
   searchQuery.value = ''
   selectedGenerationFilter.value = null
 }
 
-const generations = computed(() => {
-  const genSet = new Set<string | number>()
-  terms.value.forEach((t) => {
-    if (t.academic_year) genSet.add(t.academic_year)
-  })
-  return Array.from(genSet).sort((a, b) => Number(a) - Number(b))
-})
-
-const filteredTerms = computed(() => {
-  const result = !selectedGeneration.value
-    ? terms.value
-    : terms.value.filter((t) => t.academic_year === selectedGeneration.value)
-  return result
-})
+const filteredTerms = computed(() => terms.value)
 
 function goToTermSubjects(termId: number) {
   const query: Record<string, string> = {}
@@ -543,9 +519,7 @@ function extractData(data: { subjects: SubjectItem[] }) {
   })
   terms.value = Array.from(termsMap.values()).sort((a, b) => a.id - b.id)
 
-  if (!selectedGeneration.value && generations.value.length > 0) {
-    selectedGeneration.value = generations.value[generations.value.length - 1]
-  }
+
 }
 
 async function loadSubjects() {
@@ -809,13 +783,16 @@ onMounted(async () => {
 
 
 .classes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
   padding: 20px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.classes-grid-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
   align-content: start;
 }
 
@@ -921,13 +898,16 @@ onMounted(async () => {
 
 
 .term-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
   padding: 14px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.term-sections-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .term-section {
@@ -1149,6 +1129,38 @@ onMounted(async () => {
 
 
 
+
+.card-enter-active,
+.card-leave-active {
+  transition: all 0.3s ease;
+}
+.card-enter-from {
+  opacity: 0;
+  transform: scale(0.92) translateY(10px);
+}
+.card-leave-to {
+  opacity: 0;
+  transform: scale(0.92) translateY(-10px);
+}
+.card-move {
+  transition: transform 0.3s ease;
+}
+
+.section-enter-active,
+.section-leave-active {
+  transition: all 0.3s ease;
+}
+.section-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+.section-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.section-move {
+  transition: transform 0.3s ease;
+}
 
 .empty-state {
   text-align: center;

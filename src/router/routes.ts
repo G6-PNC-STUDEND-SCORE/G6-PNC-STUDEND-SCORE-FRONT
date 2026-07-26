@@ -82,6 +82,12 @@ export const routes: RouteRecordRaw[] = [
         meta: { roles: ['admin', 'teacher'] },
       },
       {
+        path: 'activity-logs',
+        name: 'activity-logs',
+        component: () => import('@/views/activity/ActivityLogPage.vue'),
+        meta: { roles: ['admin', 'teacher'] },
+      },
+      {
         path: 'users',
         name: 'users',
         component: () => import('@/views/users/UsersPage.vue'),

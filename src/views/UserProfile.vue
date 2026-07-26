@@ -355,7 +355,7 @@
                   <div class="form-group" style="grid-column: 1 / -1;">
                     <label class="form-label"><FileText :size="14" class="me-1" /> Bio</label>
                     <div class="input-wrapper">
-                      <textarea v-model="form.bio" class="modern-input" rows="3" placeholder="A short note about yourself..." style="resize: vertical; min-height: 60px;"></textarea>
+                      <textarea v-model="form.bio" class="modern-input" rows="3" placeholder="A short note about yourself..."></textarea>
                     </div>
                   </div>
                 </div>
@@ -928,23 +928,22 @@ onUnmounted(() => {
 .stat-tile {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   background: #fff;
   border: 1px solid #e9ecef;
-  border-radius: 16px;
-  padding: 16px 18px;
+  border-radius: 14px;
+  padding: 18px 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.25s ease;
 }
 
 .stat-tile:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 .stat-icon {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -952,13 +951,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.icon-blue { background: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0.06)); color: #3b82f6; }
-.icon-green { background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(16, 185, 129, 0.06)); color: #10b981; }
-.icon-violet { background: linear-gradient(135deg, rgba(139, 92, 246, 0.14), rgba(139, 92, 246, 0.06)); color: #8b5cf6; }
-.icon-amber { background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(245, 158, 11, 0.06)); color: #f59e0b; }
+.icon-blue { background: #eff6ff; color: #3b82f6; }
+.icon-green { background: #f0fdf4; color: #10b981; }
+.icon-violet { background: #f5f3ff; color: #8b5cf6; }
+.icon-amber { background: #fffbeb; color: #f59e0b; }
 
 .stat-value {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #0f172a;
   line-height: 1.2;
@@ -969,11 +968,12 @@ onUnmounted(() => {
 }
 
 .stat-label {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: #94a3b8;
   margin-top: 2px;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 /* ═══════════════════════════════════════════════
@@ -1002,14 +1002,19 @@ onUnmounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   text-align: center;
   padding-bottom: 20px;
+  transition: box-shadow 0.25s ease;
+}
+
+.side-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 }
 
 .side-cover {
-  height: 80px;
+  height: 90px;
   background:
-    radial-gradient(circle at 15% 30%, rgba(255, 255, 255, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 15% 30%, rgba(255, 255, 255, 0.18) 0%, transparent 45%),
     radial-gradient(circle at 85% 70%, rgba(255, 255, 255, 0.12) 0%, transparent 50%),
-    linear-gradient(135deg, #1d4ed8, #3b82f6 55%, #60a5fa);
+    linear-gradient(135deg, #1e40af, #3b82f6 50%, #60a5fa);
 }
 
 .side-avatar-wrap {
@@ -1387,19 +1392,19 @@ onUnmounted(() => {
 .security-body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  gap: 16px;
 }
 
 .pw-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .pw-group label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
 }
 
 .pw-input-box {
@@ -1408,58 +1413,67 @@ onUnmounted(() => {
 
 .pw-input-box input {
   width: 100%;
-  padding: 0.6rem 40px 0.6rem 12px;
+  padding: 0.65rem 40px 0.65rem 14px;
   font-size: 0.85rem;
   font-family: inherit;
   color: #111827;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 9px;
+  background: #fafbfc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: all 0.15s;
   box-sizing: border-box;
 }
 
 .pw-input-box input:hover { border-color: #cbd5e1; }
-.pw-input-box input:focus { border-color: #94a3b8; }
+.pw-input-box input:focus {
+  border-color: #3b82f6;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 .pw-input-box input::placeholder { color: #cbd5e1; }
 
 .pw-eye {
   position: absolute;
-  right: 8px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s;
+  transition: all 0.15s;
 }
 
-.pw-eye:hover { color: #64748b; }
+.pw-eye:hover {
+  color: #2563eb;
+  background: #f1f5f9;
+}
 
 .security-actions {
   display: flex;
-  gap: 8px;
-  padding-top: 16px;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 18px;
 }
 
 .cancel-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 20px;
-  border: 1px solid #e2e8f0;
+  padding: 10px 22px;
+  border: 1.5px solid #e2e8f0;
   background: #fff;
   color: #64748b;
   font-size: 0.8125rem;
-  font-weight: 500;
-  border-radius: 9px;
+  font-weight: 600;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
   font-family: inherit;
@@ -1468,19 +1482,20 @@ onUnmounted(() => {
 .cancel-btn:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
+  color: #475569;
 }
 
 .save-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 20px;
+  padding: 10px 22px;
   border: none;
   background: #111827;
   color: #fff;
   font-size: 0.8125rem;
   font-weight: 600;
-  border-radius: 9px;
+  border-radius: 10px;
   cursor: pointer;
   transition: background 0.15s;
   font-family: inherit;
@@ -1490,9 +1505,9 @@ onUnmounted(() => {
 .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .pw-msg {
-  padding-top: 10px;
+  padding-top: 12px;
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -1507,7 +1522,42 @@ onUnmounted(() => {
 .edit-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 18px;
+}
+
+.form-group .modern-input,
+.form-group .modern-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  box-sizing: border-box;
+}
+.form-group .modern-input:hover { border-color: #9ca3af; }
+.form-group .modern-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.form-group textarea.modern-input {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
 }
 
 /* ═══════════════════════════════════════════════

@@ -1,5 +1,5 @@
 <template>
-  <div class="score-sheet">
+  <div class="score-sheet" @click="refocusSheet">
     <div class="sheet-toolbar">
       <button class="tb-btn" @click="goBack" title="Back">
         <i class="bi bi-arrow-left"></i>
@@ -93,9 +93,23 @@
                       <button class="col-action-btn col-action-delete" @click="confirmDeleteColumn(col)" title="Delete"><i class="bi bi-trash3"></i></button>
                     </div>
                   </div>
-                  <select v-model="columnTypes[col.id]" @change="onColumnTypeChange(col, $event)" class="column-type-select" @click.stop @mousedown.stop>
-                <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-              </select>
+                  <div class="col-type-badge" :class="`col-type-${columnTypes[col.id] || col.type}`" @click.stop="(e) => toggleColTypeDropdown(col.id, e)" @keydown.enter.stop="(e) => toggleColTypeDropdown(col.id, e)" tabindex="0" role="button" :title="'Type: ' + getTypeLabel(columnTypes[col.id] || col.type)">
+                    <span class="col-type-label">{{ getTypeLabel(columnTypes[col.id] || col.type) }}</span>
+                    <svg class="col-type-chevron" width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2l3 3 3-3z"/></svg>
+                    <div v-if="openColTypeDropdown === col.id" class="col-type-dropdown" @click.stop @mousedown.stop>
+                      <div
+                        v-for="opt in typeOptions"
+                        :key="opt.value"
+                        class="col-type-option"
+                        :class="{ active: (columnTypes[col.id] || col.type) === opt.value }"
+                        @click.stop="changeColType(col, opt.value)"
+                      >
+                        <span class="col-type-dot" :class="`col-type-${opt.value}`"></span>
+                        {{ opt.label }}
+                        <span v-if="(columnTypes[col.id] || col.type) === opt.value" class="col-type-check">✓</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div v-if="col.max_score" class="max-score-label">/ {{ col.max_score }}</div>
               </th>
@@ -344,7 +358,17 @@
                 <div class="input-wrapper">
                   <select v-model="newColumn.type" class="modern-input">
                     <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    <option value="__custom__">Custom…</option>
                   </select>
+                  <div v-if="newColumn.type === '__custom__'" class="form-group" style="margin-top: 8px">
+                    <label class="form-label">
+                      <i class="bi bi-pencil me-1"></i>
+                      Custom Type Name
+                    </label>
+                    <div class="input-wrapper">
+                      <input v-model="newColumn.customTypeName" type="text" class="modern-input" placeholder="e.g. Final Exam" />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="form-group">
@@ -405,6 +429,35 @@
                 <div class="weight-input-group">
                   <input v-model.number="weightEdits[at.id]" type="number" min="0" max="100" step="0.5" class="modern-input weight-input-field" />
                   <span class="weight-suffix">%</span>
+                </div>
+              </div>
+
+              <div class="weight-divider"></div>
+              <div class="new-type-section">
+                <div class="new-type-header" @click="showNewTypeForm = !showNewTypeForm">
+                  <i class="bi" :class="showNewTypeForm ? 'bi-dash-circle' : 'bi-plus-circle'"></i>
+                  <span>New Assessment Type</span>
+                </div>
+                <div v-if="showNewTypeForm" class="new-type-form">
+                  <div class="new-type-row">
+                    <div class="new-type-field">
+                      <label class="new-type-label">Code</label>
+                      <input v-model="newTypeCode" type="text" class="modern-input" placeholder="e.g. final" />
+                    </div>
+                    <div class="new-type-field">
+                      <label class="new-type-label">Name</label>
+                      <input v-model="newTypeName" type="text" class="modern-input" placeholder="e.g. Final Exam" />
+                    </div>
+                    <div class="new-type-field new-type-field-sm">
+                      <label class="new-type-label">Weight %</label>
+                      <input v-model.number="newTypeWeight" type="number" min="0" max="100" step="0.5" class="modern-input" placeholder="20" />
+                    </div>
+                    <div class="new-type-action">
+                      <button class="btn-primary-custom btn-sm" :disabled="!newTypeCode.trim() || !newTypeName.trim()" @click="doCreateType">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">
@@ -499,43 +552,55 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
-          <div class="modal-content-panel modal-md-panel">
-            <div class="modal-header-custom">
-              <button class="modal-close-btn" @click="showImport = false; selectedFileName = ''; filePreview = null" aria-label="Close">
-                <i class="bi bi-x-lg"></i>
-              </button>
-              <div class="modal-icon icon-add">
-                <i class="bi bi-cloud-upload"></i>
+          <div class="import-modal">
+            <div class="import-modal-head">
+              <div class="import-modal-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
               </div>
               <div>
-                <h5>Import Scores</h5>
-                <p class="modal-subtitle">Import student scores from an Excel file</p>
+                <h3>Import Scores</h3>
+                <p>Upload student scores from Excel or PDF</p>
               </div>
+              <button class="import-modal-close" @click="showImport = false; selectedFileName = ''; filePreview = null" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
             </div>
-            <div class="modal-body-custom">
-              <div class="import-format-badges">
-                <span class="import-badge import-badge-excel"><i class="bi bi-file-earmark-excel"></i> Excel</span>
-                <span class="import-badge import-badge-pdf"><i class="bi bi-filetype-pdf"></i> PDF</span>
+
+            <div class="import-modal-body">
+              <div class="import-formats">
+                <span class="import-format import-format-excel">
+                  <i class="bi bi-file-earmark-excel"></i> Excel
+                </span>
+                <span class="import-format import-format-pdf">
+                  <i class="bi bi-filetype-pdf"></i> PDF
+                </span>
               </div>
 
-              <div v-if="!selectedFileName" class="import-drop-zone"
+              <div v-if="!selectedFileName" class="import-zone"
                 @drop.prevent="onFileDrop" @dragover.prevent="dragOver = true"
                 @dragleave.prevent="dragOver = false"
-                :class="{ 'import-drop-active': dragOver }"
+                :class="{ 'import-zone-over': dragOver }"
                 @click="openFilePicker">
                 <input ref="fileInputRef" type="file" accept=".xlsx,.xls,.pdf" hidden @change="onFileSelected" />
-                <div class="import-drop-icon">
-                  <i class="bi bi-file-earmark-arrow-up"></i>
+                <div class="import-zone-icon">
+                  <i class="bi bi-cloud-upload"></i>
                 </div>
-                <div class="import-drop-text">
-                  <span class="import-drop-title">Drop your file here</span>
-                  <span class="import-drop-sub">or click to browse</span>
+                <div class="import-zone-text">
+                  <span class="import-zone-title">Drop your file here</span>
+                  <span class="import-zone-sub">or click to browse</span>
                 </div>
               </div>
 
-              <div v-if="selectedFileName" class="import-file-card">
-                <div class="import-file-card-main">
-                  <div class="import-file-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div>
+              <div v-else class="import-file">
+                <div class="import-file-accent"></div>
+                <div class="import-file-main">
+                  <div class="import-file-type-icon">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                  </div>
                   <div class="import-file-info">
                     <span class="import-file-name">{{ selectedFileName }}</span>
                     <span class="import-file-size">{{ fileSizeFormatted }}</span>
@@ -546,57 +611,60 @@
                 </div>
 
                 <div v-if="filePreview" class="import-preview">
-                  <div class="import-preview-divider"></div>
-                  <div class="import-preview-header">
-                    <i class="bi bi-table"></i>
-                    <span>File Preview</span>
-                  </div>
-                  <div class="import-preview-grid">
+                  <div class="import-preview-stats">
                     <div class="import-preview-stat">
-                      <span class="import-preview-stat-value">{{ filePreview.rowCount }}</span>
-                      <span class="import-preview-stat-label">Students</span>
+                      <div class="import-preview-stat-icon import-icon-students">
+                        <i class="bi bi-people"></i>
+                      </div>
+                      <span class="import-preview-num">{{ filePreview.rowCount }}</span>
+                      <span class="import-preview-label">Students</span>
                     </div>
                     <div class="import-preview-stat">
-                      <span class="import-preview-stat-value">{{ filePreview.colCount }}</span>
-                      <span class="import-preview-stat-label">Columns</span>
+                      <div class="import-preview-stat-icon import-icon-columns">
+                        <i class="bi bi-layout-three-columns"></i>
+                      </div>
+                      <span class="import-preview-num">{{ filePreview.colCount }}</span>
+                      <span class="import-preview-label">Columns</span>
                     </div>
                     <div class="import-preview-stat import-preview-stat-wide">
-                      <span class="import-preview-stat-value import-preview-col-names" :title="filePreview.colNames.join(', ')">
+                      <div class="import-preview-stat-icon import-icon-cols">
+                        <i class="bi bi-tag"></i>
+                      </div>
+                      <span class="import-preview-num import-preview-cols" :title="filePreview.colNames.join(', ')">
                         {{ filePreview.colNames.slice(0, 3).join(' · ') }}<span v-if="filePreview.colNames.length > 3"> …</span>
                       </span>
-                      <span class="import-preview-stat-label">Detected columns</span>
+                      <span class="import-preview-label">Detected columns</span>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div v-if="!selectedFileName" class="import-supported-hint">
-                <i class="bi bi-info-circle"></i>
-                <span>Supports .xlsx, .xls, and .pdf files</span>
-              </div>
-              <div v-if="selectedFileName && studentEmailDomains.length > 1" class="import-domain-picker" :class="{ 'import-domain-required': emailDomainSelectionRequired }">
-                <label class="import-domain-label" for="import-email-domain">
+                <div v-if="studentEmailDomains.length > 1" class="import-domain-group">
+                  <div class="import-domain" :class="{ 'import-domain-required': emailDomainSelectionRequired }">
+                    <div class="import-domain-info">
+                      <i class="bi bi-envelope-at"></i>
+                      <span>New accounts sign in with</span>
+                    </div>
+                    <select v-model="selectedEmailDomain" class="import-domain-select" :class="{ 'select-warn': emailDomainSelectionRequired }">
+                      <option :value="null" disabled>Select a domain…</option>
+                      <option v-for="d in studentEmailDomains" :key="d.id" :value="d.domain">@{{ d.domain }}</option>
+                    </select>
+                  </div>
+                  <div v-if="emailDomainSelectionRequired" class="import-domain-hint import-domain-hint-warn">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Choose a sign-in domain before importing.</span>
+                  </div>
+                </div>
+                <div v-else-if="studentEmailDomains.length === 1" class="import-domain-info-bar">
                   <i class="bi bi-envelope-at"></i>
-                  New student accounts sign in with
-                </label>
-                <select id="import-email-domain" v-model="selectedEmailDomain" class="import-domain-select">
-                  <option :value="null" disabled>Select a domain…</option>
-                  <option v-for="d in studentEmailDomains" :key="d.id" :value="d.domain">@{{ d.domain }}</option>
-                </select>
-              </div>
-              <div v-if="selectedFileName && emailDomainSelectionRequired" class="import-domain-warning">
-                <i class="bi bi-exclamation-triangle"></i>
-                <span>Choose a sign-in domain before importing.</span>
-              </div>
-              <div v-else-if="selectedFileName && studentEmailDomains.length === 1" class="import-domain-hint">
-                <i class="bi bi-envelope-at"></i>
-                <span>New student accounts will sign in with <strong>@{{ studentEmailDomains[0].domain }}</strong></span>
+                  <span>New accounts will use <strong>@{{ studentEmailDomains[0].domain }}</strong></span>
+                </div>
               </div>
             </div>
-            <div class="modal-footer-custom">
-              <button class="btn-outline" @click="showImport = false; selectedFileName = ''; filePreview = null">Cancel</button>
-              <button class="btn-primary-custom" :disabled="!pendingFile || emailDomainSelectionRequired" @click="processImportFile">
-                <i class="bi bi-upload me-1"></i>
+
+            <div class="import-modal-foot">
+              <button class="import-btn-secondary" @click="showImport = false; selectedFileName = ''; filePreview = null">Cancel</button>
+              <button class="import-btn-primary" :disabled="!pendingFile || emailDomainSelectionRequired" @click="processImportFile">
+                <i class="bi bi-upload"></i>
                 Import {{ filePreview?.rowCount ? filePreview.rowCount + ' student' + (filePreview.rowCount > 1 ? 's' : '') : 'File' }}
               </button>
             </div>
@@ -728,6 +796,7 @@ import {
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
 import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
+import { createAssessmentType } from '@/services/assessmentTypeService'
 
 const router = useRouter()
 const route = useRoute()
@@ -804,10 +873,47 @@ const contextMenu = ref<{ x: number; y: number; rowIdx: number } | null>(null)
 const showExportMenu = ref(false)
 const exportBtnRef = ref<HTMLElement | null>(null)
 const showKeyboardShortcuts = ref(false)
+const openColTypeDropdown = ref<number | null>(null)
+
+function toggleColTypeDropdown(colId: number, event: MouseEvent | KeyboardEvent) {
+  if (openColTypeDropdown.value === colId) {
+    openColTypeDropdown.value = null
+  } else {
+    openColTypeDropdown.value = colId
+  }
+}
+
+function changeColType(col: SpreadsheetColumn, newType: string) {
+  if (newType === (columnTypes[col.id] || col.type)) {
+    openColTypeDropdown.value = null
+    return
+  }
+  columnTypes[col.id] = newType
+  openColTypeDropdown.value = null
+  const oldType = col.type
+  showSaveStatus('saving')
+  changeColumnType(subjectId.value, termId.value, col.label, oldType, newType)
+    .then(() => {
+      showSaveStatus('saved')
+      refreshData(true)
+    })
+    .catch(() => {
+      showSaveStatus('failed')
+      columnTypes[col.id] = oldType
+    })
+}
+
+function getTypeLabel(typeCode: string): string {
+  const found = assessments.value.find(at => at.code === typeCode)
+  return found?.name || typeCode
+}
 
 function onDocumentClick(e: MouseEvent) {
   if (showExportMenu.value && exportBtnRef.value && !exportBtnRef.value.contains(e.target as Node)) {
     showExportMenu.value = false
+  }
+  if (openColTypeDropdown.value !== null) {
+    openColTypeDropdown.value = null
   }
 }
 onMounted(() => document.addEventListener('click', onDocumentClick))
@@ -906,7 +1012,7 @@ const toastIcon = computed(() => ({
   error: 'bi bi-exclamation-circle-fill',
 }[toastType.value]))
 
-const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
+const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null, customTypeName: '' })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
 const studentNumbers = ref<string[]>([])
@@ -1150,6 +1256,28 @@ const saveStatusIcon = computed(() => ({
 const saveStatusText = computed(() => ({
   saving: 'Saving...', saved: 'Saved', failed: 'Failed', idle: '',
 }[saveStatus.value]))
+
+const showNewTypeForm = ref(false)
+const newTypeCode = ref('')
+const newTypeName = ref('')
+const newTypeWeight = ref(10)
+
+async function doCreateType() {
+  const code = newTypeCode.value.trim()
+  const name = newTypeName.value.trim()
+  if (!code || !name) return
+  try {
+    await createAssessmentType({ code, name, weight_percent: newTypeWeight.value })
+    newTypeCode.value = ''
+    newTypeName.value = ''
+    newTypeWeight.value = 10
+    showNewTypeForm.value = false
+    showToast('Assessment type created', 'success')
+    await refreshData(true)
+  } catch {
+    showToast('Failed to create assessment type', 'error')
+  }
+}
 
 const showAddRowPopup = ref(false)
 const addRowCount = ref(1)
@@ -1908,7 +2036,11 @@ function onGlobalKeydown(event: KeyboardEvent) {
       case 'x': event.preventDefault(); cutSelection(); return
       case 'z': event.preventDefault(); event.shiftKey ? redo() : undo(); return
       case 'y': event.preventDefault(); redo(); return
-      case 's': event.preventDefault(); showSaveStatus('saved'); return
+      case 's':
+        event.preventDefault()
+        if (editingRow.value !== null) saveEdit()
+        showSaveStatus('saved')
+        return
       case 'r': event.preventDefault(); return
     }
   }
@@ -2003,7 +2135,11 @@ function onGlobalKeydown(event: KeyboardEvent) {
         scrollToCell(selectedRowIndex.value, currentColIdx)
       } else if (currentRow < filteredRows.value.length - 1) {
         const next = currentRow + 1
-        if (pageSize.value !== 'all' && next >= pageSize.value) pageSize.value = 'all'
+        if (pageSize.value !== 'all' && next >= ((pageSize.value as number) * currentPage.value)) {
+          if (currentPage.value < totalPages.value) {
+            currentPage.value++
+          }
+        }
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
@@ -2123,12 +2259,16 @@ function onGlobalKeydown(event: KeyboardEvent) {
         } else {
           if (currentPos < allColIds.length - 1) {
             selectedCol.value = allColIds[currentPos + 1]
-          } else if (currentRow < filteredRows.value.length - 1) {
-            const next = currentRow + 1
-            if (pageSize.value !== 'all' && next >= pageSize.value) pageSize.value = 'all'
-            selectedRowIndex.value = next
-            selectedCol.value = allColIds[0]
-            currentRow = next
+      } else if (currentRow < filteredRows.value.length - 1) {
+        const next = currentRow + 1
+        if (pageSize.value !== 'all' && next >= ((pageSize.value as number) * currentPage.value)) {
+          if (currentPage.value < totalPages.value) {
+            currentPage.value++
+          }
+        }
+        selectedRowIndex.value = next
+        selectedCol.value = allColIds[0]
+        currentRow = next
           }
         }
         isRangeSelecting.value = false
@@ -2604,17 +2744,37 @@ async function doAddColumn() {
   showAddColumn.value = false
   const label = newColumn.label.trim()
   const maxScore = newColumn.max_score
+  let typeCode = newColumn.type
+
+  // If custom type, create the assessment type first
+  if (typeCode === '__custom__') {
+    const customName = newColumn.customTypeName.trim()
+    if (!customName) {
+      showToast('Please enter a custom type name', 'error')
+      return
+    }
+    const customCode = customName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+    try {
+      await createAssessmentType({ code: customCode, name: customName, weight_percent: 0 })
+      typeCode = customCode
+      await refreshData(true)
+    } catch {
+      showAddColumn.value = true
+      showToast('Failed to create custom type', 'error')
+      return
+    }
+  }
 
   const cols = columns.value
-  const sameTypeCols = cols.filter(c => c.type === newColumn.type)
+  const sameTypeCols = cols.filter(c => c.type === typeCode)
   const orderNumber: number = sameTypeCols.length > 0
     ? Math.max(...sameTypeCols.map(c => c.order_number ?? 0)) + 1
     : cols.length > 0 ? Math.max(...cols.map(c => c.order_number ?? 0)) + 1 : 1
 
-  newColumn.label = ''; newColumn.max_score = null
+  newColumn.label = ''; newColumn.max_score = null; newColumn.customTypeName = ''; newColumn.type = 'quiz'
   showSaveStatus('saving')
   try {
-    await addColumn(subjectId.value, termId.value, { type: newColumn.type, label, max_score: maxScore, order_number: orderNumber })
+    await addColumn(subjectId.value, termId.value, { type: typeCode, label, max_score: maxScore, order_number: orderNumber })
     showToast(`Column "${label}" created successfully`, 'success')
     showSaveStatus('saved')
     refreshData(true)
@@ -3356,15 +3516,31 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
     })
 }
 
+function refocusSheet() {
+  if (showKeyboardShortcuts.value || showAddColumn.value || showWeights.value || showImport.value || showAddRowPopup.value) return
+  if (editingRow.value !== null) return
+  const container = sheetContainer.value
+  if (container && document.activeElement !== container) {
+    container.focus()
+  }
+}
+
 onMounted(() => {
   refreshData()
   loadStoredSheetId()
   loadStudentEmailDomains()
   getStudentNumbers().then(nums => { studentNumbers.value = nums }).catch(() => {})
-  nextTick(() => {
-    const container = document.querySelector('.sheet-wrapper') as HTMLElement
-    if (container) container.focus()
-  })
+})
+
+watch([data, columns], () => {
+  if (data.value && columns.value.length > 0 && filteredRows.value.length > 0 && selectedCol.value === null) {
+    selectedCol.value = columns.value[0].id
+    selectedRowIndex.value = 0
+    nextTick(() => {
+      const container = sheetContainer.value
+      if (container) container.focus()
+    })
+  }
 })
 
 onUnmounted(() => {
@@ -3622,34 +3798,108 @@ watch([subjectId, termId], () => {
 .max-score-label { font-size: 0.5rem; color: #94a3b8; font-weight: 400; line-height: 1; }
 
 
-.column-type-select {
+.col-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   font-size: 0.55rem;
-  padding: 0px 2px;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  background: transparent;
-  color: inherit;
+  font-weight: 500;
+  padding: 2px 6px 2px 8px;
+  border-radius: 10px;
   cursor: pointer;
-  outline: none;
-  max-width: 90px;
-  font-weight: 400;
-  appearance: auto;
-  transition: all 0.15s;
+  position: relative;
+  user-select: none;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
 }
-.column-type-select:hover {
-  border-color: #cbd5e1;
-  background: rgba(255,255,255,0.6);
+.col-type-badge:hover {
+  opacity: 0.85;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-.column-type-select:focus {
-  border-color: #3b82f6;
+.col-type-badge:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+.col-type-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 65px;
+}
+.col-type-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.15s;
+}
+.col-type-badge:hover .col-type-chevron {
+  opacity: 1;
+}
+
+.col-type-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  min-width: 130px;
   background: #fff;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 4px;
+  margin-top: 4px;
 }
-.col-type-quiz .column-type-select { background: #dbeafe; color: #2563eb; border-color: #bfdbfe; }
-.col-type-assignment .column-type-select { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
-.col-type-project .column-type-select { background: #fef3c7; color: #d97706; border-color: #fde68a; }
-.col-type-midterm .column-type-select { background: #ede9fe; color: #7c3aed; border-color: #ddd6fe; }
-.col-type-final .column-type-select { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+.col-type-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #334155;
+  transition: background 0.1s;
+}
+.col-type-option:hover {
+  background: #f1f5f9;
+}
+.col-type-option.active {
+  font-weight: 600;
+  color: #0f172a;
+}
+.col-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.col-type-check {
+  margin-left: auto;
+  font-size: 0.6rem;
+  color: #22c55e;
+}
+
+/* Type badge colors */
+.col-type-quiz.col-type-badge,
+.col-type-quiz .col-type-dot { background: #dbeafe; color: #2563eb; }
+.col-type-quiz .col-type-dropdown .col-type-dot { background: #2563eb; }
+.col-type-assignment.col-type-badge,
+.col-type-assignment .col-type-dot { background: #dcfce7; color: #16a34a; }
+.col-type-assignment .col-type-dropdown .col-type-dot { background: #16a34a; }
+.col-type-project.col-type-badge,
+.col-type-project .col-type-dot { background: #fef3c7; color: #d97706; }
+.col-type-project .col-type-dropdown .col-type-dot { background: #d97706; }
+.col-type-midterm.col-type-badge,
+.col-type-midterm .col-type-dot { background: #ede9fe; color: #7c3aed; }
+.col-type-midterm .col-type-dropdown .col-type-dot { background: #7c3aed; }
+.col-type-final.col-type-badge,
+.col-type-final .col-type-dot { background: #fee2e2; color: #dc2626; }
+.col-type-final .col-type-dropdown .col-type-dot { background: #dc2626; }
+.col-type-participation.col-type-badge,
+.col-type-participation .col-type-dot { background: #ffe4e6; color: #e11d48; }
+.col-type-participation .col-type-dropdown .col-type-dot { background: #e11d48; }
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
 
@@ -4086,6 +4336,69 @@ watch([subjectId, termId], () => {
   padding: 20px 0;
 }
 
+.weight-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 14px 0;
+}
+
+.new-type-section {
+  margin-bottom: 6px;
+}
+
+.new-type-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+
+.new-type-header:hover {
+  color: #1d4ed8;
+}
+
+.new-type-form {
+  margin-top: 8px;
+}
+
+.new-type-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.new-type-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.new-type-field-sm {
+  flex: 0 0 80px;
+}
+
+.new-type-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
+.new-type-action {
+  flex-shrink: 0;
+}
+
+.new-type-action .btn-primary-custom.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  min-width: auto;
+}
+
 .weight-total-bar {
   display: flex;
   align-items: center;
@@ -4147,99 +4460,180 @@ watch([subjectId, termId], () => {
 
 
 
-.import-format-badges {
-  display: flex;
-  gap: 8px;
+/* === Import Scores Modal === */
+.import-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 520px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
 }
-.import-badge {
+.import-modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 24px 0;
+}
+.import-modal-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.import-modal-head p {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.import-modal-close {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  margin-top: -2px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.import-modal-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.import-modal-icon {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+.import-modal-body {
+  padding: 20px 24px;
+}
+.import-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 4px 24px 20px;
+}
+
+/* Format badges */
+.import-formats {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.import-format {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border-radius: 6px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
 }
-.import-badge-excel {
+.import-format-excel {
   background: #ecfdf5;
   color: #059669;
 }
-.import-badge-pdf {
+.import-format-pdf {
   background: #fef2f2;
   color: #dc2626;
 }
 
-
-.import-drop-zone {
-  border: 2px dashed #cbd5e1;
+/* Drop zone */
+.import-zone {
+  border: 2px dashed #d1d5db;
   border-radius: 12px;
-  padding: 28px 20px;
+  padding: 36px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #f8fafc;
+  background: #fafbfc;
 }
-.import-drop-zone:hover {
+.import-zone:hover {
   border-color: #3b82f6;
   background: #eff6ff;
 }
-.import-drop-active {
+.import-zone-over {
   border-color: #2563eb;
   background: #dbeafe;
-  transform: scale(1.01);
+  transform: scale(1.015);
 }
-.import-drop-icon {
+.import-zone-icon {
   width: 48px;
   height: 48px;
   background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  border-radius: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.3rem;
   color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.1);
 }
-.import-drop-text {
+.import-zone-text {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
 }
-.import-drop-title {
+.import-zone-title {
   font-size: 0.88rem;
   font-weight: 600;
   color: #1e293b;
 }
-.import-drop-sub {
+.import-zone-sub {
   font-size: 0.78rem;
   color: #94a3b8;
 }
 
-
-.import-file-card {
+/* Uploaded file card */
+.import-file {
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
+  position: relative;
 }
-.import-file-card-main {
+.import-file-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #059669, #10b981);
+  border-radius: 12px 0 0 12px;
+}
+.import-file-main {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 14px 16px 14px 20px;
   background: #f8fafc;
 }
-.import-file-icon {
-  width: 36px;
-  height: 36px;
+.import-file-type-icon {
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: #2563eb;
   flex-shrink: 0;
 }
@@ -4248,12 +4642,12 @@ watch([subjectId, termId], () => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 .import-file-name {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4263,11 +4657,11 @@ watch([subjectId, termId], () => {
   color: #94a3b8;
 }
 .import-file-remove {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: none;
   background: #f1f5f9;
-  border-radius: 6px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4281,128 +4675,178 @@ watch([subjectId, termId], () => {
   color: #dc2626;
 }
 
-
-.import-domain-picker {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  margin-top: 12px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 10px;
-}
-.import-domain-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #1e40af;
-}
-.import-domain-select {
-  border: 1px solid #bfdbfe;
-  background: #fff;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #1e3a8a;
-  cursor: pointer;
-}
-.import-domain-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  margin-top: 12px;
-  font-size: 0.78rem;
-  color: #64748b;
-}
-.import-domain-picker.import-domain-required {
-  border-color: #fbbf24;
-  background: #fffbeb;
-}
-.import-domain-warning {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px 0;
-  font-size: 0.76rem;
-  color: #b45309;
-}
-
-
+/* Preview section */
 .import-preview {
   padding: 0 16px 14px;
+  border-top: 1px solid #e2e8f0;
 }
-.import-preview-divider {
-  height: 1px;
-  background: #e2e8f0;
-  margin: 0 -16px 10px;
-}
-.import-preview-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-.import-preview-grid {
+.import-preview-stats {
   display: flex;
   gap: 8px;
+  padding-top: 14px;
 }
 .import-preview-stat {
   flex: 1;
-  background: #f1f5f9;
-  border-radius: 8px;
-  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  text-align: center;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.import-preview-stat:hover {
+  border-color: #dbeafe;
+  background: #fafdff;
 }
 .import-preview-stat-wide {
   flex: 2;
 }
-.import-preview-stat-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1e293b;
+.import-preview-stat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-bottom: 2px;
 }
-.import-preview-stat-label {
+.import-icon-students {
+  background: #ecfdf5;
+  color: #059669;
+}
+.import-icon-columns {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+.import-icon-cols {
+  background: #fef3c7;
+  color: #d97706;
+}
+.import-preview-num {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.import-preview-label {
   font-size: 0.65rem;
   font-weight: 500;
   color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.4px;
 }
-.import-preview-col-names {
-  font-size: 0.72rem;
+.import-preview-cols {
+  font-size: 0.7rem;
   font-weight: 600;
   color: #475569;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 140px;
+  display: inline-block;
 }
 
-
-.import-btn {
-  padding: 8px 18px;
-  border: none;
+/* Domain picker group */
+.import-domain-group {
+  margin-top: 16px;
+  padding: 0 16px 16px;
+}
+.import-domain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f0f5ff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+}
+.import-domain-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+.import-domain-info i {
+  font-size: 0.9rem;
+}
+.import-domain-select {
+  border: 1px solid #bfdbfe;
+  background: #fff;
   border-radius: 8px;
+  padding: 5px 28px 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%2364748b'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 130px;
+}
+.import-domain-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.select-warn {
+  border-color: #f59e0b;
+}
+.import-domain-required {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.import-domain-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  padding: 0 4px;
+}
+.import-domain-hint-warn {
+  color: #b45309;
+}
+.import-domain-hint-warn i {
+  font-size: 0.8rem;
+}
+
+/* Single domain info bar */
+.import-domain-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 14px 16px 16px;
+  background: #f0f5ff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: #1e40af;
+}
+.import-domain-info-bar i {
+  font-size: 0.9rem;
+}
+.import-domain-info-bar strong {
+  font-weight: 700;
+}
+
+/* Action buttons */
+.import-btn-secondary {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
   transition: all 0.15s;
-}
-.import-btn-secondary {
   background: #f1f5f9;
   color: #475569;
 }
@@ -4410,12 +4854,22 @@ watch([subjectId, termId], () => {
   background: #e2e8f0;
 }
 .import-btn-primary {
-  background: linear-gradient(135deg, #059669, #047857);
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #059669;
   color: #fff;
   box-shadow: 0 2px 8px rgba(5,150,105,0.25);
 }
 .import-btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #047857, #065f46);
+  background: #047857;
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(5,150,105,0.35);
 }

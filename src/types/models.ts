@@ -249,3 +249,10 @@ export interface Term {
   id: number
   name: string
 }
+
+export interface Generation {
+  id: number
+  name: string
+  year?: number
+  is_current?: boolean
+}

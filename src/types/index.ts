@@ -21,6 +21,7 @@ export type {
   AcademicYear,
   Teacher,
   Term,
+  Generation,
   PaginatedResponse,
   ApiResponse,
   ApiResponseWithMessage,
@@ -47,6 +48,28 @@ export type {
   TranscriptTerm,
   TranscriptData,
 } from './portal'
+export type {
+  ActivityLogEntry,
+  ActivityLogFilters,
+  ActivityLogFilterOptions,
+  ActivityLogListData,
+} from './activityLog'
+export type {
+  ReportFilters,
+  ReportFilterOptions,
+  ReportGradeBoundary,
+  ReportKpi,
+  ReportOverview,
+  GradeDistributionItem,
+  AssessmentBreakdownItem,
+  TermTrendItem,
+  ClassPerformanceRow,
+  SubjectRankingRow,
+  StudentRankingRow,
+  ReportCardAssessment,
+  ReportCardSubject,
+  StudentReportCard,
+} from './report'
 export type {
   DashboardData,
   DashboardFilters,

@@ -53,6 +53,7 @@
 
         <div class="toolbar-right">
           <button
+            v-if="canCreate"
             class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
             style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
             @click="openCreateModal"
@@ -67,7 +68,7 @@
         </div>
       </div>
 
-      <div v-if="selectedIds.length > 0" class="bulk-bar">
+      <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="openBulkDeleteModal">
           <Trash :size="16" />
@@ -88,7 +89,7 @@
         <table class="teacher-table data-table-base">
           <thead>
             <tr>
-              <th class="col-check">
+              <th v-if="canDelete" class="col-check">
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -105,15 +106,15 @@
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <TransitionGroup name="row" tag="tbody">
             <tr
               v-for="(teacher, index) in teachers"
               :key="teacher.id"
               class="data-row"
               :class="{ 'row-selected': selectedIds.includes(teacher.id) }"
-              @dblclick="openEditModal(teacher)"
+              @dblclick="canUpdate && openEditModal(teacher)"
             >
-              <td class="col-check" @dblclick.stop>
+              <td v-if="canDelete" class="col-check" @dblclick.stop>
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -148,16 +149,16 @@
                   <button class="act-btn" @click="viewTeacher(teacher)" title="View Details">
                     <Eye :size="15" />
                   </button>
-                  <button class="act-btn" @click="openEditModal(teacher)" title="Edit">
+                  <button v-if="canUpdate" class="act-btn" @click="openEditModal(teacher)" title="Edit">
                     <Pencil :size="15" />
                   </button>
-                  <button class="act-btn act-danger" @click="openDeleteModal(teacher)" title="Delete">
+                  <button v-if="canDelete" class="act-btn act-danger" @click="openDeleteModal(teacher)" title="Delete">
                     <Trash2 :size="15" />
                   </button>
                 </div>
               </td>
             </tr>
-          </tbody>
+          </TransitionGroup>
         </table>
       </div>
 
@@ -240,80 +241,94 @@
 
                 <div class="form-group">
                   <label class="form-label">
-                    <UserIcon :size="14" class="me-1" />
-                    Full Name
+                    <UserIcon :size="15" class="field-icon" />
+                    Full Name <span class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
+                  <div class="input-wrap">
                     <input
                       v-model="form.name"
                       type="text"
-                      class="modern-input"
+                      class="styled-input"
+                      :class="{ err: formError && !form.name.trim() }"
                       placeholder="e.g. John Smith"
                       required
                     />
                   </div>
+                  <span v-if="formError && !form.name.trim()" class="field-err">Full name is required</span>
                 </div>
+
+                <div class="section-divider"></div>
 
                 <div class="form-group">
                   <label class="form-label">
-                    <Mail :size="14" class="me-1" />
-                    Email Address
+                    <Mail :size="15" class="field-icon" />
+                    Email Address <span class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
+                  <div class="input-wrap">
                     <input
                       v-model="form.email"
                       type="email"
-                      class="modern-input"
+                      class="styled-input"
+                      :class="{ err: formError && !form.email.trim() }"
                       placeholder="teacher@example.com"
                       required
                     />
                   </div>
+                  <span v-if="formError && !form.email.trim()" class="field-err">Email is required</span>
                 </div>
+
+                <div class="section-divider"></div>
 
                 <div class="form-group">
                   <label class="form-label">
-                    <Lock :size="14" class="me-1" />
-                    Password
+                    <Lock :size="15" class="field-icon" />
+                    Password <span v-if="!isEditing" class="req">*</span>
                   </label>
-                  <div class="input-wrapper">
+                  <div class="input-wrap">
                     <input
                       v-model="form.password"
                       type="password"
-                      class="modern-input"
+                      class="styled-input"
+                      :class="{ err: formError && !isEditing && (!form.password || form.password.length < 8) }"
                       :placeholder="isEditing ? 'Leave blank to keep current' : 'Min. 8 characters'"
                       :required="!isEditing"
                       minlength="8"
                     />
                   </div>
                   <p v-if="isEditing" class="field-hint">Leave blank to keep the current password</p>
+                  <span v-if="formError && !isEditing && (!form.password || form.password.length < 8)" class="field-err">Password must be at least 8 characters</span>
                 </div>
 
-                <div class="form-group">
-                  <label class="form-label">
-                    <VenusAndMars :size="14" class="me-1" />
-                    Gender
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.gender" class="modern-input">
-                      <option value="">— Select gender —</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
+                <div class="section-divider"></div>
+
+                <div class="row-2 row-2-equal">
+                  <div class="form-group">
+                    <label class="form-label">
+                      <VenusAndMars :size="15" class="field-icon" />
+                      Gender
+                    </label>
+                    <div class="input-wrap">
+                      <select v-model="form.gender" class="styled-input">
+                        <option value="">— Select gender —</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                <div class="form-group">
-                  <label class="form-label">
-                    <ToggleLeft :size="14" class="me-1" />
-                    Status
-                  </label>
-                  <div class="input-wrapper">
-                    <select v-model="form.status" class="modern-input" required>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
+                  <div class="form-group">
+                    <label class="form-label">
+                      <ToggleLeft :size="15" class="field-icon" />
+                      Status <span class="req">*</span>
+                    </label>
+                    <div class="input-wrap">
+                      <select v-model="form.status" class="styled-input" required>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -337,20 +352,20 @@
         <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
+              <div class="modal-icon icon-danger">
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3 style="color: #dc2626;">Delete Teacher</h3>
+                <h3>Delete Teacher</h3>
                 <p>This action cannot be undone.</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
+              <p class="del-text">
                 Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?
               </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; margin: 8px 0 0;">
+              <p class="del-warning">
                 <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
                 <span style="vertical-align: middle;">This teacher and all associated data will be permanently removed.</span>
               </p>
@@ -373,20 +388,20 @@
         <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
-              <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
+              <div class="modal-icon icon-danger">
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3 style="color: #dc2626;">Delete Teachers</h3>
+                <h3>Delete Teachers</h3>
                 <p>This action cannot be undone.</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p style="font-size: 0.9rem; color: #475569; margin: 0;">
+              <p class="del-text">
                 Are you sure you want to delete <strong>{{ selectedIds.length }} teacher(s)</strong>?
               </p>
-              <p style="font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; line-height: 1.4; margin: 8px 0 0;">
+              <p class="del-warning">
                 <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
                 <span style="vertical-align: middle;">These teachers and all associated data will be permanently removed.</span>
               </p>
@@ -407,71 +422,53 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDetailsModal && detailTeacher" class="modal-overlay" @click.self="closeDetailsModal">
-          <div class="modal-content-panel">
+          <div class="modal-content-panel" style="max-width: 820px;">
             <div class="modal-head">
-              <div class="modal-icon icon-view">
-                <UserCheck :size="18" />
-              </div>
-              <div>
-                <h3>{{ detailTeacher.name }}</h3>
-                <p>{{ detailTeacher.role?.name || 'Teacher' }} &middot; <span class="status-badge" :class="getStatusClass(detailTeacher.status)">{{ detailTeacher.status }}</span></p>
-              </div>
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
 
             <div class="modal-body-custom">
-              <div class="form-group">
-                <label class="form-label">
-                  <UserCheck :size="14" class="me-1" />
-                  Teacher ID
-                </label>
-                <div class="detail-value">#{{ detailTeacher.id }}</div>
+              <div class="info-header">
+                <div class="info-avatar">{{ getInitials(detailTeacher.name) }}</div>
+                <div class="info-heading">
+                  <h4>{{ detailTeacher.name }}</h4>
+                  <span class="info-role">{{ detailTeacher.role?.name || 'Teacher' }}</span>
+                </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label">
-                  <Mail :size="14" class="me-1" />
-                  Email Address
-                </label>
-                <div class="detail-value">{{ detailTeacher.email }}</div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">
-                  <VenusAndMars :size="14" class="me-1" />
-                  Gender
-                </label>
-                <div class="detail-value">{{ detailTeacher.gender || '—' }}</div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">
-                  <Clock :size="14" class="me-1" />
-                  Last Login
-                </label>
-                <div class="detail-value">{{ formatDate(detailTeacher.last_login_at) }}</div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">
-                  <Calendar :size="14" class="me-1" />
-                  Created
-                </label>
-                <div class="detail-value">{{ formatFullDate(detailTeacher.created_at) }}</div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">
-                  <Clock :size="14" class="me-1" />
-                  Last Updated
-                </label>
-                <div class="detail-value">{{ formatFullDate(detailTeacher.updated_at) }}</div>
+              <div class="info-card">
+                <div class="info-row">
+                  <span class="info-label"><Mail :size="14" /> Email</span>
+                  <span class="info-value">{{ detailTeacher.email }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><VenusAndMars :size="14" /> Gender</span>
+                  <span class="info-value">{{ detailTeacher.gender || '—' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><BookOpen :size="14" /> Subjects</span>
+                  <span v-if="teacherSubjects" class="info-value">{{ teacherSubjects.join(', ') }}</span>
+                  <span v-else class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><Users :size="14" /> Classes</span>
+                  <span v-if="teacherClasses" class="info-value">{{ teacherClasses.join(', ') }}</span>
+                  <span v-else class="info-value">—</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><ToggleLeft :size="14" /> Status</span>
+                  <span class="info-value" :class="'status-' + detailTeacher.status">{{ detailTeacher.status }}</span>
+                </div>
+                <div class="info-row info-row-last">
+                  <span class="info-label"><Calendar :size="14" /> Created</span>
+                  <span class="info-value">{{ formatFullDate(detailTeacher.created_at) }}</span>
+                </div>
               </div>
             </div>
 
             <div class="modal-foot">
               <button type="button" class="btn btn-ghost" @click="closeDetailsModal">Close</button>
-              <button type="button" class="btn btn-primary" @click="openEditModal(detailTeacher)">
+              <button type="button" class="btn btn-primary" @click="openEditFromDetails">
                 <Pencil :size="15" />
                 <span>Edit Teacher</span>
               </button>
@@ -487,18 +484,24 @@
 import {
   UserCheck, Plus, AlertTriangle, Search, ToggleLeft, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen, UserPlus,
   User as UserIcon, Mail, Lock, VenusAndMars, Check,
-  AlertCircle, Trash, Inbox,
-  Calendar, Clock,
+  AlertCircle, Trash, Inbox, BookOpen, Users,
+  Calendar,
 } from '@lucide/vue'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, TransitionGroup } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
 import type { User, UserRole, CreateUserPayload, UpdateUserPayload } from '@/services/userService'
+import { getUser } from '@/services/userService'
+import { usePermission } from '@/composables/usePermission'
 
 const store = useUserStore()
 const { users, loading, error, totalUsers, lastPage } = storeToRefs(store)
 const { success: toastSuccess, error: toastError } = useToast()
+const { hasPermission } = usePermission()
+const canCreate = computed(() => hasPermission('create-teachers'))
+const canUpdate = computed(() => hasPermission('update-teachers'))
+const canDelete = computed(() => hasPermission('delete-teachers'))
 
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
@@ -591,6 +594,22 @@ const form = ref(initialForm())
 
 const teachers = computed(() => users.value)
 const totalTeachers = computed(() => totalUsers.value)
+
+const teacherSubjects = computed(() => {
+  const t = (detailTeacher.value as any)?.teacher
+  const offerings = t?.offerings
+  if (!offerings?.length) return null
+  const subjects = [...new Set(offerings.map((o: any) => o.subject?.name).filter(Boolean))]
+  return subjects.length ? subjects : null
+})
+
+const teacherClasses = computed(() => {
+  const t = (detailTeacher.value as any)?.teacher
+  const offerings = t?.offerings
+  if (!offerings?.length) return null
+  const classes = [...new Set(offerings.map((o: any) => o.class?.name).filter(Boolean))]
+  return classes.length ? classes : null
+})
 
 async function getTeacherRoleId(): Promise<number | null> {
   if (teacherRoleId.value) return teacherRoleId.value
@@ -756,14 +775,27 @@ async function handleDelete() {
   }
 }
 
-function viewTeacher(teacher: User) {
-  detailTeacher.value = teacher
+async function viewTeacher(teacher: User) {
+  try {
+    const res = await getUser(teacher.id)
+    detailTeacher.value = res.data
+  } catch {
+    detailTeacher.value = teacher
+  }
   showDetailsModal.value = true
 }
 
 function closeDetailsModal() {
   showDetailsModal.value = false
   detailTeacher.value = null
+}
+
+function openEditFromDetails() {
+  if (detailTeacher.value) {
+    const teacher = detailTeacher.value
+    closeDetailsModal()
+    openEditModal(teacher)
+  }
 }
 
 const selectedIds = ref<number[]>([])
@@ -973,25 +1005,26 @@ onMounted(() => {
 .teacher-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .teacher-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #2563eb;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .teacher-name {
   font-weight: 600;
   color: #0f172a;
+  font-size: 0.85rem;
 }
 
 .email-cell {
@@ -1020,20 +1053,217 @@ onMounted(() => {
 .td-actions { white-space: nowrap; text-align: center; }
 
 
-.detail-value {
-  padding: 10px 14px;
+.form-group { margin-bottom: 0; }
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 7px;
+}
+
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.req {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.field-err {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.styled-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.styled-input:hover { border-color: #9ca3af; }
+.styled-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.styled-input::placeholder { color: #adb5bd; }
+
+.styled-input.err {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+}
+
+select.styled-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+  margin: 14px 0 16px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.row-2-equal > * {
+  min-width: 0;
+}
+
+
+.row-enter-active,
+.row-leave-active {
+  transition: all 0.3s ease;
+}
+
+.row-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.row-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.row-move {
+  transition: transform 0.3s ease;
+}
+
+.del-text {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+}
+
+.del-warning {
+  font-size: 0.75rem;
+  color: #ef4444;
+  background: #fef2f2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  line-height: 1.4;
+  margin: 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
+.modal-content-panel {
+  position: relative;
+}
+
+.modal-body-custom {
+  padding-bottom: 16px;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 0 24px;
+}
+
+.info-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.info-heading h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 3px;
+}
+
+.info-role {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.info-card {
   background: #f8fafc;
   border: 1px solid #e9ecef;
-  border-radius: 10px;
-  font-size: 0.9rem;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.info-row-last {
+  border-bottom: none;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.info-label svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: 0.88rem;
   font-weight: 500;
   color: #0f172a;
-  line-height: 1.4;
+  text-align: right;
+  max-width: 65%;
+  overflow-wrap: break-word;
 }
 
-.icon-view {
-  background: #eff6ff;
-  color: #2563eb;
-}
-
+.status-active { color: #16a34a; font-weight: 600; }
+.status-inactive { color: #94a3b8; font-weight: 600; }
+.status-suspended { color: #dc2626; font-weight: 600; }
 </style>

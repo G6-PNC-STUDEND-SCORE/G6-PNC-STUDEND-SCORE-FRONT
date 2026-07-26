@@ -15,9 +15,12 @@
       :students="filteredStudents"
       :search-query="searchQuery"
       :gender-filter="genderFilter"
+      :generation-filter="generationFilter"
+      :generations="generations"
       :get-initials="getInitials"
       @update:search-query="searchQuery = $event"
       @update:gender-filter="genderFilter = $event"
+      @update:generation-filter="generationFilter = $event"
       @view="viewDetails"
       @edit="openEditModal"
       @assign="openAssignModal"
@@ -33,9 +36,11 @@
       :email="createForm.email"
       :password="createForm.password"
       :gender="createForm.gender"
-      :class-id="createForm.class_id"
       :status="createForm.status"
+      :class-id="createForm.class_id"
       :classes="classes"
+      :generation-id="createForm.generation_id"
+      :generations="generations"
       :submitting="formSubmitting"
       :error="formError"
       @close="closeCreateModal"
@@ -44,8 +49,9 @@
       @update:email="createForm.email = $event"
       @update:password="createForm.password = $event"
       @update:gender="createForm.gender = $event"
-      @update:class-id="createForm.class_id = $event"
       @update:status="createForm.status = $event"
+      @update:class-id="createForm.class_id = $event"
+      @update:generation-id="createForm.generation_id = $event"
     />
 
     <StudentFormModal
@@ -53,20 +59,20 @@
       :is-edit="true"
       :name="editForm.name"
       :gender="editForm.gender"
-      :class-id="editForm.class_id"
       :status="editForm.status"
+      :class-id="editForm.class_id"
       :classes="classes"
+      :generation-id="editForm.generation_id"
+      :generations="generations"
       :submitting="formSubmitting"
       :error="formError"
-      :existing-photo-url="existingPhotoUrl"
       @close="closeEditModal"
       @submit="handleEdit"
       @update:name="editForm.name = $event"
       @update:gender="editForm.gender = $event"
-      @update:class-id="editForm.class_id = $event"
       @update:status="editForm.status = $event"
-      @update:photo="onEditPhotoSelected"
-      @remove-photo="onEditRemovePhoto"
+      @update:class-id="editForm.class_id = $event"
+      @update:generation-id="editForm.generation_id = $event"
     />
 
     <Teleport to="body">
@@ -115,7 +121,7 @@
             </div>
             <div class="modal-body">
               <p class="del-text">Are you sure you want to delete <strong>{{ selectedBulkIds.length }} student{{ selectedBulkIds.length !== 1 ? 's' : '' }}</strong>?</p>
-              <p class="del-text" style="margin-top: 8px;">All scores, enrollments, and related data will be permanently removed.</p>
+              <p class="del-warning">All scores, enrollments, and related data will be permanently removed.</p>
             </div>
             <div class="modal-foot">
               <button class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
@@ -146,16 +152,22 @@
             </div>
             <form @submit.prevent="handleAssign">
               <div class="modal-body">
-                <div class="field">
-                  <label>Select Class</label>
-                  <select
-                    :value="assignForm.class_id"
-                    @change="assignForm.class_id = Number(($event.target as HTMLSelectElement).value)"
-                    required
-                  >
-                    <option :value="null" disabled>— Choose a class —</option>
-                    <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
-                  </select>
+                <div class="form-group">
+                  <label class="form-label">
+                    <Building :size="15" class="field-icon" />
+                    Select Class <span class="req">*</span>
+                  </label>
+                  <div class="input-wrap">
+                    <select
+                      :value="assignForm.class_id"
+                      @change="assignForm.class_id = Number(($event.target as HTMLSelectElement).value)"
+                      class="styled-input"
+                      required
+                    >
+                      <option :value="null" disabled>— Choose a class —</option>
+                      <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <div class="modal-foot">
@@ -174,63 +186,60 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDetailsModal && selectedStudent" class="overlay" @click.self="closeDetailsModal">
-          <div class="modal-card">
+        <div v-if="showDetailsModal && selectedStudent" class="modal-overlay" @click.self="closeDetailsModal">
+          <div class="modal-content-panel" style="max-width: 820px;">
             <div class="modal-head">
-              <div class="modal-icon icon-info">
-                <Eye :size="20" />
-              </div>
-              <div>
-                <h3>Student Details</h3>
-                <p>Complete information about this student</p>
-              </div>
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
-            <div class="modal-body">
-              <div class="detail-user-row">
-                <div v-if="selectedStudent.profile_photo_url" class="detail-avatar">
-                  <img :src="selectedStudent.profile_photo_url" :alt="selectedStudent.user?.name || 'Student'" class="detail-avatar-img" />
+
+            <div class="modal-body-custom">
+              <div class="info-header">
+                <div v-if="selectedStudent.profile_photo_url" class="info-avatar-img">
+                  <img :src="selectedStudent.profile_photo_url" :alt="selectedStudent.user?.name || 'Student'" />
                 </div>
-                <div v-else class="detail-avatar detail-avatar-fallback">
-                  {{ getInitials(selectedStudent.user?.name || '') }}
-                </div>
-                <div>
+                <div v-else class="info-avatar">{{ getInitials(selectedStudent.user?.name || '') }}</div>
+                <div class="info-heading">
                   <h4>{{ selectedStudent.user?.name }}</h4>
-                  <span class="pill" :class="(selectedStudent.user?.gender || '') === 'Male' ? 'pill-male' : 'pill-female'">
-                    {{ selectedStudent.user?.gender || '—' }}
-                  </span>
+                  <span class="info-role">Student</span>
                 </div>
               </div>
 
-              <div class="detail-grid">
-                <div class="detail-item">
-                  <span class="detail-label">Student ID</span>
-                  <span class="detail-value">#{{ selectedStudent.id }}</span>
+              <div class="info-card">
+                <div class="info-row">
+                  <span class="info-label"><Hash :size="14" /> ID</span>
+                  <span class="info-value">#{{ selectedStudent.id }}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="detail-label">Email</span>
-                  <span class="detail-value">{{ selectedStudent.user?.email || '—' }}</span>
+                <div class="info-row">
+                  <span class="info-label"><Mail :size="14" /> Email</span>
+                  <span class="info-value">{{ selectedStudent.user?.email || '—' }}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="detail-label">Class</span>
-                  <span class="detail-value">{{ selectedStudent.class?.name || 'Not assigned' }}</span>
+                <div class="info-row">
+                  <span class="info-label"><VenusAndMars :size="14" /> Gender</span>
+                  <span class="info-value">{{ selectedStudent.user?.gender || '—' }}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="detail-label">Status</span>
-                  <span class="pill" :class="(selectedStudent.user?.status || '') === 'active' ? 'pill-on' : 'pill-off'">
-                    {{ (selectedStudent.user?.status || '') === 'active' ? 'Active' : 'Inactive' }}
-                  </span>
+                <div class="info-row">
+                  <span class="info-label"><BookOpen :size="14" /> Student ID</span>
+                  <span class="info-value">{{ selectedStudent.studentNumberSequence?.student_number || selectedStudent.student_id_number || '—' }}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="detail-label">Gender</span>
-                  <span class="detail-value">{{ selectedStudent.user?.gender || '—' }}</span>
+                <div class="info-row">
+                  <span class="info-label"><Users :size="14" /> Generation</span>
+                  <span class="info-value">{{ selectedStudent.generation?.name || '—' }}</span>
                 </div>
-                <div class="detail-item">
-                  <span class="detail-label">Student ID Number</span>
-                  <span class="detail-value">{{ selectedStudent.student_id_number || '—' }}</span>
+                <div class="info-row">
+                  <span class="info-label"><Building :size="14" /> Class</span>
+                  <span class="info-value">{{ selectedStudent.class?.name || '—' }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="info-label"><ToggleLeft :size="14" /> Status</span>
+                  <span class="info-value" :class="'status-' + (selectedStudent.user?.status || 'inactive')">{{ selectedStudent.user?.status || 'inactive' }}</span>
+                </div>
+                <div class="info-row info-row-last">
+                  <span class="info-label"><Calendar :size="14" /> Created</span>
+                  <span class="info-value">{{ formatDate(selectedStudent.created_at) }}</span>
                 </div>
               </div>
             </div>
+
             <div class="modal-foot">
               <button class="btn btn-ghost" @click="closeDetailsModal">Close</button>
             </div>
@@ -245,14 +254,14 @@
 import { onMounted } from 'vue'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
-import { AlertTriangle, Trash2, ArrowRightFromLine, Check, Eye } from '@lucide/vue'
+import { AlertTriangle, Trash2, ArrowRightFromLine, Check, Building, Mail, VenusAndMars, BookOpen, Users, ToggleLeft, Calendar, Hash } from '@lucide/vue'
 import { useStudents } from './composables/useStudents.ts'
 
 const {
-  loading, error, searchQuery, genderFilter, formSubmitting, formError,
+  loading, error, searchQuery, genderFilter, generationFilter, formSubmitting, formError,
   showCreateModal, showEditModal, showDeleteModal, showBulkDeleteModal, showAssignModal, showDetailsModal,
-  selectedStudent, selectedBulkIds, createForm, editForm, assignForm, existingPhotoUrl, onEditPhotoSelected, onEditRemovePhoto,
-  classes, filteredStudents, getInitials,
+  selectedStudent, selectedBulkIds, createForm, editForm, assignForm,
+  classes, generations, filteredStudents, getInitials, formatDate,
   init, openCreateModal, closeCreateModal, handleCreate,
   openEditModal, closeEditModal, handleEdit,
   openDeleteModal, closeDeleteModal, handleDelete,
@@ -349,17 +358,8 @@ onMounted(() => init())
 }
 
 
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
-.field select, .field input {
-  width: 100%; padding: 8px 12px; border: 1.5px solid #d1d5db;
-  border-radius: 8px; font-size: 0.88rem; outline: none;
-  transition: border-color 0.15s; box-sizing: border-box; font-family: inherit;
-  background: #fff; color: #0f172a;
-}
-.field select:focus, .field input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-
 .del-text { font-size: 0.9rem; color: #475569; margin: 0; }
+.del-warning { font-size: 0.75rem; color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px; margin: 8px 0 0; line-height: 1.4; }
 
 
 .pill {
@@ -373,37 +373,7 @@ onMounted(() => init())
 .pill-female { background: #f1f5f9; color: #64748b; }
 
 
-.detail-user-row {
-  display: flex; align-items: center; gap: 14px;
-  padding-bottom: 16px; margin-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
-}
-.detail-user-row h4 { font-size: 1rem; font-weight: 700; margin: 0 0 4px; }
 
-.detail-avatar {
-  width: 54px; height: 54px; border-radius: 50%;
-  overflow: hidden; flex-shrink: 0;
-}
-.detail-avatar-img {
-  width: 100%; height: 100%; object-fit: cover; display: block;
-}
-.detail-avatar-fallback {
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
-  color: #fff; font-weight: 700; font-size: 1.125rem;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.25);
-}
-
-.detail-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-}
-.detail-item {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 10px 12px;
-  background: #f8fafc; border-radius: 10px;
-}
-.detail-label { font-size: 0.72rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
-.detail-value { font-size: 0.88rem; color: #0f172a; font-weight: 600; }
 
 
 .modal-enter-active { transition: all 0.2s ease-out; }
@@ -411,6 +381,184 @@ onMounted(() => init())
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-card, .modal-leave-to .modal-card { transform: scale(0.92) translateY(10px); }
 
+
+.form-group { margin-bottom: 0; }
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 7px;
+}
+
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.req {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.input-wrap {
+  position: relative;
+}
+
+.styled-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.styled-input:hover { border-color: #9ca3af; }
+.styled-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.styled-input::placeholder { color: #adb5bd; }
+
+select.styled-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(6px);
+  padding: 1rem;
+}
+
+.modal-content-panel {
+  background: #fff;
+  border-radius: 16px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  position: relative;
+}
+
+.modal-body-custom {
+  padding: 20px 32px 16px;
+}
+
+.info-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 0 24px;
+}
+
+.info-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.info-avatar-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.info-avatar-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.info-heading h4 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 3px;
+}
+
+.info-role {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.info-card {
+  background: #f8fafc;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.info-row-last {
+  border-bottom: none;
+}
+
+.info-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.info-label svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #0f172a;
+  text-align: right;
+  max-width: 65%;
+  overflow-wrap: break-word;
+}
+
+.status-active { color: #16a34a; font-weight: 600; }
+.status-inactive { color: #94a3b8; font-weight: 600; }
 
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }

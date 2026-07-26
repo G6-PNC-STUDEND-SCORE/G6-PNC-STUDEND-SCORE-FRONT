@@ -18,29 +18,7 @@
     </div>
 
     <div class="header-right">
-      <div class="search-wrapper" ref="searchWrapperRef">
-        <button class="icon-btn" @click="openSearch" title="Search">
-          <Search :size="18" />
-        </button>
-        <Transition name="search-slide">
-          <div v-if="showSearch" class="search-overlay">
-            <div class="search-bar-container">
-              <Search :size="20" class="search-input-icon" />
-              <input
-                ref="searchInput"
-                v-model="searchQuery"
-                type="text"
-                class="search-input"
-                placeholder="Search students, classes, subjects..."
-                @keydown.escape="closeSearch"
-              />
-              <button class="search-close-btn" @click="closeSearch">
-                <X :size="18" />
-              </button>
-            </div>
-          </div>
-        </Transition>
-      </div>
+
 
       <LanguageSwitcher class="header-language-btn" />
 
@@ -75,41 +53,24 @@
           <ChevronDown :size="14" class="dropdown-arrow" :class="{ 'rotated': showDropdown }" />
         </button>
 
-        <Transition name="dropdown">
-          <div v-if="showDropdown" class="dropdown-menu">
-            <div class="dropdown-header">
-              <div class="dropdown-user-avatar">
-                <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-                <span v-else class="initials">{{ getUserInitials(auth.user?.name) }}</span>
-              </div>
-              <div>
-                <div class="dropdown-user-name">{{ auth.user?.name }}</div>
-                <div class="dropdown-user-email">{{ auth.user?.email }}</div>
-              </div>
-            </div>
-            <div class="dropdown-divider"></div>
-            <RouterLink to="/profile" class="dropdown-item" @click="closeDropdown">
-              <User :size="16" class="dropdown-item-icon" />
-              <span>Profile</span>
-            </RouterLink>
-            <RouterLink to="/settings" class="dropdown-item" @click="closeDropdown">
-              <Settings :size="16" class="dropdown-item-icon" />
-              <span>Settings</span>
-            </RouterLink>
-            <div class="dropdown-divider"></div>
-            <button class="dropdown-item dropdown-item-danger" @click="handleLogout">
-              <LogOut :size="16" class="dropdown-item-icon" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-        </Transition>
+        <div v-show="showDropdown" class="dropdown-menu">
+          <RouterLink to="/profile" class="dropdown-item" @click="closeDropdown">
+            <User :size="16" class="dropdown-item-icon" />
+            <span>Profile</span>
+          </RouterLink>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item dropdown-item-danger" @click="handleLogout">
+            <LogOut :size="16" class="dropdown-item-icon" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
@@ -118,10 +79,9 @@ import { getUserInitials } from '@/utils'
 import LanguageSwitcher from '@/components/LanguageSwitcher.vue'
 import {
   ChevronDown,
-  Search, X,
   MoonStar, Sun,
   GraduationCap,
-  User, Settings, LogOut
+  User,  LogOut
 } from "lucide-vue-next"
 
 const emit = defineEmits<{
@@ -134,19 +94,12 @@ const auth = useAuthStore()
 
 const showDropdown = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
-const showSearch = ref(false)
-const searchQuery = ref('')
-const searchInput = ref<HTMLInputElement | null>(null)
-const searchWrapperRef = ref<HTMLElement | null>(null)
+
 
 const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 
 function toggleSidebar() {
   emit('toggle-sidebar')
-}
-
-function toggleDropdown() {
-  showDropdown.value = !showDropdown.value
 }
 
 function closeDropdown() {
@@ -159,33 +112,17 @@ async function handleLogout() {
   router.push('/login')
 }
 
-function openSearch() {
-  showSearch.value = true
-}
-
-function closeSearch() {
-  showSearch.value = false
-  searchQuery.value = ''
-}
-
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as Node
 
   if (dropdownRef.value && !dropdownRef.value.contains(target)) {
     closeDropdown()
   }
-
-  if (showSearch.value && searchWrapperRef.value && !searchWrapperRef.value.contains(target)) {
-    closeSearch()
-  }
 }
 
-watch(showSearch, async (val) => {
-  if (val) {
-    await nextTick()
-    searchInput.value?.focus()
-  }
-})
+function toggleDropdown() {
+  showDropdown.value = !showDropdown.value
+}
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
@@ -355,102 +292,6 @@ onUnmounted(() => {
 }
 
 
-.search-wrapper {
-  position: relative;
-}
-
-.search-overlay {
-  position: absolute;
-  top: 50%;
-  right: calc(100% + 8px);
-  transform: translateY(-50%);
-  z-index: 300;
-}
-
-.search-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0 16px;
-  width: 340px;
-  height: 44px;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 10px 20px -5px rgba(0, 0, 0, 0.08);
-  animation: searchExpand 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes searchExpand {
-  0% {
-    transform: scaleX(0.85) translateX(10%);
-    opacity: 0;
-  }
-  100% {
-    transform: scaleX(1) translateX(0);
-    opacity: 1;
-  }
-}
-
-.search-input-icon {
-  color: #94a3b8;
-  flex-shrink: 0;
-}
-
-.search-input {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 0.9rem;
-  color: #0f172a;
-  font-family: inherit;
-  background: transparent;
-}
-
-.search-input::placeholder {
-  color: #94a3b8;
-}
-
-.search-close-btn {
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  transition: all 0.2s ease;
-}
-
-.search-close-btn:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.app-header.dark-mode .search-bar-container {
-  background: #1e293b;
-  border-color: #334155;
-  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.4);
-}
-
-.app-header.dark-mode .search-input {
-  color: #f1f5f9;
-}
-
-.app-header.dark-mode .search-input::placeholder {
-  color: #64748b;
-}
-
-.app-header.dark-mode .search-close-btn:hover {
-  background: #334155;
-  color: #cbd5e1;
-}
-
 
 .user-dropdown-container {
   position: relative;
@@ -568,6 +409,7 @@ onUnmounted(() => {
 
 
 .dropdown-menu {
+  display: block;
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
@@ -576,45 +418,11 @@ onUnmounted(() => {
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.05),
     0 10px 30px -5px rgba(0, 0, 0, 0.12);
-  min-width: 220px;
+  min-width: 160px;
   z-index: 9999;
   overflow: hidden;
   border: 1px solid rgba(226, 232, 240, 0.6);
   transform-origin: top right;
-}
-
-.dropdown-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 16px 12px;
-}
-
-.dropdown-user-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.dropdown-user-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.dropdown-user-email {
-  font-size: 0.75rem;
-  color: #64748b;
-  margin-top: 1px;
 }
 
 .dropdown-item {
@@ -694,14 +502,6 @@ onUnmounted(() => {
   box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
 }
 
-.app-header.dark-mode .dropdown-user-name {
-  color: #f1f5f9;
-}
-
-.app-header.dark-mode .dropdown-user-email {
-  color: #94a3b8;
-}
-
 .app-header.dark-mode .dropdown-item {
   color: #cbd5e1;
 }
@@ -715,27 +515,6 @@ onUnmounted(() => {
   background: #334155;
 }
 
-
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.dropdown-enter-from,
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-8px) scale(0.96);
-}
-
-.search-slide-enter-active,
-.search-slide-leave-active {
-  transition: all 0.2s ease;
-}
-
-.search-slide-enter-from,
-.search-slide-leave-to {
-  opacity: 0;
-}
 
 
 .mobile-menu-btn {
@@ -756,14 +535,7 @@ onUnmounted(() => {
     display: none;
   }
 
-  .search-overlay {
-    right: auto;
-    left: 0;
-  }
 
-  .search-bar-container {
-    width: calc(100vw - 24px);
-  }
 }
 
 @media (min-width: 768px) and (max-width: 991.98px) {

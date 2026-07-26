@@ -44,6 +44,7 @@
 
         <div class="toolbar-right">
           <button
+            v-if="canCreate"
             class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
             style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
             @click="openCreateModal"
@@ -58,7 +59,7 @@
         </div>
       </div>
 
-      <div v-if="selectedIds.length > 0" class="bulk-bar">
+      <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="confirmBulkDelete">
           <Trash :size="16" />
@@ -82,9 +83,9 @@
           :data="pagination.paginatedItems.value"
           :row-key="(row) => (row as SchoolClass).id"
           :row-class="(row) => rowClassFor(row as SchoolClass)"
-          @row-dblclick="(row) => openEditModal(row as SchoolClass)"
+          @row-dblclick="(row) => canUpdate && openEditModal(row as SchoolClass)"
         >
-          <template #header-check>
+          <template v-if="canDelete" #header-check>
             <div class="col-check" @click.stop @dblclick.stop>
               <input
                 type="checkbox"
@@ -95,7 +96,7 @@
               />
             </div>
           </template>
-          <template #cell-check="{ row }">
+          <template v-if="canDelete" #cell-check="{ row }">
             <div class="col-check" @click.stop @dblclick.stop>
               <input
                 type="checkbox"
@@ -111,7 +112,7 @@
           <template #cell-name="{ row }">
             <div class="class-cell">
               <div class="class-avatar" :style="{ background: getClassAvatarBg() }">
-                <Users :size="16" />
+                <Users :size="14" />
               </div>
               <span class="class-name">{{ (row as SchoolClass).name }}</span>
             </div>
@@ -132,10 +133,10 @@
           </template>
           <template #cell-actions="{ row }">
             <div class="actions-cell" @click.stop @dblclick.stop>
-              <button class="act-btn" @click="openEditModal(row as SchoolClass)" title="Edit">
+              <button v-if="canUpdate" class="act-btn" @click="openEditModal(row as SchoolClass)" title="Edit">
                 <Pencil :size="15" />
               </button>
-              <button class="act-btn act-danger" @click="confirmDelete(row as SchoolClass)" title="Delete">
+              <button v-if="canDelete" class="act-btn act-danger" @click="confirmDelete(row as SchoolClass)" title="Delete">
                 <Trash2 :size="15" />
               </button>
             </div>
@@ -219,74 +220,85 @@
 
           <div class="form-group">
             <label class="form-label">
-              <Users :size="14" class="me-1" />
-              Class Name
+              <Users :size="15" class="field-icon" />
+              Class Name <span class="req">*</span>
             </label>
-            <div class="input-wrapper">
+            <div class="input-wrap">
               <input
                 v-model="formData.name"
                 type="text"
-                class="modern-input"
+                class="styled-input"
+                :class="{ err: formError && !formData.name.trim() }"
                 placeholder="e.g. Class A"
                 required
               />
             </div>
+            <span v-if="formError && !formData.name.trim()" class="field-err">Class name is required</span>
           </div>
+
+          <div class="section-divider"></div>
 
           <div class="form-group">
             <label class="form-label">
-              <CalendarDays :size="14" class="me-1" />
-              Generation
+              <CalendarDays :size="15" class="field-icon" />
+              Generation <span class="req">*</span>
             </label>
-            <div class="input-wrapper">
-              <select v-model.number="formData.generation_id" class="modern-input" required>
+            <div class="input-wrap">
+              <select v-model.number="formData.generation_id" class="styled-input" required>
                 <option :value="null">— Select generation —</option>
                 <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
               </select>
             </div>
+            <span v-if="formError && !formData.generation_id" class="field-err">Please select a generation</span>
           </div>
 
-          <div class="form-group">
-            <label class="form-label">
-              <DoorOpen :size="14" class="me-1" />
-              Room
-            </label>
-            <div class="input-wrapper">
-              <input
-                v-model="formData.room"
-                type="text"
-                class="modern-input"
-                placeholder="e.g. B12"
-              />
+          <div class="section-divider"></div>
+
+          <div class="row-2 row-2-equal">
+            <div class="form-group">
+              <label class="form-label">
+                <DoorOpen :size="15" class="field-icon" />
+                Room
+              </label>
+              <div class="input-wrap">
+                <input
+                  v-model="formData.room"
+                  type="text"
+                  class="styled-input"
+                  placeholder="e.g. B12"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <ToggleLeft :size="15" class="field-icon" />
+                Status
+              </label>
+              <div class="input-wrap">
+                <select v-model="formData.is_active" class="styled-input">
+                  <option :value="true">Active</option>
+                  <option :value="false">Inactive</option>
+                </select>
+              </div>
             </div>
           </div>
 
+          <div class="section-divider"></div>
+
           <div class="form-group">
             <label class="form-label">
-              <FileText :size="14" class="me-1" />
+              <FileText :size="15" class="field-icon" />
               Description
             </label>
-            <div class="input-wrapper">
+            <div class="input-wrap">
               <textarea
                 v-model="formData.description"
-                class="modern-input"
+                class="styled-input"
                 placeholder="Optional notes..."
                 rows="3"
                 style="resize: vertical; min-height: 60px;"
               ></textarea>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">
-              <ToggleLeft :size="14" class="me-1" />
-              Status
-            </label>
-            <div class="input-wrapper">
-              <select v-model="formData.is_active" class="modern-input">
-                <option :value="true">Active</option>
-                <option :value="false">Inactive</option>
-              </select>
             </div>
           </div>
         </div>
@@ -322,12 +334,17 @@ import { usePagination } from '@/composables/usePagination'
 import { useSearchFilters } from '@/composables/useSearchFilters'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
+import { usePermission } from '@/composables/usePermission'
 
 const store = useClassStore()
 const { classes, loading, error, totalClasses } = storeToRefs(store)
 
 const toast = useToast()
 const { confirm } = useConfirm()
+const { hasPermission } = usePermission()
+const canCreate = computed(() => hasPermission('create-classes'))
+const canUpdate = computed(() => hasPermission('update-classes'))
+const canDelete = computed(() => hasPermission('delete-classes'))
 
 const formSubmitting = ref(false)
 const formError = ref<string | null>(null)
@@ -366,15 +383,15 @@ const pagination = usePagination<SchoolClass>({
 })
 resetPage = pagination.resetPage
 
-const columns = [
-  { key: 'check', label: '', width: '48px' },
+const columns = computed(() => [
+  ...(canDelete.value ? [{ key: 'check', label: '', width: '48px' }] : []),
   { key: 'index', label: '#', width: '64px' },
   { key: 'name', label: 'Class Name' },
   { key: 'generation', label: 'Generation' },
   { key: 'room', label: 'Room' },
   { key: 'status', label: 'Status' },
   { key: 'actions', label: 'Actions', width: '90px' },
-]
+])
 
 function generationLabel(cls: SchoolClass): string {
   return cls.academicYear?.name || cls.generation?.name || cls.generation?.year || '—'
@@ -657,27 +674,25 @@ onMounted(async () => {
 .class-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .class-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .class-name {
   font-weight: 600;
   color: #0f172a;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .meta-cell {
@@ -727,37 +742,71 @@ onMounted(async () => {
 
 .modal-body-custom { padding: 16px 24px 20px; }
 
-.form-group { margin-bottom: 14px; }
+.form-group { margin-bottom: 0; }
 
-.form-label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
-.form-label :deep(svg) { color: #94a3b8; }
-.input-wrapper { position: relative; }
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 7px;
+}
 
-.modern-input {
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.req {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.field-err {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.input-wrap { position: relative; }
+
+.styled-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   font-size: 0.88rem;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   color: #0f172a;
   background: #fff;
   border: 1.5px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 10px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: all 0.2s ease;
   appearance: none;
   box-sizing: border-box;
 }
 
-.modern-input:hover { border-color: #9ca3af; }
-.modern-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.modern-input::placeholder { color: #94a3b8; }
+.styled-input:hover { border-color: #9ca3af; }
+.styled-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.styled-input::placeholder { color: #adb5bd; }
 
-select.modern-input {
+.styled-input.err {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+}
+
+select.styled-input {
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
-  padding-right: 2.4rem;
+  padding-right: 36px;
 }
 
 .error-alert {
@@ -770,6 +819,22 @@ select.modern-input {
   border-radius: 10px;
   margin-bottom: 16px;
   border-left: 4px solid #ef4444;
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+  margin: 14px 0 16px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.row-2-equal > * {
+  min-width: 0;
 }
 
 .modal-foot {

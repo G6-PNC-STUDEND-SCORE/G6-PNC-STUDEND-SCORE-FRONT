@@ -52,6 +52,7 @@
         </div>
         <div class="toolbar-right">
           <button
+            v-if="canCreate"
             class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
             style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
             @click="openAddModal"
@@ -65,7 +66,7 @@
         </div>
       </div>
 
-      <div v-if="selectedIds.length > 0" class="bulk-bar">
+      <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="showBulkDeleteModal = true">
           <Trash :size="16" />
@@ -86,7 +87,7 @@
         <table class="subject-table data-table-base">
           <thead>
             <tr>
-              <th class="col-check">
+              <th v-if="canDelete" class="col-check">
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -106,7 +107,7 @@
           </thead>
           <TransitionGroup name="row" tag="tbody">
             <tr v-for="(subject, index) in paginatedSubjects" :key="subject.id" :class="['data-row', { 'row-selected': selectedIds.includes(subject.id) }]">
-              <td class="col-check" @click.stop>
+              <td v-if="canDelete" class="col-check" @click.stop>
                 <input
                   type="checkbox"
                   class="table-checkbox"
@@ -115,13 +116,13 @@
                 />
               </td>
               <td class="col-index">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
-              <td class="td-subject" @click="openEditModal(subject)">
+              <td class="td-subject" @click="canUpdate && openEditModal(subject)">
                 <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
-                  <BookOpen :size="16" />
+                  <BookOpen :size="14" />
                 </div>
                 <span class="subj-name">{{ subject.name }}</span>
               </td>
-              <td class="td-meta" @click="openEditModal(subject)">
+              <td class="td-meta" @click="canUpdate && openEditModal(subject)">
                 <div v-if="teacherNamesForSubject(subject).length === 0" class="meta-val">—</div>
                 <div v-else class="teacher-stack">
                   <span class="meta-val">{{ teacherNamesForSubject(subject).slice(0, 2).join(' & ') }}</span>
@@ -134,7 +135,7 @@
                   </span>
                 </div>
               </td>
-              <td class="td-meta" @click="openEditModal(subject)">
+              <td class="td-meta" @click="canUpdate && openEditModal(subject)">
                 <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
                 <div v-else class="teacher-stack">
                   <span class="meta-val">{{ classNamesForSubject(subject).slice(0, 2).join(', ') }}</span>
@@ -152,6 +153,7 @@
                   <button
                     v-for="term in terms"
                     :key="term.id"
+                    v-if="canUpdate"
                     class="tog"
                     :class="{ 'tog-on': subject.term_ids.includes(term.id) }"
                     @click="toggleTerm(subject, term.id)"
@@ -168,10 +170,10 @@
                 </span>
               </td>
               <td class="td-actions">
-                <button class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
+                <button v-if="canUpdate" class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
                   <Pencil :size="15" />
                 </button>
-                <button class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
+                <button v-if="canDelete" class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
                   <Trash2 :size="15" />
                 </button>
               </td>
@@ -512,6 +514,11 @@ const visiblePages = computed(() => {
 
 const store = useSubjectStore()
 const auth = useAuthStore()
+
+const canCreate = computed(() => auth.hasPermission('create-subjects'))
+const canUpdate = computed(() => auth.hasPermission('update-subjects'))
+const canDelete = computed(() => auth.hasPermission('delete-subjects'))
+
 const searchQuery = ref('')
 const statusFilter = ref('')
 const termFilter = ref<number | ''>('')
@@ -742,7 +749,7 @@ function openEditModal(s: any) {
   formData.class_ids = offeringClassIds.length
     ? [...new Set(offeringClassIds)]
     : s.class_id ? [s.class_id] : []
-  formData.status = s.status
+  formData.status = typeof s.status === 'string' && s.status.toLowerCase() === 'active' ? 'Active' : 'Inactive'
   formData.term_ids = Array.isArray(s.term_ids)
     ? [...s.term_ids]
     : Array.isArray(s.terms)
@@ -991,13 +998,13 @@ onMounted(async () => {
 
 .td-subject { cursor: pointer; }
 .subj-avatar {
-  width: 34px; height: 34px;
-  border-radius: 10px;
+  width: 28px; height: 28px;
+  border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
   color: #fff; flex-shrink: 0; margin-right: 8px; vertical-align: middle;
 }
 
-.subj-name { font-weight: 600; font-size: 0.9rem; color: #0f172a; }
+.subj-name { font-weight: 600; font-size: 0.85rem; color: #0f172a; }
 
 .td-meta { cursor: pointer; }
 .meta-val { font-size: 0.82rem; color: #64748b; }

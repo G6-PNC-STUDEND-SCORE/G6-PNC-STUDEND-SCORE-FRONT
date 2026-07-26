@@ -28,10 +28,25 @@
             </select>
           </label>
         </div>
+        <div class="filter-group">
+          <label class="filter-label">
+            <Users :size="16" />
+            <span>Generation</span>
+            <select
+              :value="generationFilter"
+              @change="$emit('update:generationFilter', ($event.target as HTMLSelectElement).value === '' ? '' : Number(($event.target as HTMLSelectElement).value))"
+              class="filter-select"
+            >
+              <option value="">All</option>
+              <option v-for="gen in generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div class="toolbar-right">
         <button
+          v-if="canCreate"
           class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
           style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
           @click="$emit('add')"
@@ -46,7 +61,7 @@
       </div>
     </div>
 
-    <div v-if="someSelected" class="bulk-bar">
+    <div v-if="canDelete && someSelected" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <div class="bulk-actions">
           <button class="bulk-delete-btn" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" title="Delete selected students">
@@ -69,7 +84,7 @@
       <table class="student-table data-table-base">
         <thead>
           <tr>
-            <th class="col-check">
+            <th v-if="canDelete" class="col-check">
               <input
                 type="checkbox"
                 class="table-checkbox"
@@ -89,13 +104,14 @@
             <th class="col-actions">Actions</th>
           </tr>
         </thead>
-        <tbody>
+        <TransitionGroup name="row" tag="tbody">
           <tr
             v-for="(student, index) in paginatedStudents"
-            :key="student.id"            class="data-row"
+            :key="student.id"
+            class="data-row"
             :class="{ 'row-selected': selectedIds.includes(student.id) }"
           >
-            <td class="col-check">
+            <td v-if="canDelete" class="col-check">
               <input
                 type="checkbox"
                 class="table-checkbox"
@@ -134,18 +150,14 @@
             </td>
             <td>
               <span v-if="student.class" class="class-cell">
-                <Building2 :size="14" />
                 {{ student.class.name }}
               </span>
-              <span v-else class="class-empty">
-                <Minus :size="14" />
-                Not assigned
-              </span>
+              <span v-else class="meta-cell">—</span>
             </td>
             <td>
               <span class="meta-cell">{{ student.generation?.name || '—' }}</span>
             </td>
-            <td class="py-3">
+            <td>
               <span
                 class="status-badge"
                 :class="(student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'"
@@ -158,19 +170,16 @@
                 <button class="act-btn" title="View Details" @click="$emit('view', student)">
                   <Eye :size="15" />
                 </button>
-                <button class="act-btn" title="Edit" @click="$emit('edit', student)">
+                <button v-if="canUpdate" class="act-btn" title="Edit" @click="$emit('edit', student)">
                   <Pencil :size="15" />
                 </button>
-                <button class="act-btn" title="Assign Class" @click="$emit('assign', student)">
-                  <ArrowRightFromLine :size="15" />
-                </button>
-                <button class="act-btn act-danger" title="Delete" @click="$emit('delete', student)">
+                <button v-if="canDelete" class="act-btn act-danger" title="Delete" @click="$emit('delete', student)">
                   <Trash2 :size="15" />
                 </button>
               </div>
             </td>
           </tr>
-        </tbody>
+        </TransitionGroup>
       </table>
     </div>
 
@@ -231,22 +240,27 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { TransitionGroup } from 'vue'
 import type { Student } from '@/services/studentService'
 import {
   Search,
   VenusAndMars,
+  Users,
   Inbox,
-  Building2,
-  Minus,
   Eye,
   Pencil,
-  ArrowRightFromLine,
   Trash2,
   ChevronLeft,
   ChevronRight,
   Plus,
 } from '@lucide/vue'
+import type { Generation } from '@/types'
+import { usePermission } from '@/composables/usePermission'
 
+const { hasPermission } = usePermission()
+const canCreate = computed(() => hasPermission('create-students'))
+const canUpdate = computed(() => hasPermission('update-students'))
+const canDelete = computed(() => hasPermission('delete-students'))
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -257,6 +271,8 @@ const props = defineProps<{
   students: Student[]
   searchQuery: string
   genderFilter: string
+  generationFilter: number | ''
+  generations: Generation[]
   getInitials: (name: string) => string
 }>()
 
@@ -323,6 +339,7 @@ const visiblePages = computed(() => {
 defineEmits<{
   'update:searchQuery': [value: string]
   'update:genderFilter': [value: string]
+  'update:generationFilter': [value: number | '']
   view: [student: Student]
   edit: [student: Student]
   assign: [student: Student]
@@ -474,13 +491,13 @@ defineEmits<{
 .col-check {
   width: 48px;
   text-align: center;
-  padding: 12px 8px !important;
+  padding: 10px 8px !important;
 }
 
 .student-table thead th.col-check,
 .student-table tbody td.col-check {
   text-align: center;
-  padding: 12px 8px !important;
+  padding: 10px 8px !important;
   vertical-align: middle;
 }
 
@@ -612,18 +629,8 @@ defineEmits<{
 }
 
 .class-cell {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #374151;
-}
-
-.class-empty {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-style: italic;
-  color: #9ca3af;
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 
 .meta-cell {
@@ -844,6 +851,25 @@ defineEmits<{
     width: 100%;
     justify-content: center;
   }
+}
+
+.row-enter-active,
+.row-leave-active {
+  transition: all 0.3s ease;
+}
+
+.row-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.row-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.row-move {
+  transition: transform 0.3s ease;
 }
 
 @media (max-width: 768px) {
