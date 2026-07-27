@@ -11,6 +11,8 @@ export type {
   PortalProfile,
   PortalSummaryItem,
   PortalCurrentSubject,
+  PortalProgressItem,
+  PortalTermTrend,
   TermScoreSubject,
   TermScores,
   TranscriptTerm,

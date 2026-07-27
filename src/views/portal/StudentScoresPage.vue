@@ -92,7 +92,7 @@ onMounted(async () => {
 .scores-table thead th { padding: 10px 14px; white-space: nowrap; }
 .scores-table tbody td { padding: 10px 14px; }
 .col-num { text-align: right; }
-.total-cell { font-weight: 700; color: #0f172a; }
+.total-cell { font-weight: 700; color:  #2563eb; }
 .grade-badge {
   display: inline-block;
   font-size: 0.75rem;

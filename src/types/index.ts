@@ -43,6 +43,8 @@ export type {
   PortalSummaryItem,
   PortalCurrentSubject,
   PortalData,
+  PortalProgressItem,
+  PortalTermTrend,
   TermScoreSubject,
   TermScores,
   TranscriptTerm,
