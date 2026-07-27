@@ -82,22 +82,41 @@
 
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
-        <div class="modal-dialog-custom">
-          <div class="modal-header-custom">
-            <div class="modal-icon">
-              <LogOut :size="24" />
+      <div
+        v-if="showLogoutModal"
+        class="modal-overlay"
+        @click.self="showLogoutModal = false"
+        ref="modalOverlayRef"
+      >
+        <div
+          class="logout-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="logout-title"
+          @keydown.escape="showLogoutModal = false"
+          @keydown.tab.prevent="trapFocus"
+        >
+          <div class="logout-modal-header">
+            <div class="logout-icon-wrap">
+              <LogOut :size="20" />
             </div>
-            <h5 class="mb-1">Confirm Logout</h5>
-            <p class="mb-0 text-secondary">Are you sure you want to log out?</p>
+            <h3 id="logout-title" class="logout-title">Confirm Logout</h3>
+            <button class="logout-close-btn" @click="showLogoutModal = false" aria-label="Close modal">
+              <X :size="18" />
+            </button>
           </div>
-          <div class="modal-actions">
-            <button class="btn-cancel" @click="showLogoutModal = false">
-              <X :size="16" class="me-1" />
+
+          <div class="logout-modal-body">
+            <p class="logout-message">Are you sure you want to log out?</p>
+          </div>
+
+          <div class="logout-modal-footer">
+            <button class="logout-btn logout-btn-cancel" @click="showLogoutModal = false" ref="cancelBtnRef">
+              <X :size="16" />
               Cancel
             </button>
-            <button class="btn-logout" @click="handleLogout">
-              <LogOut :size="16" class="me-1" />
+            <button class="logout-btn logout-btn-confirm" @click="handleLogout" ref="confirmBtnRef">
+              <LogOut :size="16" />
               Logout
             </button>
           </div>
@@ -108,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
@@ -130,6 +149,27 @@ const isProfileActive = computed(() => route.path === '/profile')
 
 const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 const showLogoutModal = ref(false)
+const modalOverlayRef = ref<HTMLElement | null>(null)
+const confirmBtnRef = ref<HTMLButtonElement | null>(null)
+const cancelBtnRef = ref<HTMLButtonElement | null>(null)
+
+watch(showLogoutModal, (val) => {
+  if (val) {
+    nextTick(() => confirmBtnRef.value?.focus())
+  }
+})
+
+function trapFocus(e: KeyboardEvent) {
+  const focusable = [cancelBtnRef.value, confirmBtnRef.value].filter(Boolean) as HTMLElement[]
+  if (focusable.length === 0) return
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (e.shiftKey && document.activeElement === first) {
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    first.focus()
+  }
+}
 
 interface NavLink {
   to: string
@@ -511,75 +551,104 @@ function goToProfile() {
 
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.45);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
 }
 
-.modal-dialog-custom {
-  background: #fff;
-  border-radius: 16px;
-  width: 360px;
-  max-width: 90vw;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+.logout-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 380px;
+  max-width: 100%;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 12px 30px -4px rgba(0, 0, 0, 0.12),
+    0 24px 60px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  animation: modalBounce 0.3s ease-out;
 }
 
-@keyframes modalBounce {
-  0% {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* ─── Header ─── */
+.logout-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 0;
+  position: relative;
 }
 
-.modal-header-custom {
-  padding: 28px 28px 16px;
-  text-align: center;
-}
-
-.modal-header-custom h5 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-
-.modal-header-custom p {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.modal-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+.logout-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #fef2f2;
   color: #ef4444;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
-  margin: 0 auto 12px;
+  flex-shrink: 0;
 }
 
-.modal-actions {
+.logout-title {
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.logout-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
   display: flex;
-  gap: 8px;
-  padding: 12px 28px 28px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.modal-actions button {
+.logout-close-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.logout-close-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ─── Body ─── */
+.logout-modal-body {
+  padding: 16px 24px 0;
+}
+
+.logout-message {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ─── Footer ─── */
+.logout-modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 20px 24px 24px;
+}
+
+.logout-btn {
   flex: 1;
   padding: 10px 16px;
   border-radius: 10px;
@@ -595,26 +664,45 @@ function goToProfile() {
   font-family: "Inter", "Noto Sans Khmer", sans-serif;
 }
 
-.btn-cancel {
-  background: #f3f4f6;
-  color: #374151;
+.logout-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
 }
 
-.btn-cancel:hover {
-  background: #e5e7eb;
+.logout-btn-cancel:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
 }
 
-.btn-logout {
+.logout-btn-cancel:active {
+  transform: translateY(0);
+}
+
+.logout-btn-confirm {
   background: #ef4444;
-  color: white;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
-.btn-logout:hover {
+.logout-btn-confirm:hover {
   background: #dc2626;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
 }
 
+.logout-btn-confirm:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.2);
+}
+
+.logout-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ─── Animations ─── */
 .modal-enter-active {
-  transition: all 0.2s ease-out;
+  transition: all 0.25s ease-out;
 }
 
 .modal-leave-active {
@@ -626,8 +714,52 @@ function goToProfile() {
   opacity: 0;
 }
 
-.modal-enter-from .modal-dialog-custom,
-.modal-leave-to .modal-dialog-custom {
-  transform: scale(0.9);
+.modal-enter-from .logout-modal,
+.modal-leave-to .logout-modal {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+}
+
+.modal-enter-active .logout-modal {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-leave-active .logout-modal {
+  transition: all 0.15s ease-in;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 480px) {
+  .logout-modal {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .logout-modal-header {
+    padding: 20px 20px 0;
+  }
+
+  .logout-modal-body {
+    padding: 14px 20px 0;
+  }
+
+  .logout-modal-footer {
+    padding: 16px 20px 20px;
+    gap: 8px;
+  }
+
+  .logout-btn {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .logout-icon-wrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .logout-title {
+    font-size: 1rem;
+  }
 }
 </style>
