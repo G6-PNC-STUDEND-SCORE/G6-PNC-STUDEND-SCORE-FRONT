@@ -1,5 +1,5 @@
 <template>
-  <div class="px-4 py-4 dashboard-page">
+  <div class="py-4 dashboard-page">
     <div v-if="showWelcome" class="welcome-card">
       <div class="welcome-bg-shapes">
         <div class="shape shape-1"></div>
@@ -1009,6 +1009,7 @@ function updateLastUpdated() {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
 
 @media (max-width: 1199.98px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }

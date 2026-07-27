@@ -3,7 +3,6 @@
     <Transition name="modal">
       <div v-if="show && classData" class="modal-overlay" @click.self="$emit('close')">
         <div class="modal-content-panel bg-white rounded-4 shadow-lg" style="max-width: 460px;">
-          <!-- Header Section -->
           <div class="text-center pt-4 pb-3 px-4 border-bottom border-light">
             <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
                  style="width: 60px; height: 60px; background: linear-gradient(135deg, #eef2ff, #dbeafe);">
@@ -13,15 +12,12 @@
             <p class="text-muted small mt-1 mb-0">Complete information about this class</p>
           </div>
 
-          <!-- Body Section -->
           <div class="px-4 py-3">
-            <!-- Class Name -->
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
               <span class="small text-secondary fw-medium">Class Name</span>
               <span class="text-dark fw-semibold">{{ classData.name }}</span>
             </div>
 
-            <!-- Generation -->
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
               <span class="small text-secondary fw-medium">Generation</span>
               <span class="text-dark fw-semibold">
@@ -29,25 +25,21 @@
               </span>
             </div>
 
-            <!-- Room -->
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
               <span class="small text-secondary fw-medium">Room</span>
               <span class="text-dark fw-semibold">{{ classData.room }}</span>
             </div>
 
-            <!-- Students -->
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
               <span class="small text-secondary fw-medium">Students</span>
               <span class="text-dark fw-semibold">{{ classData.students }}</span>
             </div>
 
-            <!-- Teacher -->
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
               <span class="small text-secondary fw-medium">Homeroom Teacher</span>
               <span class="text-dark fw-semibold">{{ classData.teacher?.name || '—' }}</span>
             </div>
 
-            <!-- Status -->
             <div class="d-flex justify-content-between align-items-center py-2">
               <span class="small text-secondary fw-medium">Status</span>
               <span class="text-dark fw-semibold">
@@ -58,7 +50,6 @@
             </div>
           </div>
 
-          <!-- Footer Section -->
           <div class="d-flex px-4 pb-4 pt-2 gap-2">
             <button
               type="button"

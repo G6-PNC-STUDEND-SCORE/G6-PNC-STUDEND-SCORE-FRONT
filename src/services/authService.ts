@@ -1,13 +1,13 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type { User } from '@/types'
 
-
-export type LoginPayload = {
+export interface LoginPayload {
   email: string
   password: string
 }
 
-export type LoginResponse = {
-  user: unknown
+export interface LoginResponse {
+  user: User
   token: string
   message?: string
 }
@@ -22,8 +22,7 @@ export async function logout(): Promise<{ message: string }> {
   return res.data
 }
 
-export async function me(): Promise<{ user: unknown }> {
-  const res = await http.get<{ user: unknown }>('/user')
+export async function me(): Promise<{ user: User }> {
+  const res = await http.get<{ user: User }>('/user')
   return res.data
 }
-

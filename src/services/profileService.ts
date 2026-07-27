@@ -1,39 +1,7 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type { UserProfile, ProfileUpdatePayload, AvatarResponse, ProfileTeacherInfo, ProfileStudentInfo, ApiResponse } from '@/types'
 
-export interface UserProfile {
-  id: number
-  name: string
-  email: string
-  phone: string | null
-  department: string | null
-  school: string | null
-  role: string
-  avatar: string | null
-  bio: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface ProfileUpdatePayload {
-  name?: string
-  email?: string
-  phone?: string
-  department?: string
-  school?: string
-  bio?: string
-}
-
-export interface ApiResponse<T> {
-  success: boolean
-  message?: string
-  data: T
-  errors?: Record<string, string[]>
-}
-
-export interface AvatarResponse {
-  avatar_url: string
-  avatar: string
-}
+export type { UserProfile, ProfileUpdatePayload, AvatarResponse, ProfileTeacherInfo, ProfileStudentInfo }
 
 export async function getProfile(): Promise<UserProfile> {
   const res = await http.get<ApiResponse<UserProfile>>('/profile')

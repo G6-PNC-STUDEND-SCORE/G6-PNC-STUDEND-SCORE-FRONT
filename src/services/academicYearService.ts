@@ -1,17 +1,7 @@
 import { http } from './apiHttp'
+import type { AcademicYear, ApiResponse } from '@/types'
 
-export interface AcademicYear {
-  id: number
-  name: string
-}
-
-export interface AcademicYearsResponse {
-  success: boolean
-  message?: string
-  data: AcademicYear[]
-}
-
-export async function getAcademicYears(): Promise<AcademicYearsResponse> {
-  const response = await http.get('/academic-years')
+export async function getAcademicYears(): Promise<ApiResponse<AcademicYear[]>> {
+  const response = await http.get<ApiResponse<AcademicYear[]>>('/academic-years')
   return response.data
 }

@@ -1,136 +1,159 @@
 <template>
-  <div class="page-container">
-    <!-- ── Toast ── -->
-    <Transition name="toast">
-      <div v-if="toast.show" class="toast-bar" :class="toast.type">
-        <component :is="toastIconComponent" :size="16" />
-        <span>{{ toast.message }}</span>
-        <button class="toast-close" @click="toast.show = false">&times;</button>
-      </div>
-    </Transition>
+  <div class="classes-page">
+    <LoadingState v-if="loading && classes.length === 0" message="Loading classes..." />
 
-    <!-- ── Header ── -->
-    <div class="page-head">
-      <div class="page-head-left">
-        <div class="page-icon">
-          <Users :size="22" />
-        </div>
-        <div>
-          <h1 class="page-title">Classes</h1>
-          <p class="page-desc">Manage classes and sections</p>
-        </div>
-      </div>
-      <div class="page-head-right">
-        <button class="btn btn-primary" @click="openAddModal">
-          <Plus :size="16" />
-          <span>Add Class</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Store Messages ── -->
-    <div v-if="store.error" class="msg msg-error">
+    <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
       <AlertTriangle :size="16" />
-      {{ store.error }}
-      <button class="msg-close" @click="store.clearMessages()">&times;</button>
-    </div>
-    <div v-if="store.successMessage" class="msg msg-success">
-      <CheckCircle :size="16" />
-      {{ store.successMessage }}
-      <button class="msg-close" @click="store.clearMessages()">&times;</button>
+      {{ error }}
     </div>
 
-    <!-- ── Loading ── -->
-    <div v-if="store.loading" class="load-state">
-      <div class="spinner"></div>
-      <span>Loading classes…</span>
-    </div>
-
-    <!-- ── Content (toolbar + table) ── -->
-    <template v-else>
+    <div v-else class="class-card">
       <div class="toolbar">
-        <div class="tb-search">
-          <Search :size="16" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search classes..."
-          />
-          <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
-            <X :size="14" />
-          </button>
+        <div class="toolbar-left">
+          <div class="search-box">
+            <Search :size="16" class="search-icon" />
+            <input
+              v-model="searchQuery"
+              type="text"
+              class="search-input"
+              placeholder="Search by name, generation, or room..."
+            />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <ToggleLeft :size="16" />
+              <span>Status</span>
+              <select v-model="filters.status" class="filter-select">
+                <option value="">All</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <CalendarDays :size="16" />
+              <span>Generation</span>
+              <select v-model="filters.generation" class="filter-select">
+                <option value="">All</option>
+                <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
+              </select>
+            </label>
+          </div>
         </div>
-        <div class="tb-filter">
-          <select v-model="statusFilter">
-            <option value="">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
+
+        <div class="toolbar-right">
+          <button
+            v-if="canCreate"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+            style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+            @click="openCreateModal"
+          >
+            <Plus :size="15" />
+            Add Class
+          </button>
+
+          <span class="count-badge">
+            {{ totalClasses }} class{{ totalClasses !== 1 ? 'es' : '' }}
+          </span>
         </div>
       </div>
 
-      <div class="table-wrap">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Class</th>
-            <th>Generation</th>
-            <th>Room</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <TransitionGroup name="row" tag="tbody">
-          <tr v-if="filteredClasses.length === 0" key="empty">
-            <td colspan="5" class="td-empty">
-              <div class="empty-box">
-                <Inbox :size="40" />
-                <h5>No classes found</h5>
-                <p>{{ searchQuery ? 'Try a different search term.' : 'No classes match the current filter.' }}</p>
+      <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
+        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <button class="bulk-delete-btn" @click="confirmBulkDelete">
+          <Trash :size="16" />
+          Delete Selected
+        </button>
+        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+      </div>
+
+      <div v-if="filteredClasses.length === 0" class="empty-container">
+        <EmptyState
+          title="No classes found"
+          :message="searchQuery ? 'Try a different search term.' : 'No classes match the current filter.'"
+        >
+          <template #icon><Inbox :size="24" /></template>
+        </EmptyState>
+      </div>
+
+      <div v-else class="table-wrap">
+        <DataTable
+          :columns="columns"
+          :data="pagination.paginatedItems.value"
+          :row-key="(row) => (row as SchoolClass).id"
+          :row-class="(row) => rowClassFor(row as SchoolClass)"
+          @row-dblclick="(row) => canUpdate && openEditModal(row as SchoolClass)"
+        >
+          <template v-if="canDelete" #header-check>
+            <div class="col-check" @click.stop @dblclick.stop>
+              <input
+                type="checkbox"
+                class="table-checkbox"
+                :checked="isAllPageSelected"
+                :indeterminate="isIndeterminate"
+                @change="toggleSelectAll"
+              />
+            </div>
+          </template>
+          <template v-if="canDelete" #cell-check="{ row }">
+            <div class="col-check" @click.stop @dblclick.stop>
+              <input
+                type="checkbox"
+                class="table-checkbox"
+                :checked="selectedIds.includes((row as SchoolClass).id)"
+                @change="toggleSelectClass((row as SchoolClass).id)"
+              />
+            </div>
+          </template>
+          <template #cell-index="{ index }">
+            <span class="col-index">{{ (pagination.currentPage.value - 1) * pagination.pageSize.value + index + 1 }}</span>
+          </template>
+          <template #cell-name="{ row }">
+            <div class="class-cell">
+              <div class="class-avatar" :style="{ background: getClassAvatarBg() }">
+                <Users :size="14" />
               </div>
-            </td>
-          </tr>
-          <tr v-for="cls in paginatedClasses" :key="cls.id">
-            <td class="td-name" @click="openEditModal(cls)">
-              <div class="cls-avatar" :style="{ background: classIconBg() }">
-                <Users :size="16" />
-              </div>
-              <span class="cls-name">{{ cls.name }}</span>
-            </td>
-            <td class="td-meta" @click="openEditModal(cls)">
-              <span class="meta-val">{{ cls.academicYear?.name || '—' }}</span>
-            </td>
-            <td class="td-meta" @click="openEditModal(cls)">
-              <span class="meta-val">{{ cls.room || '—' }}</span>
-            </td>
-            <td class="td-status">
-              <span class="pill" :class="cls.is_active ? 'pill-on' : 'pill-off'">
-                {{ cls.is_active ? 'Active' : 'Inactive' }}
-              </span>
-            </td>
-            <td class="td-actions">
-              <button class="act-btn" @click.stop="openEditModal(cls)" title="Edit">
+              <span class="class-name">{{ (row as SchoolClass).name }}</span>
+            </div>
+          </template>
+          <template #cell-generation="{ row }">
+            <span class="meta-cell">{{ generationLabel(row as SchoolClass) }}</span>
+          </template>
+          <template #cell-room="{ row }">
+            <span class="meta-cell">{{ (row as SchoolClass).room || '—' }}</span>
+          </template>
+          <template #cell-status="{ row }">
+            <span
+              class="status-badge"
+              :class="(row as SchoolClass).is_active ? 'badge-active' : 'badge-inactive'"
+            >
+              {{ (row as SchoolClass).is_active ? 'Active' : 'Inactive' }}
+            </span>
+          </template>
+          <template #cell-actions="{ row }">
+            <div class="actions-cell" @click.stop @dblclick.stop>
+              <button v-if="canUpdate" class="act-btn" @click="openEditModal(row as SchoolClass)" title="Edit">
                 <Pencil :size="15" />
               </button>
-              <button class="act-btn act-danger" @click.stop="confirmDelete(cls)" title="Delete">
+              <button v-if="canDelete" class="act-btn act-danger" @click="confirmDelete(row as SchoolClass)" title="Delete">
                 <Trash2 :size="15" />
               </button>
-            </td>
-          </tr>
-        </TransitionGroup>
-      </table>
+            </div>
+          </template>
+        </DataTable>
+      </div>
 
-      <!-- Pagination -->
-      <div class="pagination-bar">
+      <div v-if="filteredClasses.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
           <div class="rows-selector">
             <button
-              v-for="size in pageSizeOptions"
+              v-for="size in pagination.pageSizeOptions"
               :key="size"
               class="rows-btn"
-              :class="{ active: pageSize === size }"
-              @click="pageSize = size; currentPage = 1"
+              :class="{ active: pagination.pageSize.value === size }"
+              @click="pagination.changePageSize(size)"
             >
               {{ size }}
             </button>
@@ -140,19 +163,19 @@
         <div class="pagination-pages">
           <button
             class="page-nav"
-            :disabled="currentPage <= 1"
-            @click="currentPage--"
+            :disabled="pagination.currentPage.value <= 1"
+            @click="pagination.changePage(pagination.currentPage.value - 1)"
             aria-label="Previous page"
           >
             <ChevronLeft :size="16" />
           </button>
 
-          <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
+          <template v-for="(page, idx) in pagination.visiblePages.value" :key="'vp-' + idx">
             <button
               v-if="page !== '...'"
               class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="currentPage = page as number"
+              :class="{ active: pagination.currentPage.value === page }"
+              @click="pagination.changePage(page as number)"
             >
               {{ page }}
             </button>
@@ -161,8 +184,8 @@
 
           <button
             class="page-nav"
-            :disabled="currentPage >= totalPages"
-            @click="currentPage++"
+            :disabled="pagination.currentPage.value >= pagination.totalPages.value"
+            @click="pagination.changePage(pagination.currentPage.value + 1)"
             aria-label="Next page"
           >
             <ChevronRight :size="16" />
@@ -170,127 +193,219 @@
         </div>
 
         <div class="pagination-total">
-          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredClasses.length) }} of {{ filteredClasses.length }}
+          {{ (pagination.currentPage.value - 1) * pagination.pageSize.value + 1 }}-{{ Math.min(pagination.currentPage.value * pagination.pageSize.value, filteredClasses.length) }} of {{ filteredClasses.length }}
         </div>
-        <p class="mt-2" style="color: #6b7280;">Loading classes...</p>
       </div>
     </div>
-    </template>
 
-    <!-- ── Add / Edit Modal ── -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showModal" class="overlay" @click.self="closeModal">
-          <div class="modal-card">
-            <div class="modal-head">
-              <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-add'">
-                <SquarePen v-if="isEditMode" :size="20" />
-                <CirclePlus v-else :size="20" />
-              </div>
-              <div>
-                <h3>{{ isEditMode ? 'Edit Class' : 'New Class' }}</h3>
-                <p>{{ isEditMode ? 'Update the class details below.' : 'Fill in the details to create a new class.' }}</p>
-              </div>
-              <button class="modal-x" @click="closeModal">&times;</button>
+    <Modal v-model="showFormModal">
+      <div class="modal-head">
+        <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-create'">
+          <SquarePen v-if="isEditMode" :size="18" />
+          <Plus v-else :size="18" />
+        </div>
+        <div>
+          <h3>{{ isEditMode ? 'Edit Class' : 'Add New Class' }}</h3>
+          <p>{{ isEditMode ? 'Update class information' : 'Fill in the new class details' }}</p>
+        </div>
+        <button class="modal-x" @click="closeFormModal">&times;</button>
+      </div>
+
+      <form @submit.prevent="handleSubmit">
+        <div class="modal-body-custom">
+          <div v-if="formError" class="error-alert">
+            <AlertTriangle :size="16" class="me-2" />
+            {{ formError }}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <Users :size="15" class="field-icon" />
+              Class Name <span class="req">*</span>
+            </label>
+            <div class="input-wrap">
+              <input
+                v-model="formData.name"
+                type="text"
+                class="styled-input"
+                :class="{ err: formError && !formData.name.trim() }"
+                placeholder="e.g. Class A"
+                required
+              />
             </div>
-            <form @submit.prevent="handleSubmit" class="modal-body">
-              <div class="field">
-                <label>Class Name <span class="req">*</span></label>
-                <input v-model="formData.name" :class="{ err: errors.name }" placeholder="e.g. Class A" required />
-                <span v-if="errors.name" class="field-err">{{ errors.name }}</span>
+            <span v-if="formError && !formData.name.trim()" class="field-err">Class name is required</span>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <CalendarDays :size="15" class="field-icon" />
+              Generation <span class="req">*</span>
+            </label>
+            <div class="input-wrap">
+              <select v-model.number="formData.generation_id" class="styled-input" required>
+                <option :value="null">— Select generation —</option>
+                <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
+              </select>
+            </div>
+            <span v-if="formError && !formData.generation_id" class="field-err">Please select a generation</span>
+          </div>
+
+          <div class="section-divider"></div>
+
+          <div class="row-2 row-2-equal">
+            <div class="form-group">
+              <label class="form-label">
+                <DoorOpen :size="15" class="field-icon" />
+                Room
+              </label>
+              <div class="input-wrap">
+                <input
+                  v-model="formData.room"
+                  type="text"
+                  class="styled-input"
+                  placeholder="e.g. B12"
+                />
               </div>
-              <div class="field">
-                <label>Generation <span class="req">*</span></label>
-                <select v-model.number="formData.generation_id" :class="{ err: errors.generation_id }">
-                  <option :value="null">Select generation</option>
-                  <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
-                </select>
-                <span v-if="errors.generation_id" class="field-err">{{ errors.generation_id }}</span>
-              </div>
-              <div class="field">
-                <label>Room</label>
-                <input v-model="formData.room" placeholder="e.g. B12" />
-              </div>
-              <div class="field">
-                <label>Description</label>
-                <textarea v-model="formData.description" placeholder="Optional notes..." rows="3"></textarea>
-              </div>
-              <div class="field">
-                <label>Status</label>
-                <select v-model="formData.is_active">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <ToggleLeft :size="15" class="field-icon" />
+                Status
+              </label>
+              <div class="input-wrap">
+                <select v-model="formData.is_active" class="styled-input">
                   <option :value="true">Active</option>
                   <option :value="false">Inactive</option>
                 </select>
               </div>
-              <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
-                <button type="submit" class="btn btn-primary" :disabled="store.loading">
-                  <span v-if="store.loading" class="spinner-sm"></span>
-                  {{ isEditMode ? 'Update Class' : 'Create Class' }}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      </Transition>
-    </Teleport>
 
-    <!-- ── Delete Modal ── -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
-          <div class="modal-card modal-sm">
-            <div class="modal-head">
-              <div class="modal-icon icon-danger">
-                <AlertTriangle :size="20" />
-              </div>
-              <div>
-                <h3>Delete Class</h3>
-                <p>This action cannot be undone.</p>
-              </div>
-              <button class="modal-x" @click="closeDeleteModal">&times;</button>
-            </div>
-            <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ classToDelete?.name }}</strong>?</p>
-            </div>
-            <div class="modal-foot">
-              <button class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
-              <button class="btn btn-danger" @click="handleDelete" :disabled="store.loading">
-                <span v-if="store.loading" class="spinner-sm"></span>
-                Delete
-              </button>
+          <div class="section-divider"></div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <FileText :size="15" class="field-icon" />
+              Description
+            </label>
+            <div class="input-wrap">
+              <textarea
+                v-model="formData.description"
+                class="styled-input"
+                placeholder="Optional notes..."
+                rows="3"
+                style="resize: vertical; min-height: 60px;"
+              ></textarea>
             </div>
           </div>
         </div>
-      </Transition>
-    </Teleport>
+
+        <div class="modal-foot">
+          <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
+            <span v-if="formSubmitting" class="spinner-sm"></span>
+            <Check v-else :size="16" />
+            <span>{{ isEditMode ? 'Save Changes' : 'Create Class' }}</span>
+          </button>
+        </div>
+      </form>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, reactive, watch } from 'vue'
-
-const currentPage = ref(1)
-const pageSize = ref(10)
-const pageSizeOptions = [10, 25, 50]
+import { ref, computed, onMounted, reactive } from 'vue'
+import { storeToRefs } from 'pinia'
+import {
+  Users, Plus, AlertTriangle, Search, ToggleLeft, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen,
+  Check, Inbox, Trash, CalendarDays, DoorOpen, FileText,
+} from '@lucide/vue'
 import { useClassStore } from '@/stores/class'
 import type { SchoolClass } from '@/services/classService'
 import { getAcademicYears } from '@/services/academicYearService'
-import {
-  Users, Plus, AlertTriangle, CheckCircle, Inbox, Pencil, Trash2, SquarePen, CirclePlus,
-  ChevronLeft, ChevronRight, Search, X,
-} from '@lucide/vue'
+import DataTable from '@/components/DataTable.vue'
+import Modal from '@/components/Modal.vue'
+import EmptyState from '@/components/EmptyState.vue'
+import LoadingState from '@/components/LoadingState.vue'
+import { usePagination } from '@/composables/usePagination'
+import { useSearchFilters } from '@/composables/useSearchFilters'
+import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
+import { usePermission } from '@/composables/usePermission'
 
 const store = useClassStore()
-const searchQuery = ref('')
-const statusFilter = ref('')
-const showModal = ref(false)
-const showDeleteModal = ref(false)
-const isEditMode = ref(false)
-const classToDelete = ref<SchoolClass | null>(null)
+const { classes, loading, error, totalClasses } = storeToRefs(store)
+
+const toast = useToast()
+const { confirm } = useConfirm()
+const { hasPermission } = usePermission()
+const canCreate = computed(() => hasPermission('create-classes'))
+const canUpdate = computed(() => hasPermission('update-classes'))
+const canDelete = computed(() => hasPermission('delete-classes'))
+
+const formSubmitting = ref(false)
+const formError = ref<string | null>(null)
 const academicYears = ref<{ id: number; name: string }[]>([])
 
-const formData = reactive({
+let resetPage = () => {}
+const { searchQuery, filters } = useSearchFilters(
+  { status: '', generation: '' as number | '' },
+  () => resetPage()
+)
+
+const filteredClasses = computed(() => {
+  let list = classes.value
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase().trim()
+    list = list.filter(c => {
+      const name = (c.name || '').toLowerCase()
+      const generation = (c.academicYear?.name || c.generation?.name || c.generation?.year || '').toLowerCase()
+      const room = (c.room || '').toLowerCase()
+      return name.includes(q) || generation.includes(q) || room.includes(q)
+    })
+  }
+  if (filters.status === 'active') list = list.filter(c => c.is_active === true)
+  if (filters.status === 'inactive') list = list.filter(c => c.is_active === false)
+  if (filters.generation !== '') {
+    const gid = filters.generation as number
+    list = list.filter(c => (c.academicYear?.id || c.generation?.id) === gid)
+  }
+  return list
+})
+
+const pagination = usePagination<SchoolClass>({
+  items: filteredClasses,
+  pageSizeOptions: [10, 25, 50],
+  initialPageSize: 10,
+})
+resetPage = pagination.resetPage
+
+const columns = computed(() => [
+  ...(canDelete.value ? [{ key: 'check', label: '', width: '48px' }] : []),
+  { key: 'index', label: '#', width: '64px' },
+  { key: 'name', label: 'Class Name' },
+  { key: 'generation', label: 'Generation' },
+  { key: 'room', label: 'Room' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions', width: '90px' },
+])
+
+function generationLabel(cls: SchoolClass): string {
+  return cls.academicYear?.name || cls.generation?.name || cls.generation?.year || '—'
+}
+
+function rowClassFor(cls: SchoolClass) {
+  return { 'class-row': true, 'row-selected': selectedIds.value.includes(cls.id) }
+}
+
+const showFormModal = ref(false)
+const isEditMode = ref(false)
+const editingClass = ref<SchoolClass | null>(null)
+
+const initialForm = () => ({
   name: '',
   generation_id: null as number | null,
   room: '',
@@ -298,286 +413,440 @@ const formData = reactive({
   is_active: true,
 })
 
-const errors = reactive({ name: '', generation_id: '' })
-
-const classes = computed(() => store.classes)
-
-const filteredClasses = computed(() => {
-  let list = classes.value
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter((c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q))
-  }
-  if (statusFilter.value === 'Active') list = list.filter((c) => c.is_active)
-  if (statusFilter.value === 'Inactive') list = list.filter((c) => !c.is_active)
-  return list
-})
-
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredClasses.value.length / pageSize.value)))
-
-const paginatedClasses = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredClasses.value.slice(start, end)
-})
-
-const visiblePages = computed(() => {
-  const pages: (number | string)[] = []
-  const total = totalPages.value
-  const current = currentPage.value
-
-  if (total <= 7) {
-    for (let i = 1; i <= total; i++) pages.push(i)
-    return pages
-  }
-
-  pages.push(1)
-  if (current > 3) pages.push('...')
-  const start = Math.max(2, current - 1)
-  const end = Math.min(total - 1, current + 1)
-  for (let i = start; i <= end; i++) pages.push(i)
-  if (current < total - 2) pages.push('...')
-  pages.push(total)
-  return pages
-})
-
-function validateForm() {
-  let v = true
-  if (!formData.name.trim()) { errors.name = 'Name is required'; v = false } else errors.name = ''
-  if (!formData.generation_id) { errors.generation_id = 'Generation is required'; v = false } else errors.generation_id = ''
-  return v
-}
-
-function resetForm() {
-  Object.assign(formData, { name: '', generation_id: null, room: '', description: '', is_active: true })
-  errors.name = ''; errors.generation_id = ''
-}
-
-function openAddModal() {
-  isEditMode.value = false
-  resetForm()
-  showModal.value = true
-}
-
-function openEditModal(cls: SchoolClass) {
-  isEditMode.value = true
-  store.currentClass = cls
-  formData.name = cls.name
-  formData.generation_id = cls.generation_id
-  formData.room = cls.room ?? ''
-  formData.description = cls.description ?? ''
-  formData.is_active = cls.is_active
-  showModal.value = true
-}
-
-function closeModal() { showModal.value = false }
+const formData = reactive(initialForm())
 
 async function loadAcademicYears() {
   try {
     const r = await getAcademicYears()
     if (r.success && Array.isArray(r.data)) academicYears.value = r.data
-  } catch { academicYears.value = [] }
-}
-
-async function handleSubmit() {
-  if (!validateForm()) return
-  if (isEditMode.value && store.currentClass) {
-    const ok = await store.updateClass(store.currentClass.id, formData)
-    if (ok) { closeModal(); await store.fetchClasses(); showToast('Class updated successfully') }
-  } else {
-    const ok = await store.createClass(formData)
-    if (ok) { closeModal(); await store.fetchClasses(); showToast('Class created successfully') }
+  } catch {
+    academicYears.value = []
   }
 }
 
-function confirmDelete(cls: SchoolClass) { classToDelete.value = cls; showDeleteModal.value = true }
-function closeDeleteModal() { showDeleteModal.value = false; classToDelete.value = null }
-
-async function handleDelete() {
-  if (!classToDelete.value) return
-  const ok = await store.deleteClass(classToDelete.value.id)
-  if (ok) { closeDeleteModal(); await store.fetchClasses(); showToast('Class deleted successfully') }
+function openCreateModal() {
+  isEditMode.value = false
+  editingClass.value = null
+  Object.assign(formData, initialForm())
+  formError.value = null
+  showFormModal.value = true
 }
 
-const toast = reactive({ show: false, message: '', type: 'success' as 'success' | 'error' })
-const toastIconComponent = computed(() => toast.type === 'success' ? CheckCircle : AlertTriangle)
-
-function showToast(msg: string, type: 'success' | 'error' = 'success') {
-  toast.message = msg
-  toast.type = type
-  toast.show = true
-  setTimeout(() => { toast.show = false }, 3000)
+function openEditModal(cls: SchoolClass) {
+  isEditMode.value = true
+  editingClass.value = cls
+  formData.name = cls.name
+  formData.generation_id = cls.academicYear?.id ?? null
+  formData.room = cls.room ?? ''
+  formData.description = cls.description ?? ''
+  formData.is_active = cls.is_active
+  formError.value = null
+  showFormModal.value = true
 }
 
-// ─── Reset page on search / filter ────────────────────────────
-watch([searchQuery, statusFilter], () => {
-  currentPage.value = 1
+function closeFormModal() {
+  showFormModal.value = false
+  editingClass.value = null
+}
+
+async function handleSubmit() {
+  if (!formData.name.trim()) {
+    formError.value = 'Class name is required'
+    return
+  }
+  if (!formData.generation_id) {
+    formError.value = 'Please select a generation'
+    return
+  }
+
+  formSubmitting.value = true
+  formError.value = null
+
+  try {
+    if (isEditMode.value && editingClass.value) {
+      const ok = await store.updateClass(editingClass.value.id, {
+        name: formData.name,
+        generation_id: formData.generation_id,
+        room: formData.room || undefined,
+        description: formData.description || undefined,
+        is_active: formData.is_active,
+      })
+      if (ok) {
+        toast.success('Class updated successfully')
+        closeFormModal()
+      } else {
+        formError.value = store.error || 'Failed to update class'
+      }
+    } else {
+      const ok = await store.createClass({
+        name: formData.name,
+        generation_id: formData.generation_id,
+        room: formData.room || undefined,
+        description: formData.description || undefined,
+        is_active: formData.is_active,
+      } as Partial<SchoolClass>)
+      if (ok) {
+        toast.success('Class created successfully')
+        closeFormModal()
+      } else {
+        formError.value = store.error || 'Failed to create class'
+      }
+    }
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    formError.value = err.response?.data?.message || err.message || 'Operation failed'
+  } finally {
+    formSubmitting.value = false
+  }
+}
+
+async function confirmDelete(cls: SchoolClass) {
+  const ok = await confirm({
+    title: 'Delete Class',
+    message: `Are you sure you want to delete "${cls.name}"? The class and all associated data will be permanently removed.`,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
+  if (!ok) return
+
+  try {
+    const deleted = await store.deleteClass(cls.id)
+    if (deleted) {
+      toast.success('Class deleted successfully')
+      if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
+        pagination.changePage(pagination.currentPage.value - 1)
+      }
+    } else {
+      toast.error(store.error || 'Failed to delete class')
+    }
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    toast.error(err.response?.data?.message || err.message || 'Failed to delete class')
+  }
+}
+
+const selectedIds = ref<number[]>([])
+
+const isAllPageSelected = computed(() => {
+  return pagination.paginatedItems.value.length > 0 &&
+    pagination.paginatedItems.value.every(c => selectedIds.value.includes(c.id))
 })
+
+const isIndeterminate = computed(() => {
+  const some = pagination.paginatedItems.value.some(c => selectedIds.value.includes(c.id))
+  return some && !isAllPageSelected.value
+})
+
+function toggleSelectAll() {
+  if (isAllPageSelected.value) {
+    const pageIds = new Set(pagination.paginatedItems.value.map(c => c.id))
+    selectedIds.value = selectedIds.value.filter(id => !pageIds.has(id))
+  } else {
+    const currentIds = new Set(selectedIds.value)
+    pagination.paginatedItems.value.forEach(c => currentIds.add(c.id))
+    selectedIds.value = Array.from(currentIds)
+  }
+}
+
+function toggleSelectClass(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value.splice(idx, 1)
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = []
+}
+
+async function confirmBulkDelete() {
+  const count = selectedIds.value.length
+  const ok = await confirm({
+    title: 'Delete Classes',
+    message: `Are you sure you want to delete ${count} class(es)? These classes and all associated data will be permanently removed.`,
+    confirmLabel: `Delete ${count} class(es)`,
+    danger: true,
+  })
+  if (!ok) return
+
+  const idsToDelete = [...selectedIds.value]
+  try {
+    const results = await Promise.allSettled(idsToDelete.map(id => store.deleteClass(id)))
+    const allOk = results.every(r => r.status === 'fulfilled')
+    if (allOk) {
+      toast.success(`${idsToDelete.length} class(es) deleted successfully`)
+      clearSelection()
+      if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
+        pagination.changePage(pagination.currentPage.value - 1)
+      }
+    } else {
+      toast.error('Failed to delete some classes')
+    }
+  } catch (e: unknown) {
+    const err = e as { message?: string }
+    toast.error(err.message || 'Failed to delete classes')
+  }
+}
+
+function getClassAvatarBg(): string {
+  return '#2563eb'
+}
 
 onMounted(async () => {
   await Promise.all([store.fetchClasses(), loadAcademicYears()])
 })
-
-function classIconBg() {
-  return '#2563eb'
-}
 </script>
 
 <style scoped>
-.page-container { padding: 1rem 1.5rem 2rem; font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif; color: #0f172a; max-width: 1440px; }
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; gap: 16px; flex-wrap: wrap; }
-.page-head-left { display: flex; align-items: center; gap: 14px; }
-.page-icon { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.page-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.025em; }
-.page-desc { font-size: 0.8rem; color: #64748b; margin: 0; }
-.page-head-right { display: flex; align-items: center; gap: 10px; }
 
-.msg { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; margin-bottom: 14px; }
-.msg-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-.msg-success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-.msg-close { margin-left: auto; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.5; padding: 0 4px; }
-.msg-close:hover { opacity: 1; }
+.classes-page {
+  height: calc(100vh - 96px);
+  width: calc(100% + 12px);
+  margin-top: -6px;
+  margin-left: -6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
 
-.load-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4rem; color: #64748b; }
-.spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
-.spinner-sm { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-.table-wrap { background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; }
-.tbl { width: 100%; border-collapse: collapse; }
-.tbl thead th { padding: 12px 16px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; text-align: left; white-space: nowrap; }
-.tbl tbody tr { transition: background 0.15s; }
-.tbl tbody tr:hover { background: #f8faff; }
-.tbl tbody td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
-.td-empty { text-align: center; padding: 3rem 1rem; }
-.empty-box { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; }
-.empty-box h5 { font-weight: 700; color: #64748b; margin: 0; font-size: 1rem; }
-.empty-box p { font-size: 0.85rem; margin: 0; }
+.class-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: box-shadow 0.25s ease;
+}
 
-.td-name { cursor: pointer; }
-.cls-avatar { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; margin-right: 8px; vertical-align: middle; }
-.cls-name { font-weight: 600; font-size: 0.9rem; color: #0f172a; }
-.td-meta { cursor: pointer; }
-.meta-val { font-size: 0.82rem; color: #64748b; }
+.class-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
 
-.pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em; }
-.pill-on { background: #dcfce7; color: #16a34a; }
-.pill-off { background: #f1f5f9; color: #94a3b8; }
+.filter-label :deep(svg) { color: #94a3b8; }
 
-.td-actions { white-space: nowrap; }
-.act-btn { background: none; border: none; padding: 5px 6px; border-radius: 6px; cursor: pointer; color: #94a3b8; transition: all 0.15s; }
-.act-btn:hover { background: #f1f5f9; color: #3b82f6; }
-.act-danger:hover { background: #fef2f2; color: #ef4444; }
 
-.overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.45); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
-.modal-card { background: #fff; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden; animation: modal-in 0.25s ease-out; }
-.modal-sm { max-width: 380px; }
-@keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
-.modal-head { display: flex; align-items: flex-start; gap: 14px; padding: 20px 24px 0; position: relative; }
+.table-wrap {
+  width: 100%;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.table-wrap :deep(.data-table-wrapper) {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.col-check {
+  text-align: center;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+}
+
+.col-index {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.actions-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.class-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.class-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.class-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.85rem;
+}
+
+.meta-cell {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px 0;
+  position: relative;
+  flex-wrap: nowrap;
+}
 .modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
 .modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
-.modal-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
-.icon-add { background: #dbeafe; color: #2563eb; }
-.icon-edit { background: #fef3c7; color: #d97706; }
-.icon-danger { background: #fee2e2; color: #ef4444; }
-.modal-x { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px; }
+
+.modal-x {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94a3b8;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
 .modal-x:hover { color: #475569; }
-.modal-body { padding: 16px 24px 20px; }
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
-.req { color: #ef4444; }
-.field input, .field select, .field textarea { width: 100%; padding: 8px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 0.88rem; outline: none; transition: border-color 0.15s; box-sizing: border-box; font-family: inherit; background: #fff; color: #0f172a; }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.field input.err, .field select.err { border-color: #ef4444; }
-.field-err { display: block; font-size: 0.75rem; color: #ef4444; margin-top: 3px; font-weight: 500; }
-.del-text { font-size: 0.9rem; color: #475569; margin: 0; }
-.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 24px 20px; }
 
-.btn { display: inline-flex; align-items: center; gap: 8px; padding: 0.5rem 1.125rem; border-radius: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
-.btn-primary { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
-.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-ghost { background: #f1f5f9; color: #475569; }
-.btn-ghost:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
+.modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
 
-.toolbar {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px; flex-wrap: wrap;
-}
-.tb-search {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 14px; height: 38px;
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
-  min-width: 200px; flex: 1; max-width: 320px;
-  transition: border-color 0.2s;
-}
-.tb-search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.tb-search svg { color: #94a3b8; flex-shrink: 0; }
-.tb-search input {
-  border: none; background: transparent; outline: none;
-  width: 100%; font-size: 0.85rem; color: #1e293b; font-family: inherit;
-}
-.tb-search input::placeholder { color: #94a3b8; }
-.tb-clear { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; }
-.tb-filter select {
-  height: 38px; padding: 0 12px; border: 1.5px solid #e2e8f0;
-  border-radius: 10px; background: #fff; font-size: 0.85rem;
-  color: #475569; cursor: pointer; outline: none; font-family: inherit;
-}
-.tb-filter select:focus { border-color: #93c5fd; }
+.icon-create { background: #dbeafe; color: #2563eb; }
+.icon-edit { background: #fef3c7; color: #d97706; }
 
-.toast-bar { position: fixed; top: 20px; right: 20px; z-index: 99999; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 400px; }
-.toast-bar.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-.toast-bar.error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-.toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.6; margin-left: auto; padding: 0 4px; }
-.toast-close:hover { opacity: 1; }
+.modal-body-custom { padding: 16px 24px 20px; }
 
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
-.modal-enter-active, .modal-leave-active { transition: all 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.96); }
-.row-enter-active, .row-leave-active { transition: all 0.3s ease; }
-.row-enter-from { opacity: 0; transform: translateX(-20px); }
-.row-leave-to { opacity: 0; transform: translateX(20px); }
+.form-group { margin-bottom: 0; }
 
-/* ══════════════════════════════════════════════════════════════
-   PAGINATION
-   ══════════════════════════════════════════════════════════════ */
-.pagination-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px; border-top: 1px solid #e5e7eb;
-  background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
-  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 7px;
 }
-.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
-.rows-label { font-weight: 500; white-space: nowrap; }
-.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
-.rows-btn {
-  padding: 4px 10px; border: none; background: transparent;
-  color: #64748b; border-radius: 6px; cursor: pointer;
-  font-size: 0.75rem; font-weight: 600; font-family: inherit;
-  transition: all 0.15s ease;
+
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
 }
-.rows-btn:hover { color: #334155; }
-.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.pagination-pages { display: flex; align-items: center; gap: 2px; }
-.page-nav {
-  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-  border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
+
+.req {
+  color: #ef4444;
+  font-weight: 700;
 }
-.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
-.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
-.page-btn {
-  min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-  border: none; background: transparent; color: #475569;
-  border-radius: 8px; cursor: pointer; font-size: 0.8125rem;
-  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
+
+.field-err {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  font-weight: 500;
 }
-.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
-.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
-.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
-.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+
+.input-wrap { position: relative; }
+
+.styled-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  box-sizing: border-box;
+}
+
+.styled-input:hover { border-color: #9ca3af; }
+.styled-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.styled-input::placeholder { color: #adb5bd; }
+
+.styled-input.err {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+}
+
+select.styled-input {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  font-size: 0.8125rem;
+  color: #991b1b;
+  background: #fef2f2;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  border-left: 4px solid #ef4444;
+}
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+  margin: 14px 0 16px;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.row-2-equal > * {
+  min-width: 0;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 24px 20px;
+}
+
+
+.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 </style>

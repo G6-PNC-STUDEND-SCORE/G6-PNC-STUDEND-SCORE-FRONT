@@ -1,33 +1,63 @@
 <template>
-  <div class="score-sheet">
-    <!-- Toolbar -->
+  <div class="score-sheet" @click="refocusSheet">
     <div class="sheet-toolbar">
       <button class="tb-btn" @click="goBack" title="Back">
         <i class="bi bi-arrow-left"></i>
       </button>
       <div class="offering-info">
-        <strong>{{ data?.subject?.name || 'Subject' }}</strong>
-        <span class="text-muted">
-          <span class="term-badge">{{ data?.term?.name }}</span>
-          <template v-if="data?.offerings?.length">
-            · {{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}
-          </template>
+        <span class="offering-item offering-item-main">{{ data?.subject?.name || 'Subject' }}</span>
+        <span class="offering-item offering-item-badge offering-term">{{ data?.term?.name }}</span>
+        <span v-if="className" class="offering-item offering-item-badge offering-class">
+          {{ className }}
         </span>
+        <template v-if="data?.offerings?.length">
+          <span class="offering-item offering-item-teachers">{{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}</span>
+        </template>
       </div>
       <div class="toolbar-spacer"></div>
       <div class="toolbar-actions">
         <div class="btn-group">
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
-          <button class="tb-btn" @click="syncToGoogle" title="Export to Google Sheets" :disabled="syncing"><i :class="syncing ? 'bi bi-arrow-repeat spinning' : 'bi bi-google'"></i><span>{{ syncing ? 'Exporting...' : 'Google Sheets' }}</span></button>
+          <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading">
+            <template v-if="gsLoading">
+              <i class="bi bi-arrow-repeat spinning"></i>
+            </template>
+            <template v-else>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="gs-icon">
+                <path d="M6 2h9l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2z" fill="#34A853"/>
+                <path d="M15 2v4h4" fill="white"/>
+                <path d="M15 2l4 4" stroke="#34A853" stroke-width="0.5"/>
+                <path d="M7.5 9.5h9M7.5 12.5h9M7.5 15.5h9M7.5 18.5h7" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+                <path d="M12 9.5v9" stroke="white" stroke-width="1.2"/>
+                <path d="M16.5 9.5v9" stroke="white" stroke-width="1.2"/>
+              </svg>
+            </template>
+            <span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span>
+          </button>
           <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
-          <button class="tb-btn" @click="exportCSV" title="Export CSV"><i class="bi bi-download"></i> <span>Export</span></button>
-          <button class="tb-btn" @click="refreshData" title="Refresh"><i class="bi bi-arrow-clockwise" :class="{ spinning: loading }"></i></button>
+          <div class="export-dropdown" @click.stop>
+            <button class="tb-btn" @click="showExportMenu = !showExportMenu" title="Export" ref="exportBtnRef"><i class="bi bi-download"></i> <span>Export</span> <i class="bi bi-chevron-down" style="font-size:0.6rem;margin-left:2px"></i></button>
+            <div v-if="showExportMenu" class="export-menu">
+              <div class="export-menu-item" @click="exportFormat('xlsx')"><i class="bi bi-file-earmark-excel"></i> Export as Excel (.xlsx)</div>
+              <div class="export-menu-item" @click="exportFormat('pdf')"><i class="bi bi-filetype-pdf"></i> Export as PDF</div>
+            </div>
+          </div>
+        </div>
+        <div class="toolbar-meta">
+          <span v-if="gsReconnectNeeded" class="gs-sync-status gs-reconnect-needed">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#f59e0b;font-size:11px"></i>
+            <a class="gs-reconnect-link" @click="openGoogleSheetsDirect" title="Re-connect Google account">Reconnect Google</a>
+          </span>
+
         </div>
         <div class="search-box">
-          <i class="bi bi-search"></i>
-          <input v-model="searchQuery" type="text" placeholder="Search student..." />
+          <i class="bi bi-search search-icon"></i>
+          <input v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
         </div>
+        <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
+          <i class="bi bi-keyboard"></i>
+        </button>
         <div class="save-status" :class="saveStatusClass" :title="saveStatusText">
           <i :class="saveStatusIcon"></i>
           <span class="status-text">{{ saveStatusText }}</span>
@@ -35,7 +65,6 @@
       </div>
     </div>
 
-    <!-- Stats bar -->
     <div class="stats-bar" v-if="data">
       <div class="stat-item"><span class="stat-label">Students</span><span class="stat-value">{{ filteredRows.length }}</span></div>
       <div class="stat-item"><span class="stat-label">Avg Score</span><span class="stat-value">{{ averageScore.toFixed(1) }}</span></div>
@@ -47,7 +76,6 @@
       </div>
     </div>
 
-    <!-- Spreadsheet Table -->
     <div class="sheet-wrapper" tabindex="0" @keydown="onGlobalKeydown" ref="sheetContainer" @paste="onPaste" @copy="onCopy" @cut="onCut">
       <div class="sheet-scroll" @scroll="onScroll">
         <table class="sheet-table">
@@ -55,22 +83,32 @@
             <tr>
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
               <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
-              <th class="cell-header cell-frozen student-class-header">Class</th>
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
-              <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ minWidth: '80px' }">
+              <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ width: '140px', minWidth: '140px', maxWidth: '140px' }">
                 <div class="header-content column-header-content">
-                  <span class="column-label" :title="col.label" @lclick.stop="startRenameColumn(col)">{{ col.label }}</span>
-                  <select v-model="columnTypes[col.id]" @change="onColumnTypeChange(col, $event)" class="column-type-select" @click.stop @mousedown.stop>
-                <option value="quiz">Quiz</option>
-                <option value="assignment">Assignment</option>
-                <option value="project">Project</option>
-                <option value="midterm">Midterm</option>
-                <option value="final">Final</option>
-                <option value="custom">Custom</option>
-              </select>
-                  <div class="column-actions">
-                    <button class="col-action-btn" @click="startRenameColumn(col)" title="Rename"><i class="bi bi-pencil"></i></button>
-                    <button class="col-action-btn text-danger" @click="confirmDeleteColumn(col)" title="Delete"><i class="bi bi-trash3"></i></button>
+                  <div class="column-label-row">
+                    <span class="column-label" :title="col.label" @dblclick.stop="startRenameColumn(col)">{{ col.label }}</span>
+                    <div class="column-actions">
+                      <button class="col-action-btn" @click="startRenameColumn(col)" title="Rename"><i class="bi bi-pencil"></i></button>
+                      <button class="col-action-btn col-action-delete" @click="confirmDeleteColumn(col)" title="Delete"><i class="bi bi-trash3"></i></button>
+                    </div>
+                  </div>
+                  <div class="col-type-badge" :class="`col-type-${columnTypes[col.id] || col.type}`" @click.stop="(e) => toggleColTypeDropdown(col.id, e)" @keydown.enter.stop="(e) => toggleColTypeDropdown(col.id, e)" tabindex="0" role="button" :title="'Type: ' + getTypeLabel(columnTypes[col.id] || col.type)">
+                    <span class="col-type-label">{{ getTypeLabel(columnTypes[col.id] || col.type) }}</span>
+                    <svg class="col-type-chevron" width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M1 2l3 3 3-3z"/></svg>
+                    <div v-if="openColTypeDropdown === col.id" class="col-type-dropdown" @click.stop @mousedown.stop>
+                      <div
+                        v-for="opt in typeOptions"
+                        :key="opt.value"
+                        class="col-type-option"
+                        :class="{ active: (columnTypes[col.id] || col.type) === opt.value }"
+                        @click.stop="changeColType(col, opt.value)"
+                      >
+                        <span class="col-type-dot" :class="`col-type-${opt.value}`"></span>
+                        {{ opt.label }}
+                        <span v-if="(columnTypes[col.id] || col.type) === opt.value" class="col-type-check">✓</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div v-if="col.max_score" class="max-score-label">/ {{ col.max_score }}</div>
@@ -82,12 +120,7 @@
                 <div v-if="showInlineAddColumn" class="inline-add-col" @click.stop>
                   <input v-model="inlineColName" placeholder="Column name" class="inline-input" @keydown.enter="doAddColumnInline" />
                   <select v-model="inlineColType" class="inline-select" @keydown.enter.prevent>
-                    <option value="quiz">Quiz</option>
-                    <option value="assignment">Assignment</option>
-                    <option value="project">Project</option>
-                    <option value="midterm">Midterm</option>
-                    <option value="final">Final</option>
-                    <option value="custom">Custom</option>
+                    <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                   </select>
                   <input v-model.number="inlineColMax" type="number" class="inline-input" placeholder="Max" @keydown.enter="doAddColumnInline" />
                   <button class="inline-btn" @click="doAddColumnInline">Add</button>
@@ -98,10 +131,10 @@
           </thead>
           <tbody>
             <tr v-for="(row, rowIndex) in visibleRows" :key="row.enrollment_id"
-              :class="{ 'row-selected': editingRow === null && isRowSelected(rowIndex) }"
+              :class="{ 'row-selected': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
               @contextmenu.prevent="showContextMenu($event, rowIndex)">
               <td class="cell cell-frozen row-num"
-                :class="{ 'row-num-highlighted': editingRow === null && isRowSelected(rowIndex) }"
+                :class="{ 'row-num-highlighted': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
                 @click.stop>{{ rowIndex + 1 }}</td>
 
               <td class="cell cell-frozen cell-student-name"
@@ -112,19 +145,19 @@
                 @dblclick.prevent.stop="startEditing(rowIndex, -1)"
               >
                 <div class="student-name-cell-inner">
-                  <div v-if="editingRow === rowIndex && editingCol === -1" class="cell-editor-wrapper">
+                  <span class="cell-value"
+                    :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === -1 }"
+                    :title="row.student_name"
+                  >{{ row.student_name }}</span>
+                  <div v-if="editingRow === rowIndex && editingCol === -1" class="cell-editor-wrapper cell-editor-overlay-frozen">
                     <input ref="cellEditor" v-model="editValue" type="text" class="cell-editor"
                       @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" />
                   </div>
-                  <span v-else class="cell-value" :title="row.student_name">{{ row.student_name }}</span>
                   <div v-if="showFillHandle(rowIndex, -1)" class="fill-handle fill-handle-frozen"
                     @mousedown.prevent.stop="fillNextStudentName(rowIndex)" @click.stop title="Fill next name down">+</div>
                 </div>
               </td>
 
-              <td class="cell cell-frozen cell-student-class">
-                <span class="cell-value" :title="row.class_name">{{ row.class_name || '-' }}</span>
-              </td>
 
               <td class="cell cell-frozen cell-student-id"
                 :class="getStudentIdCellClass(rowIndex)"
@@ -134,11 +167,14 @@
                 @dblclick.prevent.stop="startEditing(rowIndex, 0)"
               >
                 <div class="student-id-cell-inner">
-                  <div v-if="editingRow === rowIndex && editingCol === 0" class="cell-editor-wrapper id-editor-wrapper">
+                  <span class="cell-value"
+                    :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === 0 }"
+                    :title="row.student_number"
+                  >{{ row.student_number }}</span>
+                  <div v-if="editingRow === rowIndex && editingCol === 0" class="cell-editor-wrapper cell-editor-overlay-frozen id-editor-wrapper">
                     <input ref="cellEditor" v-model="editValue" type="text" class="cell-editor id-editor-input" list="student-numbers-list"
                       @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" placeholder="Select or type ID..." />
                   </div>
-                  <span v-else class="cell-value" :title="row.student_number">{{ row.student_number }}</span>
                   <div v-if="showFillHandle(rowIndex, 0)" class="fill-handle fill-handle-frozen"
                     @mousedown.prevent.stop="fillNextStudentId(rowIndex)" @click.stop title="Fill next ID down">+</div>
                 </div>
@@ -151,13 +187,16 @@
                 :class="getScoreCellClass(rowIndex, col)"
                 @mousedown.prevent="onCellMouseDown($event, rowIndex, col.id)"
               >
-                <div v-if="editingRow === rowIndex && editingCol === col.id" class="cell-editor-wrapper">
+                <span class="cell-value"
+                  :class="{ 'cell-value-hidden': editingRow === rowIndex && editingCol === col.id }"
+                  :title="getCellTitle(col, row)"
+                >{{ formatCellValue(getCellMark(row, col.id)) }}</span>
+
+                <div v-if="editingRow === rowIndex && editingCol === col.id" class="cell-editor-wrapper cell-editor-overlay">
                   <input ref="cellEditor" v-model="editValue" type="text" inputmode="decimal" class="cell-editor"
                     @keydown="onEditKeydown" @blur="saveEdit()" @input="onEditInput" />
                 </div>
-                <span v-else class="cell-value" :title="getCellTitle(col, row)">{{ formatCellValue(getCellMark(row, col.id)) }}</span>
 
-                <!-- Fill handle: show on active cell when not editing and not in range selection -->
                 <div v-if="showFillHandle(rowIndex, col.id)" class="fill-handle"
                   @mousedown.prevent.stop="onFillHandleMouseDown($event, rowIndex, col.id)" @click.stop>+</div>
               </td>
@@ -166,7 +205,7 @@
               <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
-              <td :colspan="4 + columns.length + 2" class="cell-frozen add-row-cell">
+              <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
                 <i class="bi bi-plus-lg"></i> Add Student Row
               </td>
             </tr>
@@ -175,7 +214,16 @@
       </div>
     </div>
 
-    <!-- Right-click Context Menu -->
+    <div v-if="importProgress > 0" class="import-progress-overlay">
+      <div class="import-progress-card">
+        <div class="import-progress-status">{{ importStatusText }}</div>
+        <div class="import-progress-bar-track">
+          <div class="import-progress-bar-fill" :style="{ width: importProgress + '%' }"></div>
+        </div>
+        <div class="import-progress-pct">{{ Math.round(importProgress) }}%</div>
+      </div>
+    </div>
+
     <div v-if="contextMenu" class="context-menu" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
       <div class="context-menu-item" @click="insertRowAbove(contextMenu.rowIdx)">
         <i class="bi bi-plus-lg"></i> Insert Row Above
@@ -189,155 +237,613 @@
       </div>
     </div>
 
-    <!-- Datalist for student ID suggestions (must be outside table) -->
     <datalist id="student-numbers-list">
       <option v-for="num in studentNumbers" :key="num" :value="num"></option>
     </datalist>
 
-    <!-- Page Size Selector -->
-    <div class="table-footer">
-      <div class="page-size-selector">
-        <span class="page-size-label">Show</span>
-        <select v-model="pageSize" class="page-size-select">
-          <option :value="5">5</option>
-          <option :value="10">10</option>
-          <option :value="15">15</option>
-          <option :value="20">20</option>
-          <option :value="50">50</option>
-          <option value="all">All</option>
-        </select>
-        <span class="page-size-label">of {{ filteredRows.length }} rows</span>
+    <div v-if="filteredRows.length > 0" class="pagination-bar">
+      <div class="pagination-info">
+        <span class="rows-label">Rows per page:</span>
+        <div class="rows-selector">
+          <button
+            v-for="size in [10, 25, 50, 75, 100]"
+            :key="size"
+            class="rows-btn"
+            :class="{ active: pageSize === size }"
+            @click="pageSize = size; currentPage = 1"
+          >{{ size }}</button>
+          
+        </div>
+      </div>
+
+      <div v-if="pageSize !== 'all'" class="pagination-pages">
+        <button
+          class="page-nav"
+          :disabled="currentPage <= 1"
+          @click="currentPage--"
+          aria-label="Previous page"
+        >
+          <i class="bi bi-chevron-left"></i>
+        </button>
+
+        <template v-for="(page, idx) in visiblePages" :key="'vp-' + idx">
+          <button
+            v-if="page !== '...'"
+            class="page-btn"
+            :class="{ active: currentPage === page }"
+            @click="currentPage = page as number"
+          >{{ page }}</button>
+          <span v-else class="page-dots">…</span>
+        </template>
+
+        <button
+          class="page-nav"
+          :disabled="currentPage >= totalPages"
+          @click="currentPage++"
+          aria-label="Next page"
+        >
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="pagination-total" v-if="pageSize !== 'all'">
+        {{ (currentPage - 1) * (pageSize as number) + 1 }}-{{ Math.min(currentPage * (pageSize as number), filteredRows.length) }} of {{ filteredRows.length }}
+      </div>
+      <div class="pagination-total" v-else>
+        All {{ filteredRows.length }} rows
       </div>
     </div>
 
-    <!-- Modals (unchanged) -->
-    <div v-if="renamingColumn" class="modal-overlay" @click.self="renamingColumn = null">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Rename Column</h5><button class="modal-close" @click="renamingColumn = null">&times;</button></div>
-        <div class="modal-body"><div class="form-group"><label>New Label</label><input v-model="renameValue" class="form-input" ref="renameInput" @keydown.enter="doRenameColumn" /></div></div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="renamingColumn = null">Cancel</button><button class="btn btn-primary" @click="doRenameColumn">Rename</button></div>
-      </div>
-    </div>
-    <div v-if="showAddColumn" class="modal-overlay" @click.self="showAddColumn = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Add New Column</h5><button class="modal-close" @click="showAddColumn = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-group"><label>Type</label><select v-model="newColumn.type" class="form-input"><option value="quiz">Quiz</option><option value="assignment">Assignment</option><option value="project">Project</option><option value="midterm">Midterm</option><option value="final">Final</option></select></div>
-          <div class="form-group"><label>Label</label><input v-model="newColumn.label" class="form-input" placeholder="e.g. Quiz 1" /></div>
-          <div class="form-group"><label>Max Score</label><input v-model.number="newColumn.max_score" type="number" min="1" class="form-input" placeholder="100" /></div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="showAddColumn = false">Cancel</button><button class="btn btn-primary" @click="doAddColumn">Add</button></div>
-      </div>
-    </div>
-    <div v-if="showWeights" class="modal-overlay" @click.self="showWeights = false">
-      <div class="modal-content">
-        <div class="modal-header"><h5>Weight Configuration</h5><button class="modal-close" @click="showWeights = false">&times;</button></div>
-        <div class="modal-body">
-          <table class="weight-table" v-if="assessments.length">
-            <thead><tr><th>Component</th><th>Weight (%)</th></tr></thead>
-            <tbody>
-              <tr v-for="at in assessments" :key="at.id">
-                <td><span class="weight-name">{{ at.name }}</span><span class="weight-code">{{ at.code }}</span></td>
-                <td><input v-model.number="weightEdits[at.id]" type="number" min="0" max="100" step="0.5" class="form-input weight-input" /></td>
-              </tr>
-            </tbody>
-          </table>
-          <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">Total: {{ totalWeight.toFixed(1) }}% {{ totalWeight === 100 ? '✓' : '(must be 100%)' }}</div>
-        </div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="showWeights = false">Cancel</button><button class="btn btn-primary" :disabled="totalWeight !== 100" @click="doUpdateWeights">Save & Recalculate</button></div>
-      </div>
-    </div>
-    <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Delete Column</h5><button class="modal-close" @click="deleteConfirm = null">&times;</button></div>
-        <div class="modal-body"><p>Delete "<strong>{{ deleteConfirm.label }}</strong>"? This removes it for all students.</p></div>
-        <div class="modal-footer"><button class="btn btn-secondary" @click="deleteConfirm = null">Cancel</button><button class="btn btn-danger" @click="doDeleteColumn">Delete</button></div>
-      </div>
-    </div>
-    <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Add Student Rows</h5><button class="modal-close" @click="showAddRowPopup = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label>Number of rows to add:</label>
-            <input v-model.number="addRowCount" type="number" min="1" max="50" class="form-input" />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showAddRowPopup = false">Cancel</button>
-          <button class="btn btn-primary" @click="doAddRows">Add {{ addRowCount }} Row{{ addRowCount > 1 ? 's' : '' }}</button>
-        </div>
-      </div>
-    </div>
-    <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
-      <div class="modal-content modal-sm">
-        <div class="modal-header"><h5>Import File</h5><button class="modal-close" @click="showImport = false">&times;</button></div>
-        <div class="modal-body">
-          <div class="import-notice"><i class="bi bi-info-circle"></i><div><strong>Supported formats:</strong><ul class="import-steps" style="margin-top:6px;padding-left:18px"><li><strong>CSV</strong> — Comma-separated values</li><li><strong>Excel (.xlsx, .xls)</strong> — Microsoft Excel workbook</li><li><strong>PDF</strong> — Text-based PDF tables</li></ul><p style="font-size:0.8rem;color:#64748b;margin-top:6px">Your file should have columns: Student Name, Student ID, then score columns matching your assessment types.</p></div></div>
-          <div class="file-upload-area" @drop.prevent="onFileDrop" @dragover.prevent>
-            <i class="bi bi-file-earmark-spreadsheet" style="font-size:2rem;color:#3b82f6"></i>
-            <p style="margin:8px 0 4px;font-weight:600;color:#1e293b">Drop your file here</p>
-            <p style="margin:0;font-size:0.78rem;color:#94a3b8">or click to browse</p>
-            <input ref="fileInputRef" type="file" accept=".csv,.xlsx,.xls" hidden @change="onFileSelected" />
-            <button class="btn btn-primary btn-sm" style="margin-top:10px" @click="openFilePicker">
-              <i class="bi bi-folder2-open"></i> Choose File
-            </button>
-            <div v-if="selectedFileName" class="selected-file-name">
-              <i class="bi bi-check-circle-fill" style="color:#22c55e"></i> {{ selectedFileName }}
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="renamingColumn" class="modal-overlay" @click.self="renamingColumn = null">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="renamingColumn = null" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-rename">
+                <i class="bi bi-pencil-square"></i>
+              </div>
+              <div>
+                <h5>Rename Column</h5>
+                <p class="modal-subtitle">Give the column a new name</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-fonts me-1"></i>
+                  New Label
+                </label>
+                <div class="input-wrapper">
+                  <input v-model="renameValue" ref="renameInput" type="text" class="modern-input"
+                    @keydown.enter="doRenameColumn" placeholder="Enter new column name" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="renamingColumn = null">Cancel</button>
+              <button class="btn-primary-custom" @click="doRenameColumn">
+                <i class="bi bi-check-lg me-1"></i>
+                Rename
+              </button>
             </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showImport = false; selectedFileName = ''">Cancel</button>
-          <button class="btn btn-primary" :disabled="!pendingFile" @click="processImportFile">
-            <i class="bi bi-upload"></i> Import
-          </button>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showAddColumn" class="modal-overlay" @click.self="showAddColumn = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showAddColumn = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-plus-circle"></i>
+              </div>
+              <div>
+                <h5>Add New Column</h5>
+                <p class="modal-subtitle">Add a new score column to the spreadsheet</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-tag me-1"></i>
+                  Type
+                </label>
+                <div class="input-wrapper">
+                  <select v-model="newColumn.type" class="modern-input">
+                    <option v-for="opt in typeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    <option value="__custom__">Custom…</option>
+                  </select>
+                  <div v-if="newColumn.type === '__custom__'" class="form-group" style="margin-top: 8px">
+                    <label class="form-label">
+                      <i class="bi bi-pencil me-1"></i>
+                      Custom Type Name
+                    </label>
+                    <div class="input-wrapper">
+                      <input v-model="newColumn.customTypeName" type="text" class="modern-input" placeholder="e.g. Final Exam" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-fonts me-1"></i>
+                  Label
+                </label>
+                <div class="input-wrapper">
+                  <input v-model="newColumn.label" type="text" class="modern-input" placeholder="e.g. Quiz 1" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-arrow-up-circle me-1"></i>
+                  Max Score
+                </label>
+                <div class="input-wrapper">
+                  <input v-model.number="newColumn.max_score" type="number" min="1" class="modern-input" placeholder="100" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showAddColumn = false">Cancel</button>
+              <button class="btn-primary-custom" @click="doAddColumn">
+                <i class="bi bi-check-lg me-1"></i>
+                Add Column
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showWeights" class="modal-overlay" @click.self="showWeights = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showWeights = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-weights">
+                <i class="bi bi-sliders"></i>
+              </div>
+              <div>
+                <h5>Weight Configuration</h5>
+                <p class="modal-subtitle">Set weight percentages for each assessment type</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <div v-if="!assessments.length" class="no-assessments-text">
+                No assessment types available.
+              </div>
+              <div v-for="at in assessments" :key="at.id" class="weight-row">
+                <div class="weight-info">
+                  <span class="weight-name">{{ at.name }}</span>
+                  <span class="weight-code">{{ at.code }}</span>
+                </div>
+                <div class="weight-input-group">
+                  <input v-model.number="weightEdits[at.id]" type="number" min="0" max="100" step="0.5" class="modern-input weight-input-field" />
+                  <span class="weight-suffix">%</span>
+                </div>
+              </div>
+
+              <div class="weight-divider"></div>
+              <div class="new-type-section">
+                <div class="new-type-header" @click="showNewTypeForm = !showNewTypeForm">
+                  <i class="bi" :class="showNewTypeForm ? 'bi-dash-circle' : 'bi-plus-circle'"></i>
+                  <span>New Assessment Type</span>
+                </div>
+                <div v-if="showNewTypeForm" class="new-type-form">
+                  <div class="new-type-row">
+                    <div class="new-type-field">
+                      <label class="new-type-label">Code</label>
+                      <input v-model="newTypeCode" type="text" class="modern-input" placeholder="e.g. final" />
+                    </div>
+                    <div class="new-type-field">
+                      <label class="new-type-label">Name</label>
+                      <input v-model="newTypeName" type="text" class="modern-input" placeholder="e.g. Final Exam" />
+                    </div>
+                    <div class="new-type-field new-type-field-sm">
+                      <label class="new-type-label">Weight %</label>
+                      <input v-model.number="newTypeWeight" type="number" min="0" max="100" step="0.5" class="modern-input" placeholder="20" />
+                    </div>
+                    <div class="new-type-action">
+                      <button class="btn-primary-custom btn-sm" :disabled="!newTypeCode.trim() || !newTypeName.trim()" @click="doCreateType">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="weight-total-bar" :class="{ 'weight-ok': totalWeight === 100, 'weight-warn': totalWeight !== 100 }">
+                <i :class="totalWeight === 100 ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-triangle-fill'"></i>
+                <span>Total: <strong>{{ totalWeight.toFixed(1) }}%</strong></span>
+                <span v-if="totalWeight !== 100" class="weight-hint">(must equal 100%)</span>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showWeights = false">Cancel</button>
+              <button class="btn-primary-custom" :disabled="totalWeight !== 100" @click="doUpdateWeights">
+                <i class="bi bi-check-lg me-1"></i>
+                Save &amp; Recalculate
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="deleteConfirm = null" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-delete">
+                <i class="bi bi-trash3"></i>
+              </div>
+              <div>
+                <h5>Delete Column</h5>
+                <p class="modal-subtitle">This action cannot be undone</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <p class="delete-warning-text">
+                Are you sure you want to delete <strong>"{{ deleteConfirm.label }}"</strong>?
+                This removes the column and all its scores for every student.
+              </p>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="deleteConfirm = null">Cancel</button>
+              <button class="btn-danger-custom" @click="doDeleteColumn">
+                <i class="bi bi-trash3 me-1"></i>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showAddRowPopup = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-person-plus"></i>
+              </div>
+              <div>
+                <h5>Add Student Rows</h5>
+                <p class="modal-subtitle">Add new student enrollment rows to the score sheet</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-123 me-1"></i>
+                  Number of rows
+                </label>
+                <div class="input-wrapper">
+                  <input v-model.number="addRowCount" type="number" min="1" max="50" class="modern-input" placeholder="1" />
+                </div>
+                <p class="field-hint">Each new row creates an empty enrollment for a new student (max 50).</p>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showAddRowPopup = false">Cancel</button>
+              <button class="btn-primary-custom" @click="doAddRows">
+                <i class="bi bi-check-lg me-1"></i>
+                Add {{ addRowCount }} Row{{ addRowCount > 1 ? 's' : '' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
+          <div class="import-modal">
+            <div class="import-modal-head">
+              <div class="import-modal-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <div>
+                <h3>Import Scores</h3>
+                <p>Upload student scores from Excel or PDF</p>
+              </div>
+              <button class="import-modal-close" @click="showImport = false; selectedFileName = ''; filePreview = null" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+
+            <div class="import-modal-body">
+              <div class="import-formats">
+                <span class="import-format import-format-excel">
+                  <i class="bi bi-file-earmark-excel"></i> Excel
+                </span>
+                <span class="import-format import-format-pdf">
+                  <i class="bi bi-filetype-pdf"></i> PDF
+                </span>
+              </div>
+
+              <div v-if="!selectedFileName" class="import-zone"
+                @drop.prevent="onFileDrop" @dragover.prevent="dragOver = true"
+                @dragleave.prevent="dragOver = false"
+                :class="{ 'import-zone-over': dragOver }"
+                @click="openFilePicker">
+                <input ref="fileInputRef" type="file" accept=".xlsx,.xls,.pdf" hidden @change="onFileSelected" />
+                <div class="import-zone-icon">
+                  <i class="bi bi-cloud-upload"></i>
+                </div>
+                <div class="import-zone-text">
+                  <span class="import-zone-title">Drop your file here</span>
+                  <span class="import-zone-sub">or click to browse</span>
+                </div>
+              </div>
+
+              <div v-else class="import-file">
+                <div class="import-file-accent"></div>
+                <div class="import-file-main">
+                  <div class="import-file-type-icon">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                  </div>
+                  <div class="import-file-info">
+                    <span class="import-file-name">{{ selectedFileName }}</span>
+                    <span class="import-file-size">{{ fileSizeFormatted }}</span>
+                  </div>
+                  <button class="import-file-remove" @click="clearFile" title="Remove file">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+
+                <div v-if="filePreview" class="import-preview">
+                  <div class="import-preview-stats">
+                    <div class="import-preview-stat">
+                      <div class="import-preview-stat-icon import-icon-students">
+                        <i class="bi bi-people"></i>
+                      </div>
+                      <span class="import-preview-num">{{ filePreview.rowCount }}</span>
+                      <span class="import-preview-label">Students</span>
+                    </div>
+                    <div class="import-preview-stat">
+                      <div class="import-preview-stat-icon import-icon-columns">
+                        <i class="bi bi-layout-three-columns"></i>
+                      </div>
+                      <span class="import-preview-num">{{ filePreview.colCount }}</span>
+                      <span class="import-preview-label">Columns</span>
+                    </div>
+                    <div class="import-preview-stat import-preview-stat-wide">
+                      <div class="import-preview-stat-icon import-icon-cols">
+                        <i class="bi bi-tag"></i>
+                      </div>
+                      <span class="import-preview-num import-preview-cols" :title="filePreview.colNames.join(', ')">
+                        {{ filePreview.colNames.slice(0, 3).join(' · ') }}<span v-if="filePreview.colNames.length > 3"> …</span>
+                      </span>
+                      <span class="import-preview-label">Detected columns</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="studentEmailDomains.length > 1" class="import-domain-group">
+                  <div class="import-domain" :class="{ 'import-domain-required': emailDomainSelectionRequired }">
+                    <div class="import-domain-info">
+                      <i class="bi bi-envelope-at"></i>
+                      <span>New accounts sign in with</span>
+                    </div>
+                    <select v-model="selectedEmailDomain" class="import-domain-select" :class="{ 'select-warn': emailDomainSelectionRequired }">
+                      <option :value="null" disabled>Select a domain…</option>
+                      <option v-for="d in studentEmailDomains" :key="d.id" :value="d.domain">@{{ d.domain }}</option>
+                    </select>
+                  </div>
+                  <div v-if="emailDomainSelectionRequired" class="import-domain-hint import-domain-hint-warn">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <span>Choose a sign-in domain before importing.</span>
+                  </div>
+                </div>
+                <div v-else-if="studentEmailDomains.length === 1" class="import-domain-info-bar">
+                  <i class="bi bi-envelope-at"></i>
+                  <span>New accounts will use <strong>@{{ studentEmailDomains[0].domain }}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="import-modal-foot">
+              <button class="import-btn-secondary" @click="showImport = false; selectedFileName = ''; filePreview = null">Cancel</button>
+              <button class="import-btn-primary" :disabled="!pendingFile || emailDomainSelectionRequired" @click="processImportFile">
+                <i class="bi bi-upload"></i>
+                Import {{ filePreview?.rowCount ? filePreview.rowCount + ' student' + (filePreview.rowCount > 1 ? 's' : '') : 'File' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showKeyboardShortcuts" class="overlay" @click.self="showKeyboardShortcuts = false">
+          <div class="modal-card shortcuts-modal">
+            <div class="modal-head">
+              <div class="modal-icon icon-add">
+                <i class="bi bi-keyboard" style="font-size:1.2rem"></i>
+              </div>
+              <div>
+                <h3>Keyboard Shortcuts</h3>
+                <p>All available shortcuts for the score sheet</p>
+              </div>
+              <button class="modal-x" @click="showKeyboardShortcuts = false">&times;</button>
+            </div>
+            <div class="shortcuts-body">
+              <div class="shortcut-group">
+                <h4 class="shortcut-group-title"><i class="bi bi-arrows-move"></i> Navigation</h4>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></span><span class="shortcut-desc">Move between cells</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Tab</kbd> <kbd>Shift</kbd>+<kbd>Tab</kbd></span><span class="shortcut-desc">Next or previous cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Home</kbd></span><span class="shortcut-desc">Jump to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>End</kbd></span><span class="shortcut-desc">Jump to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Jump to first cell (top-left)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Jump to last cell (bottom-right)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>↑</kbd></span><span class="shortcut-desc">Jump to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>↓</kbd></span><span class="shortcut-desc">Jump to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>←</kbd></span><span class="shortcut-desc">Jump to student name</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>→</kbd></span><span class="shortcut-desc">Jump to last column</span></div>
+              </div>
+              <div class="shortcut-group">
+                <h4 class="shortcut-group-title"><i class="bi bi-ui-checks"></i> Selection</h4>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></span><span class="shortcut-desc">Select multiple cells</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Click</kbd></span><span class="shortcut-desc">Select range from here to clicked cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>Home</kbd></span><span class="shortcut-desc">Select from here to first row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Shift</kbd>+<kbd>End</kbd></span><span class="shortcut-desc">Select from here to last row</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>A</kbd></span><span class="shortcut-desc">Select all in current column</span></div>
+              </div>
+              
+              <div class="shortcut-group">
+                <h4 class="shortcut-group-title"><i class="bi bi-pencil"></i> Editing</h4>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd> <kbd>F2</kbd></span><span class="shortcut-desc">Edit selected cell</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Enter</kbd></span><span class="shortcut-desc">Save &amp; move down</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Escape</kbd></span><span class="shortcut-desc">Cancel edit</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Delete</kbd> <kbd>Backspace</kbd></span><span class="shortcut-desc">Clear cell value</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>C</kbd></span><span class="shortcut-desc">Copy cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>V</kbd></span><span class="shortcut-desc">Paste into cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>X</kbd></span><span class="shortcut-desc">Cut cell(s)</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Undo last change</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>Y</kbd> <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></span><span class="shortcut-desc">Redo last change</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys"><kbd>Ctrl</kbd>+<kbd>S</kbd></span><span class="shortcut-desc">Save changes</span></div>
+                <div class="shortcut-row"><span class="shortcut-keys">Type a digit</span><span class="shortcut-desc">Type a number to start editing</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showGsLinkModal" class="modal-overlay" @click.self="showGsLinkModal = false">
+          <div class="modal-content-panel modal-sm-panel">
+            <div class="modal-header-custom">
+              <button class="modal-close-btn" @click="showGsLinkModal = false" aria-label="Close">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <div class="modal-icon icon-add">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+              </div>
+              <div>
+                <h5>Open Google Sheet</h5>
+                <p class="modal-subtitle">Your browser blocked the popup. Click the button below to open your sheet in a new tab.</p>
+              </div>
+            </div>
+            <div class="modal-body-custom">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="bi bi-link-45deg me-1"></i>
+                  Sheet Link
+                </label>
+                <div class="input-wrapper">
+                  <input :value="gsLinkUrl" type="text" class="modern-input" readonly
+                    @click="$event.target.select()" />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer-custom">
+              <button class="btn-outline" @click="showGsLinkModal = false">Cancel</button>
+              <button class="btn-primary-custom" @click="openGsLinkDirectly">
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+                Open Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+
+    <Teleport to="body">
+      <Transition name="toast">
+        <div v-if="toastVisible" class="toast-notification" :class="toastType">
+          <i :class="toastIcon"></i>
+          <span class="toast-message">{{ toastMessage }}</span>
+        </div>
+      </Transition>
+    </Teleport>
+
     <div v-if="loading" class="loading-overlay"><div class="spinner"></div><span>Loading scores...</span></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef } from 'vue'
+import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef, onBeforeUnmount, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
-  renameColumn, updateWeights, syncToGoogleSheets, createGoogleSheet,
+  renameColumn, updateWeights,
   addEnrollment, deleteEnrollment, updateStudentInfo,
   changeColumnType, getStudentNumbers, importFile,
+  createGoogleSheet, getGoogleConfig, getGoogleStatus,
+  importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken, ensureGoogleSheetShared, pushToGoogleSheet,
   type SpreadsheetColumn, type SpreadsheetRow, type AssessmentTypeWeight, type SpreadsheetResponse,
 } from '@/services/scoreService'
+import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
+import { createAssessmentType } from '@/services/assessmentTypeService'
 
 const router = useRouter()
 const route = useRoute()
 const subjectId = computed(() => Number(route.params.subjectId))
 const termId = computed(() => Number(route.params.termId))
+const classId = computed(() => route.query.class_id ? Number(route.query.class_id) : null)
+const className = computed(() => (route.query.class_name as string) || '')
 
-// ─── Core State ──────────────────────────────────────────────────────
 const data = shallowRef<SpreadsheetResponse | null>(null)
 const loading = ref(false)
-const syncing = ref(false)
 const searchQuery = ref('')
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
-const pageSize = ref<number | 'all'>(20)
+const pageSize = ref<number | 'all'>(10)
+const currentPage = ref(1)
+const importProgress = ref(0)
+const importStatusText = ref('')
 
-// ─── Selection State ─────────────────────────────────────────────────
+const studentEmailDomains = ref<StudentEmailDomain[]>([])
+const selectedEmailDomain = ref<string | null>(null)
+
+async function loadStudentEmailDomains() {
+  try {
+    studentEmailDomains.value = await getStudentEmailDomains()
+    if (studentEmailDomains.value.length === 1) {
+      selectedEmailDomain.value = studentEmailDomains.value[0].domain
+    }
+  } catch {
+    studentEmailDomains.value = []
+  }
+}
+
+const emailDomainSelectionRequired = computed(() =>
+  studentEmailDomains.value.length > 1 && !selectedEmailDomain.value
+)
+
 const selectedRowIndex = ref(0)
 const selectedCol = ref<number | null>(null)
 const selectionStartRow = ref<number | null>(null)
 const selectionStartCol = ref<number | null>(null)
 const isRangeSelecting = ref(false)
 
-// ─── Editing State ───────────────────────────────────────────────────
 const editingRow = ref<number | null>(null)
 const editingCol = ref<number | null>(null)
 const editValue = ref('')
 const cellEditor = ref<HTMLInputElement | null>(null)
 
-// ─── Fill Handle ─────────────────────────────────────────────────────
 const fillPreviewSet = ref<Set<string>>(new Set())
 const fillDrag = ref<{
   active: boolean; sourceRow: number; sourceColId: number;
@@ -346,7 +852,6 @@ const fillDrag = ref<{
   previewDestRow: number; previewDestColId: number;
 } | null>(null)
 
-// ─── Modal State ─────────────────────────────────────────────────────
 const showAddColumn = ref(false)
 const showInlineAddColumn = ref(false)
 const inlineColName = ref('')
@@ -354,22 +859,165 @@ const inlineColType = ref('quiz')
 const inlineColMax = ref<number | null>(100)
 const showWeights = ref(false)
 const showImport = ref(false)
+const gsLoading = ref(false)
+const gsSheetId = ref<string | null>(null)
+const gsLastSynced = ref<string | null>(null)
+const gsReconnectNeeded = ref(false)
+let gsAutoSyncTimer: ReturnType<typeof setInterval> | null = null
+let gsIsSyncing = false // Guard to prevent duplicate syncs
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
 const contextMenu = ref<{ x: number; y: number; rowIdx: number } | null>(null)
 
-// ─── Import File State ────────────────────────────────────────────────
+const showExportMenu = ref(false)
+const exportBtnRef = ref<HTMLElement | null>(null)
+const showKeyboardShortcuts = ref(false)
+const openColTypeDropdown = ref<number | null>(null)
+
+function toggleColTypeDropdown(colId: number, event: MouseEvent | KeyboardEvent) {
+  if (openColTypeDropdown.value === colId) {
+    openColTypeDropdown.value = null
+  } else {
+    openColTypeDropdown.value = colId
+  }
+}
+
+function changeColType(col: SpreadsheetColumn, newType: string) {
+  if (newType === (columnTypes[col.id] || col.type)) {
+    openColTypeDropdown.value = null
+    return
+  }
+  columnTypes[col.id] = newType
+  openColTypeDropdown.value = null
+  const oldType = col.type
+  showSaveStatus('saving')
+  changeColumnType(subjectId.value, termId.value, col.label, oldType, newType)
+    .then(() => {
+      showSaveStatus('saved')
+      refreshData(true)
+    })
+    .catch(() => {
+      showSaveStatus('failed')
+      columnTypes[col.id] = oldType
+    })
+}
+
+function getTypeLabel(typeCode: string): string {
+  const found = assessments.value.find(at => at.code === typeCode)
+  return found?.name || typeCode
+}
+
+function onDocumentClick(e: MouseEvent) {
+  if (showExportMenu.value && exportBtnRef.value && !exportBtnRef.value.contains(e.target as Node)) {
+    showExportMenu.value = false
+  }
+  if (openColTypeDropdown.value !== null) {
+    openColTypeDropdown.value = null
+  }
+}
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onDocumentClick)
+  if (toastTimer) clearTimeout(toastTimer)
+})
+
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const selectedFileName = ref('')
 const pendingFile = ref<File | null>(null)
-const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null })
+const dragOver = ref(false)
+const filePreview = ref<{ rowCount: number; colCount: number; colNames: string[] } | null>(null)
+
+const fileSizeFormatted = computed(() => {
+  if (!pendingFile.value) return ''
+  const bytes = pendingFile.value.size
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+})
+
+function clearFile() {
+  pendingFile.value = null
+  selectedFileName.value = ''
+  filePreview.value = null
+  dragOver.value = false
+}
+
+async function previewFile(file: File) {
+  const ext = file.name.split('.').pop()?.toLowerCase() || ''
+  if (ext === 'pdf') {
+    await previewPdfFile(file)
+    return
+  }
+  try {
+    const { read, utils } = await import('xlsx')
+    const buffer = await file.arrayBuffer()
+    const workbook = read(buffer, { type: 'array' })
+    const sheetName = workbook.SheetNames[0]
+    if (!sheetName) return
+    const sheet = workbook.Sheets[sheetName]
+    const jsonData: any[][] = utils.sheet_to_json(sheet, { header: 1 })
+    if (jsonData.length < 2) return
+    const header = (jsonData[0] as any[]).map(c => String(c).trim()).filter(Boolean)
+    const scoreColumns = header.filter(h => !/name|student|id|number|code|no/i.test(h) && !/total|grade|remark/i.test(h))
+    filePreview.value = {
+      rowCount: jsonData.length - 1,
+      colCount: header.length,
+      colNames: scoreColumns.length > 0 ? scoreColumns : header.slice(2).filter(h => !/total|grade|remark/i.test(h)),
+    }
+  } catch {
+  }
+}
+
+async function previewPdfFile(file: File) {
+  try {
+    const pdfjsLib = await import('pdfjs-dist')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+    const buffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
+    let fullText = ''
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      fullText += content.items.map((item: any) => item.str).join(' ') + '\n'
+    }
+    const lines = fullText.split('\n').filter(l => l.trim())
+    const dataLines = lines.filter(l => /\d/.test(l) && l.split(/\s+/).length >= 3)
+    filePreview.value = {
+      rowCount: dataLines.length || lines.length,
+      colCount: 0,
+      colNames: ['(PDF) Text data — will auto-detect columns on import'],
+    }
+  } catch {
+  }
+}
+const toastVisible = ref(false)
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error'>('success')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
+
+function showToast(message: string, type: 'success' | 'error' = 'success', duration = 2500) {
+  if (toastTimer) clearTimeout(toastTimer)
+  toastMessage.value = message
+  toastType.value = type
+  toastVisible.value = true
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false
+    toastTimer = null
+  }, duration)
+}
+
+const toastIcon = computed(() => ({
+  success: 'bi bi-check-circle-fill',
+  error: 'bi bi-exclamation-circle-fill',
+}[toastType.value]))
+
+const newColumn = reactive({ type: 'quiz', label: '', max_score: null as number | null, customTypeName: '' })
 const weightEdits = reactive<Record<number, number>>({})
 const assessments = ref<AssessmentTypeWeight[]>([])
 const studentNumbers = ref<string[]>([])
 const columnTypes = reactive<Record<number, string>>({})
 
-// ─── Auto-fill next student ID ───────────────────────────────────────
 type StudentNumberSequence = {
   prefix: string
   sequence: number
@@ -448,7 +1096,6 @@ async function fillNextStudentId(rowIdx: number) {
   const currentValue = isTargetIdCell ? editValue.value.trim() : row.student_number.trim()
   const currentSequence = parseStudentNumberSequence(currentValue)
 
-  // If the current row already has a sequential ID, treat it as the seed and fill the next row.
   if (currentSequence) {
     const nextRowIdx = rowIdx + 1
     if (nextRowIdx >= filteredRows.value.length) return
@@ -517,26 +1164,58 @@ async function fillNextStudentName(rowIdx: number) {
   editor?.select()
 }
 
-// ─── Undo/Redo ───────────────────────────────────────────────────────
 const maxUndo = 50
 const undoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
 const redoStack = ref<Array<{ enrollmentId: number; detailId: number; oldValue: number | null }>>([])
 
 
 
-// ─── Computed ────────────────────────────────────────────────────────
 const columns = computed(() => data.value?.columns || [])
 const rows = computed(() => data.value?.rows || [])
 
 const filteredRows = computed(() => {
-  if (!searchQuery.value) return rows.value
-  const q = searchQuery.value.toLowerCase()
-  return rows.value.filter(r => r.student_name.toLowerCase().includes(q) || r.student_number.toLowerCase().includes(q))
+  let result = rows.value
+
+  if (className.value) {
+    result = result.filter(r => r.class_name === className.value)
+  }
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(r => r.student_name.toLowerCase().includes(q) || r.student_number.toLowerCase().includes(q))
+  }
+
+  return result
+})
+
+const totalPages = computed(() => {
+  if (pageSize.value === 'all') return 1
+  return Math.max(1, Math.ceil(filteredRows.value.length / pageSize.value))
+})
+
+const visiblePages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
 })
 
 const visibleRows = computed(() => {
   if (pageSize.value === 'all') return filteredRows.value
-  return filteredRows.value.slice(0, pageSize.value)
+  const start = (currentPage.value - 1) * (pageSize.value as number)
+  const end = start + (pageSize.value as number)
+  return filteredRows.value.slice(start, end)
 })
 
 const averageScore = computed(() => {
@@ -556,7 +1235,11 @@ const topStudent = computed(() => {
   return sorted[0]?.student_name ?? '-'
 })
 
-const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + (v || 0), 0))
+const typeOptions = computed(() =>
+  assessments.value.map(at => ({ value: at.code, label: at.name }))
+)
+
+const totalWeight = computed(() => Object.values(weightEdits).reduce((s, v) => s + Number(v || 0), 0))
 
 const saveStatusClass = computed(() => ({
   'status-saving': saveStatus.value === 'saving',
@@ -574,7 +1257,28 @@ const saveStatusText = computed(() => ({
   saving: 'Saving...', saved: 'Saved', failed: 'Failed', idle: '',
 }[saveStatus.value]))
 
-// ─── Add Row Popup ──────────────────────────────────────────────────
+const showNewTypeForm = ref(false)
+const newTypeCode = ref('')
+const newTypeName = ref('')
+const newTypeWeight = ref(10)
+
+async function doCreateType() {
+  const code = newTypeCode.value.trim()
+  const name = newTypeName.value.trim()
+  if (!code || !name) return
+  try {
+    await createAssessmentType({ code, name, weight_percent: newTypeWeight.value })
+    newTypeCode.value = ''
+    newTypeName.value = ''
+    newTypeWeight.value = 10
+    showNewTypeForm.value = false
+    showToast('Assessment type created', 'success')
+    await refreshData(true)
+  } catch {
+    showToast('Failed to create assessment type', 'error')
+  }
+}
+
 const showAddRowPopup = ref(false)
 const addRowCount = ref(1)
 
@@ -584,11 +1288,11 @@ async function doAddRows() {
   showSaveStatus('saving')
   try {
     for (let i = 0; i < count; i++) {
-      await addEnrollment(subjectId.value, termId.value, null)
+      await addEnrollment(subjectId.value, termId.value, null, classId.value)
     }
     showSaveStatus('saved')
     pageSize.value = 'all'
-    await refreshData()
+    await refreshData(true)
   } catch (err) {
     showSaveStatus('failed')
     console.error('Failed to add rows:', err)
@@ -597,8 +1301,7 @@ async function doAddRows() {
   addRowCount.value = 1
 }
 
-// ─── Helper Functions ────────────────────────────────────────────────
-// Returns the student-specific ScoreDetail ID for a given canonical column ID
+
 function getActualDetailId(row: SpreadsheetRow, colId: number): number {
   return row.detail_ids[colId] ?? colId
 }
@@ -666,7 +1369,6 @@ function getSelectionText(): string {
   return lines.join('\n')
 }
 function isEditing(rowIdx: number, colId: number): boolean { return editingRow.value === rowIdx && editingCol.value === colId }
-// ─── Selection / Range Helpers ───────────────────────────────────────
 function isInRange(rowIdx: number, colId: number): boolean {
   if (!isRangeSelecting.value || selectionStartRow.value === null || selectionStartCol.value === null || selectedCol.value === null) return false
   const r1 = Math.min(selectionStartRow.value, selectedRowIndex.value)
@@ -708,7 +1410,6 @@ function showFillHandle(rowIdx: number, colId: number): boolean {
   if (editingRow.value !== null || editingCol.value !== null) return false
   if (!isSelectableColumn(colId)) return false
   if (isRangeSelecting.value) {
-    // Show fill handle on the last row of the range selection
     const r2 = Math.max(selectionStartRow.value ?? 0, selectedRowIndex.value)
     return rowIdx === r2 && colId === (selectedCol.value ?? 0)
   }
@@ -753,14 +1454,14 @@ function getTotalCellClass(row: SpreadsheetRow): Record<string, boolean> {
   }
 }
 
-// ─── Cell Selection (single click = select, double click = edit) ────
 function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
+
+  sheetContainer.value?.focus()
   if (editingRow.value !== null) {
     saveEdit()
   }
   if (colId === -2) return // row number click
 
-  // Shift+Click for range selection
   if (event.shiftKey) {
     expandAllRowsForSelection()
     if (selectionStartRow.value === null) {
@@ -774,19 +1475,16 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
     return
   }
 
-  // Simple click: select cell; score cells still open the editor immediately.
   isRangeSelecting.value = false
   selectionStartRow.value = rowIdx
   selectionStartCol.value = colId
   selectedRowIndex.value = Math.max(0, Math.min(rowIdx, filteredRows.value.length - 1))
   selectedCol.value = colId
-  // Score cells still edit on single click; name/ID now stay selected so range selection works naturally.
   if (colId > 0) {
     if (editingRow.value !== null) cancelEdit()
     startEditing(rowIdx, colId)
   }
 
-  // Start drag selection on selectable cells
   if (isSelectableColumn(colId)) {
     const container = sheetContainer.value?.querySelector('.sheet-scroll') as HTMLElement | null
     const edgeThreshold = 48
@@ -860,7 +1558,6 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
     }
 
     const onMouseMove = (e: MouseEvent) => {
-      // If we were editing, cancel it since user is dragging
       if (editingRow.value !== null) cancelEdit()
       lastPointer = { x: e.clientX, y: e.clientY }
       updateSelectionAtPointer(e.clientX, e.clientY)
@@ -883,7 +1580,6 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
 
 
 
-// ─── Inline Editing (double click = edit) ────────────────────────────
 function startEditing(rowIdx: number, detailId: number) {
   if (!filteredRows.value.length) return
   if (detailId === -2) return
@@ -930,7 +1626,7 @@ function saveEdit() {
     if (!newName || newName === filteredRow.student_name) { cancelEdit(); return }
     const oldName = filteredRow.student_name
     showSaveStatus('saving')
-    updateStudentInfo(subjectId.value, termId.value, filteredRow.enrollment_id, { student_name: newName })
+    updateStudentInfo(subjectId.value, termId.value, filteredRow.enrollment_id, { student_name: newName, email_domain: selectedEmailDomain.value })
       .then(() => {
         showSaveStatus('saved')
         filteredRow.student_name = newName
@@ -968,13 +1664,45 @@ function saveEdit() {
     return
   }
 
-  // Score mark
   const oldValue = getCellMark(filteredRow, detailId)
   const newValue = editValue.value === '' ? null : parseFloat(editValue.value)
   if (newValue !== null) {
     if (isNaN(newValue)) { cancelEdit(); return }
     if (newValue < 0 || newValue > 100) { cancelEdit(); return }
   }
+
+  if (isRangeSelecting.value && newValue !== null) {
+    const bounds = getSelectionBounds()
+    if (
+      bounds &&
+      (bounds.r1 !== bounds.r2 || bounds.c1 !== bounds.c2) &&
+      editingRow.value >= bounds.r1 && editingRow.value <= bounds.r2
+    ) {
+      const columnsInSelection = getSelectableColumnIds()
+      const colOrder = columnsInSelection.indexOf(detailId)
+      if (colOrder >= bounds.c1 && colOrder <= bounds.c2) {
+        const value = editValue.value.trim()
+        cancelEdit()
+        showSaveStatus('saving')
+        const promises: Promise<void>[] = []
+        for (let r = bounds.r1; r <= bounds.r2; r++) {
+          const targetRow = filteredRows.value[r]
+          if (!targetRow) continue
+          for (let c = bounds.c1; c <= bounds.c2; c++) {
+            const targetColId = columnsInSelection[c]
+            if (targetColId === undefined) continue
+            const p = pasteValueToCell(targetRow, targetColId, value)
+            if (p) promises.push(p)
+          }
+        }
+        Promise.all(promises)
+          .then(() => showSaveStatus('saved'))
+          .catch(() => showSaveStatus('failed'))
+        return
+      }
+    }
+  }
+
   if (oldValue === newValue) { cancelEdit(); return }
 
   const actualRow = rows.value.find(r => r.enrollment_id === filteredRow.enrollment_id)
@@ -1027,20 +1755,16 @@ function cancelEdit() {
   editingRow.value = null
   editingCol.value = null
   editValue.value = ''
+  nextTick(() => sheetContainer.value?.focus())
 }
 
-// ─── Fill Handle ─────────────────────────────────────────────────────
 function computeAutoFillValues(sourceValues: (number | null)[], count: number, direction: 1 | -1 = 1): (number | null)[] {
   if (!sourceValues.length) return Array.from({ length: count }, () => null)
-  // Single value: repeat it
   if (sourceValues.length === 1) return Array.from({ length: count }, () => sourceValues[0] ?? null)
 
-  // Filter out nulls for numeric calculations
   const numeric = sourceValues.map(v => (v === null ? null : Number(v)))
   const cleanNums = numeric.filter((v): v is number => v !== null && !Number.isNaN(v))
 
-  // Infer a numeric progression when there are at least 2 values.
-  // One value repeats; 2+ values can continue as a sequence.
   if (cleanNums.length < 2) {
     const result: (number | null)[] = []
     for (let i = 0; i < count; i++) {
@@ -1050,7 +1774,6 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
     return result
   }
 
-  // Check if it's a consistent arithmetic progression
   const step = cleanNums[1] - cleanNums[0]
   let isArithmetic = true
   for (let i = 2; i < cleanNums.length; i++) {
@@ -1058,7 +1781,6 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
   }
 
   if (!isArithmetic) {
-    // Repeat the pattern
     const result: (number | null)[] = []
     for (let i = 0; i < count; i++) {
       const srcIdx = i % sourceValues.length
@@ -1067,12 +1789,10 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
     return result
   }
 
-  // Arithmetic progression: continue the sequence in the drag direction.
   const result: (number | null)[] = []
   const edgeValue = direction === 1 ? sourceValues[sourceValues.length - 1] : sourceValues[0]
   const edgeNum = edgeValue !== null ? Number(edgeValue) : null
   if (edgeNum === null || Number.isNaN(edgeNum)) {
-    // Fallback: repeat pattern
     for (let i = 0; i < count; i++) {
       const srcIdx = i % sourceValues.length
       result.push(sourceValues[srcIdx] ?? null)
@@ -1082,7 +1802,7 @@ function computeAutoFillValues(sourceValues: (number | null)[], count: number, d
 
   for (let i = 0; i < count; i++) {
     const nextValue = direction === 1 ? edgeNum + step * (i + 1) : edgeNum - step * (i + 1)
-    result.push(nextValue)
+    result.push(Math.min(100, Math.max(0, nextValue)))
   }
   return result
 }
@@ -1094,14 +1814,12 @@ function onFillHandleMouseDown(e: MouseEvent, rowIdx: number, colId: number) {
   e.preventDefault()
   e.stopPropagation()
 
-  // Use sourceRow as the first row of the range (or single cell)
   let sourceRow = rowIdx
   const sourcePattern: (number | null)[] = []
 
   if (isRangeSelecting.value && selectionStartRow.value !== null) {
     const r1 = Math.min(selectionStartRow.value, selectedRowIndex.value)
     const r2 = Math.max(selectionStartRow.value, selectedRowIndex.value)
-    // Only use range if fill handle is on the last row
     if (rowIdx === r2) {
       sourceRow = r1
       for (let r = r1; r <= r2; r++) {
@@ -1111,7 +1829,6 @@ function onFillHandleMouseDown(e: MouseEvent, rowIdx: number, colId: number) {
     }
   }
 
-  // Fallback: single source cell value
   if (sourcePattern.length === 0) {
     const mark = getCellMark(filteredRows.value[rowIdx], colId)
     sourcePattern.push(mark !== undefined ? mark : null)
@@ -1126,7 +1843,6 @@ function onFillHandleMouseDown(e: MouseEvent, rowIdx: number, colId: number) {
     destRow: rowIdx, destColId: colId,
     previewDestRow: rowIdx, previewDestColId: colId,
   }
-  // Store source pattern on the fillDrag object
   ;(fillDrag.value as any).sourcePattern = sourcePattern
   updateFillPreviewFromPointer(e.clientX, e.clientY)
   window.addEventListener('mousemove', onFillHandleMouseMove)
@@ -1193,7 +1909,6 @@ function commitFillApply() {
   const destColId = fillDrag.value.previewDestColId
   const vertical = destRow !== srcRow
 
-  // Get source pattern (from range selection or single cell)
   let sourcePattern = (fillDrag.value as any).sourcePattern as (number | null)[]
   if (!sourcePattern || sourcePattern.length === 0) {
     const sourceRowObj = filteredRows.value[srcRow]
@@ -1203,7 +1918,6 @@ function commitFillApply() {
   const patternLen = sourcePattern.length
 
   if (vertical) {
-    // Vertical fill: continue the pattern away from the source range.
     const sourceStartRow = srcRow
     const sourceEndRow = srcRow + patternLen - 1
     const targetRows: number[] = []
@@ -1223,17 +1937,27 @@ function commitFillApply() {
     }
 
     const values = computeAutoFillValues(sourcePattern, targetRows.length, direction)
+    const fillPromises: Promise<void>[] = []
     targetRows.forEach((r, i) => {
       const targetRow = rows.value.find(tr => tr.enrollment_id === filteredRows.value[r]?.enrollment_id)
       if (!targetRow) return
+      const oldValue = targetRow.details[srcColId] ?? null
       const nextValue = values[i] ?? null
       targetRow.details[srcColId] = nextValue
       recalculateRowTotal(targetRow)
+      triggerRef(data)
       const actualDetailId = getActualDetailId(targetRow, srcColId)
-      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {})
+      fillPromises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
+        targetRow.details[srcColId] = oldValue
+        recalculateRowTotal(targetRow)
+        triggerRef(data)
+        showSaveStatus('failed')
+        throw new Error('Failed to save fill value')
+      }))
     })
+    showSaveStatus('saving')
+    Promise.all(fillPromises).then(() => showSaveStatus('saved')).catch(() => {})
   } else {
-    // Horizontal fill: continue the pattern across columns.
     const cols = columns.value
     const sIdx = cols.findIndex(c => c.id === srcColId)
     const dIdx = cols.findIndex(c => c.id === destColId)
@@ -1263,13 +1987,24 @@ function commitFillApply() {
       return
     }
 
+    const fillPromises: Promise<void>[] = []
     targetColIndices.forEach((ci, i) => {
+      const oldValue = targetRow.details[cols[ci].id] ?? null
       const nextValue = values[i] ?? null
       targetRow.details[cols[ci].id] = nextValue
       recalculateRowTotal(targetRow)
+      triggerRef(data)
       const actualDetailId = getActualDetailId(targetRow, cols[ci].id)
-      updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {})
+      fillPromises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, nextValue).catch(() => {
+        targetRow.details[cols[ci].id] = oldValue
+        recalculateRowTotal(targetRow)
+        triggerRef(data)
+        showSaveStatus('failed')
+        throw new Error('Failed to save fill value')
+      }))
     })
+    showSaveStatus('saving')
+    Promise.all(fillPromises).then(() => showSaveStatus('saved')).catch(() => {})
   }
 
   fillPreviewSet.value = new Set()
@@ -1277,15 +2012,12 @@ function commitFillApply() {
   fillDrag.value = null
 }
 
-// ─── Keyboard Navigation (Excel-like) ────────────────────────────────
 function onGlobalKeydown(event: KeyboardEvent) {
-  // If editing, delegate to edit handler
   if (editingRow.value !== null && editingCol.value !== null) {
     onEditKeydown(event)
     return
   }
 
-  // Handle copy/paste/cut/undo/redo/save from here too (Ctrl+C/V/X/Z/Y/S)
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'a':
@@ -1304,12 +2036,15 @@ function onGlobalKeydown(event: KeyboardEvent) {
       case 'x': event.preventDefault(); cutSelection(); return
       case 'z': event.preventDefault(); event.shiftKey ? redo() : undo(); return
       case 'y': event.preventDefault(); redo(); return
-      case 's': event.preventDefault(); showSaveStatus('saved'); return
+      case 's':
+        event.preventDefault()
+        if (editingRow.value !== null) saveEdit()
+        showSaveStatus('saved')
+        return
       case 'r': event.preventDefault(); return
     }
   }
 
-  // Delete/Backspace: clear selected cell(s) in range or single selection
   if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCol.value !== null) {
     event.preventDefault()
     if (isRangeSelecting.value) {
@@ -1337,6 +2072,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
           promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
         }
       }
+      triggerRef(data)
       if (promises.length) {
         Promise.all(promises)
           .then(() => {
@@ -1347,7 +2083,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
       }
       isRangeSelecting.value = false
     } else {
-      // Single cell delete
       const row = filteredRows.value[selectedRowIndex.value]
       if (!row) return
       const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
@@ -1357,20 +2092,19 @@ function onGlobalKeydown(event: KeyboardEvent) {
       const oldValue = getCellMark(row, colId)
       if (oldValue === null) return
       actualRow.details[colId] = null
+      triggerRef(data) // Immediate feedback — see note on the range branch above.
       undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
       redoStack.value = []
       showSaveStatus('saving')
       const actualDetailId = getActualDetailId(actualRow, colId)
       updateCellMark(subjectId.value, termId.value, actualDetailId, null)
         .then(() => { showSaveStatus('saved'); recalculateRowTotal(actualRow) })
-        .catch(() => { showSaveStatus('failed'); actualRow.details[colId] = oldValue })
+        .catch(() => { showSaveStatus('failed'); actualRow.details[colId] = oldValue; triggerRef(data) })
     }
     return
   }
 
-  // Printable character handling: type to start editing (Excel-like)
   if (selectedCol.value !== null && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-    // Only for score cells, student name (-1), and student ID (0)
     if (selectedCol.value >= -1) {
       event.preventDefault()
       startEditing(selectedRowIndex.value, selectedCol.value)
@@ -1387,7 +2121,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
   if (currentColIdx < 0) currentColIdx = 0
   const shiftKey = event.shiftKey
 
-  // Clear range selection when pressing ANY key WITHOUT Shift (Excel-like)
   if (!shiftKey) {
     isRangeSelecting.value = false
   }
@@ -1396,18 +2129,21 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowDown':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowDown: jump to last row
         expandAllRowsForSelection()
         selectedRowIndex.value = filteredRows.value.length - 1
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(selectedRowIndex.value, currentColIdx)
       } else if (currentRow < filteredRows.value.length - 1) {
         const next = currentRow + 1
-        if (pageSize.value !== 'all' && next >= pageSize.value) pageSize.value = 'all'
+        if (pageSize.value !== 'all' && next >= ((pageSize.value as number) * currentPage.value)) {
+          if (currentPage.value < totalPages.value) {
+            currentPage.value++
+          }
+        }
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedRowIndex.value = next
@@ -1417,7 +2153,6 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowUp':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowUp: jump to first row
         expandAllRowsForSelection()
         selectedRowIndex.value = 0
         if (!shiftKey) isRangeSelecting.value = false
@@ -1427,7 +2162,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedRowIndex.value = prev
@@ -1437,12 +2172,16 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowLeft':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowLeft: jump to first column (student name)
         selectedCol.value = -1
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(currentRow, -1)
       } else if (selectedCol.value === 0) {
-        // From student ID go to student name
+        if (shiftKey && !isRangeSelecting.value) {
+          expandAllRowsForSelection()
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedCol.value = -1
         scrollToCell(currentRow, -1)
       } else if (currentColIdx > 0) {
@@ -1450,13 +2189,18 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx + 1].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedCol.value = cols[currentColIdx].id
         scrollToCell(currentRow, currentColIdx)
       } else if (currentColIdx === 0 && cols.length > 0 && selectedCol.value === cols[0].id) {
-        // From first score column go to student ID
+        if (shiftKey && !isRangeSelecting.value) {
+          expandAllRowsForSelection()
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedCol.value = 0
         scrollToCell(currentRow, 0)
       }
@@ -1464,17 +2208,26 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'ArrowRight':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+ArrowRight: jump to last column
         selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : null
         if (!shiftKey) isRangeSelecting.value = false
         scrollToCell(currentRow, cols.length - 1)
       } else if (selectedCol.value === -1) {
-        // From student name go to student ID
+        if (shiftKey && !isRangeSelecting.value) {
+          expandAllRowsForSelection()
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedCol.value = 0
         scrollToCell(currentRow, 0)
       } else if (selectedCol.value === 0) {
-        // From student ID go to first score column
         if (cols.length > 0) {
+          if (shiftKey && !isRangeSelecting.value) {
+            expandAllRowsForSelection()
+            selectionStartRow.value = currentRow
+            selectionStartCol.value = selectedCol.value
+            isRangeSelecting.value = true
+          }
           selectedCol.value = cols[0].id
           scrollToCell(currentRow, 0)
         }
@@ -1483,7 +2236,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
         if (shiftKey && !isRangeSelecting.value) {
           expandAllRowsForSelection()
           selectionStartRow.value = currentRow
-          selectionStartCol.value = cols[currentColIdx - 1].id
+          selectionStartCol.value = selectedCol.value
           isRangeSelecting.value = true
         }
         selectedCol.value = cols[currentColIdx].id
@@ -1492,30 +2245,39 @@ function onGlobalKeydown(event: KeyboardEvent) {
       break
     case 'Tab':
       event.preventDefault()
-      if (event.shiftKey) {
-        if (currentColIdx > 0) { currentColIdx--; selectedCol.value = cols[currentColIdx].id }
-        else if (currentRow > 0) { currentRow--; selectedRowIndex.value = currentRow; currentColIdx = cols.length - 1; selectedCol.value = cols[currentColIdx].id }
-      } else {
-        if (currentColIdx < cols.length - 1) { currentColIdx++; selectedCol.value = cols[currentColIdx].id }
-        else if (currentRow < filteredRows.value.length - 1) {
-          const next = currentRow + 1; if (pageSize.value !== 'all' && next >= pageSize.value) pageSize.value = 'all'
-          currentRow = next; selectedRowIndex.value = currentRow; currentColIdx = 0; selectedCol.value = cols[currentColIdx].id
+      {
+        const allColIds = getSelectableColumnIds()
+        const currentPos = selectedCol.value !== null ? allColIds.indexOf(selectedCol.value) : -1
+        if (currentPos < 0) break
+        if (event.shiftKey) {
+          if (currentPos > 0) {
+            selectedCol.value = allColIds[currentPos - 1]
+          } else if (currentRow > 0) {
+            selectedRowIndex.value = --currentRow
+            selectedCol.value = allColIds[allColIds.length - 1]
+          }
+        } else {
+          if (currentPos < allColIds.length - 1) {
+            selectedCol.value = allColIds[currentPos + 1]
+      } else if (currentRow < filteredRows.value.length - 1) {
+        const next = currentRow + 1
+        if (pageSize.value !== 'all' && next >= ((pageSize.value as number) * currentPage.value)) {
+          if (currentPage.value < totalPages.value) {
+            currentPage.value++
+          }
         }
+        selectedRowIndex.value = next
+        selectedCol.value = allColIds[0]
+        currentRow = next
+          }
+        }
+        isRangeSelecting.value = false
       }
-      isRangeSelecting.value = false
-      scrollToCell(currentRow, currentColIdx)
+      scrollToCell(selectedRowIndex.value, selectedCol.value ?? 0)
       break
     case 'Enter':
       event.preventDefault()
-      if (selectedCol.value !== null && selectedCol.value > 0) {
-        // For score cells, Enter advances step by step like Tab.
-        handleTabNavigation(event.shiftKey)
-      } else if (event.shiftKey) {
-        // Shift+Enter: move up in the frozen Name/ID area.
-        if (selectedRowIndex.value > 0) selectedRowIndex.value--
-        scrollToCell(selectedRowIndex.value, currentColIdx)
-      } else if (selectedCol.value !== null) {
-        // Keep name/ID cells editable with Enter.
+      if (selectedCol.value !== null) {
         startEditing(selectedRowIndex.value, selectedCol.value)
       }
       break
@@ -1526,28 +2288,52 @@ function onGlobalKeydown(event: KeyboardEvent) {
     case 'Home':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+Home: go to first cell
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedRowIndex.value = 0
-        selectedCol.value = cols.length > 0 ? cols[0].id : null
+        selectedCol.value = -1
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(0, 0)
       } else {
-        // Home: go to first column in current row
-        selectedCol.value = cols.length > 0 ? cols[0].id : null
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
+        selectedRowIndex.value = 0
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(0, currentColIdx)
       }
-      if (!shiftKey) isRangeSelecting.value = false
-      scrollToCell(selectedRowIndex.value, 0)
       break
     case 'End':
       event.preventDefault()
       if (event.ctrlKey || event.metaKey) {
-        // Ctrl+End: go to last cell
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
         selectedRowIndex.value = filteredRows.value.length - 1
-        selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : null
+        selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : -1
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(filteredRows.value.length - 1, cols.length - 1)
       } else {
-        // End: go to last column in current row
-        selectedCol.value = cols.length > 0 ? cols[cols.length - 1].id : null
+        expandAllRowsForSelection()
+        if (shiftKey && !isRangeSelecting.value) {
+          selectionStartRow.value = currentRow
+          selectionStartCol.value = selectedCol.value
+          isRangeSelecting.value = true
+        }
+        selectedRowIndex.value = filteredRows.value.length - 1
+        if (!shiftKey) isRangeSelecting.value = false
+        scrollToCell(filteredRows.value.length - 1, currentColIdx)
       }
-      if (!shiftKey) isRangeSelecting.value = false
-      scrollToCell(selectedRowIndex.value, cols.length - 1)
       break
     case 'PageDown':
       event.preventDefault()
@@ -1561,77 +2347,12 @@ function onGlobalKeydown(event: KeyboardEvent) {
       if (!shiftKey) isRangeSelecting.value = false
       scrollToCell(selectedRowIndex.value, currentColIdx)
       break
-
-    case 'Delete':
-    case 'Backspace':
-      if (selectedCol.value !== null && selectedCol.value > 0 && !event.ctrlKey && !event.metaKey) {
-        event.preventDefault()
-        // If range selected, clear all cells in range
-        if (isRangeSelecting.value) {
-          clearRangeSelection()
-        } else {
-          clearSingleCell()
-        }
-      }
-      break
   }
-}
-
-function clearSingleCell() {
-  const row = filteredRows.value[selectedRowIndex.value]
-  if (!row) return
-  const colId = selectedCol.value!
-  const oldValue = getCellMark(row, colId)
-  if (oldValue === null) return
-  const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
-  if (actualRow) { actualRow.details[colId] = null; triggerRef(data) }
-  undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
-  redoStack.value = []
-  showSaveStatus('saving')
-  const actualDetailId = actualRow ? getActualDetailId(actualRow, colId) : colId
-  updateCellMark(subjectId.value, termId.value, actualDetailId, null)
-    .then(() => { showSaveStatus('saved'); if (actualRow) recalculateRowTotal(actualRow) })
-    .catch(() => { showSaveStatus('failed'); if (actualRow) actualRow.details[colId] = oldValue })
-}
-
-function clearRangeSelection() {
-  if (selectionStartRow.value === null || selectionStartCol.value === null || selectedCol.value === null) return
-  const bounds = getSelectionBounds()
-  if (!bounds) return
-  const columnsInSelection = getSelectableColumnIds()
-  const promises: Promise<void>[] = []
-  const clearedRows: SpreadsheetRow[] = []
-  for (let r = bounds.r1; r <= bounds.r2; r++) {
-    for (let c = bounds.c1; c <= bounds.c2; c++) {
-      const colId = columnsInSelection[c]
-      if (colId === undefined || colId <= 0) continue
-      const row = filteredRows.value[r]
-      if (!row) continue
-      const actualRow = rows.value.find(ar => ar.enrollment_id === row.enrollment_id)
-      if (!actualRow) continue
-      const oldValue = getCellMark(row, colId)
-      if (oldValue === null) continue
-      actualRow.details[colId] = null
-      undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
-      if (!clearedRows.includes(actualRow)) clearedRows.push(actualRow)
-      const actualDetailId = getActualDetailId(actualRow, colId)
-      promises.push(updateCellMark(subjectId.value, termId.value, actualDetailId, null))
-    }
-  }
-  redoStack.value = []
-  triggerRef(data)
-  clearedRows.forEach(r => recalculateRowTotal(r))
-  if (promises.length) {
-    showSaveStatus('saving')
-    Promise.all(promises)
-      .then(() => showSaveStatus('saved'))
-      .catch(() => showSaveStatus('failed'))
-  }
-  isRangeSelecting.value = false
 }
 
 function onEditKeydown(event: KeyboardEvent) {
-  // Handle Ctrl+Z, Ctrl+Y, Ctrl+S during editing
+  event.stopPropagation()
+
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'z':
@@ -1653,23 +2374,7 @@ function onEditKeydown(event: KeyboardEvent) {
     }
   }
 
-  // Escape key: cancel editing without saving
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    cancelEdit()
-    return
-  }
 
-  // Enter/Tab: save and move to next cell
-  if (event.key === 'Enter') {
-    event.preventDefault()
-    saveEdit()
-    return
-  }
-
-  // Let the native text field / datalist handle vertical navigation for
-  // the frozen Student Name / Student ID editors so long suggestion lists
-  // can scroll normally.
   if (editingCol.value !== null && editingCol.value <= 0) {
     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
       return
@@ -1680,19 +2385,7 @@ function onEditKeydown(event: KeyboardEvent) {
     case 'Enter':
       event.preventDefault()
       saveEdit()
-      if (selectedCol.value !== null && selectedCol.value > 0) {
-        handleTabNavigation(event.shiftKey)
-      } else if (event.shiftKey) {
-        if (selectedRowIndex.value > 0) { selectedRowIndex.value-- }
-        if (selectedCol.value !== null && selectedCol.value >= 0) {
-          nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
-        }
-      } else {
-        if (selectedRowIndex.value < filteredRows.value.length - 1) { selectedRowIndex.value++ }
-        if (selectedCol.value !== null && selectedCol.value >= 0) {
-          nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
-        }
-      }
+      handleEnterNavigation(event.shiftKey)
       break
     case 'Tab':
       event.preventDefault()
@@ -1709,7 +2402,7 @@ function onEditKeydown(event: KeyboardEvent) {
       saveEdit()
       if (event.key === 'ArrowUp' && selectedRowIndex.value > 0) selectedRowIndex.value--
       if (event.key === 'ArrowDown' && selectedRowIndex.value < filteredRows.value.length - 1) selectedRowIndex.value++
-      if (selectedCol.value !== null && selectedCol.value >= 0) {
+      if (selectedCol.value !== null) {
         nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
       }
       break
@@ -1717,37 +2410,54 @@ function onEditKeydown(event: KeyboardEvent) {
 }
 
 function handleTabNavigation(shiftKey: boolean) {
-  const cols = columns.value
-  const idx = selectedCol.value !== null ? cols.findIndex(c => c.id === selectedCol.value) : 0
+  const allColIds = getSelectableColumnIds()
+  const currentPos = selectedCol.value !== null ? allColIds.indexOf(selectedCol.value) : -1
+  if (currentPos < 0) return
   if (shiftKey) {
-    if (idx > 0) { selectedCol.value = cols[idx - 1].id }
-    else if (selectedRowIndex.value > 0) {
+    if (currentPos > 0) {
+      selectedCol.value = allColIds[currentPos - 1]
+    } else if (selectedRowIndex.value > 0) {
       selectedRowIndex.value--
-      selectedCol.value = cols[cols.length - 1].id
+      selectedCol.value = allColIds[allColIds.length - 1]
     }
   } else {
-    if (idx < cols.length - 1) { selectedCol.value = cols[idx + 1].id }
-    else if (selectedRowIndex.value < filteredRows.value.length - 1) {
+    if (currentPos < allColIds.length - 1) {
+      selectedCol.value = allColIds[currentPos + 1]
+    } else if (selectedRowIndex.value < filteredRows.value.length - 1) {
       selectedRowIndex.value++
-      selectedCol.value = cols[0].id
+      selectedCol.value = allColIds[0]
     }
   }
-  if (selectedCol.value !== null && selectedCol.value > 0) {
+  if (selectedCol.value !== null) {
     nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
   }
 }
 
-function onEditInput() { /* live validation placeholder */ }
+
+function handleEnterNavigation(shiftKey: boolean) {
+  if (selectedCol.value === null) return
+  if (shiftKey) {
+    if (selectedRowIndex.value > 0) {
+      selectedRowIndex.value--
+    }
+  } else {
+    if (selectedRowIndex.value < filteredRows.value.length - 1) {
+      selectedRowIndex.value++
+    }
+  }
+  scrollToCell(selectedRowIndex.value, 0)
+  nextTick(() => startEditing(selectedRowIndex.value, selectedCol.value))
+}
+
+function onEditInput() {  }
 
 function scrollToCell(rowIdx: number, colIdx: number) {
   const container = sheetContainer.value?.querySelector('.sheet-scroll')
   if (!container) return
-  // Scroll row into view (vertical)
   const rowCells = container.querySelectorAll('tbody tr')
   if (rowCells[rowIdx]) {
     rowCells[rowIdx].scrollIntoView({ block: 'nearest', behavior: 'instant' })
   }
-  // Scroll score column into view (horizontal) using actual column ID
   const targetColId = selectedCol.value
   if (targetColId !== null && targetColId > 0) {
     const targetTd = container.querySelector<HTMLElement>(`td[data-col-id="${targetColId}"]`)
@@ -1758,10 +2468,8 @@ function scrollToCell(rowIdx: number, colIdx: number) {
 }
 
 function onScroll() {
-  // Selection remains visible while scrolling due to sticky headers and frozen columns
 }
 
-// ─── Copy / Paste ────────────────────────────────────────────────────
 function copySelection() {
   const text = getSelectionText()
   navigator.clipboard.writeText(text).catch(() => {})
@@ -1795,7 +2503,6 @@ async function onPaste(event: ClipboardEvent) {
   const isMultiRow = lines.length > 1
 
   if (isMultiRow) {
-    // Multi-cell paste: iterate over rows and columns
     expandAllRowsForSelection()
     const promises: Promise<void>[] = []
     lines.forEach((line, rowOffset) => {
@@ -1829,7 +2536,33 @@ async function onPaste(event: ClipboardEvent) {
     return
   }
 
-  // Single cell paste
+  if (isRangeSelecting.value) {
+    const bounds = getSelectionBounds()
+    if (bounds && (bounds.r1 !== bounds.r2 || bounds.c1 !== bounds.c2)) {
+      const columnsInSelection = getSelectableColumnIds()
+      const value = text.trim()
+      const promises: Promise<void>[] = []
+      showSaveStatus('saving')
+      for (let r = bounds.r1; r <= bounds.r2; r++) {
+        const targetRow = filteredRows.value[r]
+        if (!targetRow) continue
+        for (let c = bounds.c1; c <= bounds.c2; c++) {
+          const targetColId = columnsInSelection[c]
+          if (targetColId === undefined) continue
+          const p = pasteValueToCell(targetRow, targetColId, value)
+          if (p) promises.push(p)
+        }
+      }
+      try {
+        await Promise.all(promises)
+        showSaveStatus('saved')
+      } catch {
+        showSaveStatus('failed')
+      }
+      return
+    }
+  }
+
   const row = filteredRows.value[selectedRowIndex.value]
   if (!row) return
   const colId = selectedCol.value
@@ -1846,14 +2579,13 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
   if (!value) return
 
   if (colId === -1) {
-    // Paste student name
     const newName = value
     if (!newName || newName === row.student_name) return
     const oldName = row.student_name
     row.student_name = newName
     const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
     if (actualRow) actualRow.student_name = newName
-    return updateStudentInfo(subjectId.value, termId.value, row.enrollment_id, { student_name: newName })
+    return updateStudentInfo(subjectId.value, termId.value, row.enrollment_id, { student_name: newName, email_domain: selectedEmailDomain.value })
       .then(() => {})
       .catch(() => {
         row.student_name = oldName
@@ -1863,7 +2595,6 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
   }
 
   if (colId === 0) {
-    // Paste student number
     const newNumber = value
     if (!newNumber || newNumber === row.student_number) return
     const oldNumber = row.student_number
@@ -1879,7 +2610,6 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
       })
   }
 
-  // Score cell paste
   if (colId > 0) {
     const numValue = parseFloat(value)
     if (isNaN(numValue)) return
@@ -1911,7 +2641,6 @@ function onCut(event: ClipboardEvent) {
   cutSelection()
 }
 
-// ─── Undo / Redo ─────────────────────────────────────────────────────
 function undo() {
   const action = undoStack.value.pop()
   if (!action) return
@@ -1946,56 +2675,113 @@ function redo() {
     .catch(() => { showSaveStatus('failed'); row.details[action.detailId] = prevValue; triggerRef(data) })
 }
 
-// ─── Data Loading ────────────────────────────────────────────────────
 function goBack() { router.push('/scores') }
 
-async function refreshData() {
+async function refreshData(silent = false) {
   if (!subjectId.value || !termId.value) return
-  loading.value = true
+  if (!silent) loading.value = true
+  const prevRow = selectedRowIndex.value
+  const prevCol = selectedCol.value
   try {
-    data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value)
+    data.value = await getSpreadsheetBySubjectAndTerm(subjectId.value, termId.value, true)
     assessments.value = data.value.assessment_types
-    assessments.value.forEach(at => { weightEdits[at.id] = at.weight_percent })
-    // Initialize column types dropdown values
+    assessments.value.forEach(at => { weightEdits[at.id] = Number(at.weight_percent) })
     columns.value.forEach(col => { columnTypes[col.id] = col.type })
-    selectedRowIndex.value = 0
-    selectedCol.value = columns.value.length > 0 ? columns.value[0].id : null
+    const rowCount = filteredRows.value.length
+    selectedRowIndex.value = prevRow < rowCount ? prevRow : Math.max(0, rowCount - 1)
+    if (prevCol !== null && columns.value.some(c => c.id === prevCol)) {
+      selectedCol.value = prevCol
+    } else if (columns.value.length > 0) {
+      selectedCol.value = columns.value[0].id
+    }
   } catch { showSaveStatus('failed') }
-  finally { loading.value = false }
+  finally { if (!silent) loading.value = false }
 }
 
-// ─── Column Management ───────────────────────────────────────────────
 function startRenameColumn(col: SpreadsheetColumn) {
   renamingColumn.value = col
   renameValue.value = col.label
-  nextTick(() => { (document.querySelector('.modal-overlay .form-input') as HTMLInputElement)?.focus() })
+  nextTick(() => { (document.querySelector('.modern-input') as HTMLInputElement)?.focus() })
 }
 
 async function doRenameColumn() {
   if (!renamingColumn.value || !renameValue.value.trim()) return
+  const { id } = renamingColumn.value
+  const label = renameValue.value.trim()
+  renamingColumn.value = null
+  showSaveStatus('saving')
   try {
-    await renameColumn(subjectId.value, termId.value, renamingColumn.value.id, renameValue.value.trim())
-    renamingColumn.value = null; showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await renameColumn(subjectId.value, termId.value, id, label)
+    showToast(`Column renamed to "${label}"`, 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to rename column', 'error')
+  }
 }
 
 function confirmDeleteColumn(col: SpreadsheetColumn) { deleteConfirm.value = { col, label: col.label } }
 
 async function doDeleteColumn() {
   if (!deleteConfirm.value) return
+  const { col, label } = deleteConfirm.value
+  deleteConfirm.value = null
+  showSaveStatus('saving')
   try {
-    await deleteColumn(subjectId.value, termId.value, deleteConfirm.value.col.id)
-    deleteConfirm.value = null; showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await deleteColumn(subjectId.value, termId.value, col.id)
+    showToast(`Column "${label}" deleted`, 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to delete column', 'error')
+  }
 }
 
 async function doAddColumn() {
   if (!newColumn.label.trim()) return
+  showAddColumn.value = false
+  const label = newColumn.label.trim()
+  const maxScore = newColumn.max_score
+  let typeCode = newColumn.type
+
+  // If custom type, create the assessment type first
+  if (typeCode === '__custom__') {
+    const customName = newColumn.customTypeName.trim()
+    if (!customName) {
+      showToast('Please enter a custom type name', 'error')
+      return
+    }
+    const customCode = customName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+    try {
+      await createAssessmentType({ code: customCode, name: customName, weight_percent: 0 })
+      typeCode = customCode
+      await refreshData(true)
+    } catch {
+      showAddColumn.value = true
+      showToast('Failed to create custom type', 'error')
+      return
+    }
+  }
+
+  const cols = columns.value
+  const sameTypeCols = cols.filter(c => c.type === typeCode)
+  const orderNumber: number = sameTypeCols.length > 0
+    ? Math.max(...sameTypeCols.map(c => c.order_number ?? 0)) + 1
+    : cols.length > 0 ? Math.max(...cols.map(c => c.order_number ?? 0)) + 1 : 1
+
+  newColumn.label = ''; newColumn.max_score = null; newColumn.customTypeName = ''; newColumn.type = 'quiz'
+  showSaveStatus('saving')
   try {
-    await addColumn(subjectId.value, termId.value, { type: newColumn.type, label: newColumn.label.trim(), max_score: newColumn.max_score })
-    showAddColumn.value = false; newColumn.label = ''; newColumn.max_score = null
-    showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
+    await addColumn(subjectId.value, termId.value, { type: typeCode, label, max_score: maxScore, order_number: orderNumber })
+    showToast(`Column "${label}" created successfully`, 'success')
+    showSaveStatus('saved')
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to create column', 'error')
+  }
 }
 
 async function doAddColumnInline() {
@@ -2003,13 +2789,11 @@ async function doAddColumnInline() {
   try {
     await addColumn(subjectId.value, termId.value, { type: inlineColType.value, label: inlineColName.value.trim(), max_score: inlineColMax.value })
     inlineColName.value = ''; inlineColType.value = 'quiz'; inlineColMax.value = 100
-    showInlineAddColumn.value = false; showSaveStatus('saved'); refreshData()
+    showInlineAddColumn.value = false; showSaveStatus('saved'); refreshData(true)
   } catch { showSaveStatus('failed') }
 }
 
-// ─── Context Menu & Row Insert ───────────────────────────────────
 function showContextMenu(event: MouseEvent, rowIdx: number) {
-  // Position menu, preventing overflow
   const x = Math.min(event.clientX, window.innerWidth - 200)
   const y = Math.min(event.clientY, window.innerHeight - 160)
   contextMenu.value = { x, y, rowIdx }
@@ -2023,7 +2807,7 @@ function showContextMenu(event: MouseEvent, rowIdx: number) {
 async function insertRowAbove(rowIdx: number) {
   contextMenu.value = null
   try {
-    const result = await addEnrollment(subjectId.value, termId.value, null)
+    const result = await addEnrollment(subjectId.value, termId.value, null, classId.value)
     const enrollmentId = result.id
     const targetRow = filteredRows.value[rowIdx]
     const actualIndex = targetRow && data.value
@@ -2031,9 +2815,6 @@ async function insertRowAbove(rowIdx: number) {
       : -1
     pageSize.value = 'all'
     showSaveStatus('saving')
-    // Refresh to get proper ScoreDetails from server
-    await refreshData()
-    // Re-insert the new row at the target position (it came back at the bottom)
     if (actualIndex >= 0 && data.value) {
       const freshRows = [...data.value.rows]
       const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
@@ -2053,7 +2834,7 @@ async function insertRowAbove(rowIdx: number) {
 async function insertRowBelow(rowIdx: number) {
   contextMenu.value = null
   try {
-    const result = await addEnrollment(subjectId.value, termId.value, null)
+    const result = await addEnrollment(subjectId.value, termId.value, null, classId.value)
     const enrollmentId = result.id
     const targetRow = filteredRows.value[rowIdx]
     const actualIndex = targetRow && data.value
@@ -2061,8 +2842,7 @@ async function insertRowBelow(rowIdx: number) {
       : -1
     pageSize.value = 'all'
     showSaveStatus('saving')
-    await refreshData()
-    // Re-insert the new row after the target position
+    await refreshData(true)
     if (actualIndex >= 0 && data.value) {
       const freshRows = [...data.value.rows]
       const newRowIdx = freshRows.findIndex(r => r.enrollment_id === enrollmentId)
@@ -2087,7 +2867,7 @@ async function deleteRow(rowIdx: number) {
   try {
     await deleteEnrollment(subjectId.value, termId.value, row.enrollment_id)
     showSaveStatus('saved')
-    await refreshData()
+    await refreshData(true)
   } catch (err) {
     showSaveStatus('failed')
     console.error('Failed to delete row:', err)
@@ -2096,10 +2876,10 @@ async function deleteRow(rowIdx: number) {
 
 async function doAddRow() {
   try {
-    await addEnrollment(subjectId.value, termId.value, null)
+    await addEnrollment(subjectId.value, termId.value, null, classId.value)
     showSaveStatus('saved')
     pageSize.value = 'all'
-    await refreshData()
+    await refreshData(true)
   } catch (err) {
     showSaveStatus('failed')
     console.error('Failed to add row:', err)
@@ -2109,37 +2889,310 @@ async function doAddRow() {
 
 async function doUpdateWeights() {
   if (totalWeight.value !== 100) return
+  const weights = assessments.value.map(at => ({ id: at.id, weight_percent: Number(weightEdits[at.id] || 0) }))
+  showWeights.value = false
+  showSaveStatus('saving')
   try {
-    await updateWeights(assessments.value.map(at => ({ id: at.id, weight_percent: weightEdits[at.id] || 0 })))
-    showWeights.value = false; showSaveStatus('saved'); refreshData()
-  } catch { showSaveStatus('failed') }
-}
-
-// ─── Google Sheets Sync ──────────────────────────────────────────────
-async function syncToGoogle() {
-  syncing.value = true
-  try {
-    const token = localStorage.getItem('google_access_token')
-    if (token) {
-      try {
-        const result = await createGoogleSheet(subjectId.value, termId.value, token)
-        window.open(result.url, '_blank'); showSaveStatus('saved'); return
-      } catch (e) { console.warn('OAuth sync failed, falling back to CSV export', e) }
-    }
-    const result = await syncToGoogleSheets(subjectId.value, termId.value)
-    const blob = new Blob([result.csv_content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    window.open('https://docs.google.com/spreadsheets', '_blank')
-    const link = document.createElement('a')
-    link.href = url; link.download = `${data.value?.subject?.name || 'scores'}-${data.value?.term?.name || 'term'}.csv`
-    document.body.appendChild(link); link.click(); document.body.removeChild(link)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    await updateWeights(weights)
+    showToast('Weights updated successfully', 'success')
     showSaveStatus('saved')
-  } catch { showSaveStatus('failed') }
-  finally { syncing.value = false }
+    refreshData(true)
+  } catch {
+    showSaveStatus('failed')
+    showToast('Failed to update weights', 'error')
+  }
 }
 
-// ─── File Import (CSV, Excel) ────────────────────────────────────────
+function openGoogleSheetsDirect() {
+  gsLoading.value = true
+  gsReconnectNeeded.value = false
+  if (gsSheetId.value) {
+    openExistingSheet(gsSheetId.value, openLoadingPopup())
+    return
+  }
+  const storedToken = localStorage.getItem("google_access_token")
+  if (storedToken) { createAndOpenSheet(storedToken, openLoadingPopup()); return }
+  startGoogleAuth()
+}
+
+function openLoadingPopup(): Window | null {
+  const popup = window.open('', '_blank')
+  try {
+    popup?.document.write('<title>Google Sheets</title><body style="font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#64748b">Preparing your Google Sheet…</body>')
+  } catch {
+  }
+  return popup
+}
+
+function navigatePopupOrOpen(popup: Window | null, url: string) {
+  if (popup && !popup.closed) {
+    popup.location.href = url
+  } else {
+    showGoogleSheetLink(url)
+  }
+}
+
+const gsLinkUrl = ref('')
+const showGsLinkModal = ref(false)
+
+function showGoogleSheetLink(url: string) {
+  gsLinkUrl.value = url
+  showGsLinkModal.value = true
+  navigator.clipboard.writeText(url).catch(() => {})
+  showToast('Link copied to clipboard! Click Open to view your sheet.', 'success', 4000)
+}
+
+function openGsLinkDirectly() {
+  window.open(gsLinkUrl.value, '_blank')
+  showGsLinkModal.value = false
+}
+
+async function openExistingSheet(sheetId: string, popup: Window | null) {
+  try {
+    navigatePopupOrOpen(popup, `https://docs.google.com/spreadsheets/d/${sheetId}/edit`)
+    gsLoading.value = false
+
+    let token = localStorage.getItem("google_access_token")
+    if (!token) {
+      try {
+        const refreshed = await refreshGoogleToken()
+        localStorage.setItem("google_access_token", refreshed.access_token)
+        token = refreshed.access_token
+      } catch {
+        gsReconnectNeeded.value = true
+        return
+      }
+    }
+    if (token) {
+      ;(async () => {
+        await pushToGoogleSheet(subjectId.value, termId.value, sheetId, token).catch((err) => {
+          console.warn("Could not push latest data to Google Sheet:", err?.response?.data?.message || err?.message)
+        })
+        await ensureGoogleSheetShared(sheetId, token).catch(() => {})
+      })()
+    }
+  } catch {
+  }
+}
+
+async function createAndOpenSheet(token: string, popup: Window | null) {
+  try {
+    const result = await createGoogleSheet(subjectId.value, termId.value, token)
+    const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
+    const storageData = { sheet_id: result.spreadsheet_id, created_at: new Date().toISOString() }
+    localStorage.setItem(storageKey, JSON.stringify(storageData))
+    gsSheetId.value = result.spreadsheet_id
+    navigatePopupOrOpen(popup, result.url)
+    showSaveStatus("saved", { skipSheetPush: true })
+    gsLastSynced.value = new Date().toLocaleTimeString()
+    startAutoSync() // Begin polling immediately instead of waiting for the next page load.
+    gsLoading.value = false
+  } catch (err: any) {
+    const status = err?.response?.status
+    if (status === 400 || status === 401 || status === 403) {
+      console.warn("Google token expired or missing, re-authenticating...")
+      localStorage.removeItem("google_access_token")
+      popup?.close() // GIS will open its own popup for re-auth; don't leave our blank one hanging.
+      startGoogleAuth()
+      return
+    }
+    console.error("Google Sheets error:", err?.response?.data?.message || err?.message || "Failed")
+    showSaveStatus("failed")
+    popup?.close()
+    gsLoading.value = false
+  }
+}
+
+async function syncFromGoogleSheets() {
+  if (gsIsSyncing) return // Prevent concurrent syncs (e.g. visibility + focus firing together)
+  gsIsSyncing = true
+  try {
+    if (sheetPushTimer) {
+      clearTimeout(sheetPushTimer)
+      sheetPushTimer = null
+      await pushCurrentDataToSheet()
+    }
+    let token = localStorage.getItem("google_access_token")
+    
+    if (!token) {
+      try {
+        const refreshed = await refreshGoogleToken()
+        localStorage.setItem("google_access_token", refreshed.access_token)
+        token = refreshed.access_token
+      } catch {
+        gsReconnectNeeded.value = true
+        stopAutoSync()
+        showSaveStatus("failed")
+        return
+      }
+    }
+
+    try {
+      const result = await importFromGoogleSheets(
+        subjectId.value,
+        termId.value,
+        gsSheetId.value!,
+        token,
+        selectedEmailDomain.value
+      )
+      if (!result.synced) return // Nothing to sync yet (no matching tab / no data rows) — stay quiet.
+      await refreshData(true)
+      gsLastSynced.value = new Date().toLocaleTimeString()
+      gsReconnectNeeded.value = false
+      showSaveStatus("saved", { skipSheetPush: true })
+    } catch (err: any) {
+      const status = err?.response?.status
+      if (status === 401 || status === 403) {
+        localStorage.removeItem("google_access_token")
+        try {
+          const refreshed = await refreshGoogleToken()
+          localStorage.setItem("google_access_token", refreshed.access_token)
+          const retryResult = await importFromGoogleSheets(
+            subjectId.value,
+            termId.value,
+            gsSheetId.value!,
+            refreshed.access_token,
+            selectedEmailDomain.value
+          )
+          if (!retryResult.synced) return
+          await refreshData(true)
+          gsLastSynced.value = new Date().toLocaleTimeString()
+          gsReconnectNeeded.value = false
+          showSaveStatus("saved", { skipSheetPush: true }) // Pull result — see note above.
+          return
+        } catch (retryErr: any) {
+          gsReconnectNeeded.value = true
+          stopAutoSync()
+          if (retryErr?.response?.status === 403) {
+            forgetStoredSheetId()
+            console.warn("This Google account doesn't have access to the linked spreadsheet. Click 'Google Sheets' to create a new one, or reconnect with the account that owns it.")
+          } else {
+            console.warn("Google token expired. Click 'Reconnect Google' to re-authorize.")
+          }
+          showSaveStatus("failed")
+        }
+      } else {
+        console.error("Sync from Google Sheets failed:", err?.response?.data?.message || err?.message || "Failed")
+        showSaveStatus("failed")
+      }
+    }
+  } finally {
+    gsIsSyncing = false
+  }
+}
+
+function startAutoSync() {
+  stopAutoSync()
+  document.addEventListener("visibilitychange", onVisibilityChange)
+  window.addEventListener("focus", onWindowFocus)
+  if (gsSheetId.value && editingRow.value === null) syncFromGoogleSheets()
+  gsAutoSyncTimer = setInterval(() => {
+    if (!gsSheetId.value || editingRow.value !== null) return // Don't sync while user is editing
+    syncFromGoogleSheets()
+  }, 8000)
+}
+
+
+function stopAutoSync() {
+  document.removeEventListener("visibilitychange", onVisibilityChange)
+  window.removeEventListener("focus", onWindowFocus)
+  if (gsAutoSyncTimer !== null) {
+    clearInterval(gsAutoSyncTimer)
+    gsAutoSyncTimer = null
+  }
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === "visible" && gsSheetId.value && editingRow.value === null) {
+    syncFromGoogleSheets()
+  }
+}
+
+function onWindowFocus() {
+  if (gsSheetId.value && editingRow.value === null) {
+    syncFromGoogleSheets()
+  }
+}
+
+async function loadStoredSheetId() {
+  const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
+  try {
+    const stored = localStorage.getItem(storageKey)
+    if (stored) {
+      const data = JSON.parse(stored)
+      gsSheetId.value = data.sheet_id || null
+      if (gsSheetId.value) {
+        try {
+          const status = await getGoogleStatus()
+          if (status.connected) {
+            startAutoSync()
+          } else {
+            gsReconnectNeeded.value = true
+          }
+        } catch {
+        }
+      }
+    }
+  } catch {
+  }
+}
+
+function forgetStoredSheetId() {
+  const storageKey = `gs_sheet_${subjectId.value}_${termId.value}`
+  localStorage.removeItem(storageKey)
+  gsSheetId.value = null
+  stopAutoSync()
+}
+
+async function startGoogleAuth() {
+  try {
+    const config = await getGoogleConfig()
+    if (!config.client_id) { showSaveStatus("failed"); gsLoading.value = false; return }
+    await loadGoogleScript()
+    const codeClient = (window as any).google.accounts.oauth2.initCodeClient({
+      client_id: config.client_id,
+      scope: config.scopes.join(" "),
+      ux_mode: "popup",
+      callback: async (response: any) => {
+        if (response.error || !response.code) { showSaveStatus("failed"); gsLoading.value = false; return }
+        try {
+          const tokenResult = await exchangeGoogleToken(response.code)
+          localStorage.setItem("google_access_token", tokenResult.access_token)
+          await createAndOpenSheet(tokenResult.access_token, null)
+        } catch (err: any) {
+          console.error("Google token exchange failed:", err?.response?.data?.message || err?.message)
+          showSaveStatus("failed")
+          gsLoading.value = false
+        }
+      },
+      error_callback: () => { showSaveStatus("failed"); gsLoading.value = false },
+    })
+    codeClient.requestCode()
+  } catch (err: any) {
+    console.error("Google auth failed:", err)
+    showSaveStatus("failed")
+    gsLoading.value = false
+  }
+}
+
+function loadGoogleScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).google?.accounts?.oauth2) { resolve(); return }
+    const script = document.createElement("script")
+    script.src = "https://accounts.google.com/gsi/client"
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      setTimeout(() => {
+        if ((window as any).google?.accounts?.oauth2) resolve()
+        else reject(new Error("Google Identity Services failed to load"))
+      }, 200)
+    }
+    script.onerror = () => reject(new Error("Failed to load Google script"))
+    document.head.appendChild(script)
+  })
+}
+
 function openFilePicker() {
   fileInputRef.value?.click()
 }
@@ -2150,6 +3203,7 @@ function onFileSelected(event: Event) {
   if (file) {
     pendingFile.value = file
     selectedFileName.value = file.name
+    previewFile(file)
   }
   input.value = ''
 }
@@ -2159,6 +3213,8 @@ function onFileDrop(event: DragEvent) {
   if (file) {
     pendingFile.value = file
     selectedFileName.value = file.name
+    dragOver.value = false
+    previewFile(file)
   }
 }
 
@@ -2169,51 +3225,38 @@ async function processImportFile() {
   const ext = file.name.split('.').pop()?.toLowerCase() || ''
   showSaveStatus('saving')
   showImport.value = false
+  pendingFile.value = null
+  selectedFileName.value = ''
+  importProgress.value = 0
+  importStatusText.value = ''
 
   try {
-    if (ext === 'csv') {
-      await importCSVFile(file)
-    } else if (ext === 'xlsx' || ext === 'xls') {
+    if (ext === 'xlsx' || ext === 'xls') {
       await importExcelFile(file)
+    } else if (ext === 'pdf') {
+      await importPdfFile(file)
     } else {
-      throw new Error('Unsupported file format. Please use CSV or Excel (.xlsx/.xls).')
+      throw new Error('Unsupported file format. Please use Excel (.xlsx/.xls) or PDF (.pdf) files only.')
     }
     showSaveStatus('saved')
     pageSize.value = 'all'
-    await refreshData()
+    await animateImportProgress(70, 90, 500, 'Refreshing sheet...')
+    await refreshData(true)
+    await animateImportProgress(90, 100, 400, 'Import complete!')
+    setTimeout(() => { importProgress.value = 0 }, 1200)
   } catch (err: any) {
     showSaveStatus('failed')
+    importProgress.value = 0
+    importStatusText.value = ''
     alert('Import failed: ' + (err.message || 'Unknown error'))
     console.error('Import error:', err)
   }
-
-  pendingFile.value = null
-  selectedFileName.value = ''
-}
-
-async function importCSVFile(file: File) {
-  const content = await file.text()
-  // Parse CSV into structured rows and send to the unified import endpoint
-  const lines = content.split('\n').filter(l => l.trim())
-  const parsedRows: (string | number)[][] = lines.map(l => {
-    // Handle quoted CSV values properly
-    const row: string[] = []
-    let current = ''
-    let inQuotes = false
-    for (const ch of l) {
-      if (ch === '"') { inQuotes = !inQuotes; continue }
-      if (ch === ',' && !inQuotes) { row.push(current.trim()); current = ''; continue }
-      current += ch
-    }
-    row.push(current.trim())
-    return row
-  })
-  const rows = parseTabularData(parsedRows)
-  await importFile(subjectId.value, termId.value, { rows })
 }
 
 async function importExcelFile(file: File) {
   const { read, utils } = await import('xlsx')
+
+  await animateImportProgress(0, 15, 400, 'Reading file...')
   const buffer = await file.arrayBuffer()
   const workbook = read(buffer, { type: 'array' })
   const sheetName = workbook.SheetNames[0]
@@ -2222,8 +3265,13 @@ async function importExcelFile(file: File) {
   const jsonData: any[][] = utils.sheet_to_json(sheet, { header: 1 })
   if (jsonData.length < 2) throw new Error('Excel file must contain at least a header row and one data row')
 
+  await animateImportProgress(15, 35, 500, 'Parsing student data...')
   const rows = parseTabularData(jsonData as (string | number)[][])
-  await importFile(subjectId.value, termId.value, { rows })
+
+  importStatusText.value = 'Importing scores to server...'
+  const animPromise = animateImportProgress(35, 65, 3000, 'Importing scores to server...')
+  await importFile(subjectId.value, termId.value, { rows, email_domain: selectedEmailDomain.value }, classId.value)
+  importProgress.value = 70
 }
 
 function parseTabularData(jsonData: (string | number)[][]): Array<{
@@ -2234,13 +3282,11 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   if (jsonData.length < 2) throw new Error('Data must have at least a header and one row')
 
   const header = jsonData[0].map(c => String(c).trim())
-  // Find column indices: Student Name and Student ID
   let nameIdx = header.findIndex(h => /name|student/i.test(h))
   let idIdx = header.findIndex(h => /id|number|code|no/i.test(h) && !/name/i.test(h))
   if (nameIdx < 0) nameIdx = 0  // Default: first column is name
   if (idIdx < 0 || idIdx === nameIdx) idIdx = -1  // No ID column
 
-  // Parse score columns (everything after name/ID columns)
   const scoreColumns: { index: number; label: string }[] = []
   for (let i = 0; i < header.length; i++) {
     if (i === nameIdx || i === idIdx) continue
@@ -2289,7 +3335,6 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   return rows
 }
 
-// ─── Export ──────────────────────────────────────────────────────────
 function exportCSV() {
   if (!data.value) return
   const cols = columns.value
@@ -2310,13 +3355,151 @@ function exportCSV() {
   showSaveStatus('saved')
 }
 
-// ─── Status ──────────────────────────────────────────────────────────
-function showSaveStatus(status: 'saving' | 'saved' | 'failed') {
-  saveStatus.value = status
-  if (status !== 'saving') setTimeout(() => { if (saveStatus.value === status) saveStatus.value = 'idle' }, 3000)
+async function exportExcel() {
+  if (!data.value) return
+  const { utils, writeFile } = await import('xlsx')
+  const cols = columns.value
+  
+  const header = ['Student Name', 'Student ID']
+  cols.forEach(c => header.push(`${c.label} (${c.type})`))
+  header.push('Total', 'Grade')
+  
+  const dataRows = rows.value.map(r => {
+    const row: (string | number)[] = [r.student_name, r.student_number]
+    cols.forEach(c => {
+      const m = getCellMark(r, c.id)
+      row.push(m !== null ? m : '')
+    })
+    row.push(r.total !== null ? r.total : '', r.grade || '')
+    return row
+  })
+  
+  const ws = utils.aoa_to_sheet([header, ...dataRows])
+  const wb = utils.book_new()
+  utils.book_append_sheet(wb, ws, 'Scores')
+  
+  writeFile(wb, `scores-${data.value.subject?.name || 'export'}.xlsx`)
+  showExportMenu.value = false
+  showSaveStatus('saved')
 }
 
-// ─── Lifecycle ───────────────────────────────────────────────────────
+async function exportPDF() {
+  if (!data.value) return
+  const [{ default: jsPDF }, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ])
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  if (typeof (doc as any).autoTable !== 'function' && autoTableModule && typeof autoTableModule.default === 'function') {
+    const autoTablePlugin = autoTableModule.default
+    ;(doc as any).autoTable = (opts: any) => autoTablePlugin(doc, opts)
+  }
+  const cols = columns.value
+  
+  doc.setFontSize(14)
+  doc.text(`${data.value.subject?.name || 'Scores'} - ${data.value.term?.name || ''}`, 14, 15)
+  doc.setFontSize(9)
+  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 21)
+  
+  const head = [['#', 'Student Name', 'Student ID', ...cols.map(c => c.label), 'Total', 'Grade']]
+  const body = rows.value.map((r, i) => [
+    String(i + 1),
+    r.student_name,
+    r.student_number,
+    ...cols.map(c => {
+      const m = getCellMark(r, c.id)
+      return m !== null ? String(m) : ''
+    }),
+    r.total !== null ? r.total.toFixed(2) : '-',
+    r.grade || '-',
+  ])
+  
+  ;(doc as any).autoTable({
+    head,
+    body,
+    startY: 26,
+    styles: { fontSize: 7, cellPadding: 1.5 },
+    headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles: {
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 28 },
+    },
+  })
+  
+  doc.save(`scores-${data.value.subject?.name || 'export'}.pdf`)
+  showExportMenu.value = false
+  showSaveStatus('saved')
+}
+
+function exportFormat(format: 'xlsx' | 'pdf') {
+  showExportMenu.value = false
+  if (format === 'xlsx') exportExcel()
+  else if (format === 'pdf') exportPDF()
+}
+
+function showSaveStatus(status: 'saving' | 'saved' | 'failed', opts: { skipSheetPush?: boolean } = {}) {
+  saveStatus.value = status
+  if (status !== 'saving') setTimeout(() => { if (saveStatus.value === status) saveStatus.value = 'idle' }, 3000)
+  if (status === 'saved' && !opts.skipSheetPush) scheduleSheetPush()
+}
+
+let sheetPushTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSheetPush() {
+  if (!gsSheetId.value) return // No linked sheet for this subject/term — nothing to push to.
+  if (sheetPushTimer) clearTimeout(sheetPushTimer)
+  sheetPushTimer = setTimeout(() => { pushCurrentDataToSheet() }, 2500)
+}
+
+function cancelScheduledSheetPush() {
+  if (sheetPushTimer) {
+    clearTimeout(sheetPushTimer)
+    sheetPushTimer = null
+  }
+}
+
+async function pushCurrentDataToSheet() {
+  sheetPushTimer = null
+  if (!gsSheetId.value) return
+
+  let token = localStorage.getItem("google_access_token")
+  if (!token) {
+    try {
+      const refreshed = await refreshGoogleToken()
+      localStorage.setItem("google_access_token", refreshed.access_token)
+      token = refreshed.access_token
+    } catch {
+      return
+    }
+  }
+
+  try {
+    await pushToGoogleSheet(subjectId.value, termId.value, gsSheetId.value, token)
+  } catch (err: any) {
+    console.warn("Could not push edit to Google Sheet:", err?.response?.data?.message || err?.message)
+  }
+}
+
+function animateImportProgress(from: number, to: number, duration: number, statusText: string): Promise<void> {
+  return new Promise(resolve => {
+    importStatusText.value = statusText
+    const startTime = performance.now()
+    function tick(now: number) {
+      const elapsed = now - startTime
+      const t = Math.min(elapsed / duration, 1)
+      const newValue = from + (to - from) * t
+      if (newValue > importProgress.value) {
+        importProgress.value = newValue
+      }
+      if (t < 1) requestAnimationFrame(tick)
+      else resolve()
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
 function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
   const newType = (event.target as HTMLSelectElement).value
   if (newType === col.type) return
@@ -2325,7 +3508,7 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
   changeColumnType(subjectId.value, termId.value, col.label, oldType, newType)
     .then(() => {
       showSaveStatus('saved')
-      refreshData()
+      refreshData(true)
     })
     .catch(() => {
       showSaveStatus('failed')
@@ -2333,75 +3516,171 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
     })
 }
 
+function refocusSheet() {
+  if (showKeyboardShortcuts.value || showAddColumn.value || showWeights.value || showImport.value || showAddRowPopup.value) return
+  if (editingRow.value !== null) return
+  const container = sheetContainer.value
+  if (container && document.activeElement !== container) {
+    container.focus()
+  }
+}
+
 onMounted(() => {
   refreshData()
+  loadStoredSheetId()
+  loadStudentEmailDomains()
   getStudentNumbers().then(nums => { studentNumbers.value = nums }).catch(() => {})
-  nextTick(() => {
-    const container = document.querySelector('.sheet-wrapper') as HTMLElement
-    if (container) container.focus()
-  })
 })
 
-watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshData() })
+watch([data, columns], () => {
+  if (data.value && columns.value.length > 0 && filteredRows.value.length > 0 && selectedCol.value === null) {
+    selectedCol.value = columns.value[0].id
+    selectedRowIndex.value = 0
+    nextTick(() => {
+      const container = sheetContainer.value
+      if (container) container.focus()
+    })
+  }
+})
+
+onUnmounted(() => {
+  stopAutoSync()
+  cancelScheduledSheetPush()
+  gsSheetId.value = null
+})
+
+watch(searchQuery, () => {
+  currentPage.value = 1
+})
+
+watch([subjectId, termId], () => {
+  if (!subjectId.value || !termId.value) return
+  refreshData()
+  stopAutoSync()
+  cancelScheduledSheetPush()
+  gsSheetId.value = null
+  gsReconnectNeeded.value = false
+  loadStoredSheetId()
+})
 </script>
 
 <style scoped>
-/* ─── Layout ────────────────────────────────────────────────────────── */
+
 .score-sheet {
   position: relative;
   font-family: 'Inter', 'Segoe UI', 'Noto Sans Khmer', sans-serif;
-  height: calc(100vh - 0px);
+  height: calc(98vh - 90px);
+  width: calc(100% + 12px);
+  margin-top: -8px;
+  margin-left: -6px;
   min-height: 0;
   display: flex;
   flex-direction: column;
   color: #1e293b;
   background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
 }
 
 .sheet-toolbar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
   flex-shrink: 0;
   flex-wrap: wrap;
+  border-radius: 16px 16px 0 0;
 }
 .toolbar-spacer { flex: 0; }
 .toolbar-actions { display: flex; align-items: center; gap: 8px; flex: 1; flex-wrap: wrap; }
-.offering-info { display: flex; flex-direction: column; white-space: nowrap; }
-.offering-info strong { font-size: 0.95rem; font-weight: 700; color: #0f172a; }
-.offering-info .text-muted { font-size: 0.7rem; color: #64748b; }
-.term-badge { display: inline-block; padding: 2px 8px; background: #dbeafe; color: #1e40af; border-radius: 4px; font-weight: 700; font-size: 0.75rem; margin-right: 4px; }
+.offering-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  color: #334155;
+  white-space: nowrap;
+  min-height: 32px;
+}
+.offering-item {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  color: #475569;
+}
+.offering-item-main {
+  font-weight: 700;
+  color: #0f172a;
+}
+.offering-item-badge {
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+.offering-item-badge.offering-term {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.offering-item-badge.offering-class {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+.offering-item-teachers {
+  color: #64748b;
+  font-size: 0.72rem;
+}
 
 .tb-btn {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 5px 10px; border: 1px solid #e2e8f0; background: #fff;
-  border-radius: 6px; cursor: pointer; font-size: 0.78rem;
-  color: #475569; transition: all 0.15s; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border: 1px solid #e2e8f0; background: #fff;
+  border-radius: 8px; cursor: pointer; font-size: 0.78rem;
+  color: #475569; transition: all 0.2s; white-space: nowrap;
+  font-family: inherit; font-weight: 500;
 }
-.tb-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
+.tb-btn:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.tb-btn:active { transform: translateY(0); box-shadow: none; }
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-group { display: flex; gap: 3px; flex-wrap: wrap; }
+.tb-btn span { display: inline; }
+.kb-btn { font-size: 0.85rem; color: #64748b; padding: 6px 10px; }
+.kb-btn:hover { color: #2563eb; background: #eff6ff; border-color: #93c5fd; }
 
-.search-box { display: flex; align-items: center; gap: 5px; padding: 5px 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; min-width: 120px; }
-.search-box input { border: none; background: transparent; outline: none; font-size: 0.78rem; width: 100px; color: #1e293b; }
-.search-box i { color: #94a3b8; font-size: 0.78rem; }
+.gs-icon {
+  flex-shrink: 0;
+}
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
 
-.save-status { font-size: 0.7rem; display: flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
-.status-saving { color: #f59e0b; background: #fef3c7; }
-.status-saved { color: #16a34a; background: #dcfce7; }
-.status-failed { color: #dc2626; background: #fee2e2; }
-.status-idle { color: transparent; }
+.toolbar-meta { display: flex; align-items: center; gap: 8px; font-size: 0.7rem; white-space: nowrap; padding-right: 4px; }
+.gs-sync-status { display: flex; align-items: center; gap: 4px; color: #16a34a; padding: 2px 8px; background: #f0fdf4; border-radius: 4px; }
+.gs-sync-pending { color: #f59e0b; background: #fefce8; }
+.gs-reconnect-needed { color: #ea580c; background: #fff7ed; cursor: pointer; transition: background 0.15s; }
+.gs-reconnect-needed:hover { background: #ffedd5; }
+.gs-reconnect-link { color: #ea580c; text-decoration: underline; cursor: pointer; }
+.gs-reconnect-link:hover { color: #c2410c; }
+.save-status { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 500; white-space: nowrap; padding: 3px 8px; border-radius: 6px; }
+.status-saving { color: #f59e0b; }
+.status-saved { color: #10b981; }
+.status-failed { color: #ef4444; }
+.status-idle { color: #94a3b8; }
 
-.stats-bar { display: flex; gap: 16px; padding: 6px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; flex-wrap: wrap; }
-.stat-item { display: flex; gap: 5px; font-size: 0.78rem; align-items: center; }
+.stats-bar { display: flex; gap: 20px; padding: 10px 16px; background: #f8fafc; border-bottom: 1px solid #e9ecef; flex-shrink: 0; flex-wrap: wrap; }
+.stat-item { display: flex; gap: 6px; font-size: 0.78rem; align-items: center; }
 .stat-label { color: #64748b; font-weight: 500; }
 .stat-value { font-weight: 700; color: #0f172a; }
 
-/* ─── Sheet Wrapper ────────────────────────────────────────────────── */
+
 .sheet-wrapper {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -2417,7 +3696,12 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   overflow: auto;
 }
 
-/* ─── Table ────────────────────────────────────────────────────────── */
+.sheet-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.sheet-scroll::-webkit-scrollbar-track { background: transparent; }
+.sheet-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.sheet-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+
 .sheet-table {
   border-collapse: collapse;
   width: max-content;
@@ -2425,12 +3709,12 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   font-size: 0.8rem;
 }
 
-.sheet-table thead { position: sticky; top: 0; z-index: 10; }
+.sheet-table thead { position: sticky; top: 0; z-index: 50; }
 
 .cell-header {
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
-  padding: 5px 8px;
+  padding: 4px 3px;
   font-weight: 700;
   font-size: 0.7rem;
   text-transform: uppercase;
@@ -2438,24 +3722,28 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   color: #475569;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 50;
   text-align: left;
   white-space: nowrap;
   min-width: 80px;
   user-select: none;
 }
 
-/* ─── Cell Highlights (Excel green) ─────────────────────────────────── */
-.cell-frozen { position: sticky; z-index: 20; background: #f1f5f9; }
+
+.cell-frozen { position: sticky; z-index: 20; background: #fff; }
 
 .row-num-header, .row-num { left: 0; width: 36px; min-width: 36px; max-width: 36px; text-align: center; z-index: 30; }
 .student-name-header, .cell-student-name { left: 36px; min-width: 160px; z-index: 25; }
-.student-class-header, .cell-student-class { left: 196px; min-width: 100px; max-width: 120px; z-index: 25; }
-.student-id-header, .cell-student-id { left: 296px; min-width: 90px; z-index: 25; }
+.student-id-header, .cell-student-id { left: 196px; min-width: 120px; z-index: 25; }
 
-/* ─── Enhanced Header Highlight ─────────────────────────────────────── */
+
+.row-num-header { z-index: 50; }
+.student-name-header { z-index: 50; }
+.student-id-header { z-index: 50; }
+
+
 .header-highlighted {
-  background: #d4edda !important; /* Light green */
+  background: #d4edda !important; 
   border-color: #6cc47c !important;
   color: #155724 !important;
 }
@@ -2467,84 +3755,194 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   font-weight: 700 !important;
 }
 
-/* ─── Header ────────────────────────────────────────────────────────── */
+
 .header-content { display: flex; align-items: center; gap: 4px; }
-.column-header-content { flex-direction: column; align-items: flex-start; gap: 1px; }
-.column-label { overflow: hidden; text-overflow: ellipsis; cursor: pointer; font-size: 0.68rem; }
+.column-header-content { flex-direction: column; align-items: stretch; gap: 1px; }
 
-.column-actions { display: none; gap: 2px; margin-top: 2px; }
-.cell-header:hover .column-actions { display: flex; }
-.col-action-btn { background: none; border: none; padding: 1px 3px; cursor: pointer; font-size: 0.6rem; color: #64748b; border-radius: 2px; }
-.col-action-btn:hover { background: #e2e8f0; }
-.text-danger { color: #ef4444 !important; }
-.max-score-label { font-size: 0.55rem; color: #94a3b8; font-weight: 400; margin-top: 1px; }
+.column-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
 
-/* ─── Editable Column Type Select ─────────────────────────────────── */
-.column-type-select {
-  font-size: 0.6rem;
-  padding: 1px 4px;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  background: transparent;
-  color: inherit;
+.column-label { overflow: hidden; text-overflow: ellipsis; cursor: pointer; font-size: 0.68rem; flex: 1; min-width: 0; text-align: left; }
+
+.column-actions {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  flex-shrink: 0;
+}
+.cell-header:hover .column-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.col-action-btn {
+  background: none; border: none; padding: 3px 5px; cursor: pointer; font-size: 0.65rem;
+  color: #64748b; border-radius: 4px; display: inline-flex; align-items: center;
+  justify-content: center; opacity: 0.7; transition: all 0.15s ease; line-height: 1;
+}
+.col-action-btn:hover { background: #e2e8f0; opacity: 1; }
+.col-action-delete:hover { color: #ef4444 !important; background: #fef2f2; }
+
+.max-score-label { font-size: 0.5rem; color: #94a3b8; font-weight: 400; line-height: 1; }
+
+
+.col-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.55rem;
+  font-weight: 500;
+  padding: 2px 6px 2px 8px;
+  border-radius: 10px;
   cursor: pointer;
-  outline: none;
-  max-width: 90px;
-  font-weight: 400;
-  appearance: auto;
-  transition: all 0.15s;
+  position: relative;
+  user-select: none;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
 }
-.column-type-select:hover {
-  border-color: #cbd5e1;
-  background: rgba(255,255,255,0.6);
+.col-type-badge:hover {
+  opacity: 0.85;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
-.column-type-select:focus {
-  border-color: #3b82f6;
+.col-type-badge:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+.col-type-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 65px;
+}
+.col-type-chevron {
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: transform 0.15s;
+}
+.col-type-badge:hover .col-type-chevron {
+  opacity: 1;
+}
+
+.col-type-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  min-width: 130px;
   background: #fff;
-  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 4px;
+  margin-top: 4px;
 }
-.col-type-quiz .column-type-select { background: #dbeafe; color: #2563eb; border-color: #bfdbfe; }
-.col-type-assignment .column-type-select { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
-.col-type-project .column-type-select { background: #fef3c7; color: #d97706; border-color: #fde68a; }
-.col-type-midterm .column-type-select { background: #ede9fe; color: #7c3aed; border-color: #ddd6fe; }
-.col-type-final .column-type-select { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+.col-type-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #334155;
+  transition: background 0.1s;
+}
+.col-type-option:hover {
+  background: #f1f5f9;
+}
+.col-type-option.active {
+  font-weight: 600;
+  color: #0f172a;
+}
+.col-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.col-type-check {
+  margin-left: auto;
+  font-size: 0.6rem;
+  color: #22c55e;
+}
+
+/* Type badge colors */
+.col-type-quiz.col-type-badge,
+.col-type-quiz .col-type-dot { background: #dbeafe; color: #2563eb; }
+.col-type-quiz .col-type-dropdown .col-type-dot { background: #2563eb; }
+.col-type-assignment.col-type-badge,
+.col-type-assignment .col-type-dot { background: #dcfce7; color: #16a34a; }
+.col-type-assignment .col-type-dropdown .col-type-dot { background: #16a34a; }
+.col-type-project.col-type-badge,
+.col-type-project .col-type-dot { background: #fef3c7; color: #d97706; }
+.col-type-project .col-type-dropdown .col-type-dot { background: #d97706; }
+.col-type-midterm.col-type-badge,
+.col-type-midterm .col-type-dot { background: #ede9fe; color: #7c3aed; }
+.col-type-midterm .col-type-dropdown .col-type-dot { background: #7c3aed; }
+.col-type-final.col-type-badge,
+.col-type-final .col-type-dot { background: #fee2e2; color: #dc2626; }
+.col-type-final .col-type-dropdown .col-type-dot { background: #dc2626; }
+.col-type-participation.col-type-badge,
+.col-type-participation .col-type-dot { background: #ffe4e6; color: #e11d48; }
+.col-type-participation .col-type-dropdown .col-type-dot { background: #e11d48; }
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
 
-/* ─── Cells ────────────────────────────────────────────────────────── */
+
 .cell {
   border: 1px solid #e2e8f0;
-  padding: 3px 6px;
+  padding: 3px 4px;
   font-size: 0.8rem;
   white-space: nowrap;
   cursor: pointer;
   height: 32px;
   vertical-align: middle;
   transition: background 0.05s;
+  overflow: hidden;
+}.cell-score {
+  min-width: 140px;
+  max-width: 140px;
+  width: 140px;
+  text-align: center;
+  position: relative;
 }
-.cell-score { min-width: 60px; text-align: center; position: relative; }
 .cell-score .cell-editing {
   z-index: 5;
 }
 .cell:hover { background: #f8fafc; }
 
-/* ─── Excel-style Selection: Green Border ───────────────────────────── */
+
 .cell-selected {
-  outline: 2px solid #16a34a !important; /* Excel green */
+  outline: 2px solid #16a34a !important; 
   outline-offset: -1px;
   background: #e8f5e9 !important;
   z-index: 5;
 }
-/* Keep sticky positioning for frozen selected cells */
+
 .cell-frozen.cell-selected {
   position: sticky;
 }
-/* Keep relative positioning for score selected cells */
+
 .cell-score.cell-selected {
   position: relative;
 }
 
-/* ─── Range Selection: Light green area with border ─────────────────── */
+
 .cell-in-range {
   background: #e8f5e9 !important;
   border-top-color: #a5d6a7 !important;
@@ -2553,7 +3951,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   border-right-color: #a5d6a7 !important;
 }
 
-/* ─── Cell Editing State ────────────────────────────────────────────── */
+
 .cell-editing {
   outline: 2px solid #16a34a !important;
   outline-offset: -1px;
@@ -2561,27 +3959,29 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   z-index: 5;
   padding: 0 !important;
 }
-/* For sticky editing cells: keep sticky positioning */
+
 .cell-frozen.cell-editing {
   position: sticky;
 }
-/* For score cell editing: keep relative positioning */
+
 .cell-score.cell-editing {
   position: relative;
 }
 
-/* ─── Cell Colors ──────────────────────────────────────────────────── */
+
 .cell-excellent { background: #dcfce7 !important; color: #16a34a; font-weight: 600; }
 .cell-average { background: #fef9c3 !important; color: #b45309; }
 .cell-low { background: #fee2e2 !important; color: #dc2626; }
 
-/* ─── Cell Editor ──────────────────────────────────────────────────── */
+
 .cell-editor-wrapper {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  overflow: hidden;
+  max-width: 100%;
 }
 .cell-editor {
   width: 100%;
@@ -2596,24 +3996,22 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   color: #0f172a;
   box-sizing: border-box;
   min-width: 0;
+  max-width: 100%;
   line-height: 1;
 }
 
-/* ─── Name Cell & Editor - Professional Spreadsheet Style ──────────── */
+
 .cell-student-name {
   min-width: 160px;
   max-width: 160px;
   width: 160px;
 }
+
+.cell-student-name .cell-value {
+  padding: 3px 14px 3px 6px;
+}
 .cell-student-name .cell-editor-wrapper .cell-editor {
   text-align: left;
-  font-weight: 500;
-  font-size: 0.82rem;
-  color: #0f172a;
-  padding: 0 6px;
-  background: #fff;
-  height: 100%;
-  letter-spacing: 0.01em;
 }
 .cell-student-name.cell-selected {
   z-index: 25;
@@ -2629,18 +4027,12 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   position: sticky;
 }
 .cell-student-name .cell-value {
-  font-weight: 500;
-  color: #0f172a;
   padding: 3px 14px 3px 6px;
-  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
 }
 
-/* ─── Student ID Cell & Editor - Professional Style ───────────────── */
+
 .student-name-cell-inner {
   position: relative;
   width: 100%;
@@ -2650,23 +4042,11 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   box-sizing: border-box;
 }
 .cell-student-id {
-  min-width: 90px;
-  max-width: 90px;
-  width: 90px;
-}
-.cell-student-class {
-  min-width: 100px;
+  min-width: 120px;
   max-width: 120px;
-  width: 110px;
+  width: 120px;
 }
-.cell-student-class .cell-value {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+
 .student-id-cell-inner {
   position: relative;
   width: 100%;
@@ -2717,10 +4097,6 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   position: sticky;
 }
 .cell-student-id .cell-value {
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-weight: 600;
-  font-size: 0.78rem;
-  color: #334155;
   padding: 3px 18px 3px 6px;
   letter-spacing: 0.02em;
   line-height: 1.4;
@@ -2731,7 +4107,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   box-sizing: border-box;
 }
 
-/* ─── Cell Value Base ───────────────────────────────────────────────── */
+
 .cell-value {
   display: block;
   padding: 3px 6px;
@@ -2742,12 +4118,32 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 }
 
 
-/* ─── Row States ───────────────────────────────────────────────────── */
+.cell-value-hidden { visibility: hidden; }
+
+
+.cell-editor-overlay {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+.cell-editor-overlay-frozen {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+
 .row-even .cell { background-color: #fafafa; }
 .row-selected .cell { background-color: #f0fff4; }
 .row-selected .cell.frozen { background-color: #e8f5e9; }
 
-/* ─── Fill Handle ──────────────────────────────────────────────────── */
+
 .fill-handle {
   position: absolute;
   bottom: 0;
@@ -2778,7 +4174,7 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
   border-bottom: 2px solid #16a34a !important;
 }
 
-/* ─── Grade Colors ─────────────────────────────────────────────────── */
+
 .grade-a { color: #16a34a !important; font-weight: 700 !important; }
 .grade-b-plus { color: #2563eb !important; font-weight: 700 !important; }
 .grade-b { color: #2563eb !important; font-weight: 700 !important; }
@@ -2788,45 +4184,266 @@ watch([subjectId, termId], () => { if (subjectId.value && termId.value) refreshD
 .grade-f { color: #dc2626 !important; font-weight: 700 !important; }
 .grade-none { color: #94a3b8 !important; }
 
-/* ─── Loading ──────────────────────────────────────────────────────── */
+
+.loading-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%);
+  background-size: 200% 100%;
+  animation: loading-bar 1.2s ease-in-out infinite;
+  z-index: 200;
+  border-radius: 0 0 2px 2px;
+}
+@keyframes loading-bar {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.spinning { animation: spin 0.7s linear infinite; }
+
 .loading-overlay {
   position: absolute; top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(2px);
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 10px;
-  z-index: 100; font-size: 0.85rem; color: #64748b;
+  align-items: center; justify-content: center;
+  gap: 14px;
+  z-index: 500;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
 }
-.spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinning { animation: spin 0.7s linear infinite; }
 
-/* ─── Modal ────────────────────────────────────────────────────────── */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.modal-content { background: #fff; border-radius: 10px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
-.modal-sm { max-width: 380px; }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid #e2e8f0; }
-.modal-header h5 { font-size: 0.95rem; font-weight: 700; margin: 0; }
-.modal-close { background: none; border: none; font-size: 1.4rem; color: #64748b; cursor: pointer; padding: 0; line-height: 1; }
-.modal-body { padding: 18px; }
-.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 18px; border-top: 1px solid #e2e8f0; }
-.form-group { margin-bottom: 12px; }
-.form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: #374151; margin-bottom: 3px; }
-.form-input { width: 100%; padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 0.85rem; outline: none; transition: border-color 0.15s; box-sizing: border-box; }
-.form-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-select.form-input { appearance: auto; }
-.btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
-.btn-primary { background: #2563eb; color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
-.btn-primary:disabled { background: #93c5fd; cursor: not-allowed; }
-.btn-secondary { background: #f1f5f9; color: #475569; }
-.btn-secondary:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
-.btn-block { width: 100%; justify-content: center; }
+
+
+.import-progress-overlay {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center; justify-content: center;
+  z-index: 90;
+}
+.import-progress-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px 32px;
+  min-width: 280px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+.import-progress-status {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.import-progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.import-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 4px;
+  transition: width 0.1s linear;
+}
+.import-progress-pct {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+
+.modal-md-panel {
+  width: 520px;
+}
+
+.modal-content-panel::-webkit-scrollbar { width: 4px; }
+.modal-content-panel::-webkit-scrollbar-track { background: transparent; }
+.modal-content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+
+
+.weight-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.weight-row:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.weight-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.weight-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+
+.weight-code {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.weight-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weight-input-group .weight-input-field {
+  width: 80px;
+  text-align: center;
+  padding: 0.5rem 0.5rem;
+  font-weight: 600;
+}
+
+.weight-suffix {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 16px;
+}
+
+.no-assessments-text {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  padding: 20px 0;
+}
+
+.weight-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 14px 0;
+}
+
+.new-type-section {
+  margin-bottom: 6px;
+}
+
+.new-type-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+
+.new-type-header:hover {
+  color: #1d4ed8;
+}
+
+.new-type-form {
+  margin-top: 8px;
+}
+
+.new-type-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.new-type-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.new-type-field-sm {
+  flex: 0 0 80px;
+}
+
+.new-type-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
+.new-type-action {
+  flex-shrink: 0;
+}
+
+.new-type-action .btn-primary-custom.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  min-width: auto;
+}
+
+.weight-total-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.weight-total-bar i {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.weight-total-bar.weight-ok {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.weight-total-bar.weight-warn {
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fde68a;
+}
+
+.weight-hint {
+  font-size: 0.75rem;
+  color: #a16207;
+}
+
+.delete-warning-text {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+
+.delete-warning-text strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
 
 .weight-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .weight-table th { text-align: left; padding: 6px 10px; border-bottom: 2px solid #e2e8f0; font-weight: 600; color: #475569; font-size: 0.72rem; text-transform: uppercase; }
@@ -2840,16 +4457,471 @@ select.form-input { appearance: auto; }
 .import-steps { font-size: 0.78rem; color: #64748b; padding-left: 18px; margin-bottom: 14px; }
 .import-steps li { margin-bottom: 4px; }
 
+
+
+
+/* === Import Scores Modal === */
+.import-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 520px;
+  max-width: 94vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
+}
+.import-modal-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 24px 0;
+}
+.import-modal-head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.import-modal-head p {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.import-modal-close {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  margin-top: -2px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.import-modal-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.import-modal-icon {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+.import-modal-body {
+  padding: 20px 24px;
+}
+.import-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 4px 24px 20px;
+}
+
+/* Format badges */
+.import-formats {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.import-format {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.import-format-excel {
+  background: #ecfdf5;
+  color: #059669;
+}
+.import-format-pdf {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Drop zone */
+.import-zone {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 36px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #fafbfc;
+}
+.import-zone:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+.import-zone-over {
+  border-color: #2563eb;
+  background: #dbeafe;
+  transform: scale(1.015);
+}
+.import-zone-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #2563eb;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.1);
+}
+.import-zone-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.import-zone-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.import-zone-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+/* Uploaded file card */
+.import-file {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+.import-file-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #059669, #10b981);
+  border-radius: 12px 0 0 12px;
+}
+.import-file-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 14px 20px;
+  background: #f8fafc;
+}
+.import-file-type-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+.import-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.import-file-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.import-file-size {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+.import-file-remove {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.import-file-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Preview section */
+.import-preview {
+  padding: 0 16px 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.import-preview-stats {
+  display: flex;
+  gap: 8px;
+  padding-top: 14px;
+}
+.import-preview-stat {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.import-preview-stat:hover {
+  border-color: #dbeafe;
+  background: #fafdff;
+}
+.import-preview-stat-wide {
+  flex: 2;
+}
+.import-preview-stat-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-bottom: 2px;
+}
+.import-icon-students {
+  background: #ecfdf5;
+  color: #059669;
+}
+.import-icon-columns {
+  background: #eff6ff;
+  color: #3b82f6;
+}
+.import-icon-cols {
+  background: #fef3c7;
+  color: #d97706;
+}
+.import-preview-num {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.import-preview-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.import-preview-cols {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  display: inline-block;
+}
+
+/* Domain picker group */
+.import-domain-group {
+  margin-top: 16px;
+  padding: 0 16px 16px;
+}
+.import-domain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f0f5ff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+}
+.import-domain-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e40af;
+}
+.import-domain-info i {
+  font-size: 0.9rem;
+}
+.import-domain-select {
+  border: 1px solid #bfdbfe;
+  background: #fff;
+  border-radius: 8px;
+  padding: 5px 28px 5px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e3a8a;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='%2364748b'%3E%3Cpath d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  min-width: 130px;
+}
+.import-domain-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.select-warn {
+  border-color: #f59e0b;
+}
+.import-domain-required {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.import-domain-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.75rem;
+  padding: 0 4px;
+}
+.import-domain-hint-warn {
+  color: #b45309;
+}
+.import-domain-hint-warn i {
+  font-size: 0.8rem;
+}
+
+/* Single domain info bar */
+.import-domain-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 14px 16px 16px;
+  background: #f0f5ff;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: #1e40af;
+}
+.import-domain-info-bar i {
+  font-size: 0.9rem;
+}
+.import-domain-info-bar strong {
+  font-weight: 700;
+}
+
+/* Action buttons */
+.import-btn-secondary {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #f1f5f9;
+  color: #475569;
+}
+.import-btn-secondary:hover {
+  background: #e2e8f0;
+}
+.import-btn-primary {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #059669;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(5,150,105,0.25);
+}
+.import-btn-primary:hover:not(:disabled) {
+  background: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(5,150,105,0.35);
+}
+.import-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 @media (max-width: 768px) {
   .sheet-toolbar { flex-direction: column; align-items: flex-start; }
   .toolbar-actions { width: 100%; }
   .btn-group { width: 100%; }
 }
 
-.table-footer { display: flex; align-items: center; justify-content: flex-end; padding: 10px 12px; border-top: 1px solid #e2e8f0; background: #f8fafc; gap: 8px; }
-.page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: #64748b; }
-.page-size-select { padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.78rem; background: #fff; color: #1e293b; outline: none; cursor: pointer; }
-.page-size-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+.pagination-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 20px; border-top: 1px solid #e5e7eb;
+  background: #f8fafc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
+  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
+.rows-label { font-weight: 500; white-space: nowrap; }
+.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
+.rows-btn {
+  padding: 4px 10px; border: none; background: transparent;
+  color: #64748b; border-radius: 6px; cursor: pointer;
+  font-size: 0.75rem; font-weight: 600; font-family: inherit;
+  transition: all 0.15s ease;
+}
+.rows-btn:hover { color: #334155; }
+.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.pagination-pages { display: flex; align-items: center; gap: 2px; }
+.page-nav {
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+  border-radius: 6px; cursor: pointer; transition: all 0.15s ease;
+}
+.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
+.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
+.page-btn {
+  min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: #475569;
+  border-radius: 6px; cursor: pointer; font-size: 0.78rem;
+  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
+}
+.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
+.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
+.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
+.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
 .add-col-header { width: 40px; min-width: 40px; max-width: 40px; text-align: center; padding: 5px !important; position: relative; }
 .add-col-trigger { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; color: #64748b; transition: all 0.15s; margin: 0 auto; }
@@ -2863,7 +4935,7 @@ select.form-input { appearance: auto; }
 .inline-btn-cancel { position: absolute; top: 4px; right: 6px; background: none; border: none; font-size: 1.1rem; color: #94a3b8; cursor: pointer; line-height: 1; }
 .inline-btn-cancel:hover { color: #ef4444; }
 
-/* ─── Placeholder Rows (Excel-like) ─────────────────────────────── */
+
 .placeholder-row { cursor: pointer; }
 .placeholder-row:hover { background: #f8faff !important; }
 .placeholder-row:hover .placeholder-cell { border-color: #bfdbfe !important; }
@@ -2878,13 +4950,140 @@ select.form-input { appearance: auto; }
 .placeholder-hint i { margin-right: 6px; color: #3b82f6; }
 .placeholder-row:hover .placeholder-hint { color: #3b82f6; }
 
-/* ─── Add Row Button ───────────────────────────────────────────── */
+
+
+.export-dropdown { position: relative; display: inline-block; }
+.export-menu {
+  position: absolute; top: 100%; right: 0; z-index: 100;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 180px;
+  padding: 4px; margin-top: 4px;
+}
+.export-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer; border-radius: 6px;
+  font-size: 0.78rem; color: #334155; transition: background 0.12s;
+}
+.export-menu-item:hover { background: #f1f5f9; }
+.export-menu-item i { font-size: 1rem; width: 18px; text-align: center; color: #64748b; }
+.export-menu-item:first-child i { color: #22c55e; }
+.export-menu-item:nth-child(2) i { color: #22c55e; }
+.export-menu-item:last-child i { color: #ef4444; }
+
 .add-row-row { cursor: pointer; transition: background 0.15s; }
 .add-row-row:hover { background: #f0f9ff !important; }
 .add-row-cell { text-align: center; color: #3b82f6; font-weight: 600; font-size: 0.8rem; padding: 10px !important; border: 2px dashed #bfdbfe !important; border-radius: 0 0 8px 0; }
 .add-row-cell i { margin-right: 6px; }
 
-/* ─── Right-Click Context Menu ──────────────────────────────────── */
+
+
+.shortcuts-modal {
+  max-width: 560px !important;
+  max-height: 80vh;
+}
+
+.shortcuts-body {
+  padding: 4px 24px 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shortcut-group {
+  padding: 12px 0;
+}
+
+.shortcut-group + .shortcut-group {
+  border-top: 1px solid #f1f5f9;
+}
+
+.shortcut-group-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin: 0 0 10px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.shortcut-group-title i {
+  font-size: 0.85rem;
+  color: #3b82f6;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+  gap: 12px;
+}
+
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.shortcut-keys kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+  color: #1e293b;
+  background: #f1f5f9;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.06);
+  line-height: 1;
+}
+
+.shortcut-desc {
+  font-size: 0.82rem;
+  color: #475569;
+  text-align: right;
+  flex: 1;
+}
+
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  overflow: hidden;
+  animation: modal-in 0.25s ease-out;
+}
+
+@keyframes modal-in {
+  0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 .context-menu {
   position: fixed;
   z-index: 10000;
@@ -2924,4 +5123,65 @@ select.form-input { appearance: auto; }
 .cell-score:hover { background: #f8fafc; }
 .cell-selected { transition: outline 0.1s ease, background 0.1s ease; }
 .row-selected .cell { transition: background 0.1s ease; }
+
+
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  z-index: 99999;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  animation: toastSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.toast-notification i {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.toast-notification.success {
+  background: #ecfdf5;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.toast-notification.success i {
+  color: #22c55e;
+}
+
+.toast-notification.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.toast-notification.error i {
+  color: #ef4444;
+}
+
+@keyframes toastSlideIn {
+  0% {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-enter-active { transition: all 0.3s ease-out; }
+.toast-leave-active { transition: all 0.2s ease-in; }
+.toast-enter-from, .toast-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
+}
 </style>

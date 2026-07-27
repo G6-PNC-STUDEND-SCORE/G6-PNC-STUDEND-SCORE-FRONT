@@ -1,6 +1,5 @@
 <template>
   <div class="class-list">
-    <!-- Search and Filter -->
     <div class="list-toolbar">
       <div class="search-wrapper">
         <i class="bi bi-search search-icon"></i>
@@ -23,9 +22,8 @@
       </select>
     </div>
 
-    <!-- Table -->
     <div class="table-wrapper">
-      <table class="class-table">
+      <table class="class-table data-table-base">
         <thead>
           <tr>
             <th>Class Name</th>
@@ -34,13 +32,13 @@
             <th>Students</th>
             <th>Teacher</th>
             <th>Status</th>
-            <th class="actions-col">Actions</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="classItem in classes" :key="classItem.id">
+          <tr v-for="classItem in classes" :key="classItem.id" class="data-row">
             <td class="fw-semibold text-dark">{{ classItem.name }}</td>
-            <td>{{ classItem.generation?.year || classItem.generation || '—' }}</td>
+            <td>{{ typeof classItem.generation === 'object' ? classItem.generation?.year : classItem.generation || '—' }}</td>
             <td>{{ classItem.room || '—' }}</td>
             <td>{{ classItem.students ?? '—' }}</td>
             <td>{{ classItem.teacher?.name || '—' }}</td>
@@ -50,14 +48,14 @@
               </span>
             </td>
             <td>
-              <div class="action-buttons">
-                <button class="action-btn view" @click="$emit('view', classItem)" title="View">
+              <div class="td-actions">
+                <button class="act-btn view" @click="$emit('view', classItem)" title="View">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button class="action-btn edit" @click="$emit('edit', classItem)" title="Edit">
+                <button class="act-btn edit" @click="$emit('edit', classItem)" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="action-btn delete" @click="$emit('delete', classItem)" title="Delete">
+                <button class="act-btn act-danger" @click="$emit('delete', classItem)" title="Delete">
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
@@ -168,103 +166,19 @@ defineEmits<{
   overflow: hidden;
 }
 
-.class-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.class-table thead {
-  background: #f8fafc;
-}
-
-.class-table th {
-  padding: 12px 16px;
-  text-align: left;
-  font-weight: 600;
-  color: #64748b;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.class-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
-  vertical-align: middle;
-}
-
-.class-table tbody tr:hover {
-  background: #f8fafc;
-}
-
 .class-table tbody tr:last-child td {
   border-bottom: none;
 }
 
 .status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
   font-weight: 600;
 }
 
-.badge-active {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.badge-inactive {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-.action-buttons {
+.td-actions {
   display: flex;
   gap: 6px;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.15s;
-}
-
-.action-btn.view {
-  background: #eff6ff;
-  color: #2563eb;
-}
-
-.action-btn.view:hover {
-  background: #dbeafe;
-}
-
-.action-btn.edit {
-  background: #fef9c3;
-  color: #d97706;
-}
-
-.action-btn.edit:hover {
-  background: #fef3c7;
-}
-
-.action-btn.delete {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.action-btn.delete:hover {
-  background: #fecaca;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .empty-row {
@@ -288,8 +202,8 @@ defineEmits<{
   font-size: 0.875rem;
 }
 
-.actions-col {
-  width: 120px;
-  text-align: right;
+.col-actions {
+  text-align: center;
+  width: 110px;
 }
 </style>

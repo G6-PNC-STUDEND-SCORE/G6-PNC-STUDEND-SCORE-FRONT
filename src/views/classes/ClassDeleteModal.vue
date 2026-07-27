@@ -4,13 +4,16 @@
       <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
         <div class="modal-content-panel" style="max-width: 400px;">
           <div class="modal-header-custom">
+            <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
+              <i class="bi bi-x-lg"></i>
+            </button>
             <div class="modal-icon" style="background: #fef2f2; color: #ef4444;">
               <i class="bi bi-trash-fill"></i>
             </div>
-            <h5 class="mb-1 fw-bold" style="color: #1a1a2e;">Delete Class</h5>
-            <p class="mb-0" style="font-size: 0.8125rem; color: #6b7280;">
-              Are you sure you want to delete <strong>{{ className }}</strong>? This action cannot be undone.
-            </p>
+            <div>
+              <h5>Delete Class</h5>
+              <p class="modal-subtitle">Are you sure you want to delete <strong>{{ className }}</strong>? This action cannot be undone.</p>
+            </div>
           </div>
           <div class="modal-footer-custom">
             <button type="button" class="btn-cancel" @click="$emit('close')">Cancel</button>
@@ -79,7 +82,7 @@ defineEmits<{
   100% { transform: scale(1); opacity: 1; }
 }
 
-.modal-header-custom { padding: 28px 28px 16px; text-align: center; }
+.modal-header-custom { padding: 28px 28px 16px; }
 .modal-header-custom h5 { font-size: 1.1rem; }
 .modal-icon {
   width: 56px; height: 56px;
@@ -88,7 +91,7 @@ defineEmits<{
   align-items: center;
   justify-content: center;
   font-size: 1.4rem;
-  margin: 0 auto 12px;
+  margin: 0;
 }
 
 .modal-footer-custom {

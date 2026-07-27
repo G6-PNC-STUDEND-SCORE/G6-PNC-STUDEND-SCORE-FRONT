@@ -1,75 +1,9 @@
 import { http } from './apiHttp'
+import type { Subject, SubjectPayload, ApiResponse } from '@/types'
 
-export interface SubjectOffering {
-  id: number
-  subject_id: number
-  teacher_id: number | null
-  class_id: number
-  generation_id: number
-  term_id: number
-  status: string
-  teacher?: {
-    id: number
-    user_id: number
-    user?: {
-      name: string
-      email: string
-    }
-  } | null
-  class?: {
-    id: number
-    name: string
-  } | null
-  term?: {
-    id: number
-    name: string
-  } | null
-}
+export type { Subject, SubjectPayload }
 
-export interface Subject {
-  id: number
-  subject_code?: string
-  name: string
-  teacher_id?: number | null
-  class_id?: number | null
-  status: 'Active' | 'Inactive'
-  created_at?: string
-  updated_at?: string
-  teacher?: {
-    id: number
-    user?: {
-      name: string
-      email?: string
-    } | null
-  } | null
-  class?: {
-    id: number
-    name: string
-  } | null
-  offerings?: SubjectOffering[]
-  teachers?: Array<{
-    id: number
-    user?: { name?: string | null } | null
-  }>
-  teacher_ids?: number[]
-}
-
-export interface SubjectPayload {
-  subject_code?: string
-  name: string
-  teacher_id?: number | null
-  class_id?: number | null
-  class_ids?: number[]
-  status: 'Active' | 'Inactive'
-  teacher_ids?: number[]
-}
-
-export interface SubjectResponse {
-  success: boolean
-  message?: string
-  data: Subject | Subject[]
-  errors?: Record<string, string[]>
-}
+export interface SubjectResponse extends ApiResponse<Subject | Subject[]> {}
 
 export const subjectService = {
   async getSubjects(search?: string, status?: string): Promise<SubjectResponse> {

@@ -1,66 +1,28 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type {
+  SpreadsheetColumn,
+  SpreadsheetRow,
+  AssessmentTypeWeight,
+  SubjectTerm,
+  SubjectItem,
+  SpreadsheetResponse,
+  SubjectsResponse,
+  GoogleConfigResponse,
+  GoogleTokenResponse,
+  GoogleStatusResponse,
+} from '@/types'
 
-export interface SpreadsheetColumn {
-  id: number
-  score_id: number
-  label: string
-  type: string
-  order_number: number
-  max_score: number | null
-  assessment_type_id: number
-}
-
-export interface SpreadsheetRow {
-  enrollment_id: number
-  score_id: number | null
-  student_id: number
-  student_name: string
-  student_number: string
-  class_name: string
-  offering_id: number
-  total: number | null
-  grade: string | null
-  details: Record<number, number | null>
-  detail_ids: Record<number, number | null>  // Canonical col ID -> actual detail ID for this student
-}
-
-export interface AssessmentTypeWeight {
-  id: number
-  code: string
-  name: string
-  weight_percent: number
-}
-
-export interface SubjectTerm {
-  term_id: number
-  term_name: string
-  academic_year_id: number
-  academic_year: string | number | null
-  teachers: string[]
-  classes: string[]
-  offering_ids: number[]
-  enrollment_count: number
-}
-
-export interface SubjectItem {
-  id: number
-  name: string
-  code: string
-  terms: SubjectTerm[]
-}
-
-export interface SpreadsheetResponse {
-  subject: { id: number; name: string; subject_code: string }
-  term: { id: number; name: string }
-  offerings: Array<{ teacher_name: string; class_name: string }>
-  columns: SpreadsheetColumn[]
-  rows: SpreadsheetRow[]
-  assessment_types: AssessmentTypeWeight[]
-}
-
-export interface SubjectsResponse {
-  subjects: SubjectItem[]
-  terms: Array<{ id: number; name: string }>
+export type {
+  SpreadsheetColumn,
+  SpreadsheetRow,
+  AssessmentTypeWeight,
+  SubjectTerm,
+  SubjectItem,
+  SpreadsheetResponse,
+  SubjectsResponse,
+  GoogleConfigResponse,
+  GoogleTokenResponse,
+  GoogleStatusResponse,
 }
 
 export async function getSpreadsheetSubjects(): Promise<SubjectsResponse> {
@@ -68,8 +30,30 @@ export async function getSpreadsheetSubjects(): Promise<SubjectsResponse> {
   return res.data.data
 }
 
-export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number): Promise<SpreadsheetResponse> {
+let spreadsheetRefreshPromise: Promise<SpreadsheetResponse> | null = null
+
+export function getSpreadsheetRefreshPromise(): Promise<SpreadsheetResponse> | null {
+  return spreadsheetRefreshPromise
+}
+
+export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: number, bypassCache = false): Promise<SpreadsheetResponse> {
+  const cacheKey = `spreadsheet_${subjectId}_${termId}`
+
+  const cached = bypassCache ? null : sessionStorage.getItem(cacheKey)
+  if (cached) {
+    spreadsheetRefreshPromise = http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
+      .then(res => {
+        sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
+        return res.data.data
+      })
+      .catch(() => { /* silently fail - cached data is fine */ })
+    return JSON.parse(cached) as SpreadsheetResponse
+  }
+
   const res = await http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
+  try {
+    sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
+  } catch { /* quota exceeded, ignore */ }
   return res.data.data
 }
 
@@ -114,8 +98,7 @@ export async function updateWeights(weights: { id: number; weight_percent: numbe
 
 export async function syncToGoogleSheets(subjectId: number, termId: number): Promise<{
   csv_content: string
-  google_sheets_url: string
-  download_url: string
+  filename: string
 }> {
   const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/sync-google`)
   return res.data.data
@@ -134,21 +117,45 @@ export async function createGoogleSheet(subjectId: number, termId: number, acces
   return res.data.data
 }
 
-export async function importFromGoogleSheets(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<void> {
-  await http.post('/google-sheets/import', {
+export async function importFromGoogleSheets(subjectId: number, termId: number, spreadsheetId: string, accessToken: string, emailDomain?: string | null): Promise<{ synced: boolean }> {
+  const res = await http.post('/google-sheets/import', {
+    subject_id: subjectId,
+    term_id: termId,
+    spreadsheet_id: spreadsheetId,
+    access_token: accessToken,
+    email_domain: emailDomain || undefined,
+  })
+  return res.data.data ?? { synced: true }
+}
+
+export async function pushToGoogleSheet(subjectId: number, termId: number, spreadsheetId: string, accessToken: string): Promise<{ pushed_rows: number }> {
+  const res = await http.post('/google-sheets/push', {
     subject_id: subjectId,
     term_id: termId,
     spreadsheet_id: spreadsheetId,
     access_token: accessToken,
   })
+  return res.data.data ?? { pushed_rows: 0 }
 }
 
-export async function importFromGoogleSheetsCSV(subjectId: number, termId: number, csvContent: string): Promise<void> {
-  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent })
+export async function ensureGoogleSheetShared(spreadsheetId: string, accessToken: string): Promise<{ shared: boolean }> {
+  const res = await http.post('/google-sheets/ensure-shared', {
+    spreadsheet_id: spreadsheetId,
+    access_token: accessToken,
+  })
+  return res.data.data ?? { shared: false }
 }
 
-export async function addEnrollment(subjectId: number, termId: number, studentId: number | null): Promise<{ id: number; student_id: number; student_number: string }> {
-  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, { student_id: studentId })
+export async function importFromGoogleSheetsCSV(subjectId: number, termId: number, csvContent: string, emailDomain?: string | null): Promise<void> {
+  await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-google`, { csv_content: csvContent, email_domain: emailDomain || undefined })
+}
+
+export async function addEnrollment(subjectId: number, termId: number, studentId: number | null, classId?: number | null, studentName?: string | null, studentNumber?: string | null, emailDomain?: string | null): Promise<{ id: number; student_id: number; student_number: string }> {
+  const payload: Record<string, unknown> = { student_id: studentId, class_id: classId || undefined }
+  if (studentName) payload.student_name = studentName
+  if (studentNumber) payload.student_number = studentNumber
+  if (emailDomain) payload.email_domain = emailDomain
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments`, payload)
   return res.data.data
 }
 
@@ -159,6 +166,7 @@ export async function deleteEnrollment(subjectId: number, termId: number, enroll
 export async function updateStudentInfo(subjectId: number, termId: number, enrollmentId: number, data: {
   student_name?: string
   student_number?: string
+  email_domain?: string | null
 }): Promise<{ student_name: string; student_number: string }> {
   const res = await http.put(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`, data)
   return res.data.data
@@ -170,12 +178,38 @@ export async function importFile(subjectId: number, termId: number, data: {
     student_number?: string
     marks?: Record<string, number>
   }>
-}): Promise<{ imported_count: number }> {
-  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-file`, data)
+  email_domain?: string | null
+}, classId?: number | null): Promise<{ imported_count: number }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/import-file`, { ...data, class_id: classId || undefined })
   return res.data.data
 }
 
 export async function getStudents(): Promise<Array<{ id: number; name: string; student_number: string }>> {
   const res = await http.get('/students')
   return res.data.data
+}
+
+
+export async function getGoogleConfig(): Promise<GoogleConfigResponse> {
+  const res = await http.get('/google-sheets/config')
+  return res.data.data
+}
+
+export async function exchangeGoogleToken(code: string): Promise<GoogleTokenResponse> {
+  const res = await http.post('/google-sheets/token', { code })
+  return res.data.data
+}
+
+export async function refreshGoogleToken(): Promise<{ access_token: string; expires_in: number }> {
+  const res = await http.post('/google-sheets/refresh')
+  return res.data.data
+}
+
+export async function getGoogleStatus(): Promise<GoogleStatusResponse> {
+  const res = await http.get('/google-sheets/status')
+  return res.data.data
+}
+
+export async function disconnectGoogleAccount(): Promise<void> {
+  await http.post('/google-sheets/disconnect')
 }

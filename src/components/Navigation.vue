@@ -1,7 +1,6 @@
 <template>
   <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
-    <!-- Logo / Brand -->
-    <div :class="['logo', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0' : 'gap-2 px-3', 'border-bottom']" style="height: 64px">
+    <div :class="['logo', sidebar.collapsed ? 'logo-collapsed' : 'logo-expanded', 'border-bottom']">
       <div class="sidebar-logo-wrap">
         <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
       </div>
@@ -9,9 +8,17 @@
         <span class="brand-name">Passerelles</span>
         <span class="brand-name">Numériques</span>
       </div>
+      <button
+        class="logo-toggle-btn"
+        :class="{ 'collapsed': sidebar.collapsed }"
+        @click="sidebar.toggle()"
+        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+      >
+        <ChevronLeft v-if="!sidebar.collapsed" :size="14" />
+        <ChevronRight v-else :size="14" />
+      </button>
     </div>
 
-    <!-- Navigation -->
     <nav class="px-2 py-2 flex-grow-1">
       <RouterLink
         v-for="link in navLinks"
@@ -24,38 +31,32 @@
         <span class="sidebar-link-text">{{ link.label }}</span>
       </RouterLink>
 
-      <h6 class="menu-title mt-3 mb-2">Settings</h6>
+      <template v-if="settingsLinks.length > 0">
+        <h6 class="menu-title mt-3 mb-2">Settings</h6>
 
-      <RouterLink
-        v-for="link in settingsLinks"
-        :key="link.to"
-        :to="link.to"
-        :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
-        :title="sidebar.collapsed ? link.label : ''"
-      >
-        <component :is="link.icon" :size="20" />
-        <span class="sidebar-link-text">{{ link.label }}</span>
-      </RouterLink>
+        <RouterLink
+          v-for="link in settingsLinks"
+          :key="link.to"
+          :to="link.to"
+          :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
+          :title="sidebar.collapsed ? link.label : ''"
+        >
+          <component :is="link.icon" :size="20" />
+          <span class="sidebar-link-text">{{ link.label }}</span>
+        </RouterLink>
+      </template>
     </nav>
 
-    <!-- Toggle Button -->
-    <div class="toggle-section border-top">
-      <button
-        :class="['toggle-sidebar-btn', { collapsed: sidebar.collapsed }]"
-        @click="sidebar.toggle()"
-        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-      >
-        <PanelLeftClose :size="18" :class="{ 'rotated': sidebar.collapsed }" />
-        <span class="toggle-label">Collapse</span>
-      </button>
-    </div>
 
-    <!-- User Section & Logout -->
+
     <div class="border-top">
-      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'px-3 py-2']">
+      <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'justify-content-between px-3 py-2', { 'user-section-active': isProfileActive }]">
         <div
           class="user d-flex align-items-center"
-          :class="{ 'justify-content-center': sidebar.collapsed }"
+          :class="[
+            { 'justify-content-center': sidebar.collapsed },
+            { 'user-active': isProfileActive }
+          ]"
           @click="goToProfile"
           @keydown.enter.prevent="goToProfile"
           role="button"
@@ -64,7 +65,7 @@
         >
           <div class="avatar">
             <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
-            <span v-else class="initials">{{ getUserInitials() }}</span>
+            <span v-else class="initials">{{ getUserInitials(auth.user?.name) }}</span>
           </div>
           <div class="ms-2 user-text">
             <h6 class="mb-0 fw-bold text-truncate">{{ auth.user?.name }}</h6>
@@ -79,25 +80,43 @@
 
   </aside>
 
-  <!-- Logout Confirmation Modal -->
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
-        <div class="modal-dialog-custom">
-          <div class="modal-header-custom">
-            <div class="modal-icon">
-              <LogOut :size="24" />
+      <div
+        v-if="showLogoutModal"
+        class="modal-overlay"
+        @click.self="showLogoutModal = false"
+        ref="modalOverlayRef"
+      >
+        <div
+          class="logout-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="logout-title"
+          @keydown.escape="showLogoutModal = false"
+          @keydown.tab.prevent="trapFocus"
+        >
+          <div class="logout-modal-header">
+            <div class="logout-icon-wrap">
+              <LogOut :size="20" />
             </div>
-            <h5 class="mb-1">Confirm Logout</h5>
-            <p class="mb-0 text-secondary">Are you sure you want to log out?</p>
+            <h3 id="logout-title" class="logout-title">Confirm Logout</h3>
+            <button class="logout-close-btn" @click="showLogoutModal = false" aria-label="Close modal">
+              <X :size="18" />
+            </button>
           </div>
-          <div class="modal-actions">
-            <button class="btn-cancel" @click="showLogoutModal = false">
-              <X :size="16" class="me-1" />
+
+          <div class="logout-modal-body">
+            <p class="logout-message">Are you sure you want to log out?</p>
+          </div>
+
+          <div class="logout-modal-footer">
+            <button class="logout-btn logout-btn-cancel" @click="showLogoutModal = false" ref="cancelBtnRef">
+              <X :size="16" />
               Cancel
             </button>
-            <button class="btn-logout" @click="handleLogout">
-              <LogOut :size="16" class="me-1" />
+            <button class="logout-btn logout-btn-confirm" @click="handleLogout" ref="confirmBtnRef">
+              <LogOut :size="16" />
               Logout
             </button>
           </div>
@@ -108,59 +127,93 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, nextTick } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
+import { getUserInitials } from '@/utils'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
-  GraduationCap, ClipboardList, FileText,
-  User, Shield, LogOut, X, PanelLeftClose,
+  GraduationCap, ClipboardList, FileText, History,
+  User, Shield, LogOut, X, ChevronLeft, ChevronRight,
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const sidebar = useSidebarStore()
 
+const isProfileActive = computed(() => route.path === '/profile')
+
 const userAvatarUrl = computed(() => storageUrl((auth.user?.avatar as string | undefined) ?? null))
 const showLogoutModal = ref(false)
+const modalOverlayRef = ref<HTMLElement | null>(null)
+const confirmBtnRef = ref<HTMLButtonElement | null>(null)
+const cancelBtnRef = ref<HTMLButtonElement | null>(null)
+
+watch(showLogoutModal, (val) => {
+  if (val) {
+    nextTick(() => confirmBtnRef.value?.focus())
+  }
+})
+
+function trapFocus(e: KeyboardEvent) {
+  const focusable = [cancelBtnRef.value, confirmBtnRef.value].filter(Boolean) as HTMLElement[]
+  if (focusable.length === 0) return
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (e.shiftKey && document.activeElement === first) {
+    last.focus()
+  } else if (!e.shiftKey && document.activeElement === last) {
+    first.focus()
+  }
+}
 
 interface NavLink {
   to: string
   label: string
   icon: Component
+  permission?: string
 }
 
-const navLinks: NavLink[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/classes', label: 'Classes', icon: Users },
-  { to: '/subjects', label: 'Subjects', icon: BookOpen },
-  { to: '/teachers', label: 'Teachers', icon: UserCheck },
-  { to: '/students', label: 'Students', icon: GraduationCap },
-  { to: '/scores', label: 'Scores', icon: ClipboardList },
-  { to: '/reports', label: 'Reports', icon: FileText },
-]
-
-const settingsLinks: NavLink[] = [
-  { to: '/users', label: 'Users', icon: User },
-  { to: '/roles', label: 'Roles & Permissions', icon: Shield },
-]
-
-function getUserInitials(): string {
-  const name = auth.user?.name || ''
-  if (!name) return 'U'
-  const parts = name.split(' ').filter(Boolean)
-  if (parts.length >= 2) {
-    return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase()
+const navLinks = computed<NavLink[]>(() => {
+  if (auth.user?.role === 'student') {
+    return [
+      { to: '/portal', label: 'My Dashboard', icon: LayoutDashboard },
+      { to: '/portal/scores', label: 'My Scores', icon: ClipboardList },
+      { to: '/portal/transcript', label: 'My Transcript', icon: FileText },
+    ]
   }
-  return name.substring(0, 2).toUpperCase()
-}
+  const links: NavLink[] = [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/classes', label: 'Classes', icon: Users, permission: 'view-classes' },
+    { to: '/subjects', label: 'Subjects', icon: BookOpen, permission: 'view-subjects' },
+    { to: '/teachers', label: 'Teachers', icon: UserCheck, permission: 'view-teachers' },
+    { to: '/students', label: 'Students', icon: GraduationCap, permission: 'view-students' },
+    { to: '/scores', label: 'Scores', icon: ClipboardList, permission: 'view-scores' },
+    { to: '/reports', label: 'Reports', icon: FileText },
+    { to: '/activity-logs', label: 'Activity Log', icon: History, permission: 'view-activity-logs' },
+  ]
+  return links.filter(link => !link.permission || auth.hasPermission(link.permission))
+})
 
-function handleLogout() {
+const settingsLinks = computed<NavLink[]>(() => {
+  if (auth.user?.role !== 'admin') return []
+  const links: NavLink[] = []
+  if (auth.hasPermission('view-users')) {
+    links.push({ to: '/users', label: 'Users', icon: User })
+  }
+  if (auth.hasPermission('manage-roles-permissions')) {
+    links.push({ to: '/roles', label: 'Roles & Permissions', icon: Shield })
+  }
+  return links
+})
+
+async function handleLogout() {
   showLogoutModal.value = false
-  auth.logout()
+  await auth.logout()
   router.push('/login')
 }
 
@@ -170,7 +223,7 @@ function goToProfile() {
 </script>
 
 <style scoped>
-/* ── Sidebar Base ── */
+
 .sidebar {
   width: 240px;
   height: 100vh;
@@ -191,15 +244,31 @@ function goToProfile() {
   width: 72px;
 }
 
-/* ── Logo ── */.sidebar-logo-wrap {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.logo-expanded {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 0 14px;
+  height: 72px;
+}
+
+.logo-collapsed {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 72px;
+  padding: 0 0 0 14px;
+}
+
+.sidebar-logo-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-logo {
@@ -220,15 +289,17 @@ function goToProfile() {
   line-height: 1.15;
   transition: opacity 0.2s ease, transform 0.2s ease;
   transform-origin: left;
+  flex: 1;
 }
 
 .sidebar.collapsed .sidebar-brand-text {
   opacity: 0;
-  transform: translateX(-8px);
   width: 0;
-  margin: 0;
+  height: 0;
   overflow: hidden;
   pointer-events: none;
+  flex: 0;
+  margin: 0;
 }
 
 .brand-name {
@@ -255,7 +326,7 @@ function goToProfile() {
   pointer-events: none;
 }
 
-/* ── Nav Links ── */
+
 .sidebar-link {
   display: flex;
   align-items: center;
@@ -271,6 +342,20 @@ function goToProfile() {
   font-family: "Inter", "Noto Sans Khmer", sans-serif;
   white-space: nowrap;
   overflow: hidden;
+  position: relative;
+}
+
+.sidebar-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 20px;
+  background: #2563eb;
+  border-radius: 0 4px 4px 0;
+  transition: transform 0.2s ease;
 }
 
 .sidebar-link.collapsed {
@@ -280,15 +365,28 @@ function goToProfile() {
   margin-right: 4px;
 }
 
+.sidebar-link.collapsed:hover {
+  padding-left: 0;
+}
+
 .sidebar-link:hover {
-  background: #eef2ff;
+  background: #f8fafc;
   color: #2563eb;
+  padding-left: 20px;
+}
+
+.sidebar-link:hover::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .sidebar-link.router-link-active {
   background: #e8f1ff;
   color: #2563eb;
   font-weight: 600;
+}
+
+.sidebar-link.router-link-active::before {
+  transform: translateY(-50%) scaleY(1);
 }
 
 .sidebar-link-text {
@@ -305,73 +403,81 @@ function goToProfile() {
   pointer-events: none;
 }
 
-/* ── Toggle Button ── */
-.toggle-section {
-  padding: 0;
-}
 
-.toggle-sidebar-btn {
+.logo-toggle-btn {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 10px 14px;
+  justify-content: center;
   border: none;
-  background: transparent;
+  background: #f3f4f6;
   color: #94a3b8;
-  font-size: 13px;
-  font-weight: 500;
+  border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
-  overflow: hidden;
-  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.toggle-sidebar-btn.collapsed {
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.toggle-sidebar-btn:hover {
-  background: #f8fafc;
+.logo-toggle-btn:hover {
+  background: #eef2ff;
   color: #2563eb;
 }
 
-.toggle-sidebar-btn:active {
-  transform: scale(0.97);
+.logo-toggle-btn.collapsed {
+  width: 22px;
+  height: 36px;
+  border-radius: 6px 0 0 6px;
+  background: #eef2ff;
+  color: #2563eb;
+  margin-left: auto;
 }
 
-.toggle-sidebar-btn .rotated {
-  transform: rotate(180deg);
+.logo-toggle-btn.collapsed:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
-.toggle-label {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
 
-.sidebar.collapsed .toggle-label {
-  opacity: 0;
-  transform: translateX(-8px);
-  pointer-events: none;
-}
-
-/* ── User Section ── */
 .user-section {
   background: white;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.user-section-active {
+  background: #e8f1ff;
+}
+
 .user {
   cursor: pointer;
-  transition: background 0.2s ease;
-  border-radius: 8px;
-  padding: 4px 8px;
+  transition: all 0.2s ease;
+  border-radius: 10px;
+  padding: 8px 12px;
   overflow: hidden;
+  flex: 1;
 }
 
 .user:hover {
-  background: #f8fafc;
+  background: #eef2ff;
+  color: #2563eb;
+}
+
+.user-active {
+  background: #e8f1ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.user-active .avatar {
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+.user-active .user-text h6 {
+  color: #2563eb;
+}
+
+.user-active .user-text small {
+  color: #2563eb;
 }
 
 .avatar {
@@ -425,7 +531,7 @@ function goToProfile() {
 .logout-icon-btn {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #ef4444;
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -438,82 +544,111 @@ function goToProfile() {
 }
 
 .logout-icon-btn:hover {
-  background: #f1f5f9;
-  color: #ef4444;
+  background: #fef2f2;
+  color: #dc2626;
 }
 
-/* ── Logout Modal ── */
+
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.45);
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
 }
 
-.modal-dialog-custom {
-  background: #fff;
-  border-radius: 16px;
-  width: 360px;
-  max-width: 90vw;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+.logout-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 380px;
+  max-width: 100%;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 12px 30px -4px rgba(0, 0, 0, 0.12),
+    0 24px 60px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  animation: modalBounce 0.3s ease-out;
 }
 
-@keyframes modalBounce {
-  0% {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* ─── Header ─── */
+.logout-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 24px 0;
+  position: relative;
 }
 
-.modal-header-custom {
-  padding: 28px 28px 16px;
-  text-align: center;
-}
-
-.modal-header-custom h5 {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-
-.modal-header-custom p {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.modal-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+.logout-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   background: #fef2f2;
   color: #ef4444;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
-  margin: 0 auto 12px;
+  flex-shrink: 0;
 }
 
-.modal-actions {
+.logout-title {
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.logout-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
   display: flex;
-  gap: 8px;
-  padding: 12px 28px 28px;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
-.modal-actions button {
+.logout-close-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.logout-close-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ─── Body ─── */
+.logout-modal-body {
+  padding: 16px 24px 0;
+}
+
+.logout-message {
+  font-size: 0.9rem;
+  color: #475569;
+  margin: 0;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ─── Footer ─── */
+.logout-modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 20px 24px 24px;
+}
+
+.logout-btn {
   flex: 1;
   padding: 10px 16px;
   border-radius: 10px;
@@ -529,26 +664,45 @@ function goToProfile() {
   font-family: "Inter", "Noto Sans Khmer", sans-serif;
 }
 
-.btn-cancel {
-  background: #f3f4f6;
-  color: #374151;
+.logout-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
 }
 
-.btn-cancel:hover {
-  background: #e5e7eb;
+.logout-btn-cancel:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
 }
 
-.btn-logout {
+.logout-btn-cancel:active {
+  transform: translateY(0);
+}
+
+.logout-btn-confirm {
   background: #ef4444;
-  color: white;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
 }
 
-.btn-logout:hover {
+.logout-btn-confirm:hover {
   background: #dc2626;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
 }
 
+.logout-btn-confirm:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.2);
+}
+
+.logout-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* ─── Animations ─── */
 .modal-enter-active {
-  transition: all 0.2s ease-out;
+  transition: all 0.25s ease-out;
 }
 
 .modal-leave-active {
@@ -560,8 +714,52 @@ function goToProfile() {
   opacity: 0;
 }
 
-.modal-enter-from .modal-dialog-custom,
-.modal-leave-to .modal-dialog-custom {
-  transform: scale(0.9);
+.modal-enter-from .logout-modal,
+.modal-leave-to .logout-modal {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+}
+
+.modal-enter-active .logout-modal {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-leave-active .logout-modal {
+  transition: all 0.15s ease-in;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 480px) {
+  .logout-modal {
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .logout-modal-header {
+    padding: 20px 20px 0;
+  }
+
+  .logout-modal-body {
+    padding: 14px 20px 0;
+  }
+
+  .logout-modal-footer {
+    padding: 16px 20px 20px;
+    gap: 8px;
+  }
+
+  .logout-btn {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+
+  .logout-icon-wrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .logout-title {
+    font-size: 1rem;
+  }
 }
 </style>

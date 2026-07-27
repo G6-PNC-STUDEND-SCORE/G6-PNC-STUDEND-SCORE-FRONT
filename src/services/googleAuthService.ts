@@ -1,7 +1,8 @@
-import { http } from './api'
+import { http } from './apiHttp'
+import type { User } from '@/types'
 
-export type GoogleLoginResponse = {
-  user: unknown
+export interface GoogleLoginResponse {
+  user: User
   token: string
   message?: string
 }
@@ -12,5 +13,5 @@ export async function googleLogin(credential: string): Promise<GoogleLoginRespon
 }
 
 export function initGoogleClientId(): string {
-  return import.meta.env.VITE_GOOGLE_CLIENT_ID || '213370047582-omlbf5s59ccocfseu1ruib12i2rhuuvv.apps.googleusercontent.com'
+  return import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 }

@@ -3,12 +3,10 @@
     <Transition name="modal">
       <div v-if="show && student" class="modal-overlay" @click.self="$emit('close')">
         <div class="modal-content-panel">
-          <!-- Close Button -->
           <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
             <i class="bi bi-x-lg"></i>
           </button>
 
-          <!-- Profile Header -->
           <div class="profile-section">
             <div class="profile-avatar-wrap">
               <div class="profile-avatar" :style="avatarGradient">
@@ -23,7 +21,6 @@
             </span>
           </div>
 
-          <!-- Detail Cards -->
           <div class="details-grid">
             <div class="detail-card">
               <div class="detail-card-left">
@@ -142,7 +139,6 @@
             </div>
           </div>
 
-          <!-- Footer -->
           <div class="modal-footer-custom">
             <button type="button" class="btn-close-modal" @click="$emit('close')">
               <i class="bi bi-check-lg me-1"></i>
@@ -186,7 +182,7 @@ const genderIconStyle = computed(() => {
 </script>
 
 <style scoped>
-/* ==================== Overlay ==================== */
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -223,7 +219,7 @@ const genderIconStyle = computed(() => {
   }
 }
 
-/* ==================== Close Button ==================== */
+
 .modal-close-btn {
   position: absolute;
   top: 16px;
@@ -249,7 +245,7 @@ const genderIconStyle = computed(() => {
   transform: rotate(90deg);
 }
 
-/* ==================== Profile Section ==================== */
+
 .profile-section {
   padding: 36px 32px 20px;
   text-align: center;
@@ -333,7 +329,7 @@ const genderIconStyle = computed(() => {
   color: #be185d;
 }
 
-/* ==================== Details Grid ==================== */
+
 .details-grid {
   padding: 20px 24px 8px;
   display: flex;
@@ -398,7 +394,7 @@ const genderIconStyle = computed(() => {
   color: #0f172a;
 }
 
-/* ==================== Status Pill ==================== */
+
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -434,7 +430,7 @@ const genderIconStyle = computed(() => {
   background: #94a3b8;
 }
 
-/* ==================== Footer ==================== */
+
 .modal-footer-custom {
   padding: 16px 24px 24px;
 }
@@ -467,7 +463,7 @@ const genderIconStyle = computed(() => {
   transform: translateY(0);
 }
 
-/* ==================== Transitions ==================== */
+
 .modal-enter-active {
   transition: all 0.25s ease-out;
 }
@@ -486,7 +482,7 @@ const genderIconStyle = computed(() => {
   transform: scale(0.92) translateY(12px);
 }
 
-/* ==================== Scrollbar ==================== */
+
 .modal-content-panel::-webkit-scrollbar {
   width: 4px;
 }

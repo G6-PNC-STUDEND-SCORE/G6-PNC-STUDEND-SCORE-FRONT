@@ -98,7 +98,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     try {
       filterOptions.value = await dashboardService.getFilterOptions()
     } catch {
-      // Filters are non-critical; silently ignore
     } finally {
       filtersLoading.value = false
     }
@@ -157,16 +156,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   async function initialize() {
-    // 1. Show cached data INSTANTLY (skeleton stays hidden if cache exists)
     const cached = cacheService.get<DashboardData>(DASHBOARD_CACHE_KEY)
     if (cached) {
       kpi.value = cached.kpi
       charts.value = cached.charts
-      // loading stays false — cached data visible instantly
     } else {
       loading.value = true // show skeleton on first visit only
     }
-    // 2. Refresh from API in background (silent — no skeleton flash)
     await Promise.all([
       fetchFilterOptions(),
       fetchDashboardData(true),

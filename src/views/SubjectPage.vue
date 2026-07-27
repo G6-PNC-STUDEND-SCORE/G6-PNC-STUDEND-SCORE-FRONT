@@ -1,210 +1,188 @@
 <template>
   <div class="page-container">
-    <!-- ── Toast ── -->
-    <Transition name="toast">
-      <div v-if="toast.show" class="toast-bar" :class="toast.type">
-        <component :is="toastIconComponent" :size="16" />
-        <span>{{ toast.message }}</span>
-        <button class="toast-close" @click="toast.show = false">&times;</button>
-      </div>
-    </Transition>
-
-    <!-- ── Header ── -->
-    <div class="page-head">
-      <div class="page-head-left">
-        <div class="page-icon">
-          <BookOpen :size="22" />
-          </div>
-          <div>
-            <h1 class="page-title">Subjects</h1>
-          <p class="page-desc">Manage subjects and assign them to academic terms</p>
-        </div>
-      </div>
-      <div class="page-head-right">
-        <!-- Save Button (only visible when changes exist) -->
-        <Transition name="slide-fade">
-          <button v-if="hasChanges" class="btn btn-save" @click="saveAll" :disabled="saving">
-            <RefreshCw v-if="saving" :size="16" class="spin" />
-            <CloudUpload v-else :size="16" />
-            <span>Save Changes</span>
-            <span class="save-badge">{{ changeCount }}</span>
-          </button>
-        </Transition>
-        <button class="btn btn-primary" @click="openAddModal">
-          <Plus :size="16" />
-          <span>Add Subject</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Store Messages ── -->
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
       {{ store.error }}
       <button class="msg-close" @click="store.clearMessages()">&times;</button>
     </div>
-    <div v-if="store.successMessage" class="msg msg-success">
-      <CheckCircle :size="16" />
-      {{ store.successMessage }}
-      <button class="msg-close" @click="store.clearMessages()">&times;</button>
-    </div>
 
-    <!-- ── Term Summary Bar ── -->
-    <div class="term-strip">
-      <div
-        v-for="term in terms"
-        :key="term.id"
-        class="term-stat"
-        :class="'ts-' + term.term_number"
-        @click="activeTermFilter = activeTermFilter === term.id ? null : term.id"
-      >
-        <div class="ts-icon">
-          <BookOpen :size="18" />
-        </div>
-        <div class="ts-body">
-          <span class="ts-label">{{ term.name }}</span>
-          <span class="ts-count">{{ subjectsInTerm(term.id) }}</span>
-        </div>
-        <div v-if="activeTermFilter === term.id" class="ts-active-dot"></div>
-      </div>
-    </div>
 
-    <!-- ── Toolbar ── -->
-    <div class="toolbar">
-      <div class="tb-search">
-        <Search :size="16" />
-        <input
-          v-model="searchQuery"
-          @input="handleSearch"
-          type="text"
-          placeholder="Search subjects..."
-        />
-        <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''; handleSearch()">
-          <X :size="14" />
-        </button>
-      </div>
-      <div class="tb-filter">
-        <select v-model="statusFilter" @change="handleFilter">
-          <option value="">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-        </select>
-      </div>
-      <div class="tb-chips">
-        <button
-          v-for="term in terms"
-          :key="term.id"
-          class="chip"
-          :class="{ 'chip-on': activeTermFilter === term.id }"
-          @click="activeTermFilter = activeTermFilter === term.id ? null : term.id"
-        >
-          {{ term.name }}
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Loading ── -->
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
       <span>Loading subjects…</span>
     </div>
 
-    <!-- ── Table ── -->
-    <div v-else class="table-wrap">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th class="th-subject">Subject</th>
-            <th class="th-teacher">Teacher</th>
-            <th class="th-class">Class</th>
-            <th class="th-terms">Terms</th>
-            <th class="th-status">Status</th>
-            <th class="th-actions">Actions</th>
-          </tr>
-        </thead>
-        <TransitionGroup name="row" tag="tbody">
-          <tr v-if="filteredSubjects.length === 0" key="empty">
-            <td colspan="6" class="td-empty">
-              <div class="empty-box">
-                <Inbox :size="40" />
-                <h5>No subjects found</h5>
-                <p>{{ searchQuery ? 'Try a different search term.' : 'No subjects match the current filter.' }}</p>
-              </div>
-            </td>
-          </tr>
-          <tr v-for="subject in paginatedSubjects" :key="subject.id">
-            <!-- Subject -->
-            <td class="td-subject" @click="openEditModal(subject)">
-              <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
-                <BookOpen :size="16" />
-              </div>
-              <span class="subj-name">{{ subject.name }}</span>
-            </td>
-            <!-- Teacher -->
-            <td class="td-meta" @click="openEditModal(subject)">
-              <div v-if="teacherNamesForSubject(subject).length === 0" class="meta-val">—</div>
-              <div v-else class="teacher-stack">
-                <span class="meta-val">{{ teacherNamesForSubject(subject).slice(0, 2).join(' & ') }}</span>
-                <span
-                  v-if="teacherNamesForSubject(subject).length > 2"
-                  class="teacher-more-chip"
-                  :title="teacherNamesForSubject(subject).join(', ')"
-                >
-                  +{{ teacherNamesForSubject(subject).length - 2 }} more
-                </span>
-              </div>
-            </td>
-            <!-- Class -->
-            <td class="td-meta" @click="openEditModal(subject)">
-              <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
-              <div v-else class="teacher-stack">
-                <span class="meta-val">{{ classNamesForSubject(subject).slice(0, 2).join(', ') }}</span>
-                <span
-                  v-if="classNamesForSubject(subject).length > 2"
-                  class="teacher-more-chip"
-                  :title="classNamesForSubject(subject).join(', ')"
-                >
-                  +{{ classNamesForSubject(subject).length - 2 }} more
-                </span>
-              </div>
-            </td>
-            <!-- Term Toggles -->
-            <td class="td-terms">
-              <div class="tog-group" @click.stop>
-                <button
-                  v-for="term in terms"
-                  :key="term.id"
-                  class="tog"
-                  :class="{ 'tog-on': subject.term_ids.includes(term.id) }"
-                  @click="toggleTerm(subject, term.id)"
-                >
-                  <CheckCircle v-if="subject.term_ids.includes(term.id)" :size="14" />
-                  <Circle v-else :size="14" />
-                  <span>{{ term.name }}</span>
-                </button>
-              </div>
-            </td>
-            <!-- Status -->
-            <td class="td-status">
-              <span class="pill" :class="subject.status === 'Active' ? 'pill-on' : 'pill-off'">
-                {{ subject.status }}
-              </span>
-            </td>
-            <!-- Actions -->
-            <td class="td-actions">
-              <button class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
-                <Pencil :size="15" />
-              </button>
-              <button class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
-                <Trash2 :size="15" />
-              </button>
-            </td>
-          </tr>
-        </TransitionGroup>
-      </table>
+    <div v-else class="subject-card">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <Search :size="16" class="search-icon" />
+            <input
+              v-model="searchQuery"
+              @input="handleSearch"
+              type="text"
+              class="search-input"
+              placeholder="Search by name, teacher, class, or term..."
+            />
+            <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''; handleSearch()">
+              <X :size="14" />
+            </button>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <ToggleLeft :size="16" />
+              <span>Status</span>
+              <select v-model="statusFilter" @change="handleFilter" class="filter-select">
+                <option value="">All</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </label>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">
+              <CalendarDays :size="16" />
+              <span>Term</span>
+              <select v-model="termFilter" @change="handleFilter" class="filter-select">
+                <option value="">All</option>
+                <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.name }}</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <button
+            v-if="canCreate"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
+            style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+            @click="openAddModal"
+          >
+            <Plus :size="15" />
+            Add Subject
+          </button>
+          <span class="count-badge">
+            {{ filteredSubjects.length }} / {{ subjects.length }} subject{{ subjects.length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+      </div>
 
-      <!-- Pagination -->
-      <div class="pagination-bar">
+      <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
+        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <button class="bulk-delete-btn" @click="showBulkDeleteModal = true">
+          <Trash :size="16" />
+          Delete Selected
+        </button>
+        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+      </div>
+
+      <div v-if="filteredSubjects.length === 0" class="empty-container">
+        <div class="empty-box">
+          <Inbox :size="40" />
+          <h5>No subjects found</h5>
+          <p>{{ searchQuery ? 'Try a different search term.' : 'No subjects match the current filter.' }}</p>
+        </div>
+      </div>
+
+      <div v-else class="table-wrap">
+        <table class="subject-table data-table-base">
+          <thead>
+            <tr>
+              <th v-if="canDelete" class="col-check">
+                <input
+                  type="checkbox"
+                  class="table-checkbox"
+                  :checked="isAllPageSelected"
+                  :indeterminate="isIndeterminate"
+                  @change="toggleSelectAll"
+                />
+              </th>
+              <th class="col-index">#</th>
+              <th class="th-subject">Subject</th>
+              <th class="th-teacher">Teacher</th>
+              <th class="th-class">Class</th>
+              <th class="th-terms">Terms</th>
+              <th class="th-status">Status</th>
+              <th class="th-actions">Actions</th>
+            </tr>
+          </thead>
+          <TransitionGroup name="row" tag="tbody">
+            <tr v-for="(subject, index) in paginatedSubjects" :key="subject.id" :class="['data-row', { 'row-selected': selectedIds.includes(subject.id) }]">
+              <td v-if="canDelete" class="col-check" @click.stop>
+                <input
+                  type="checkbox"
+                  class="table-checkbox"
+                  :checked="selectedIds.includes(subject.id)"
+                  @change="toggleSelectSubject(subject.id)"
+                />
+              </td>
+              <td class="col-index">{{ (currentPage - 1) * pageSize + index + 1 }}</td>
+              <td class="td-subject" @click="canUpdate && openEditModal(subject)">
+                <div class="subj-avatar" :style="{ background: subjectIconBg(subject.name) }">
+                  <BookOpen :size="14" />
+                </div>
+                <span class="subj-name">{{ subject.name }}</span>
+              </td>
+              <td class="td-meta" @click="canUpdate && openEditModal(subject)">
+                <div v-if="teacherNamesForSubject(subject).length === 0" class="meta-val">—</div>
+                <div v-else class="teacher-stack">
+                  <span class="meta-val">{{ teacherNamesForSubject(subject).slice(0, 2).join(' & ') }}</span>
+                  <span
+                    v-if="teacherNamesForSubject(subject).length > 2"
+                    class="teacher-more-chip"
+                    :title="teacherNamesForSubject(subject).join(', ')"
+                  >
+                    +{{ teacherNamesForSubject(subject).length - 2 }} more
+                  </span>
+                </div>
+              </td>
+              <td class="td-meta" @click="canUpdate && openEditModal(subject)">
+                <div v-if="classNamesForSubject(subject).length === 0" class="meta-val">—</div>
+                <div v-else class="teacher-stack">
+                  <span class="meta-val">{{ classNamesForSubject(subject).slice(0, 2).join(', ') }}</span>
+                  <span
+                    v-if="classNamesForSubject(subject).length > 2"
+                    class="teacher-more-chip"
+                    :title="classNamesForSubject(subject).join(', ')"
+                  >
+                    +{{ classNamesForSubject(subject).length - 2 }} more
+                  </span>
+                </div>
+              </td>
+              <td class="td-terms">
+                <div class="tog-group" @click.stop>
+                  <button
+                    v-for="term in terms"
+                    :key="term.id"
+                    v-if="canUpdate"
+                    class="tog"
+                    :class="{ 'tog-on': subject.term_ids.includes(term.id) }"
+                    @click="toggleTerm(subject, term.id)"
+                  >
+                    <CheckCircle v-if="subject.term_ids.includes(term.id)" :size="14" />
+                    <Circle v-else :size="14" />
+                    <span>{{ term.name }}</span>
+                  </button>
+                </div>
+              </td>
+              <td class="td-status">
+                <span class="status-badge" :class="(subject.status || '').toLowerCase() === 'active' ? 'badge-active' : 'badge-inactive'">
+                  {{ subject.status }}
+                </span>
+              </td>
+              <td class="td-actions">
+                <button v-if="canUpdate" class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
+                  <Pencil :size="15" />
+                </button>
+                <button v-if="canDelete" class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
+                  <Trash2 :size="15" />
+                </button>
+              </td>
+            </tr>
+          </TransitionGroup>
+        </table>
+      </div>
+
+      <div v-if="filteredSubjects.length > 0" class="pagination-bar">
         <div class="pagination-info">
           <span class="rows-label">Rows per page:</span>
           <div class="rows-selector">
@@ -258,11 +236,10 @@
       </div>
     </div>
 
-    <!-- ── Add / Edit Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showModal" class="overlay" @click.self="closeModal">
-          <div class="modal-card">
+          <div class="modal-card modal-card-wide">
             <div class="modal-head">
               <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-add'">
                 <SquarePen v-if="isEditMode" :size="20" />
@@ -270,56 +247,68 @@
               </div>
               <div>
                 <h3>{{ isEditMode ? 'Edit Subject' : 'New Subject' }}</h3>
-                <p>{{ isEditMode ? 'Update the subject details below.' : 'Fill in the details to create a new subject.' }}</p>
+                <p>{{ isEditMode && store.currentSubject ? `Editing: ${store.currentSubject.name}` : 'Fill in the details to create a new subject.' }}</p>
               </div>
               <button class="modal-x" @click="closeModal">&times;</button>
             </div>
             <form @submit.prevent="handleSubmit" class="modal-body">
-              <!-- Name -->
               <div class="field">
-                <label>Subject Name <span class="req">*</span></label>
-                <input
-                  v-model="formData.name"
-                  :class="{ err: errors.name }"
-                  placeholder="e.g. Web Development"
-                  required
-                />
+                <label>
+                  <BookOpen :size="15" class="field-icon" />
+                  Subject Name <span class="req">*</span>
+                </label>
+                <div class="input-wrap">
+                  <input
+                    v-model="formData.name"
+                    :class="{ err: errors.name }"
+                    placeholder="e.g. Web Development"
+                    required
+                  />
+                </div>
                 <span v-if="errors.name" class="field-err">{{ errors.name }}</span>
               </div>
-              <!-- Teacher (multi-select via checkbox list) -->
-              <div class="field">
-                <label>Teachers <span class="opt">(optional — pick one or more)</span></label>
-                <div v-if="teachers.length" class="teacher-checklist">
-                  <label
-                    v-for="t in teachers"
-                    :key="t.id"
-                    class="teacher-check"
-                    :class="{ 'teacher-check-on': formData.teacher_ids.includes(t.id) }"
-                  >
-                    <input
-                      type="checkbox"
-                      :value="t.id"
-                      :checked="formData.teacher_ids.includes(t.id)"
-                      @change="toggleFormTeacher(t.id)"
-                    />
-                    <span class="teacher-check-name">{{ t.name }}</span>
-                  </label>
-                </div>
-                <p v-else class="field-hint">No teachers available yet.</p>
-                <p v-if="formData.teacher_ids.length" class="field-hint">
-                  {{ formData.teacher_ids.length }} teacher{{ formData.teacher_ids.length > 1 ? 's' : '' }} selected
-                </p>
-              </div>
-              <div class="row-2">
-                <!-- Classes (multi-select via checkbox list) -->
+
+              <div class="section-divider"></div>
+
+              <div class="row-2 row-2-equal">
                 <div class="field">
-                  <label>Classes <span class="opt">(optional — pick one or more)</span></label>
-                  <div v-if="classes.length" class="teacher-checklist">
+                  <label>
+                    <Users :size="15" class="field-icon" />
+                    Teachers
+                  </label>
+                  <div v-if="teachers.length" class="check-list">
+                    <label
+                      v-for="t in teachers"
+                      :key="t.id"
+                      class="check-item"
+                      :class="{ 'check-item-on': formData.teacher_ids.includes(t.id) }"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="t.id"
+                        :checked="formData.teacher_ids.includes(t.id)"
+                        @change="toggleFormTeacher(t.id)"
+                      />
+                      <span class="check-dot"></span>
+                      <span class="check-label">{{ t.name }}</span>
+                    </label>
+                  </div>
+                  <p v-else class="field-hint">No teachers available yet.</p>
+                  <p v-if="formData.teacher_ids.length" class="field-count">
+                    {{ formData.teacher_ids.length }} selected
+                  </p>
+                </div>
+                <div class="field">
+                  <label>
+                    <Layers :size="15" class="field-icon" />
+                    Classes
+                  </label>
+                  <div v-if="classes.length" class="check-list">
                     <label
                       v-for="c in classes"
                       :key="c.id"
-                      class="teacher-check"
-                      :class="{ 'teacher-check-on': formData.class_ids.includes(c.id) }"
+                      class="check-item"
+                      :class="{ 'check-item-on': formData.class_ids.includes(c.id) }"
                     >
                       <input
                         type="checkbox"
@@ -327,47 +316,63 @@
                         :checked="formData.class_ids.includes(c.id)"
                         @change="toggleFormClass(c.id)"
                       />
-                      <span class="teacher-check-name">{{ c.name }}</span>
+                      <span class="check-dot"></span>
+                      <span class="check-label">{{ c.name }}</span>
                     </label>
                   </div>
                   <p v-else class="field-hint">No classes available yet.</p>
-                  <p v-if="formData.class_ids.length" class="field-hint">
-                    {{ formData.class_ids.length }} class{{ formData.class_ids.length > 1 ? 'es' : '' }} selected
+                  <p v-if="formData.class_ids.length" class="field-count">
+                    {{ formData.class_ids.length }} selected
                   </p>
                 </div>
-                <!-- Status -->
-                <div class="field">
-                  <label>Status</label>
-                  <select v-model="formData.status">
+              </div>
+
+              <div class="section-divider"></div>
+
+              <div class="field">
+                <label>
+                  <ToggleLeft :size="15" class="field-icon" />
+                  Status
+                </label>
+                <div class="input-wrap">
+                  <select v-model="formData.status" class="modern-input">
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
               </div>
-              <!-- Term assignment on create -->
-              <div v-if="!isEditMode" class="field">
-                <label>Assign to Terms</label>
-                <div class="tog-group tog-form">
+
+              <div class="section-divider"></div>
+
+              <div class="field">
+                <label>
+                  <CalendarDays :size="15" class="field-icon" />
+                  Assign to Terms
+                </label>
+                <div class="term-chips">
                   <button
                     v-for="term in terms"
                     :key="term.id"
                     type="button"
-                    class="tog"
-                    :class="{ 'tog-on': formData.term_ids.includes(term.id) }"
+                    class="term-chip"
+                    :class="{ 'term-chip-on': formData.term_ids.includes(term.id) }"
                     @click="toggleFormTerm(term.id)"
                   >
-                    <CheckCircle v-if="formData.term_ids.includes(term.id)" :size="14" />
-                    <Circle v-else :size="14" />
+                    <span class="chip-icon-wrap">
+                      <CheckCircle v-if="formData.term_ids.includes(term.id)" :size="13" />
+                      <Circle v-else :size="13" />
+                    </span>
                     <span>{{ term.name }}</span>
                   </button>
                 </div>
               </div>
-              <!-- Footer -->
+
               <div class="modal-foot">
                 <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="store.loading">
                   <span v-if="store.loading" class="spinner-sm"></span>
-                  {{ isEditMode ? 'Update Subject' : 'Create Subject' }}
+                  <Check v-else :size="16" />
+                  {{ isEditMode ? 'Save Changes' : 'Create Subject' }}
                 </button>
               </div>
             </form>
@@ -376,7 +381,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── Delete Modal ── -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
@@ -405,12 +409,42 @@
         </div>
       </Transition>
     </Teleport>
+
+    <Teleport to="body">
+      <Transition name="modal">
+        <div v-if="showBulkDeleteModal" class="overlay" @click.self="closeBulkDeleteModal">
+          <div class="modal-card modal-sm">
+            <div class="modal-head">
+              <div class="modal-icon icon-danger">
+                <AlertTriangle :size="20" />
+              </div>
+              <div>
+                <h3>Delete Subjects</h3>
+                <p>This action cannot be undone.</p>
+              </div>
+              <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="del-text">Are you sure you want to delete <strong>{{ selectedIds.length }} subject(s)</strong>?</p>
+            </div>
+            <div class="modal-foot">
+              <button class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
+              <button class="btn btn-danger" @click="handleBulkDelete" :disabled="store.loading">
+                <span v-if="store.loading" class="spinner-sm"></span>
+                Delete {{ selectedIds.length }} subject(s)
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, computed, watch, type Component } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useSubjectStore } from '@/stores/subject'
+import { useAuthStore } from '@/stores/auth'
 import type { Subject } from '@/services/subjectService'
 import { subjectService } from '@/services/subjectService'
 import { classService } from '@/services/classService'
@@ -423,12 +457,12 @@ import {
   BookOpen,
   Pencil,
   Trash2,
-  RefreshCw,
-  CloudUpload,
+  Trash,
   Plus,
   AlertTriangle,
   CheckCircle,
   Search,
+  ToggleLeft,
   X,
   Inbox,
   Circle,
@@ -436,12 +470,18 @@ import {
   CirclePlus,
   ChevronLeft,
   ChevronRight,
+  Users,
+  Layers,
+  CalendarDays,
+  Check,
 } from '@lucide/vue'
 import { cacheService } from '@/services/cacheService'
+import { useToast } from '@/composables/useToast'
+
+const { success: toastSuccess, error: toastError } = useToast()
 
 const CACHE_KEY = 'subject-terms'
 
-// ─── Pagination ───────────────────────────────────────────────────
 const currentPage = ref(1)
 const pageSize = ref(10)
 const pageSizeOptions = [10, 25, 50]
@@ -472,31 +512,24 @@ const visiblePages = computed(() => {
   return pages
 })
 
-// ─── Store ─────────────────────────────────────────────────────────
 const store = useSubjectStore()
+const auth = useAuthStore()
+
+const canCreate = computed(() => auth.hasPermission('create-subjects'))
+const canUpdate = computed(() => auth.hasPermission('update-subjects'))
+const canDelete = computed(() => auth.hasPermission('delete-subjects'))
+
 const searchQuery = ref('')
 const statusFilter = ref('')
-const activeTermFilter = ref<number | null>(null)
+const termFilter = ref<number | ''>('')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
-// ─── Term State ────────────────────────────────────────────────────
 const loading = ref(false)
-const saving = ref(false)
 const subjects = ref<SubjectWithTerms[]>([])
 const terms = ref<(TermInfo & { term_number?: number })[]>([])
 const pendingChanges = reactive<Record<number, number[]>>({})
 const debounceTimers = new Map<number, ReturnType<typeof setTimeout>>()
 
-const toast = reactive({
-  show: false,
-  message: '',
-  type: 'success' as 'success' | 'error',
-  icon: CheckCircle,
-})
-
-const toastIconComponent = computed(() => toast.type === 'success' ? CheckCircle : AlertTriangle)
-
-// ─── CRUD State ────────────────────────────────────────────────────
 const teachers = ref<{ id: number; name: string }[]>([])
 const classes = ref<{ id: number; name: string }[]>([])
 const showModal = ref(false)
@@ -514,7 +547,70 @@ const formData = reactive({
 
 const errors = reactive({ name: '', class_ids: '' })
 
-// ─── Teacher list helpers ──────────────────────────────────────────
+const selectedIds = ref<number[]>([])
+const showBulkDeleteModal = ref(false)
+
+const isAllPageSelected = computed(() => {
+  return paginatedSubjects.value.length > 0 && paginatedSubjects.value.every(s => selectedIds.value.includes(s.id))
+})
+
+const isIndeterminate = computed(() => {
+  const some = paginatedSubjects.value.some(s => selectedIds.value.includes(s.id))
+  return some && !isAllPageSelected.value
+})
+
+function toggleSelectAll() {
+  if (isAllPageSelected.value) {
+    const pageIds = new Set(paginatedSubjects.value.map(s => s.id))
+    selectedIds.value = selectedIds.value.filter(id => !pageIds.has(id))
+  } else {
+    const currentIds = new Set(selectedIds.value)
+    paginatedSubjects.value.forEach(s => currentIds.add(s.id))
+    selectedIds.value = Array.from(currentIds)
+  }
+}
+
+function toggleSelectSubject(id: number) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx === -1) {
+    selectedIds.value.push(id)
+  } else {
+    selectedIds.value.splice(idx, 1)
+  }
+}
+
+function clearSelection() {
+  selectedIds.value = []
+}
+
+function closeBulkDeleteModal() {
+  showBulkDeleteModal.value = false
+}
+
+async function handleBulkDelete() {
+  if (selectedIds.value.length === 0) return
+  const idsToDelete = [...selectedIds.value]
+  try {
+    const results = await Promise.allSettled(idsToDelete.map(id => store.deleteSubject(id)))
+    const allOk = results.every(r => r.status === 'fulfilled')
+    if (allOk) {
+      store.clearMessages()
+      globalShowToast('Subjects deleted successfully')
+      subjects.value = subjects.value.filter(s => !idsToDelete.includes(s.id))
+      showBulkDeleteModal.value = false
+      clearSelection()
+      if (paginatedSubjects.value.length === 0 && currentPage.value > 1) {
+        currentPage.value--
+      }
+    } else {
+      store.clearMessages()
+      globalShowToast('Failed to delete some subjects', 'error')
+    }
+  } catch {
+    globalShowToast('Failed to delete subjects', 'error')
+  }
+}
+
 function teacherName(t: { id: number; user?: { name?: string | null } | null }): string {
   return t.user?.name || `Teacher #${t.id}`
 }
@@ -523,7 +619,6 @@ function teacherNamesForSubject(subj: SubjectWithTerms): string[] {
   if (subj.teachers && subj.teachers.length) {
     return subj.teachers.map(teacherName)
   }
-  // Fallback to old single teacher shape for compatibility.
   const single = subj.teacher?.user?.name
   return single ? [single] : []
 }
@@ -542,43 +637,30 @@ function classNamesForSubject(subj: SubjectWithTerms): string[] {
   return classNames
 }
 
-// ─── Computed ──────────────────────────────────────────────────────
-const hasChanges = computed(() => Object.keys(pendingChanges).length > 0)
-const changeCount = computed(() => Object.keys(pendingChanges).length)
-
 const filteredSubjects = computed(() => {
   let r = subjects.value
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
-    r = r.filter((s) => s.name.toLowerCase().includes(q))
+    r = r.filter((s) => {
+      const name = (s.name || '').toLowerCase()
+      const teachers = teacherNamesForSubject(s).join(' ').toLowerCase()
+      const classes = classNamesForSubject(s).join(' ').toLowerCase()
+      const termNames = (s.terms || []).map(t => t.name).join(' ').toLowerCase()
+      return name.includes(q) || teachers.includes(q) || classes.includes(q) || termNames.includes(q)
+    })
   }
-  if (statusFilter.value) r = r.filter((s) => s.status === statusFilter.value)
-  if (activeTermFilter.value) r = r.filter((s) => s.term_ids.includes(activeTermFilter.value!))
+  if (statusFilter.value) r = r.filter((s) => s.status?.toLowerCase() === statusFilter.value.toLowerCase())
+  if (termFilter.value !== '') r = r.filter((s) => s.term_ids.includes(termFilter.value as number))
   return r
-})
-
-function subjectsInTerm(tid: number) {
-  return subjects.value.filter((s) => s.term_ids.includes(tid)).length
-}
-
-// ─── Helpers ───────────────────────────────────────────────────────
-function getSubjectIcon(_name: string): Component {
-  return BookOpen
-}
-
+})  // ─── Helpers ───────────────────────────────────────────────────────
 function subjectIconBg(_name: string): string {
   return '#2563eb'
 }
 
-// ─── Toast ─────────────────────────────────────────────────────────
-function showToast(msg: string, type: 'success' | 'error' = 'success') {
-  toast.message = msg
-  toast.type = type
-  toast.show = true
-  setTimeout(() => { toast.show = false }, 3000)
+function globalShowToast(msg: string, type: 'success' | 'error' = 'success') {
+  type === 'error' ? toastError(msg) : toastSuccess(msg)
 }
 
-// ─── Term Actions ──────────────────────────────────────────────────
 function toggleTerm(subj: SubjectWithTerms, tid: number) {
   const i = subj.term_ids.indexOf(tid)
   i >= 0 ? subj.term_ids.splice(i, 1) : subj.term_ids.push(tid)
@@ -611,49 +693,45 @@ function debouncedSave(sid: number) {
       try {
         await subjectTermService.syncSubject(sid, ids)
         delete pendingChanges[sid]
-      } catch {
-        showToast('Auto-save failed. Use Save Changes button.', 'error')
+      } catch (err: any) {
+        delete pendingChanges[sid]
+        if (err?.response?.status === 404) {
+          subjects.value = subjects.value.filter(s => s.id !== sid)
+          cacheService.remove(CACHE_KEY)
+          globalShowToast('This subject no longer exists — it has been removed from the list.', 'error')
+          return
+        }
+        await loadTermData()
+        globalShowToast('Auto-save failed. Please try toggling the term again.', 'error')
       }
     }, 800)
   )
 }
 
-async function saveAll() {
-  const entries = Object.entries(pendingChanges)
-  if (!entries.length) return
-  saving.value = true
-  try {
-    const result = await subjectTermService.syncBatch(
-      entries.map(([id, tids]) => ({ subject_id: Number(id), term_ids: tids }))
-    )
-    if (result.success) {
-      Object.keys(pendingChanges).forEach((k) => delete pendingChanges[k])
-      showToast(`Term assignments updated for ${entries.length} subject${entries.length > 1 ? 's' : ''}.`)
-    } else {
-      showToast(result.message || 'Failed to save.', 'error')
-      await loadTermData()
-    }
-  } catch {
-    showToast('Failed to save changes.', 'error')
-    await loadTermData()
-  } finally {
-    saving.value = false
-  }
-}
-
-// ─── Reset page on filter change ───────────────────────────────
-watch([searchQuery, statusFilter, activeTermFilter], () => {
+watch([searchQuery, statusFilter, termFilter], () => {
   currentPage.value = 1
 })
 
-// ─── CRUD ──────────────────────────────────────────────────────────
-function handleSearch() {}
-function handleFilter() {}
+function handleSearch() {
+  currentPage.value = 1
+}
+function handleFilter() {
+  currentPage.value = 1
+}
+
+function resetForm() {
+  formData.name = ''
+  formData.teacher_ids = []
+  formData.class_ids = []
+  formData.status = 'Active'
+  formData.term_ids = []
+  errors.name = ''
+  errors.class_ids = ''
+}
 
 function openAddModal() {
   isEditMode.value = false
-  Object.assign(formData, { name: '', teacher_ids: [], class_ids: [], status: 'Active', term_ids: [] })
-  errors.name = ''; errors.class_ids = ''
+  resetForm()
   showModal.value = true
 }
 
@@ -665,18 +743,24 @@ function openEditModal(s: any) {
     Array.isArray(s.teacher_ids) ? [...s.teacher_ids] :
     Array.isArray(s.teachers) ? s.teachers.map((t: { id: number }) => t.id) :
     s.teacher_id ? [s.teacher_id] : []
-  // Collect all unique class IDs from offerings (supports multi-class)
   const offeringClassIds = (s.offerings || [])
     .map((o: any) => o.class_id)
     .filter((id: any) => id != null)
   formData.class_ids = offeringClassIds.length
     ? [...new Set(offeringClassIds)]
     : s.class_id ? [s.class_id] : []
-  formData.status = s.status
+  formData.status = typeof s.status === 'string' && s.status.toLowerCase() === 'active' ? 'Active' : 'Inactive'
+  formData.term_ids = Array.isArray(s.term_ids)
+    ? [...s.term_ids]
+    : Array.isArray(s.terms)
+      ? s.terms.map((t: any) => t.id)
+      : []
   showModal.value = true
 }
 
-function closeModal() { showModal.value = false }
+function closeModal() {
+  showModal.value = false
+}
 
 function validateForm() {
   let v = true
@@ -695,25 +779,34 @@ async function handleSubmit() {
       teacher_ids: formData.teacher_ids,
     })
     if (!store.error) {
+      const updatedTermIds = [...formData.term_ids]
+      const updatedSubjectId = store.currentSubject.id
       closeModal(); await store.fetchSubjects(); await loadTermData()
-      showToast('Subject updated successfully')
+      if (updatedTermIds.length || store.currentSubject.term_ids?.length) {
+        await subjectTermService.syncSubject(updatedSubjectId, updatedTermIds)
+        await loadTermData()
+      }
+      store.clearMessages()
+      globalShowToast('Subject updated successfully')
     }
   } else {
+    const newTermIds = [...formData.term_ids]
     await store.createSubject({
       name: formData.name,
       class_ids: formData.class_ids,
       status: formData.status,
       teacher_ids: formData.teacher_ids,
+      term_ids: formData.term_ids,
     })
     if (!store.error) {
       closeModal()
       await store.fetchSubjects()
       await loadTermData()
-      showToast('Subject created successfully')
-      // Assign terms to the newly created subject if any were picked.
-      if (formData.term_ids.length) {
-        const subj = store.subjects.find((s: any) => s.name === formData.name)
-        if (subj) await subjectTermService.syncSubject(subj.id, formData.term_ids)
+      store.clearMessages()
+      globalShowToast('Subject created successfully')
+      if (newTermIds.length) {
+        const subj = subjects.value.find((s: any) => s.name === formData.name)
+        if (subj) await subjectTermService.syncSubject(subj.id, newTermIds)
         await loadTermData()
       }
     }
@@ -725,22 +818,21 @@ function closeDeleteModal() { showDeleteModal.value = false; subjectToDelete.val
 
 async function handleDelete() {
   if (!subjectToDelete.value) return
-  await store.deleteSubject(subjectToDelete.value.id)
+  const targetId = subjectToDelete.value.id
+  await store.deleteSubject(targetId)
   if (!store.error) {
-    store.clearMessages()
+    subjects.value = subjects.value.filter(s => s.id !== targetId)
     closeDeleteModal()
-    await loadTermData()
-    showToast('Subject deleted successfully')
+    store.clearMessages()
+    globalShowToast('Subject deleted successfully')
   }
 }
 
-// ─── Cache helpers ──────────────────────────────────────────────
 function applyTermData(data: { subjects: SubjectWithTerms[]; terms: TermInfo[] }) {
   subjects.value = data.subjects
   terms.value = data.terms.map((t, i) => ({ ...t, term_number: i + 1 }))
 }
 
-// ─── Data ──────────────────────────────────────────────────────────
 async function loadTermData() {
   try {
     const res = await subjectTermService.getAll()
@@ -748,10 +840,11 @@ async function loadTermData() {
       applyTermData(res.data)
       cacheService.set(CACHE_KEY, res.data, 24 * 60 * 60_000)
     }
-  } catch { /* store handles its own errors */ }
+  } catch {  }
 }
 
 async function fetchTeachers() {
+  if (!auth.hasPermission('view-teachers')) { teachers.value = []; return }
   try {
     const r = await subjectService.getTeachers()
     if (r.success) teachers.value = (r.data as { id: number; name: string }[]) || []
@@ -768,12 +861,13 @@ async function fetchClasses() {
 onMounted(async () => {
   const cached = cacheService.get<{ subjects: SubjectWithTerms[]; terms: TermInfo[] }>(CACHE_KEY)
   if (cached) {
+
     applyTermData(cached)
   } else {
     loading.value = true
   }
   await Promise.all([
-    cached ? Promise.resolve() : loadTermData(),
+    loadTermData(),
     fetchTeachers(),
     fetchClasses(),
   ])
@@ -782,55 +876,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ══════════════════════════════════════════════════════════════
-   GLOBAL
-   ══════════════════════════════════════════════════════════════ */
+
 .page-container {
-  padding: 1rem 1.5rem 2rem;
-  font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
-  color: #0f172a;
-  max-width: 1440px;
-}
-
-.page-icon {
-  width: 44px; height: 44px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  color: #2563eb;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-
-/* ══════════════════════════════════════════════════════════════
-   HEADER
-   ══════════════════════════════════════════════════════════════ */
-.page-head {
+  height: calc(100vh - 96px);
+  width: calc(100% + 12px);
+  margin-top: -6px;
+  margin-left: -6px;
   display: flex;
-  align-items: center; justify-content: space-between;
-  margin-bottom: 1.25rem; gap: 16px; flex-wrap: wrap;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
 }
-.page-head-left { display: flex; align-items: center; gap: 14px; }
-.page-title { font-size: 1.4rem; font-weight: 800; margin: 0 0 2px; letter-spacing: -0.025em; }
-.page-desc { font-size: 0.8rem; color: #64748b; margin: 0; }
-.page-head-right { display: flex; align-items: center; gap: 10px; }
 
-/* ══════════════════════════════════════════════════════════════
-   BUTTONS
-   ══════════════════════════════════════════════════════════════ */
-.btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 0.5rem 1.125rem; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 600; cursor: pointer;
-  border: none; transition: all 0.2s; font-family: inherit;
-  white-space: nowrap;
-}
-.btn-primary { background: #2563eb; color: #fff; box-shadow: 0 2px 8px rgba(37,99,235,0.2); }
-.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.btn-ghost { background: #f1f5f9; color: #475569; }
-.btn-ghost:hover { background: #e2e8f0; }
-.btn-danger { background: #ef4444; color: #fff; }
-.btn-danger:hover { background: #dc2626; }
 
 .btn-save {
   background: linear-gradient(135deg, #059669, #047857);
@@ -846,9 +903,7 @@ onMounted(async () => {
   background: #fbbf24; color: #92400e; font-size: 0.7rem; font-weight: 700;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   MESSAGES
-   ══════════════════════════════════════════════════════════════ */
+
 .msg {
   display: flex; align-items: center; gap: 10px;
   padding: 10px 14px; border-radius: 10px;
@@ -859,90 +914,24 @@ onMounted(async () => {
 .msg-close { margin-left: auto; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.5; padding: 0 4px; }
 .msg-close:hover { opacity: 1; }
 
-/* ══════════════════════════════════════════════════════════════
-   TERM STRIP
-   ══════════════════════════════════════════════════════════════ */
-.term-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 10px; margin-bottom: 16px;
+
+.tb-clear {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
 }
 
-.term-stat {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 16px; border-radius: 12px;
-  border: 1.5px solid #e2e8f0; background: #fff;
-  cursor: pointer; transition: all 0.2s; position: relative;
-}
-.term-stat:hover { border-color: #cbd5e1; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.tb-clear:hover { color: #64748b; }
 
-.ts-icon {
-  width: 38px; height: 38px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; flex-shrink: 0;
-}
-.ts-1 .ts-icon { background: linear-gradient(135deg,#2563eb,#1d4ed8); }
-.ts-2 .ts-icon { background: linear-gradient(135deg,#3b82f6,#2563eb); }
-.ts-3 .ts-icon { background: linear-gradient(135deg,#60a5fa,#3b82f6); }
-.ts-4 .ts-icon { background: linear-gradient(135deg,#93c5fd,#60a5fa); }
 
-.ts-body { display: flex; flex-direction: column; }
-.ts-label { font-size: 0.75rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.03em; }
-.ts-count { font-size: 1.25rem; font-weight: 800; color: #0f172a; line-height: 1.2; }
-
-.ts-active-dot {
-  position: absolute; top: 8px; right: 8px;
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #2563eb; animation: pulse-dot 1.5s ease-in-out infinite;
-}
-@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-.term-stat:has(.ts-active-dot) { border-color: #93c5fd; background: #f8faff; }
-
-/* ══════════════════════════════════════════════════════════════
-   TOOLBAR
-   ══════════════════════════════════════════════════════════════ */
-.toolbar {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 16px; flex-wrap: wrap;
-}
-
-.tb-search {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 14px; height: 38px;
-  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 10px;
-  min-width: 200px; flex: 1; max-width: 320px;
-  transition: border-color 0.2s;
-}
-.tb-search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.tb-search :deep(svg) { color: #94a3b8; }
-.tb-search input {
-  border: none; background: transparent; outline: none;
-  width: 100%; font-size: 0.85rem; color: #1e293b; font-family: inherit;
-}
-.tb-search input::placeholder { color: #94a3b8; }
-.tb-clear { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 0; display: flex; align-items: center; }
-
-.tb-filter select {
-  height: 38px; padding: 0 12px; border: 1.5px solid #e2e8f0;
-  border-radius: 10px; background: #fff; font-size: 0.85rem;
-  color: #475569; cursor: pointer; outline: none; font-family: inherit;
-}
-.tb-filter select:focus { border-color: #93c5fd; }
-
-.tb-chips { display: flex; gap: 5px; flex-wrap: wrap; }
-
-.chip {
-  padding: 4px 12px; border: 1.5px solid #e2e8f0; border-radius: 20px;
-  background: #fff; color: #64748b; font-size: 0.78rem; font-weight: 500;
-  cursor: pointer; transition: all 0.15s; font-family: inherit;
-}
-.chip:hover { border-color: #93c5fd; color: #2563eb; background: #f8faff; }
-.chip-on { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
-
-/* ══════════════════════════════════════════════════════════════
-   LOADING
-   ══════════════════════════════════════════════════════════════ */
 .load-state {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
   padding: 4rem; color: #64748b;
@@ -952,45 +941,70 @@ onMounted(async () => {
   border: 3px solid #e2e8f0; border-top-color: #3b82f6;
   border-radius: 50%; animation: spin 0.7s linear infinite;
 }
-.spinner-sm { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
 .spin { animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ══════════════════════════════════════════════════════════════
-   TABLE
-   ══════════════════════════════════════════════════════════════ */
-.table-wrap {
-  background: #fff; border-radius: 14px;
-  border: 1px solid #e2e8f0; overflow: hidden;
+
+.subject-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: box-shadow 0.25s ease;
 }
 
-.tbl { width: 100%; border-collapse: collapse; }
-
-.tbl thead th {
-  padding: 12px 16px;
-  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: #64748b;
-  background: #f8fafc; border-bottom: 1px solid #e2e8f0;
-  text-align: left; white-space: nowrap;
+.subject-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
-.tbl tbody tr { transition: background 0.15s; }
-.tbl tbody tr:hover { background: #f8faff; }
-.tbl tbody td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; }
+.col-check {
+  width: 48px;
+  text-align: center;
+  padding: 12px 8px !important;
+}
 
-.th-actions, .td-actions { width: 80px; text-align: center; }
-.th-status, .td-status { width: 90px; }
+.subject-table thead th.col-check,
+.subject-table tbody td.col-check {
+  text-align: center;
+  padding: 12px 8px !important;
+  vertical-align: middle;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+}
+
+.col-index {
+  width: 64px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.th-actions, .td-actions { width: 110px; text-align: center; }
+.th-status, .td-status { min-width: 90px; }
 .th-terms { min-width: 280px; }
+
 
 .td-subject { cursor: pointer; }
 .subj-avatar {
-  width: 34px; height: 34px;
-  border-radius: 10px;
+  width: 28px; height: 28px;
+  border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
   color: #fff; flex-shrink: 0; margin-right: 8px; vertical-align: middle;
 }
 
-.subj-name { font-weight: 600; font-size: 0.9rem; color: #0f172a; }
+.subj-name { font-weight: 600; font-size: 0.85rem; color: #0f172a; }
 
 .td-meta { cursor: pointer; }
 .meta-val { font-size: 0.82rem; color: #64748b; }
@@ -998,7 +1012,7 @@ onMounted(async () => {
 .tog-group { display: flex; gap: 4px; flex-wrap: wrap; }
 
 .tog {
-  display: inline-flex; align-items: center; gap: 3px;
+  display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 10px; border: 1.5px solid #e2e8f0; border-radius: 16px;
   background: #fff; color: #94a3b8; font-size: 0.72rem; font-weight: 500;
   cursor: pointer; transition: all 0.2s; font-family: inherit;
@@ -1006,33 +1020,12 @@ onMounted(async () => {
 .tog:hover { border-color: #93c5fd; background: #f8faff; color: #3b82f6; transform: translateY(-1px); }
 .tog-on { border-color: #2563eb; background: #eff6ff; color: #2563eb; font-weight: 600; }
 
-.tog-form .tog { padding: 5px 12px; font-size: 0.78rem; }
+.tog-form .tog { padding: 6px 14px; font-size: 0.8rem; gap: 5px; }
 .tog-form { gap: 6px; }
 
-.pill {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
-  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.02em;
-}
-.pill-on { background: #dcfce7; color: #16a34a; }
-.pill-off { background: #f1f5f9; color: #94a3b8; }
-
 .td-actions { white-space: nowrap; }
-.act-btn {
-  background: none; border: none; padding: 5px 6px;
-  border-radius: 6px; cursor: pointer; color: #94a3b8;
-  transition: all 0.15s;
-}
-.act-btn:hover { background: #f1f5f9; color: #3b82f6; }
-.act-danger:hover { background: #fef2f2; color: #ef4444; }
 
-.td-empty { text-align: center; padding: 3rem 1rem; }
-.empty-box { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; }
-.empty-box h5 { font-weight: 700; color: #64748b; margin: 0; font-size: 1rem; }
-.empty-box p { font-size: 0.85rem; margin: 0; }
 
-/* ══════════════════════════════════════════════════════════════
-   MODAL
-   ══════════════════════════════════════════════════════════════ */
 .overlay {
   position: fixed; inset: 0;
   background: rgba(15,23,42,0.45); backdrop-filter: blur(4px);
@@ -1041,19 +1034,14 @@ onMounted(async () => {
 }
 
 .modal-card {
-  background: #fff; border-radius: 16px; width: 100%; max-width: 480px;
+  background: #fff; border-radius: 16px; width: 100%; max-width: 520px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.15);
   overflow: hidden; animation: modal-in 0.25s ease-out;
 }
-.modal-sm { max-width: 380px; }
-@keyframes modal-in { 0%{opacity:0;transform:scale(0.92)translateY(10px)} 100%{opacity:1;transform:scale(1)translateY(0)} }
-
-.modal-head {
-  display: flex; align-items: flex-start; gap: 14px;
-  padding: 20px 24px 0; position: relative;
+.modal-card-wide {
+  max-width: 580px;
 }
-.modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
-.modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
+.modal-sm { max-width: 380px; }
 
 .modal-icon {
   width: 42px; height: 42px; border-radius: 12px;
@@ -1064,53 +1052,188 @@ onMounted(async () => {
 .icon-edit { background: #fef3c7; color: #d97706; }
 .icon-danger { background: #fee2e2; color: #ef4444; }
 
-.modal-x {
-  position: absolute; top: 16px; right: 16px;
-  background: none; border: none; font-size: 1.5rem;
-  color: #94a3b8; cursor: pointer; line-height: 1; padding: 4px;
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+  margin: 14px 0 16px;
 }
-.modal-x:hover { color: #475569; }
 
-.modal-body { padding: 16px 24px 20px; }
 
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
-.req { color: #ef4444; }
-.opt { color: #94a3b8; font-weight: 400; }
-
-.field input, .field select {
-  width: 100%; padding: 8px 12px; border: 1.5px solid #d1d5db;
-  border-radius: 8px; font-size: 0.88rem; outline: none;
-  transition: border-color 0.15s; box-sizing: border-box; font-family: inherit;
-  background: #fff; color: #0f172a;
+.field {
+  margin-bottom: 0;
 }
-.field input:focus, .field select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.08); }
-.field input.err, .field select.err { border-color: #ef4444; }
-.field-err { display: block; font-size: 0.75rem; color: #ef4444; margin-top: 3px; font-weight: 500; }
 
-.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 7px;
+}
 
-/* ── Multi-teacher checkbox list ── */
-.teacher-checklist {
+.field-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.req {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+
+.input-wrap {
+  position: relative;
+}
+
+.input-wrap input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  font-family: inherit;
+  background: #fff;
+  color: #0f172a;
+}
+.input-wrap input::placeholder {
+  color: #adb5bd;
+}
+.input-wrap input:hover {
+  border-color: #9ca3af;
+}
+.input-wrap input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.input-wrap input.err {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+}
+
+.field-err {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.row-2-equal > * {
+  min-width: 0;
+}
+.row-2-auto {
+  align-items: start;
+}
+
+
+.check-list {
   display: flex; flex-direction: column;
-  max-height: 180px; overflow-y: auto;
-  border: 1.5px solid #d1d5db; border-radius: 8px;
-  background: #fff; padding: 4px;
+  max-height: 160px; overflow-y: auto;
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  background: #fff;
+  padding: 4px;
+  gap: 1px;
 }
-.teacher-check {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 10px; border-radius: 6px;
-  cursor: pointer; font-size: 0.85rem; color: #1e293b;
-  transition: background 0.15s;
+.check-list::-webkit-scrollbar { width: 4px; }
+.check-list::-webkit-scrollbar-track { background: transparent; }
+.check-list::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.15s ease;
+  margin: 0;
+  position: relative;
 }
-.teacher-check:hover { background: #f1f5f9; }
-.teacher-check-on { background: #eff6ff; color: #1d4ed8; }
-.teacher-check input[type="checkbox"] {
-  width: 16px; height: 16px; accent-color: #2563eb; cursor: pointer; flex-shrink: 0;
+.check-item:hover {
+  background: #f8fafc;
 }
-.teacher-check-name { flex: 1; }
+.check-item-on {
+  background: #f0f5ff;
+  color: #1d4ed8;
+}
+.check-item-on:hover {
+  background: #e8effe;
+}
+
+.check-item input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.check-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid #cbd5e1;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.check-item-on .check-dot {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+
+.check-dot::after {
+  content: '';
+  display: none;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.check-item-on .check-dot::after {
+  display: block;
+}
+
+.check-label {
+  flex: 1;
+}
+
 .field-hint {
-  font-size: 0.75rem; color: #64748b; margin: 6px 0 0; font-weight: 500;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 6px 0 0;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.field-count {
+  font-size: 0.72rem;
+  color: #2563eb;
+  margin: 5px 0 0;
+  font-weight: 600;
 }
 
 .teacher-stack {
@@ -1126,19 +1249,83 @@ onMounted(async () => {
 
 .del-text { font-size: 0.9rem; color: #475569; margin: 0; }
 
-.modal-foot {
-  display: flex; justify-content: flex-end; gap: 8px;
-  padding: 12px 24px 20px;
+
+.modern-input {
+  width: 100%;
+  padding: 0.55rem 0.875rem;
+  font-size: 0.875rem;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   TRANSITIONS
-   ══════════════════════════════════════════════════════════════ */
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { transform: translateX(100%); opacity: 0; }
+.modern-input:hover {
+  background: #fff;
+  border-color: #cbd5e1;
+}
 
-.slide-fade-enter-active, .slide-fade-leave-active { transition: all 0.25s ease; }
-.slide-fade-enter-from, .slide-fade-leave-to { opacity: 0; transform: translateX(-10px); }
+.modern-input:focus {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+
+.term-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.term-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  background: #fff;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.term-chip:hover {
+  border-color: #93c5fd;
+  background: #f8faff;
+  color: #3b82f6;
+}
+
+.term-chip-on {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);
+}
+
+.chip-icon-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.chip-icon-wrap :deep(svg) {
+  flex-shrink: 0;
+}
+
 
 .modal-enter-active { transition: all 0.2s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
@@ -1150,73 +1337,9 @@ onMounted(async () => {
 .row-leave-to { opacity: 0; transform: translateX(20px); }
 .row-move { transition: transform 0.3s ease; }
 
-/* ══════════════════════════════════════════════════════════════
-   TOAST BAR
-   ══════════════════════════════════════════════════════════════ */
-.toast-bar {
-  position: fixed; top: 20px; right: 20px; z-index: 99999;
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 18px; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 500;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 400px;
-}
-.toast-bar.success { background: #ecfdf5; color: #065f46; border-left: 4px solid #10b981; }
-.toast-bar.error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
-.toast-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit; opacity: 0.6; margin-left: auto; padding: 0 4px; }
-.toast-close:hover { opacity: 1; }
 
-/* ══════════════════════════════════════════════════════════════
-   RESPONSIVE
-   ══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
-  .page-head { flex-direction: column; align-items: flex-start; }
-  .page-head-right { width: 100%; }
-  .page-head-right .btn { flex: 1; justify-content: center; }
-  .toolbar { flex-direction: column; align-items: stretch; }
-  .tb-search { max-width: 100%; }
-  .term-strip { grid-template-columns: repeat(2, 1fr); }
   .row-2 { grid-template-columns: 1fr; }
-  .pagination-bar { flex-direction: column; align-items: center; gap: 8px; }
-  .pagination-info { width: 100%; justify-content: center; }
 }
-
-/* ══════════════════════════════════════════════════════════════
-   PAGINATION
-   ══════════════════════════════════════════════════════════════ */
-.pagination-bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 20px; border-top: 1px solid #e5e7eb;
-  background: #fafbfc; font-family: 'Inter','Noto Sans Khmer',sans-serif;
-  font-size: 0.8125rem; gap: 12px; flex-wrap: wrap;
-}
-.pagination-info { display: flex; align-items: center; gap: 8px; color: #64748b; }
-.rows-label { font-weight: 500; white-space: nowrap; }
-.rows-selector { display: flex; gap: 2px; background: #f1f5f9; border-radius: 8px; padding: 2px; }
-.rows-btn {
-  padding: 4px 10px; border: none; background: transparent;
-  color: #64748b; border-radius: 6px; cursor: pointer;
-  font-size: 0.75rem; font-weight: 600; font-family: inherit;
-  transition: all 0.15s ease;
-}
-.rows-btn:hover { color: #334155; }
-.rows-btn.active { background: #fff; color: #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.pagination-pages { display: flex; align-items: center; gap: 2px; }
-.page-nav {
-  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-  border: 1px solid #e2e8f0; background: #fff; color: #64748b;
-  border-radius: 8px; cursor: pointer; transition: all 0.15s ease;
-}
-.page-nav:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #f0f5ff; }
-.page-nav:disabled { opacity: 0.4; cursor: not-allowed; }
-.page-btn {
-  min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
-  border: none; background: transparent; color: #475569;
-  border-radius: 8px; cursor: pointer; font-size: 0.8125rem;
-  font-weight: 500; font-family: inherit; transition: all 0.15s ease;
-}
-.page-btn:hover:not(.active) { background: #f1f5f9; color: #2563eb; }
-.page-btn.active { background: #2563eb; color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(37,99,235,0.25); }
-.page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
-.pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 </style>

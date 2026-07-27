@@ -1,29 +1,33 @@
 <template>
   <div class="login-page">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
+    <!-- Background decorative shapes -->
+    <div class="bg-shape bg-shape-1"></div>
+    <div class="bg-shape bg-shape-2"></div>
+    <div class="bg-shape bg-shape-3"></div>
+    <div class="bg-grid"></div>
 
     <div class="login-card-wrapper">
       <div class="login-card">
-        <div class="text-center mb-2">
+        <!-- Logo Section -->
+        <div class="login-header">
           <img
             src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png"
             alt="Passerelles Numériques Cambodia"
-            class="pnc-logo"
+            class="login-logo"
           />
+          <h1 class="login-title">Student Score Management System</h1>
+          <p class="login-subtitle">Welcome back Please sign in to continue.</p>
         </div>
 
-        <h1 class="welcome-heading">Student Score Management System</h1>
-
-        <div v-if="auth.error" class="alert-custom alert-error">
+        <!-- Error Alert -->
+        <div v-if="auth.error" class="alert alert-error">
           <AlertTriangle :size="16" />
           <span>{{ auth.error }}</span>
         </div>
 
-
-
-        <form @submit.prevent="onSubmit" class="login-form">
+        <!-- Login Form -->
+        <form @submit.prevent="onSubmit" class="login-form" novalidate>
+          <!-- Email -->
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
             <div class="input-wrapper">
@@ -40,6 +44,7 @@
             </div>
           </div>
 
+          <!-- Password -->
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
             <div class="input-wrapper">
@@ -66,6 +71,7 @@
             </div>
           </div>
 
+          <!-- Remember Me + Forgot Password -->
           <div class="form-options">
             <label class="checkbox-label">
               <input type="checkbox" class="checkbox-input" checked />
@@ -74,11 +80,13 @@
               </span>
               <span class="checkbox-text">Remember me</span>
             </label>
+            <a href="#" class="forgot-link" @click.prevent>Forgot Password?</a>
           </div>
 
+          <!-- Sign In Button -->
           <button
             type="submit"
-            class="btn-submit"
+            class="btn-primary"
             :disabled="auth.loading"
           >
             <template v-if="auth.loading">
@@ -92,14 +100,18 @@
           </button>
         </form>
 
-        <div class="google-divider">
-          <span class="google-divider-line"></span>
-          <span class="google-divider-text">or continue with</span>
-          <span class="google-divider-line"></span>
+        <!-- Divider -->
+        <div class="divider">
+          <span class="divider-line"></span>
+          <span class="divider-text">OR CONTINUE WITH</span>
+          <span class="divider-line"></span>
         </div>
+
+        <!-- Google Sign In -->
         <div ref="googleButtonRef" class="google-btn-wrapper"></div>
 
-        <p class="copyright">&copy; 2026 Passerelles Numériques Cambodia</p>
+        <!-- Footer -->
+        <p class="login-footer">&copy; 2026 Passerelles Num&eacute;riques Cambodia</p>
       </div>
     </div>
   </div>
@@ -153,7 +165,7 @@ let retryTimeout: ReturnType<typeof setTimeout> | undefined
 async function onSubmit() {
   const success = await auth.login(email.value, password.value)
   if (success) {
-    await router.push('/dashboard')
+    await router.push(auth.defaultLandingPath)
   }
 }
 
@@ -161,7 +173,7 @@ function handleGoogleCredential(response: { credential: string }) {
   if (response.credential) {
     auth.loginWithGoogle(response.credential).then(success => {
       if (success) {
-        setTimeout(() => router.push('/dashboard'), 500)
+        setTimeout(() => router.push(auth.defaultLandingPath), 500)
       }
     })
   }
@@ -185,13 +197,11 @@ onMounted(() => {
           shape: 'pill',
           theme: 'outline',
           size: 'large',
-          text: 'signin_with',
-          width: googleButtonRef.value.offsetWidth || 320,
+          text: 'continue_with',
+          width: googleButtonRef.value.offsetWidth || 380,
           logo_alignment: 'center',
         })
       }
-
-      window.google.accounts.id.prompt()
     } else if (retries < maxRetries) {
       retries++
       retryTimeout = setTimeout(initGoogleSignIn, 300)
@@ -209,6 +219,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ============================================================
+   Login Page – Premium Redesign
+   Inspired by modern SaaS platforms (Notion, Stripe, Linear)
+   ============================================================ */
+
+/* ─── Page Container ─── */
 .login-page {
   position: relative;
   min-height: 100vh;
@@ -216,144 +232,159 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: linear-gradient(135deg, #e8f0fe 0%, #f0f5ff 40%, #f8faff 70%, #eef4fb 100%);
+  background:
+    radial-gradient(ellipse 80% 60% at 0% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 60% at 100% 50%, rgba(99, 102, 241, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(59, 130, 246, 0.04) 0%, transparent 60%),
+    linear-gradient(180deg, #f8faff 0%, #f0f5ff 50%, #eef4fb 100%);
   overflow: hidden;
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-.blob {
+/* ─── Background Shapes ─── */
+.bg-shape {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.3;
+  filter: blur(80px);
   pointer-events: none;
-  animation: blobFloat 12s ease-in-out infinite;
+  will-change: transform;
 }
 
-.blob-1 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  top: -120px;
-  right: -80px;
-  animation-delay: 0s;
+.bg-shape-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.03));
+  top: -180px;
+  right: -100px;
+  animation: shapeFloat 20s ease-in-out infinite;
 }
 
-.blob-2 {
-  width: 350px;
-  height: 350px;
-  background: linear-gradient(135deg, #a78bfa, #818cf8);
-  bottom: -100px;
-  left: -80px;
-  animation-delay: -4s;
+.bg-shape-2 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.02));
+  bottom: -140px;
+  left: -100px;
+  animation: shapeFloat 20s ease-in-out infinite reverse;
 }
 
-.blob-3 {
-  width: 250px;
-  height: 250px;
-  background: linear-gradient(135deg, #34d399, #38bdf8);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: -8s;
-  opacity: 0.12;
+.bg-shape-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.06), transparent);
+  top: 40%;
+  left: 10%;
+  animation: shapeFloat 25s ease-in-out infinite 2s;
 }
 
-@keyframes blobFloat {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  33% {
-    transform: translate(30px, -30px) scale(1.05);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.95);
-  }
+.bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
 }
 
+@keyframes shapeFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -30px) scale(1.05); }
+  50% { transform: translate(-10px, 20px) scale(0.97); }
+  75% { transform: translate(30px, 10px) scale(1.03); }
+}
+
+/* ─── Card Wrapper ─── */
 .login-card-wrapper {
   position: relative;
   width: 100%;
   max-width: 420px;
-  animation: cardFadeIn 0.6s ease-out;
+  animation: cardEntry 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes cardFadeIn {
-  from {
+@keyframes cardEntry {
+  0% {
     opacity: 0;
-    transform: translateY(24px);
+    transform: translateY(30px) scale(0.97);
   }
-  to {
+  100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
+/* ─── Card ─── */
 .login-card {
   background: #ffffff;
-  border-radius: 24px;
-  padding: 2.5rem 2rem;
+  border-radius: 20px;
+  padding: 2rem 2.25rem;
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 8px 32px rgba(59, 130, 246, 0.08),
-    0 24px 60px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 12px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(59, 130, 246, 0.06),
+    0 24px 60px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   animation: cardContentIn 0.5s ease-out 0.15s both;
 }
 
 @keyframes cardContentIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
-.pnc-logo {
-  height: 62px;
+/* ─── Header (Logo + Title + Subtitle) ─── */
+.login-header {
+  text-align: center;
+  margin-bottom: 1.25rem;
+}
+
+.login-logo {
+  height: 58px;
   width: auto;
   object-fit: contain;
   transition: transform 0.3s ease;
+  margin-bottom: 0.5rem;
 }
 
-.pnc-logo:hover {
-  transform: scale(1.03);
+.login-logo:hover {
+  transform: scale(1.04);
 }
 
-
-.welcome-heading {
-  font-size: 1rem;
-  font-weight: 800;
-  color: #111827;
-  text-align: center;
-  margin: 0.75rem 0 0.25rem 0;
+.login-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
   line-height: 1.3;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #1e40af, #3b82f6, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.alert-custom {
+.login-subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+/* ─── Error Alert ─── */
+.alert {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
+  padding: 0.65rem 0.875rem;
+  border-radius: 10px;
   font-size: 0.8125rem;
-  margin-bottom: 1.25rem;
-  animation: fadeInUp 0.3s ease-out;
+  margin-bottom: 1rem;
+  animation: alertSlide 0.3s ease-out;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes alertSlide {
+  0% { opacity: 0; transform: translateY(-6px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .alert-error {
@@ -366,21 +397,14 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.alert-success {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-}
-
-/* ==========================================
-   Form Layout
-   ========================================== */
+/* ─── Form ─── */
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.25rem;
 }
 
+/* ─── Form Group ─── */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -392,8 +416,10 @@ onUnmounted(() => {
   font-weight: 600;
   color: #374151;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
+/* ─── Input Wrapper ─── */
 .input-wrapper {
   position: relative;
   display: flex;
@@ -405,32 +431,37 @@ onUnmounted(() => {
   left: 0.875rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: #94a3b8;
   pointer-events: none;
   transition: color 0.2s ease;
   z-index: 2;
 }
 
+/* ─── Input ─── */
 .form-input {
   width: 100%;
-  padding: 0.6rem 0.875rem 0.6rem 2.75rem;
+  padding: 0.55rem 0.875rem 0.55rem 2.75rem;
   font-size: 0.875rem;
-  color: #1f2937;
+  color: #1e293b;
+  font-weight: 500;
   background: #f8fafc;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   outline: none;
   transition: all 0.2s ease;
   font-family: inherit;
+  line-height: 1.5;
 }
 
 .form-input::placeholder {
-  color: #9ca3af;
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 0.8125rem;
 }
 
 .form-input:hover {
   background: #f1f5f9;
-  border-color: #d1d5db;
+  border-color: #cbd5e1;
 }
 
 .form-input:focus {
@@ -443,12 +474,12 @@ onUnmounted(() => {
   color: #3b82f6;
 }
 
-/* Password with extra padding for toggle button */
 .form-input[type="password"],
 .form-input[type="text"]#password {
   padding-right: 3rem;
 }
 
+/* ─── Password Toggle ─── */
 .password-toggle {
   position: absolute;
   right: 0.5rem;
@@ -461,7 +492,7 @@ onUnmounted(() => {
   justify-content: center;
   background: transparent;
   border: none;
-  color: #9ca3af;
+  color: #94a3b8;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -470,8 +501,13 @@ onUnmounted(() => {
 }
 
 .password-toggle:hover {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.password-toggle:active {
+  background: #e2e8f0;
+  transform: translateY(-50%) scale(0.95);
 }
 
 .password-toggle:focus-visible {
@@ -479,6 +515,7 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
+/* ─── Form Options (Remember Me + Forgot Password) ─── */
 .form-options {
   display: flex;
   align-items: center;
@@ -486,9 +523,8 @@ onUnmounted(() => {
   gap: 0.5rem;
 }
 
-/* Custom checkbox */
 .checkbox-label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
@@ -505,7 +541,7 @@ onUnmounted(() => {
 .checkbox-custom {
   width: 18px;
   height: 18px;
-  border: 2px solid #d1d5db;
+  border: 2px solid #cbd5e1;
   border-radius: 5px;
   display: flex;
   align-items: center;
@@ -538,7 +574,7 @@ onUnmounted(() => {
 
 .checkbox-text {
   font-size: 0.8125rem;
-  color: #4b5563;
+  color: #475569;
   font-weight: 500;
 }
 
@@ -553,13 +589,13 @@ onUnmounted(() => {
 
 .forgot-link:hover {
   color: #2563eb;
-  text-decoration: underline;
 }
 
-.btn-submit {
+/* ─── Primary Button ─── */
+.btn-primary {
   width: 100%;
-  padding: 0.6rem 1.5rem;
-  font-size: 0.9rem;
+  padding: 0.55rem 1.5rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: #ffffff;
   background: linear-gradient(135deg, #2563eb, #3b82f6);
@@ -575,9 +611,10 @@ onUnmounted(() => {
   font-family: inherit;
   position: relative;
   overflow: hidden;
+  margin-top: 0.25rem;
 }
 
-.btn-submit::before {
+.btn-primary::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -587,32 +624,33 @@ onUnmounted(() => {
   border-radius: 12px;
 }
 
-.btn-submit:hover:not(:disabled) {
+.btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
 }
 
-.btn-submit:hover:not(:disabled)::before {
+.btn-primary:hover:not(:disabled)::before {
   opacity: 1;
 }
 
-.btn-submit:active:not(:disabled) {
+.btn-primary:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  transition-duration: 0.08s;
 }
 
-.btn-submit:disabled {
+.btn-primary:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
 
-.btn-submit :deep(svg),
-.btn-submit span {
+.btn-primary :deep(svg),
+.btn-primary span {
   position: relative;
   z-index: 1;
 }
 
-/* Spinner */
+/* ─── Spinner ─── */
 .spinner {
   width: 1.1rem;
   height: 1.1rem;
@@ -625,72 +663,81 @@ onUnmounted(() => {
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
-.google-divider {
+/* ─── Divider ─── */
+.divider {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin: 0.5rem 0;
+  margin: 0.75rem 0;
 }
 
-.google-divider-line {
+.divider-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+  background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
 }
 
-.google-divider-text {
-  font-size: 0.65rem;
-  color: #9ca3af;
-  font-weight: 500;
+.divider-text {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 600;
   white-space: nowrap;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
+/* ─── Google Button ─── */
 .google-btn-wrapper {
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
 }
 
 .google-btn-wrapper > div > iframe {
   width: 100% !important;
 }
 
-.copyright {
-  font-size: 0.75rem;
-  color: #9ca3af;
+/* ─── Footer ─── */
+.login-footer {
+  font-size: 0.7rem;
+  color: #94a3b8;
   text-align: center;
-  margin: 1.25rem 0 0 0;
-  padding-top: 1rem;
-  border-top: 1px solid #f3f4f6;
+  margin: 0.75rem 0 0 0;
+  padding-top: 0.625rem;
+  border-top: 1px solid #f1f5f9;
+  letter-spacing: 0.01em;
 }
 
+/* ============================================================
+   Responsive
+   ============================================================ */
 
 @media (max-width: 480px) {
   .login-page {
     padding: 1rem;
     align-items: flex-start;
-    padding-top: 2rem;
+    padding-top: 2.5rem;
   }
 
   .login-card {
-    padding: 1.75rem 1.25rem;
-    border-radius: 20px;
+    padding: 1.5rem 1.25rem;
+    border-radius: 16px;
   }
 
-  .pnc-logo {
-    height: 52px;
+  .login-logo {
+    height: 50px;
   }
 
-  .welcome-heading {
-    font-size: 1.3rem;
+  .login-title {
+    font-size: 1.05rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.8125rem;
   }
 
   .form-options {
@@ -699,17 +746,21 @@ onUnmounted(() => {
     gap: 0.75rem;
   }
 
-  .blob-1 {
+  .bg-shape-1 {
     width: 250px;
     height: 250px;
+    top: -80px;
+    right: -60px;
   }
 
-  .blob-2 {
+  .bg-shape-2 {
     width: 200px;
     height: 200px;
+    bottom: -60px;
+    left: -60px;
   }
 
-  .blob-3 {
+  .bg-shape-3 {
     display: none;
   }
 }
@@ -719,20 +770,14 @@ onUnmounted(() => {
     padding: 2rem 1.5rem;
   }
 
-  .blob-1 {
+  .bg-shape-1 {
     width: 300px;
     height: 300px;
   }
 
-  .blob-2 {
+  .bg-shape-2 {
     width: 250px;
     height: 250px;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  .login-card {
-    padding: 2.25rem 1.75rem;
   }
 }
 </style>

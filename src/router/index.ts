@@ -7,21 +7,29 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, _from) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
-  
-  const publicRoutes = ['/login']
-  
-  if (publicRoutes.includes(to.path)) {
-    if (authStore.isAuthenticated) {
-      return '/dashboard'
-    }
-    return true
-  }
-  
+
+  const isLoginRoute = to.name === 'login'
+
   if (!authStore.isAuthenticated) {
-    return '/login'
+    return isLoginRoute ? true : '/login'
   }
+
+  if (!authStore.user) {
+    await authStore.ensureReady()
+  }
+
+  if (isLoginRoute) {
+    return authStore.defaultLandingPath
+  }
+
+  const allowedRoles = to.meta.roles
+  const userRole = authStore.user?.role as 'admin' | 'teacher' | 'student' | undefined
+  if (allowedRoles && !(userRole && allowedRoles.includes(userRole))) {
+    return authStore.defaultLandingPath
+  }
+
   return true
 })
 

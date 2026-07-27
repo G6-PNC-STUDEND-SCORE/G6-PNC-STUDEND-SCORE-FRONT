@@ -3,15 +3,8 @@ import { ref, computed } from 'vue'
 import { login as loginApi, logout as logoutApi, me } from '@/services/authService'
 import { googleLogin as googleLoginApi } from '@/services/googleAuthService'
 import { setAuthToken, clearAuthToken } from '@/services/apiHttp'
+import type { User } from '@/types'
 import router from '@/router'
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-  [key: string]: unknown
-}
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token') || null)
@@ -19,21 +12,21 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Trust the token; the 401 interceptor handles truly invalid tokens
   const isAuthenticated = computed(() => !!token.value)
+
+  const defaultLandingPath = computed(() => (user.value?.role === 'student' ? '/portal' : '/dashboard'))
+
+  function hasPermission(permission: string): boolean {
+    return (user.value?.permissions as string[] | undefined)?.includes(permission) ?? false
+  }
 
   async function init() {
     if (token.value) {
       setAuthToken(token.value)
-      // Try to load the user profile in the background.
-      // Return a promise so main.ts can await it before mounting the app.
-      // Failure here won't log the user out — the 401 interceptor on axios
-      // will handle truly invalid tokens when real API calls are made.
       try {
         const response = await me()
         user.value = response.user as User
       } catch {
-        // Token is invalid/expired — clear everything and redirect to login
         token.value = null
         user.value = null
         localStorage.removeItem('token')
@@ -41,6 +34,12 @@ export const useAuthStore = defineStore('auth', () => {
         router.push('/login')
       }
     }
+  }
+
+  let readyPromise: Promise<void> | null = null
+  function ensureReady(): Promise<void> {
+    if (!readyPromise) readyPromise = init()
+    return readyPromise
   }
 
   async function login(email: string, password: string) {
@@ -106,7 +105,10 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     isAuthenticated,
+    defaultLandingPath,
+    hasPermission,
     init,
+    ensureReady,
     login,
     loginWithGoogle,
     logout,
