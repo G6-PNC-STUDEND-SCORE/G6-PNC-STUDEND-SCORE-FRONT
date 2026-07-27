@@ -16,8 +16,8 @@ import { cacheService } from '@/services/cacheService'
 
 const USERS_CACHE_KEY = 'users-data'
 const ROLES_CACHE_KEY = 'users-roles'
-const CACHE_TTL = 60_000 // 1 min in-memory TTL
-const LS_TTL = 24 * 60 * 60_000 // 24h localStorage TTL
+const CACHE_TTL = 60_000
+const LS_TTL = 24 * 60 * 60_000
 
 export const useUserStore = defineStore('user', () => {
   const users = ref<User[]>([])

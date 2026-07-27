@@ -5,7 +5,6 @@
         <h3 class="table-title">{{ title }}</h3>
       </slot>
     </div>
-
     <div class="table-responsive">
       <table class="data-table mb-0">
         <thead>
@@ -193,7 +192,6 @@ defineOptions({
   border-top-color: #334155;
 }
 
-/* Row transition animations */
 :deep(.row-enter-active),
 :deep(.row-leave-active) {
   transition: all 0.3s ease;

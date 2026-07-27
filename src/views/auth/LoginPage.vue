@@ -1,6 +1,5 @@
 <template>
   <div class="login-page">
-    <!-- Background decorative shapes -->
     <div class="bg-shape bg-shape-1"></div>
     <div class="bg-shape bg-shape-2"></div>
     <div class="bg-shape bg-shape-3"></div>
@@ -8,7 +7,6 @@
 
     <div class="login-card-wrapper">
       <div class="login-card">
-        <!-- Logo Section -->
         <div class="login-header">
           <img
             src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png"
@@ -19,15 +17,12 @@
           <p class="login-subtitle">Welcome back Please sign in to continue.</p>
         </div>
 
-        <!-- Error Alert -->
         <div v-if="auth.error" class="alert alert-error">
           <AlertTriangle :size="16" />
           <span>{{ auth.error }}</span>
         </div>
 
-        <!-- Login Form -->
         <form @submit.prevent="onSubmit" class="login-form" novalidate>
-          <!-- Email -->
           <div class="form-group">
             <label for="email" class="form-label">Email</label>
             <div class="input-wrapper">
@@ -44,7 +39,6 @@
             </div>
           </div>
 
-          <!-- Password -->
           <div class="form-group">
             <label for="password" class="form-label">Password</label>
             <div class="input-wrapper">
@@ -71,7 +65,6 @@
             </div>
           </div>
 
-          <!-- Remember Me + Forgot Password -->
           <div class="form-options">
             <label class="checkbox-label">
               <input type="checkbox" class="checkbox-input" checked />
@@ -83,7 +76,6 @@
             <a href="#" class="forgot-link" @click.prevent>Forgot Password?</a>
           </div>
 
-          <!-- Sign In Button -->
           <button
             type="submit"
             class="btn-primary"
@@ -100,17 +92,14 @@
           </button>
         </form>
 
-        <!-- Divider -->
         <div class="divider">
           <span class="divider-line"></span>
           <span class="divider-text">OR CONTINUE WITH</span>
           <span class="divider-line"></span>
         </div>
 
-        <!-- Google Sign In -->
         <div ref="googleButtonRef" class="google-btn-wrapper"></div>
 
-        <!-- Footer -->
         <p class="login-footer">&copy; 2026 Passerelles Num&eacute;riques Cambodia</p>
       </div>
     </div>
@@ -219,12 +208,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ============================================================
-   Login Page – Premium Redesign
-   Inspired by modern SaaS platforms (Notion, Stripe, Linear)
-   ============================================================ */
-
-/* ─── Page Container ─── */
 .login-page {
   position: relative;
   min-height: 100vh;
@@ -241,7 +224,6 @@ onUnmounted(() => {
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-/* ─── Background Shapes ─── */
 .bg-shape {
   position: absolute;
   border-radius: 50%;
@@ -294,7 +276,6 @@ onUnmounted(() => {
   75% { transform: translate(30px, 10px) scale(1.03); }
 }
 
-/* ─── Card Wrapper ─── */
 .login-card-wrapper {
   position: relative;
   width: 100%;
@@ -313,7 +294,6 @@ onUnmounted(() => {
   }
 }
 
-/* ─── Card ─── */
 .login-card {
   background: #ffffff;
   border-radius: 20px;
@@ -332,7 +312,6 @@ onUnmounted(() => {
   100% { opacity: 1; transform: translateY(0); }
 }
 
-/* ─── Header (Logo + Title + Subtitle) ─── */
 .login-header {
   text-align: center;
   margin-bottom: 1.25rem;
@@ -370,7 +349,6 @@ onUnmounted(() => {
   font-weight: 400;
 }
 
-/* ─── Error Alert ─── */
 .alert {
   display: flex;
   align-items: center;
@@ -397,14 +375,12 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* ─── Form ─── */
 .login-form {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-/* ─── Form Group ─── */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -419,7 +395,6 @@ onUnmounted(() => {
   letter-spacing: -0.01em;
 }
 
-/* ─── Input Wrapper ─── */
 .input-wrapper {
   position: relative;
   display: flex;
@@ -437,7 +412,6 @@ onUnmounted(() => {
   z-index: 2;
 }
 
-/* ─── Input ─── */
 .form-input {
   width: 100%;
   padding: 0.55rem 0.875rem 0.55rem 2.75rem;
@@ -479,7 +453,6 @@ onUnmounted(() => {
   padding-right: 3rem;
 }
 
-/* ─── Password Toggle ─── */
 .password-toggle {
   position: absolute;
   right: 0.5rem;
@@ -515,7 +488,6 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
-/* ─── Form Options (Remember Me + Forgot Password) ─── */
 .form-options {
   display: flex;
   align-items: center;
@@ -591,7 +563,6 @@ onUnmounted(() => {
   color: #2563eb;
 }
 
-/* ─── Primary Button ─── */
 .btn-primary {
   width: 100%;
   padding: 0.55rem 1.5rem;
@@ -650,7 +621,6 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-/* ─── Spinner ─── */
 .spinner {
   width: 1.1rem;
   height: 1.1rem;
@@ -666,7 +636,6 @@ onUnmounted(() => {
   to { transform: rotate(360deg); }
 }
 
-/* ─── Divider ─── */
 .divider {
   display: flex;
   align-items: center;
@@ -689,7 +658,6 @@ onUnmounted(() => {
   letter-spacing: 0.08em;
 }
 
-/* ─── Google Button ─── */
 .google-btn-wrapper {
   display: flex;
   justify-content: center;
@@ -701,7 +669,6 @@ onUnmounted(() => {
   width: 100% !important;
 }
 
-/* ─── Footer ─── */
 .login-footer {
   font-size: 0.7rem;
   color: #94a3b8;
@@ -711,10 +678,6 @@ onUnmounted(() => {
   border-top: 1px solid #f1f5f9;
   letter-spacing: 0.01em;
 }
-
-/* ============================================================
-   Responsive
-   ============================================================ */
 
 @media (max-width: 480px) {
   .login-page {

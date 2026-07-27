@@ -29,7 +29,6 @@
       <button class="rp-error-retry" @click="loadAll"><RefreshCw :size="13" /> Retry</button>
     </div>
 
-    <!-- Filters -->
     <div class="rp-filters">
       <div class="rp-filter">
         <label>Academic Year</label>
@@ -78,7 +77,6 @@
       </button>
     </div>
 
-    <!-- Tabs -->
     <div class="rp-tabs">
       <button
         v-for="tab in tabs"
@@ -94,7 +92,6 @@
     <LoadingState v-if="loading" message="Compiling reports..." />
 
     <template v-else>
-      <!-- ── Overview ─────────────────────────────────────────── -->
       <section v-if="activeTab === 'overview'">
         <div class="rp-kpis">
           <KpiCard label="Students Reported" :value="kpi.students_reported" icon="mortarboard" icon-class="icon-blue" :subtitle="`${kpi.classes_covered} classes`" />
@@ -174,7 +171,6 @@
         </template>
       </section>
 
-      <!-- ── Class performance ────────────────────────────────── -->
       <section v-else-if="activeTab === 'classes'">
         <EmptyState
           v-if="!classRows.length"
@@ -221,7 +217,6 @@
         </template>
       </section>
 
-      <!-- ── Subject ranking ──────────────────────────────────── -->
       <section v-else>
         <EmptyState
           v-if="!subjectRows.length"
@@ -364,8 +359,6 @@ const activeFilterCount = computed(
   () => Object.values(filters).filter((value) => value !== null && value !== undefined).length,
 )
 
-// ── Table columns ──────────────────────────────────────────────
-
 const topStudentColumns = [
   { key: 'rank', label: '#', width: '56px' },
   { key: 'student_name', label: 'Student' },
@@ -401,8 +394,6 @@ const subjectColumns = [
   { key: 'lowest', label: 'Lowest' },
   { key: 'pass_rate', label: 'Pass Rate', width: '160px' },
 ]
-
-// ── Charts ─────────────────────────────────────────────────────
 
 const axisLine = { lineStyle: { color: '#cbd5e1' } }
 const splitLine = { lineStyle: { type: 'dashed' as const, color: '#e2e8f0' } }
@@ -521,7 +512,6 @@ const classChart = computed<EChartsOption>(() => ({
 }))
 
 const subjectChart = computed<EChartsOption>(() => {
-  // Reversed so rank 1 sits at the top of a horizontal bar axis.
   const rows = [...subjectRows.value].reverse()
   return {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -539,8 +529,6 @@ const subjectChart = computed<EChartsOption>(() => {
     }],
   }
 })
-
-// ── Presentation helpers ───────────────────────────────────────
 
 function gradeStyle(grade: string | null) {
   const color = grade ? GRADE_COLORS[grade] : undefined
@@ -560,8 +548,6 @@ function passColor(rate: number): string {
   if (rate >= 50) return '#f59e0b'
   return '#ef4444'
 }
-
-// ── Data loading ───────────────────────────────────────────────
 
 async function loadOptions() {
   try {
@@ -599,9 +585,6 @@ function clearFilters() {
   filters.generation_id = null
 }
 
-// ── Export ─────────────────────────────────────────────────────
-
-/** Rows backing the active tab — also what "Export" writes out. */
 const activeRows = computed<unknown[]>(() => {
   switch (activeTab.value) {
     case 'classes': return classRows.value
@@ -932,7 +915,6 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 
 .mb-3 { margin-bottom: 1rem; }
 
-/* Dark mode */
 .dark-mode .rp-panel-title { color: #f1f5f9; }
 .dark-mode .rp-btn { background: rgba(30, 41, 59, 0.9); border-color: #475569; color: #cbd5e1; }
 .dark-mode .rp-btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }

@@ -364,7 +364,6 @@ async function exportLogsAsPDF() {
     let y = 30
     const lineH = 6
 
-    // Draw header row
     doc.setFillColor(37, 99, 235)
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(8)
@@ -376,13 +375,11 @@ async function exportLogsAsPDF() {
     })
     y += lineH
 
-    // Draw data rows
     doc.setTextColor(51, 65, 85)
     rows.forEach((row, ri) => {
       if (y >= 190) {
         doc.addPage()
         y = 16
-        // Redraw header on new page
         doc.setFillColor(37, 99, 235)
         doc.setTextColor(255, 255, 255)
         x = 10
@@ -685,7 +682,6 @@ onMounted(loadLogs)
 }
 .al-select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
 
-/* Export dropdown */
 .export-dropdown {
   position: relative;
 }
@@ -732,7 +728,6 @@ onMounted(loadLogs)
   cursor: pointer;
 }
 
-/* Bulk action bar */
 .bulk-bar {
   display: flex;
   align-items: center;
@@ -770,7 +765,6 @@ onMounted(loadLogs)
 }
 .bulk-clear-btn:hover { color: #334155; text-decoration: underline; }
 
-/* Checkbox column */
 .col-check {
   width: 48px;
   text-align: center;
@@ -929,7 +923,6 @@ onMounted(loadLogs)
 .page-dots { width: 24px; text-align: center; color: #94a3b8; }
 .pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
 
-/* Delete confirmation modal */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(15,23,42,0.45); backdrop-filter: blur(4px);

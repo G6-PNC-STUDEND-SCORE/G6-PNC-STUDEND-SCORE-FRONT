@@ -864,7 +864,7 @@ const gsSheetId = ref<string | null>(null)
 const gsLastSynced = ref<string | null>(null)
 const gsReconnectNeeded = ref(false)
 let gsAutoSyncTimer: ReturnType<typeof setInterval> | null = null
-let gsIsSyncing = false // Guard to prevent duplicate syncs
+let gsIsSyncing = false
 const renamingColumn = ref<SpreadsheetColumn | null>(null)
 const renameValue = ref('')
 const deleteConfirm = ref<{ col: SpreadsheetColumn; label: string } | null>(null)
@@ -1460,7 +1460,7 @@ function onCellMouseDown(event: MouseEvent, rowIdx: number, colId: number) {
   if (editingRow.value !== null) {
     saveEdit()
   }
-  if (colId === -2) return // row number click
+  if (colId === -2) return
 
   if (event.shiftKey) {
     expandAllRowsForSelection()
@@ -2032,7 +2032,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
         }
         return
       case 'c': event.preventDefault(); copySelection(); return
-      case 'v': event.preventDefault(); return // handled by paste event
+      case 'v': event.preventDefault(); return
       case 'x': event.preventDefault(); cutSelection(); return
       case 'z': event.preventDefault(); event.shiftKey ? redo() : undo(); return
       case 'y': event.preventDefault(); redo(); return
@@ -2092,7 +2092,7 @@ function onGlobalKeydown(event: KeyboardEvent) {
       const oldValue = getCellMark(row, colId)
       if (oldValue === null) return
       actualRow.details[colId] = null
-      triggerRef(data) // Immediate feedback — see note on the range branch above.
+      triggerRef(data)
       undoStack.value.push({ enrollmentId: row.enrollment_id, detailId: colId, oldValue })
       redoStack.value = []
       showSaveStatus('saving')
@@ -2646,11 +2646,11 @@ function undo() {
   if (!action) return
   const row = rows.value.find(r => r.enrollment_id === action.enrollmentId)
   if (!row) return
-  const prevValue = getCellMark(row, action.detailId)  // save current for redo
+  const prevValue = getCellMark(row, action.detailId)
   row.details[action.detailId] = action.oldValue
   triggerRef(data)
   recalculateRowTotal(row)
-  redoStack.value.push({ ...action, oldValue: prevValue })  // redo restores current
+  redoStack.value.push({ ...action, oldValue: prevValue })
   showSaveStatus('saving')
   const actualDetailId = getActualDetailId(row, action.detailId)
   updateCellMark(subjectId.value, termId.value, actualDetailId, action.oldValue)
@@ -2663,11 +2663,11 @@ function redo() {
   if (!action) return
   const row = rows.value.find(r => r.enrollment_id === action.enrollmentId)
   if (!row) return
-  const prevValue = getCellMark(row, action.detailId)  // save current for undo
+  const prevValue = getCellMark(row, action.detailId)
   row.details[action.detailId] = action.oldValue
   triggerRef(data)
   recalculateRowTotal(row)
-  undoStack.value.push({ ...action, oldValue: prevValue })  // undo restores current
+  undoStack.value.push({ ...action, oldValue: prevValue })
   showSaveStatus('saving')
   const actualDetailId = getActualDetailId(row, action.detailId)
   updateCellMark(subjectId.value, termId.value, actualDetailId, action.oldValue)
@@ -2746,7 +2746,6 @@ async function doAddColumn() {
   const maxScore = newColumn.max_score
   let typeCode = newColumn.type
 
-  // If custom type, create the assessment type first
   if (typeCode === '__custom__') {
     const customName = newColumn.customTypeName.trim()
     if (!customName) {
@@ -2985,14 +2984,14 @@ async function createAndOpenSheet(token: string, popup: Window | null) {
     navigatePopupOrOpen(popup, result.url)
     showSaveStatus("saved", { skipSheetPush: true })
     gsLastSynced.value = new Date().toLocaleTimeString()
-    startAutoSync() // Begin polling immediately instead of waiting for the next page load.
+    startAutoSync()
     gsLoading.value = false
   } catch (err: any) {
     const status = err?.response?.status
     if (status === 400 || status === 401 || status === 403) {
       console.warn("Google token expired or missing, re-authenticating...")
       localStorage.removeItem("google_access_token")
-      popup?.close() // GIS will open its own popup for re-auth; don't leave our blank one hanging.
+      popup?.close()
       startGoogleAuth()
       return
     }
@@ -3004,7 +3003,7 @@ async function createAndOpenSheet(token: string, popup: Window | null) {
 }
 
 async function syncFromGoogleSheets() {
-  if (gsIsSyncing) return // Prevent concurrent syncs (e.g. visibility + focus firing together)
+  if (gsIsSyncing) return
   gsIsSyncing = true
   try {
     if (sheetPushTimer) {
@@ -3035,7 +3034,7 @@ async function syncFromGoogleSheets() {
         token,
         selectedEmailDomain.value
       )
-      if (!result.synced) return // Nothing to sync yet (no matching tab / no data rows) — stay quiet.
+      if (!result.synced) return
       await refreshData(true)
       gsLastSynced.value = new Date().toLocaleTimeString()
       gsReconnectNeeded.value = false
@@ -3058,7 +3057,7 @@ async function syncFromGoogleSheets() {
           await refreshData(true)
           gsLastSynced.value = new Date().toLocaleTimeString()
           gsReconnectNeeded.value = false
-          showSaveStatus("saved", { skipSheetPush: true }) // Pull result — see note above.
+          showSaveStatus("saved", { skipSheetPush: true })
           return
         } catch (retryErr: any) {
           gsReconnectNeeded.value = true
@@ -3087,7 +3086,7 @@ function startAutoSync() {
   window.addEventListener("focus", onWindowFocus)
   if (gsSheetId.value && editingRow.value === null) syncFromGoogleSheets()
   gsAutoSyncTimer = setInterval(() => {
-    if (!gsSheetId.value || editingRow.value !== null) return // Don't sync while user is editing
+    if (!gsSheetId.value || editingRow.value !== null) return
     syncFromGoogleSheets()
   }, 8000)
 }
@@ -3284,13 +3283,13 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   const header = jsonData[0].map(c => String(c).trim())
   let nameIdx = header.findIndex(h => /name|student/i.test(h))
   let idIdx = header.findIndex(h => /id|number|code|no/i.test(h) && !/name/i.test(h))
-  if (nameIdx < 0) nameIdx = 0  // Default: first column is name
-  if (idIdx < 0 || idIdx === nameIdx) idIdx = -1  // No ID column
+  if (nameIdx < 0) nameIdx = 0
+  if (idIdx < 0 || idIdx === nameIdx) idIdx = -1
 
   const scoreColumns: { index: number; label: string }[] = []
   for (let i = 0; i < header.length; i++) {
     if (i === nameIdx || i === idIdx) continue
-    const label = header[i].replace(/\(.*?\)/g, '').trim() // Remove type info like "(quiz)"
+    const label = header[i].replace(/\(.*?\)/g, '').trim()
     const typeMatch = header[i].match(/\(([^)]+)\)/)
     const type = typeMatch ? typeMatch[1].toLowerCase().trim() : 'unknown'
     if (label && !/total|grade|remark/i.test(label)) {
@@ -3448,7 +3447,7 @@ function showSaveStatus(status: 'saving' | 'saved' | 'failed', opts: { skipSheet
 let sheetPushTimer: ReturnType<typeof setTimeout> | null = null
 
 function scheduleSheetPush() {
-  if (!gsSheetId.value) return // No linked sheet for this subject/term — nothing to push to.
+  if (!gsSheetId.value) return
   if (sheetPushTimer) clearTimeout(sheetPushTimer)
   sheetPushTimer = setTimeout(() => { pushCurrentDataToSheet() }, 2500)
 }
@@ -3512,7 +3511,7 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
     })
     .catch(() => {
       showSaveStatus('failed')
-      columnTypes[col.id] = oldType // revert
+      columnTypes[col.id] = oldType
     })
 }
 
@@ -3881,7 +3880,6 @@ watch([subjectId, termId], () => {
   color: #22c55e;
 }
 
-/* Type badge colors */
 .col-type-quiz.col-type-badge,
 .col-type-quiz .col-type-dot { background: #dbeafe; color: #2563eb; }
 .col-type-quiz .col-type-dropdown .col-type-dot { background: #2563eb; }
@@ -4460,7 +4458,6 @@ watch([subjectId, termId], () => {
 
 
 
-/* === Import Scores Modal === */
 .import-modal {
   background: #fff;
   border-radius: 16px;
@@ -4528,7 +4525,6 @@ watch([subjectId, termId], () => {
   padding: 4px 24px 20px;
 }
 
-/* Format badges */
 .import-formats {
   display: flex;
   gap: 6px;
@@ -4552,7 +4548,6 @@ watch([subjectId, termId], () => {
   color: #dc2626;
 }
 
-/* Drop zone */
 .import-zone {
   border: 2px dashed #d1d5db;
   border-radius: 12px;
@@ -4602,7 +4597,6 @@ watch([subjectId, termId], () => {
   color: #94a3b8;
 }
 
-/* Uploaded file card */
 .import-file {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -4675,7 +4669,6 @@ watch([subjectId, termId], () => {
   color: #dc2626;
 }
 
-/* Preview section */
 .import-preview {
   padding: 0 16px 14px;
   border-top: 1px solid #e2e8f0;
@@ -4749,7 +4742,6 @@ watch([subjectId, termId], () => {
   display: inline-block;
 }
 
-/* Domain picker group */
 .import-domain-group {
   margin-top: 16px;
   padding: 0 16px 16px;
@@ -4818,7 +4810,6 @@ watch([subjectId, termId], () => {
   font-size: 0.8rem;
 }
 
-/* Single domain info bar */
 .import-domain-info-bar {
   display: flex;
   align-items: center;
@@ -4838,7 +4829,6 @@ watch([subjectId, termId], () => {
   font-weight: 700;
 }
 
-/* Action buttons */
 .import-btn-secondary {
   padding: 9px 20px;
   border: none;

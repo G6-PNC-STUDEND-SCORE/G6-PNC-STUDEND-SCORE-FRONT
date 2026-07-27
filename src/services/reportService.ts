@@ -10,7 +10,6 @@ import type {
   SubjectRankingRow,
 } from '@/types'
 
-/** Strip nulls so an unset filter never reaches the API as `?term_id=`. */
 function toParams(filters: ReportFilters): Record<string, number> {
   const params: Record<string, number> = {}
   for (const [key, value] of Object.entries(filters)) {

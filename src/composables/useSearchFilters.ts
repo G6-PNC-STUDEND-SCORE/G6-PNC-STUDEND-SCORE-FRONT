@@ -1,9 +1,5 @@
 import { reactive, ref, watch } from 'vue'
 
-/**
- * Search text + arbitrary filter fields, with an onChange hook fired whenever
- * either changes — wire this to page-reset logic in server- or client-side lists.
- */
 export function useSearchFilters<F extends Record<string, unknown>>(
   initialFilters: F,
   onChange?: () => void

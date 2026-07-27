@@ -161,7 +161,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       kpi.value = cached.kpi
       charts.value = cached.charts
     } else {
-      loading.value = true // show skeleton on first visit only
+      loading.value = true
     }
     await Promise.all([
       fetchFilterOptions(),

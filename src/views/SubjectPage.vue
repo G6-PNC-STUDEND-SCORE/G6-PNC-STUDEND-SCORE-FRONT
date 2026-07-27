@@ -652,7 +652,7 @@ const filteredSubjects = computed(() => {
   if (statusFilter.value) r = r.filter((s) => s.status?.toLowerCase() === statusFilter.value.toLowerCase())
   if (termFilter.value !== '') r = r.filter((s) => s.term_ids.includes(termFilter.value as number))
   return r
-})  // ─── Helpers ───────────────────────────────────────────────────────
+})
 function subjectIconBg(_name: string): string {
   return '#2563eb'
 }

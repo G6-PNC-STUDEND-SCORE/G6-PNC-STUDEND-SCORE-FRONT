@@ -46,14 +46,14 @@ export async function getSpreadsheetBySubjectAndTerm(subjectId: number, termId: 
         sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
         return res.data.data
       })
-      .catch(() => { /* silently fail - cached data is fine */ })
+      .catch(() => {})
     return JSON.parse(cached) as SpreadsheetResponse
   }
 
   const res = await http.get(`/spreadsheet/subject/${subjectId}/term/${termId}`)
   try {
     sessionStorage.setItem(cacheKey, JSON.stringify(res.data.data))
-  } catch { /* quota exceeded, ignore */ }
+  } catch {}
   return res.data.data
 }
 

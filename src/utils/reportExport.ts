@@ -24,10 +24,6 @@ const PASS_TINT: [number, number, number] = [236, 253, 245]
 const FAIL_COLOR: [number, number, number] = [239, 68, 68]
 const FAIL_TINT: [number, number, number] = [254, 242, 242]
 
-/**
- * jspdf-autotable ships as both a plugin and a standalone function depending on
- * the build; ScoreSheetView already normalises it this way, so reports do too.
- */
 async function createDoc(orientation: Orientation) {
   const [{ default: jsPDF }, autoTableModule] = await Promise.all([
     import('jspdf'),
@@ -44,11 +40,6 @@ async function createDoc(orientation: Orientation) {
   return doc
 }
 
-/**
- * The logo is bundled locally and fetched once as a data URL — jsPDF's
- * addImage needs actual image data, not a bare URL, and this avoids a
- * network dependency (or CORS failure) on every export.
- */
 let cachedLogo: string | null | undefined
 async function loadLogoDataUrl(): Promise<string | null> {
   if (cachedLogo !== undefined) return cachedLogo
@@ -62,17 +53,11 @@ async function loadLogoDataUrl(): Promise<string | null> {
       reader.readAsDataURL(blob)
     })
   } catch {
-    // Export still works without a logo if the asset can't be read.
     cachedLogo = null
   }
   return cachedLogo
 }
 
-/**
- * Shared branded header: a blue banner with the school logo/name on the left
- * and the report title/timestamp on the right, followed by an optional
- * filter-scope line. Returns the Y position content can start at.
- */
 async function drawBrandedHeader(doc: any, title: string, subtitle?: string): Promise<number> {
   const pageWidth = doc.internal.pageSize.getWidth()
   const bannerHeight = 26
@@ -86,8 +71,7 @@ async function drawBrandedHeader(doc: any, title: string, subtitle?: string): Pr
     try {
       doc.addImage(logo, 'PNG', 12, 5, 16, 16)
     } catch {
-      // Corrupt/unreadable image data — fall back to text-only header.
-    }
+      }
   }
 
   doc.setTextColor(255, 255, 255)
@@ -118,7 +102,6 @@ async function drawBrandedHeader(doc: any, title: string, subtitle?: string): Pr
   return y
 }
 
-/** Branded footer with page numbers, added once the document has laid out every page. */
 function drawFooter(doc: any) {
   const pages = doc.internal.getNumberOfPages()
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -186,12 +169,6 @@ function initialsOf(name: string | null): string {
   return parts.map((p) => p.charAt(0).toUpperCase()).join('')
 }
 
-/**
- * A single student's report card as a portrait PDF, designed to feel like an
- * actual certificate rather than a data dump: branded header, an identity
- * card with an avatar and a colored grade/result stamp, the subject table,
- * a totals summary, and a short encouraging note.
- */
 export async function exportReportCardToPdf(card: StudentReportCard): Promise<void> {
   const doc = await createDoc('portrait')
   const { student, summary, scope } = card
@@ -201,7 +178,6 @@ export async function exportReportCardToPdf(card: StudentReportCard): Promise<vo
 
   let y = await drawBrandedHeader(doc, 'Official Student Report Card')
 
-  // ── Identity card: avatar, name/meta on the left, grade stamp on the right ──
   const cardTop = y
   const cardHeight = 30
   doc.setFillColor(248, 250, 252)
@@ -252,7 +228,6 @@ export async function exportReportCardToPdf(card: StudentReportCard): Promise<vo
   doc.setTextColor(...INK)
   doc.setFont('helvetica', 'normal')
 
-  // ── Subject table (assessment columns built from the data, weights vary per school) ──
   const assessmentNames = Array.from(
     new Set(card.subjects.flatMap((s) => s.assessments.map((a) => a.name))),
   )
@@ -288,7 +263,6 @@ export async function exportReportCardToPdf(card: StudentReportCard): Promise<vo
     },
   })
 
-  // ── Summary totals ──
   ;(doc as any).autoTable({
     body: [
       ['Total Score', `${summary.total_score.toFixed(2)} / ${summary.max_possible}`],
@@ -310,7 +284,6 @@ export async function exportReportCardToPdf(card: StudentReportCard): Promise<vo
     },
   })
 
-  // ── A short, student-facing note — the part a report full of numbers is missing ──
   const firstName = (student.name ?? 'Student').split(' ')[0]
   const message = summary.result === 'pass'
     ? summary.rank === 1

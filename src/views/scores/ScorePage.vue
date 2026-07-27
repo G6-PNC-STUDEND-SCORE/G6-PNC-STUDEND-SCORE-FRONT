@@ -443,7 +443,7 @@ function getTermSubjects(termId: number): SubjectItem[] {
       const termB = b.terms.find((t) => t.term_id === termId)
       const countA = termA?.enrollment_count ?? 0
       const countB = termB?.enrollment_count ?? 0
-      return countB - countA // descending: most students first
+      return countB - countA
     })
   } else {
     sorted.sort((a, b) => a.name.localeCompare(b.name))

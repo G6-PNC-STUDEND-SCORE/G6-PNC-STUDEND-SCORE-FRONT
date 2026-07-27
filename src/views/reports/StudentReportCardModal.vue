@@ -385,8 +385,6 @@ watch(
   .rc-identity { flex-wrap: wrap; }
 }
 
-/* Print: the modal is teleported next to #app, so hide the app behind it and
-   flatten the fixed overlay into a normal page. */
 @media print {
   :global(#app) { display: none !important; }
   :global(body) { background: #fff !important; }

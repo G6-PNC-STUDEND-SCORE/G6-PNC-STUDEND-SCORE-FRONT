@@ -1,11 +1,9 @@
 import { ref, computed, type Ref } from 'vue'
 
 export interface UsePaginationOptions<T> {
-  /** Full (already-filtered) list to paginate client-side. */
   items: Ref<T[]>
   pageSizeOptions?: number[]
   initialPageSize?: number
-  /** Called after the page or page size changes — wire this up for server-side pagination. */
   onPageChange?: (page: number, pageSize: number) => void
 }
 

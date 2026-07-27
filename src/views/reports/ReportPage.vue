@@ -27,7 +27,6 @@
       <button class="rp-error-retry" @click="loadAll"><RefreshCw :size="13" /> Retry</button>
     </div>
 
-    <!-- Filters -->
     <div class="rp-filters">
       <div class="rp-filter">
         <label>Academic Year</label>
@@ -518,7 +517,6 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 }
 .rp-row-btn:hover { background: #eff6ff; border-color: #bfdbfe; }
 
-/* Dark mode */
 .dark-mode .rp-btn { background: rgba(30, 41, 59, 0.9); border-color: #475569; color: #cbd5e1; }
 .dark-mode .rp-btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }
 .dark-mode .rp-filters,

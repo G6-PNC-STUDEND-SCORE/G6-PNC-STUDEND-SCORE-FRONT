@@ -28,7 +28,6 @@
         <button class="alert-close" @click="saveError = ''">&times;</button>
       </div>
 
-      <!-- ── Quick Stats ── -->
       <div class="stats-row">
         <div class="stat-tile">
           <div class="stat-icon icon-blue"><ShieldCheck :size="18" /></div>
@@ -61,7 +60,6 @@
       </div>
 
       <div class="profile-layout">
-        <!-- ══════════ LEFT: Identity card ══════════ -->
         <aside class="profile-side">
           <div class="side-card">
             <div class="side-cover"></div>
@@ -117,9 +115,7 @@
           </div>
         </aside>
 
-        <!-- ══════════ RIGHT: Detail cards ══════════ -->
         <div class="profile-main">
-          <!-- ── Personal Details ── -->
           <section class="info-card">
             <div class="info-card-head">
               <IdCard :size="16" />
@@ -157,7 +153,6 @@
             </div>
           </section>
 
-          <!-- ── Bio ── -->
           <section class="info-card">
             <div class="info-card-head">
               <FileText :size="16" />
@@ -167,7 +162,6 @@
             <p v-else class="bio-empty">No bio added yet.</p>
           </section>
 
-          <!-- ── Role-specific info ── -->
           <section v-if="form.role === 'teacher' && teacherInfo" class="info-card">
             <div class="info-card-head">
               <BookOpen :size="16" />
@@ -244,7 +238,6 @@
             </div>
           </section>
 
-          <!-- ── Security ── -->
           <section class="info-card">
             <div class="info-card-head">
               <Lock :size="16" />
@@ -304,7 +297,6 @@
       </div>
     </template>
 
-    <!-- Edit Modal -->
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
@@ -543,7 +535,6 @@ const relativeLastLogin = computed(() => {
 const permissionGroups = computed(() => {
   const counts = new Map<string, number>()
   for (const slug of form.permissions) {
-    // Permission slugs look like "view-students", "create-classes", "manage-roles-permissions"
     const resource = slug.replace(/^(view|create|update|delete|generate|export|manage)-/, '')
     const label = resource.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
     counts.set(label, (counts.get(label) || 0) + 1)
@@ -767,9 +758,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* ═══════════════════════════════════════════════
-   PAGE LAYOUT — matches Users page exactly
-   ═══════════════════════════════════════════════ */
 .profile-page {
   height: calc(100vh - 96px);
   width: calc(100% + 12px);
@@ -782,9 +770,6 @@ onUnmounted(() => {
   padding: 20px 24px;
 }
 
-/* ═══════════════════════════════════════════════
-   LOADING
-   ═══════════════════════════════════════════════ */
 .load-state {
   display: flex;
   flex-direction: column;
@@ -807,9 +792,6 @@ onUnmounted(() => {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ═══════════════════════════════════════════════
-   ERROR
-   ═══════════════════════════════════════════════ */
 .error-card {
   flex: 1;
   display: flex;
@@ -869,9 +851,6 @@ onUnmounted(() => {
 
 .retry-btn:hover { background: #1f2937; }
 
-/* ═══════════════════════════════════════════════
-   ALERTS
-   ═══════════════════════════════════════════════ */
 .alert {
   display: flex;
   align-items: center;
@@ -915,9 +894,6 @@ onUnmounted(() => {
 
 .alert-close:hover { opacity: 1; }
 
-/* ═══════════════════════════════════════════════
-   QUICK STATS
-   ═══════════════════════════════════════════════ */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -976,9 +952,6 @@ onUnmounted(() => {
   text-transform: uppercase;
 }
 
-/* ═══════════════════════════════════════════════
-   TWO-COLUMN LAYOUT
-   ═══════════════════════════════════════════════ */
 .profile-layout {
   display: grid;
   grid-template-columns: 300px 1fr;
@@ -986,9 +959,6 @@ onUnmounted(() => {
   align-items: start;
 }
 
-/* ═══════════════════════════════════════════════
-   LEFT: Identity sidebar
-   ═══════════════════════════════════════════════ */
 .profile-side {
   position: sticky;
   top: 0;
@@ -1024,7 +994,6 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* ── Avatar (base + xl variant) ── */
 .avatar {
   width: 34px;
   height: 34px;
@@ -1128,7 +1097,6 @@ onUnmounted(() => {
   padding: 0 16px;
 }
 
-/* ── Role / Status Badges ── */
 .role-badge {
   display: inline-flex;
   align-items: center;
@@ -1222,9 +1190,6 @@ onUnmounted(() => {
   text-align: right;
 }
 
-/* ═══════════════════════════════════════════════
-   RIGHT: Info cards
-   ═══════════════════════════════════════════════ */
 .profile-main {
   display: flex;
   flex-direction: column;
@@ -1313,7 +1278,6 @@ onUnmounted(() => {
   color: #0f172a;
 }
 
-/* ── Bio ── */
 .bio-text {
   font-size: 0.85rem;
   color: #334155;
@@ -1328,7 +1292,6 @@ onUnmounted(() => {
   margin: 0;
 }
 
-/* ── Chip list (teaching info) ── */
 .chip-list {
   display: flex;
   flex-wrap: wrap;
@@ -1349,7 +1312,6 @@ onUnmounted(() => {
 .chip-blue { background: #eff6ff; color: #2563eb; border-color: #dbeafe; }
 .chip-violet { background: #f5f3ff; color: #7c3aed; border-color: #ede9fe; }
 
-/* ── Access summary (admin) ── */
 .access-summary {
   display: flex;
   align-items: center;
@@ -1386,9 +1348,6 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-/* ═══════════════════════════════════════════════
-   SECURITY
-   ═══════════════════════════════════════════════ */
 .security-body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1516,9 +1475,6 @@ onUnmounted(() => {
 .msg-ok { color: #16a34a; }
 .msg-fail { color: #dc2626; }
 
-/* ═══════════════════════════════════════════════
-   EDIT MODAL
-   ═══════════════════════════════════════════════ */
 .edit-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1560,9 +1516,6 @@ onUnmounted(() => {
   margin-bottom: 6px;
 }
 
-/* ═══════════════════════════════════════════════
-   TRANSITIONS
-   ═══════════════════════════════════════════════ */
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.2s ease;
 }
@@ -1582,9 +1535,6 @@ onUnmounted(() => {
   border-width: 0;
 }
 
-/* ═══════════════════════════════════════════════
-   RESPONSIVE
-   ═══════════════════════════════════════════════ */
 @media (max-width: 900px) {
   .profile-page { padding: 16px; }
   .stats-row { grid-template-columns: 1fr 1fr; }

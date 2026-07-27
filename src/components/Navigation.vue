@@ -573,7 +573,6 @@ function goToProfile() {
   overflow: hidden;
 }
 
-/* ─── Header ─── */
 .logout-modal-header {
   display: flex;
   align-items: center;
@@ -628,7 +627,6 @@ function goToProfile() {
   outline-offset: 2px;
 }
 
-/* ─── Body ─── */
 .logout-modal-body {
   padding: 16px 24px 0;
 }
@@ -641,7 +639,6 @@ function goToProfile() {
   line-height: 1.6;
 }
 
-/* ─── Footer ─── */
 .logout-modal-footer {
   display: flex;
   gap: 10px;
@@ -700,7 +697,6 @@ function goToProfile() {
   outline-offset: 2px;
 }
 
-/* ─── Animations ─── */
 .modal-enter-active {
   transition: all 0.25s ease-out;
 }
@@ -728,7 +724,6 @@ function goToProfile() {
   transition: all 0.15s ease-in;
 }
 
-/* ─── Responsive ─── */
 @media (max-width: 480px) {
   .logout-modal {
     width: 100%;
