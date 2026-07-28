@@ -242,7 +242,7 @@
               </td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
-              <td :colspan="4 + columns.length + 2" class="cell-frozen add-row-cell">
+              <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
                 <i class="bi bi-plus-lg"></i> Add Student Row
               </td>
             </tr>
@@ -4629,10 +4629,6 @@ watch([subjectId, termId], () => {
   background: #e8f5e9 !important;
   border-bottom: 2px solid #16a34a !important;
 }
-
-
-
-
 
 .loading-bar {
   position: absolute; top: 0; left: 0; right: 0; height: 3px;
