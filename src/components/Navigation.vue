@@ -2,7 +2,7 @@
   <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
     <div :class="['logo', sidebar.collapsed ? 'logo-collapsed' : 'logo-expanded', 'border-bottom']">
       <div class="sidebar-logo-wrap">
-        <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
+        <img :src="logoSrc" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
       </div>
       <div class="sidebar-brand-text">
         <span class="brand-name">Passerelles</span>
@@ -133,6 +133,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
 import { getUserInitials } from '@/utils'
+import logoSrc from '@/assets/images/pnc-logo.png'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText, History,
