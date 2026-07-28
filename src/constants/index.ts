@@ -47,9 +47,6 @@ export const ROLE_LANDING_PATHS: Record<string, string> = {
 export const SELF_MANAGED_SCROLL_PAGES = [
   'roles',
   'users',
-  'classes',
-  'teachers',
-  'student',
   'subject',
 ] as const
 

@@ -91,3 +91,67 @@
 
 .page-dots { width: 24px; text-align: center; color: #94a3b8; font-size: 0.875rem; letter-spacing: 1px; }
 .pagination-total { color: #64748b; font-size: 0.75rem; font-weight: 500; white-space: nowrap; }
+
+/* ─── Responsive Pagination ─── */
+@media (max-width: 767.98px) {
+  .pagination-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .pagination-info {
+    justify-content: center;
+  }
+
+  .pagination-pages {
+    justify-content: center;
+  }
+
+  .page-btn {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.8125rem;
+  }
+
+  .rows-label {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-bar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .pagination-info {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .rows-selector {
+    gap: 0;
+  }
+
+  .rows-btn {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .page-btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .page-nav {
+    width: 28px;
+    height: 28px;
+  }
+
+  .pagination-total {
+    display: none;
+  }
+}

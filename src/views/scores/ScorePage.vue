@@ -547,14 +547,13 @@ onMounted(async () => {
 <style scoped>
 
 .page-container {
-  height: calc(100vh - 96px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
   max-width: 1440px;
-  padding: 0;
+  margin: 0 auto;
+  width: 100%;
 }
 
 
@@ -647,11 +646,6 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.25s ease;
-  flex: 1;
-  height: 1px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
 }
 
 .scores-card:hover {
@@ -784,9 +778,6 @@ onMounted(async () => {
 
 .classes-grid {
   padding: 20px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .classes-grid-inner {
@@ -899,9 +890,6 @@ onMounted(async () => {
 
 .term-sections {
   padding: 14px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 .term-sections-inner {
@@ -1190,9 +1178,61 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
+  .term-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .term-search {
+    width: 100%;
+    max-width: 100%;
+  }
+  .tb-search {
+    width: 100%;
+    max-width: 100%;
+  }
+  .toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .scores-card {
+    border-radius: 12px;
+  }
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
+  .stat-chip {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+  }
 }
 
 @media (max-width: 640px) {
   .classes-grid { grid-template-columns: 1fr; }
+  .classes-grid-inner { grid-template-columns: 1fr; }
+  .class-card { min-height: 140px; }
+  .sort-toggle { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+  .toolbar-left-group {
+    flex-direction: column;
+  }
+  .tb-filter {
+    width: 100%;
+  }
+  .tb-filter select {
+    width: 100%;
+  }
+  .class-card-top { padding: 14px 14px 0; }
+  .class-card-body { padding: 12px 14px; }
+  .class-card-footer { padding: 10px 14px; }
+  .term-section-header { flex-wrap: wrap; }
+  .subject-chips { gap: 4px; }
 }
 </style>

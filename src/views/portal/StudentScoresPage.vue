@@ -111,4 +111,10 @@ onMounted(async () => {
   border: 1px solid #e9ecef;
   border-radius: 16px;
 }
+
+@media (max-width: 768px) {
+  .portal-page { gap: 12px; }
+  .section-card { padding: 16px 18px; border-radius: 12px; }
+  .section-title { font-size: 0.85rem; }
+}
 </style>

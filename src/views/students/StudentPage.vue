@@ -277,14 +277,26 @@ onMounted(() => init())
 <style scoped>
 
 .page-container {
-  height: calc(100vh - 96px);
-  width: calc(100% + 12px);
-  margin-top: -6px;
-  margin-left: -6px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.page-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.page-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.page-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
 }
 
 

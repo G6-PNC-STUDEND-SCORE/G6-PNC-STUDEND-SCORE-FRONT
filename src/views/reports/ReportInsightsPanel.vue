@@ -713,6 +713,13 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 <style scoped>
 .rp-panel { font-family: 'Inter', 'Noto Sans Khmer', sans-serif; }
 
+@media (max-width: 768px) {
+  .rp-panel {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 .rp-panel-head {
   display: flex;
   align-items: center;
@@ -954,9 +961,80 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 }
 @media (max-width: 991.98px) {
   .rp-charts { grid-template-columns: 1fr; }
+  .rp-panel-head { flex-direction: column; align-items: flex-start; }
+  .rp-panel-actions { width: 100%; }
+  .rp-panel-actions .rp-btn { flex: 1; justify-content: center; }
+}
+@media (max-width: 768px) {
+  .rp-filters {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.6rem 0.75rem;
+    gap: 0.6rem;
+  }
+  .rp-filter {
+    min-width: 100%;
+    flex: none;
+  }
+  .rp-card {
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+  .rp-export-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    min-width: unset;
+    width: 100%;
+    max-width: 100%;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+    padding: 0.5rem;
+    z-index: 9999;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .rp-export-menu button {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+  .rp-rank {
+    width: 22px;
+    height: 22px;
+    font-size: 0.65rem;
+  }
 }
 @media (max-width: 575.98px) {
-  .rp-kpis { grid-template-columns: 1fr; }
+  .rp-kpis { grid-template-columns: 1fr; gap: 0.6rem; }
   .rp-tabs { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .rp-tab { justify-content: center; padding: 0.6rem; }
+  .rp-panel-head { margin-bottom: 0.75rem; }
+}
+@media (max-width: 480px) {
+  .rp-card {
+    padding: 0.6rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+  }
+  .rp-card-head h3 { font-size: 0.8rem; }
+  .rp-card-head p { font-size: 0.68rem; }
+  .rp-error { flex-wrap: wrap; }
+  .rp-error-retry {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  .rp-select {
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+  }
+  .rp-btn {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+  }
+  .rp-panel-title { font-size: 0.9rem; }
+  .rp-panel-sub { font-size: 0.72rem; }
 }
 </style>

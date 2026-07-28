@@ -1057,4 +1057,45 @@ onMounted(loadLogs)
   .search-box { width: 100%; }
   .pagination-bar { flex-direction: column; align-items: center; }
 }
+@media (max-width: 768px) {
+  .al-card {
+    border-radius: 12px;
+  }
+  .al-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-box {
+    width: 100%;
+    max-width: 100%;
+  }
+  .al-filter-group {
+    flex-direction: column;
+    width: 100%;
+  }
+  .al-filter {
+    width: 100%;
+    flex: none;
+  }
+  .al-select {
+    width: 100%;
+  }
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
+  .description-cell .desc-text {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+}
+
 </style>

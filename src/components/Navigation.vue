@@ -1,5 +1,21 @@
 <template>
-  <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
+  <!-- Mobile backdrop -->
+  <Transition name="backdrop">
+    <div
+      v-if="sidebar.mobileOpen"
+      class="sidebar-backdrop"
+      @click="sidebar.closeMobile()"
+      @touchmove.prevent
+    ></div>
+  </Transition>
+
+  <aside
+    :class="[
+      'sidebar',
+      { collapsed: sidebar.collapsed },
+      { 'mobile-open': sidebar.mobileOpen }
+    ]"
+  >
     <div :class="['logo', sidebar.collapsed ? 'logo-collapsed' : 'logo-expanded', 'border-bottom']">
       <div class="sidebar-logo-wrap">
         <img src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
@@ -8,15 +24,6 @@
         <span class="brand-name">Passerelles</span>
         <span class="brand-name">Numériques</span>
       </div>
-      <button
-        class="logo-toggle-btn"
-        :class="{ 'collapsed': sidebar.collapsed }"
-        @click="sidebar.toggle()"
-        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-      >
-        <ChevronLeft v-if="!sidebar.collapsed" :size="14" />
-        <ChevronRight v-else :size="14" />
-      </button>
     </div>
 
     <nav class="px-2 py-2 flex-grow-1">
@@ -26,6 +33,7 @@
         :to="link.to"
         :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
         :title="sidebar.collapsed ? link.label : ''"
+        @click="sidebar.closeMobile()"
       >
         <component :is="link.icon" :size="20" />
         <span class="sidebar-link-text">{{ link.label }}</span>
@@ -40,6 +48,7 @@
           :to="link.to"
           :class="['sidebar-link', { collapsed: sidebar.collapsed }]"
           :title="sidebar.collapsed ? link.label : ''"
+          @click="sidebar.closeMobile()"
         >
           <component :is="link.icon" :size="20" />
           <span class="sidebar-link-text">{{ link.label }}</span>
@@ -47,7 +56,12 @@
       </template>
     </nav>
 
-
+    <div class="toggle-wrap">
+      <button class="sidebar-toggle" @click="sidebar.toggle()" :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'">
+        <ChevronLeft :size="16" :class="{ 'flip': sidebar.collapsed }" />
+        <span class="toggle-label">{{ sidebar.collapsed ? 'Expand' : 'Collapse' }}</span>
+      </button>
+    </div>
 
     <div class="border-top">
       <div :class="['user-section', 'd-flex', 'align-items-center', sidebar.collapsed ? 'justify-content-center px-0 py-2' : 'justify-content-between px-3 py-2', { 'user-section-active': isProfileActive }]">
@@ -58,6 +72,8 @@
             { 'user-active': isProfileActive }
           ]"
           @click="goToProfile"
+          @mouseenter="onUserMouseEnter"
+          @touchstart.passive="onUserMouseEnter"
           @keydown.enter.prevent="goToProfile"
           role="button"
           tabindex="0"
@@ -133,17 +149,23 @@ import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
 import { getUserInitials } from '@/utils'
+import { getProfile } from '@/services/profileService'
+import { cacheService } from '@/services/cacheService'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText, History,
-  User, Shield, LogOut, X, ChevronLeft, ChevronRight,
+  User, Shield, LogOut, X, ChevronLeft,
 } from '@lucide/vue'
 import type { Component } from 'vue'
+
+const PROFILE_CACHE_KEY = 'user_profile_data'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const sidebar = useSidebarStore()
+
+let profilePreloaded = false
 
 const isProfileActive = computed(() => route.path === '/profile')
 
@@ -152,6 +174,26 @@ const showLogoutModal = ref(false)
 const modalOverlayRef = ref<HTMLElement | null>(null)
 const confirmBtnRef = ref<HTMLButtonElement | null>(null)
 const cancelBtnRef = ref<HTMLButtonElement | null>(null)
+
+// ── Preload profile data in background so clicking profile is instant ──
+async function preloadProfile() {
+  if (profilePreloaded) return
+  profilePreloaded = true
+  // Preload the UserProfile component (dynamic import triggers lazy loading)
+  import('@/views/UserProfile.vue').catch(() => {})
+  // Pre-fetch the profile data and cache it
+  try {
+    const profile = await getProfile()
+    cacheService.set(PROFILE_CACHE_KEY, profile, 5 * 60_000) // 5 min cache
+  } catch {
+    // Silently fail — UserProfile will fetch on its own
+  }
+}
+
+// Preload on hover over the user section (mouseenter)
+function onUserMouseEnter() {
+  preloadProfile()
+}
 
 watch(showLogoutModal, (val) => {
   if (val) {
@@ -218,11 +260,37 @@ async function handleLogout() {
 }
 
 function goToProfile() {
+  // Close mobile sidebar overlay (like other nav links do)
+  sidebar.closeMobile()
+  // Start preloading immediately on click (no await — fire and forget)
+  preloadProfile()
   router.push('/profile')
 }
 </script>
 
 <style scoped>
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.backdrop-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.backdrop-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.backdrop-enter-from,
+.backdrop-leave-to {
+  opacity: 0;
+}
 
 .sidebar {
   width: 240px;
@@ -236,7 +304,7 @@ function goToProfile() {
   left: 0;
   top: 0;
   z-index: 1000;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
@@ -404,41 +472,6 @@ function goToProfile() {
 }
 
 
-.logo-toggle-btn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: #f3f4f6;
-  color: #94a3b8;
-  border-radius: 7px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.logo-toggle-btn:hover {
-  background: #eef2ff;
-  color: #2563eb;
-}
-
-.logo-toggle-btn.collapsed {
-  width: 22px;
-  height: 36px;
-  border-radius: 6px 0 0 6px;
-  background: #eef2ff;
-  color: #2563eb;
-  margin-left: auto;
-}
-
-.logo-toggle-btn.collapsed:hover {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-
 .user-section {
   background: white;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -517,6 +550,7 @@ function goToProfile() {
   display: none;
 }
 
+
 .user h6 {
   font-size: 0.95rem;
   color: #1e293b;
@@ -548,6 +582,78 @@ function goToProfile() {
   color: #dc2626;
 }
 
+
+.toggle-wrap {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  position: relative;
+}
+
+/* Thin separator line above toggle */
+.toggle-wrap::before {
+  content: '';
+  display: block;
+  margin: 0 4px 10px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
+}
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: "Inter", "Noto Sans Khmer", sans-serif;
+}
+
+.sidebar-toggle:hover {
+  background: #eef2ff;
+  color: #4f46e5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.1);
+}
+
+.sidebar-toggle:active {
+  transform: scale(0.96) translateY(0);
+  box-shadow: none;
+}
+
+.sidebar-toggle svg {
+  flex-shrink: 0;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-toggle .flip {
+  transform: rotate(180deg);
+}
+
+.toggle-label {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.sidebar.collapsed .toggle-label {
+  opacity: 0;
+  transform: translateX(-6px);
+  width: 0;
+  overflow: hidden;
+  margin: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+  justify-content: center;
+  padding: 8px 0;
+}
 
 .modal-overlay {
   position: fixed;
@@ -728,10 +834,136 @@ function goToProfile() {
   transition: all 0.15s ease-in;
 }
 
-/* ─── Responsive ─── */
-@media (max-width: 480px) {
+
+
+/* ─── Mobile (< 768px) ─── */
+@media (max-width: 767.98px) {
+  .sidebar {
+    transform: translateX(-100%);
+    width: 280px;
+    box-shadow: 4px 0 40px rgba(0, 0, 0, 0.18);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .sidebar.collapsed {
+    width: 280px;
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar.collapsed .sidebar-brand-text {
+    opacity: 1;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    pointer-events: auto;
+    flex: 1;
+  }
+
+  .sidebar-link {
+    padding: 12px 14px;
+    margin-bottom: 2px;
+    font-size: 15px;
+  }
+
+  .sidebar-link:active {
+    background: #e8f1ff;
+    transform: scale(0.98);
+  }
+
+  .sidebar.collapsed .sidebar-link-text {
+    opacity: 1;
+    transform: translateX(0);
+    width: auto;
+    margin-left: 10px;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .sidebar.collapsed .sidebar-link {
+    justify-content: flex-start;
+    padding: 12px 14px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .menu-title {
+    font-size: 12px;
+    padding: 0 14px;
+    margin-top: 12px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .sidebar.collapsed .menu-title {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .user-section {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .sidebar.collapsed .user-text {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .sidebar.collapsed .logout-icon-btn {
+    display: flex;
+  }
+
+  .sidebar.collapsed .user-section {
+    justify-content: space-between !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .sidebar.collapsed .user {
+    justify-content: flex-start !important;
+  }
+
+  .sidebar.collapsed .toggle-label {
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    margin-left: 10px;
+    pointer-events: auto;
+  }
+
+  .sidebar.collapsed .sidebar-toggle {
+    justify-content: flex-start;
+    padding: 8px 12px;
+  }
+
+  .user {
+    padding: 8px 10px;
+  }
+
+  .user h6 {
+    font-size: 0.9rem;
+  }
+
+  .user small {
+    font-size: 0.75rem;
+  }
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 0.85rem;
+  }
+
+  .logout-icon-btn {
+    padding: 8px;
+    margin-right: -2px;
+  }
+
   .logout-modal {
     width: 100%;
+    max-width: 380px;
     border-radius: 12px;
   }
 
@@ -749,8 +981,8 @@ function goToProfile() {
   }
 
   .logout-btn {
-    padding: 10px 12px;
-    font-size: 0.8125rem;
+    padding: 12px 12px;
+    font-size: 0.875rem;
   }
 
   .logout-icon-wrap {
@@ -760,6 +992,50 @@ function goToProfile() {
 
   .logout-title {
     font-size: 1rem;
+  }
+
+  .logout-btn-cancel:active,
+  .logout-btn-confirm:active {
+    transform: scale(0.97);
+  }
+}
+
+/* Extra small phones: ≤420px */
+@media (max-width: 420px) {
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+  }
+
+  .sidebar-link {
+    padding: 14px 16px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  .logo-expanded,
+  .logo-collapsed {
+    height: 56px;
+    padding: 0 10px;
+  }
+
+  .sidebar-logo-wrap {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brand-name {
+    font-size: 0.85rem;
+  }
+
+  .avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .user {
+    padding: 6px 8px;
   }
 }
 </style>

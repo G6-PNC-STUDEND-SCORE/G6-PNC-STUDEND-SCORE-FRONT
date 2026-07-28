@@ -133,4 +133,19 @@ onMounted(async () => {
   border-radius: 100px;
 }
 .empty-row { text-align: center; color: #94a3b8; padding: 2rem !important; }
+
+@media (max-width: 768px) {
+  .portal-page { gap: 12px; }
+  .profile-card { padding: 16px 18px; border-radius: 12px; }
+  .profile-name { font-size: 1rem; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .section-card { padding: 16px 18px; border-radius: 12px; }
+  .section-title { font-size: 0.85rem; }
+}
+
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr; gap: 8px; }
+  .stat-value { font-size: 1.25rem; }
+  .table-wrap { overflow-x: auto; }
+}
 </style>

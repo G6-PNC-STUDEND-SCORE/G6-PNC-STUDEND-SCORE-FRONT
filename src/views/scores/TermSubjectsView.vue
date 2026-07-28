@@ -237,14 +237,15 @@ onMounted(async () => {
 <style scoped>
 
 .page-container {
-  height: calc(100vh - 96px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   color: #0f172a;
   max-width: 1440px;
-  padding: 0;
+  margin: 0 auto;
+  min-height: calc(100vh - 96px);
+  width: 100%;
 }
 
 
@@ -567,5 +568,31 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
   .subjects-grid { grid-template-columns: 1fr; }
+  .scores-card { border-radius: 12px; }
+  .breadcrumb { flex-wrap: wrap; }
+  .sort-toggle { flex-wrap: wrap; }
+  .subject-card { padding: 8px 10px; }
+  .subj-name { font-size: 0.78rem; }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-left {
+    width: 100%;
+  }
+  .class-filter-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .tb-result-count {
+    text-align: center;
+    width: 100%;
+  }
+  .breadcrumb-back span {
+    display: none;
+  }
 }
 </style>

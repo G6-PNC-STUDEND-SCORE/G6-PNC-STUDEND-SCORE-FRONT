@@ -127,3 +127,71 @@ select.modern-input {
   border: 1px solid #fecaca;
   margin-bottom: 20px;
 }
+
+/* ─── Tablet: 768px - 991px ─── */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .modern-input {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.85rem;
+  }
+
+  .form-label {
+    font-size: 0.78rem;
+    margin-bottom: 4px;
+  }
+
+  .status-option {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* ─── Responsive Form ─── */
+@media (max-width: 767.98px) {
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .modern-input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .status-toggle {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-label {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .error-alert {
+    padding: 10px 12px;
+    font-size: 0.75rem;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+  }
+
+  .modern-input {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.78rem;
+    border-radius: 8px;
+  }
+
+  .status-option {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}

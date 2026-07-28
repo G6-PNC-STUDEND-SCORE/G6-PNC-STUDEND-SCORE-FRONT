@@ -3569,13 +3569,10 @@ watch([subjectId, termId], () => {
 .score-sheet {
   position: relative;
   font-family: 'Inter', 'Segoe UI', 'Noto Sans Khmer', sans-serif;
-  height: calc(98vh - 90px);
-  width: calc(100% + 12px);
-  margin-top: -8px;
-  margin-left: -6px;
-  min-height: 0;
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 96px);
+  min-height: 0;
   color: #1e293b;
   background: #fff;
   border-radius: 16px;
@@ -4879,10 +4876,340 @@ watch([subjectId, termId], () => {
   transform: none;
 }
 
+/* ────── Mobile Responsive ────────────────────────────────── */
+
+@media (max-width: 991.98px) {
+  .offering-item-teachers { display: none; }
+  .save-status .status-text { display: none; }
+}
+
 @media (max-width: 768px) {
-  .sheet-toolbar { flex-direction: column; align-items: flex-start; }
-  .toolbar-actions { width: 100%; }
-  .btn-group { width: 100%; }
+  .score-sheet {
+    height: calc(100vh - 80px);
+  }
+
+  .sheet-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .offering-info {
+    flex-wrap: wrap;
+    min-width: 0;
+    padding: 4px 8px;
+    font-size: 0.72rem;
+    gap: 4px;
+    min-height: 28px;
+  }
+
+  .offering-item-main {
+    font-size: 0.78rem;
+  }
+
+  .offering-item-badge {
+    font-size: 0.68rem;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .toolbar-actions .search-box {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .search-box input {
+    font-size: 0.9rem;
+    height: 40px;
+  }
+
+  .btn-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+  }
+
+  .btn-group .tb-btn {
+    justify-content: center;
+    padding: 8px 6px;
+    height: 40px;
+    font-size: 0.72rem;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .btn-group .tb-btn span {
+    display: inline;
+    font-size: 0.68rem;
+  }
+
+  .export-dropdown {
+    grid-column: span 1;
+  }
+
+  .export-dropdown .tb-btn {
+    width: 100%;
+  }
+
+  .export-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+    z-index: 9999;
+    padding: 12px;
+    padding-bottom: env(safe-area-inset-bottom, 12px);
+  }
+
+  .export-menu .export-menu-item {
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    justify-content: center;
+  }
+
+  .stats-bar {
+    gap: 8px;
+    padding: 6px 12px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .stat-item {
+    font-size: 0.72rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .stat-item .stat-value {
+    font-size: 0.78rem;
+  }
+
+  .modal-content-panel {
+    max-width: calc(100% - 16px) !important;
+    margin: 0 8px;
+    border-radius: 14px;
+  }
+
+  .modal-sm-panel {
+    width: 100%;
+    max-width: calc(100% - 16px) !important;
+  }
+
+  .modal-md-panel {
+    width: 100%;
+    max-width: calc(100% - 16px) !important;
+  }
+
+  .import-modal {
+    max-width: calc(100% - 16px);
+    border-radius: 14px;
+  }
+
+  .import-zone {
+    padding: 20px 12px;
+  }
+
+  .import-modal-head {
+    padding: 16px 14px 0;
+    gap: 10px;
+  }
+
+  .import-modal-body {
+    padding: 12px 14px 10px;
+  }
+
+  .import-modal-foot {
+    padding: 10px 14px 16px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .import-modal-foot button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+  }
+
+  .pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .shortcuts-modal {
+    max-width: calc(100% - 16px);
+    margin: 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .score-sheet {
+    height: calc(100vh - 64px);
+    border-radius: 12px;
+  }
+
+  .sheet-toolbar {
+    padding: 6px 8px;
+    gap: 5px;
+    font-size: 0.72rem;
+  }
+
+  .offering-info {
+    padding: 3px 6px;
+    font-size: 0.65rem;
+    gap: 3px;
+    min-height: 22px;
+  }
+
+  .offering-item-main {
+    font-size: 0.72rem;
+  }
+
+  .offering-item-badge {
+    font-size: 0.62rem;
+    padding: 1px 4px;
+  }
+
+  .btn-group {
+    grid-template-columns: 1fr 1fr;
+    gap: 3px;
+  }
+
+  .btn-group .tb-btn {
+    padding: 5px 4px;
+    height: 36px;
+    font-size: 0.68rem;
+    gap: 2px;
+    border-radius: 6px;
+  }
+
+  .btn-group .tb-btn span {
+    font-size: 0.62rem;
+  }
+
+  .tb-btn svg,
+  .tb-btn i {
+    font-size: 0.8rem;
+  }
+
+  .stats-bar {
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  .stat-item {
+    font-size: 0.65rem;
+  }
+
+  .stat-item:nth-child(n+5) {
+    display: none;
+  }
+
+  .toolbar-spacer {
+    display: none;
+  }
+
+  .gs-sync-status {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pagination-bar {
+    padding: 4px 8px;
+    gap: 5px;
+  }
+
+  .pagination-pages {
+    gap: 1px;
+  }
+
+  .page-btn {
+    min-width: 24px;
+    height: 24px;
+    font-size: 0.68rem;
+  }
+
+  .page-nav {
+    width: 24px;
+    height: 24px;
+  }
+
+  .modal-content-panel,
+  .modal-sm-panel,
+  .modal-md-panel {
+    max-width: calc(100% - 8px) !important;
+  }
+
+  .modal-content-panel {
+    margin: 0 4px;
+    border-radius: 12px;
+  }
+
+  .modal-header-custom {
+    padding: 12px 10px 0;
+    gap: 8px;
+  }
+
+  .modal-header-custom h5 {
+    font-size: 0.9rem;
+  }
+
+  .modal-body-custom {
+    padding: 8px 10px;
+  }
+
+  .modal-footer-custom {
+    padding: 6px 10px 12px;
+    gap: 6px;
+  }
+
+  .modal-footer-custom button {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+
+  .import-modal {
+    max-width: calc(100% - 8px);
+    margin: 0 4px;
+  }
+
+  .import-modal-head {
+    padding: 12px 10px 0;
+  }
+
+  .import-modal-head h3 {
+    font-size: 0.9rem;
+  }
+
+  .import-modal-head p {
+    font-size: 0.75rem;
+  }
+
+  .import-modal-body {
+    padding: 10px 10px;
+  }
+
+  .import-modal-foot {
+    padding: 8px 10px 12px;
+  }
 }
 
 .pagination-bar {

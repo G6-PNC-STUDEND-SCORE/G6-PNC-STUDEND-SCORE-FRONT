@@ -53,3 +53,26 @@
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Responsive Bulk Actions ─── */
+@media (max-width: 767.98px) {
+  .bulk-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 14px;
+  }
+
+  .bulk-delete-btn,
+  .bulk-clear-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .bulk-count {
+    font-size: 0.75rem;
+    width: 100%;
+    text-align: center;
+  }
+}

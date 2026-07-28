@@ -176,4 +176,18 @@ onMounted(async () => {
   border: 1px solid #e9ecef;
   border-radius: 16px;
 }
+
+@media (max-width: 768px) {
+  .portal-page { gap: 12px; }
+  .header-row { padding: 16px 18px; border-radius: 12px; }
+  .student-name { font-size: 1rem; }
+  .section-card { padding: 16px 18px; border-radius: 12px; }
+  .section-title { font-size: 0.85rem; }
+  .btn-download { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .header-row { flex-direction: column; align-items: flex-start; }
+  .term-header { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
 </style>

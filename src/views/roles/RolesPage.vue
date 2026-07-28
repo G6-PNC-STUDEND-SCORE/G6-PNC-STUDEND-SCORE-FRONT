@@ -595,14 +595,10 @@ onMounted(loadAll)
 <style scoped>
 .roles-page {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  
-  height: calc(100vh - 96px);
-  width: calc(100% + 12px);
-  margin-top: -6px;
-  margin-left: -6px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: calc(100vh - 96px);
 }
 
 .alert-banner {

@@ -181,4 +181,5 @@ function onFilterChange(key: keyof DashboardFilters, value: string) {
   padding: 0.25rem 0.6rem;
   margin-bottom: 1px;
 }
+
 </style>

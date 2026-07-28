@@ -972,15 +972,11 @@ onMounted(() => {
 <style scoped>
 
 .users-page {
-  
-  height: calc(100vh - 96px);
-  width: calc(100% + 12px);
-  margin-top: -6px;
-  margin-left: -6px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  min-height: calc(100vh - 96px);
 }
 
 
@@ -1197,12 +1193,19 @@ onMounted(() => {
 
   @media (max-width: 768px) {
   .toolbar { flex-direction: column; align-items: stretch; }
-  .search-box { max-width: 100%; }
-  .filter-group { flex-wrap: wrap; }
+  .toolbar-left { flex-direction: column; width: 100%; }
+  .toolbar-right { width: 100%; justify-content: flex-start; }
+  .search-box { max-width: 100%; width: 100%; }
+  .filter-group { flex-wrap: wrap; width: 100%; }
+  .filter-label { width: 100%; }
   .pagination-bar { flex-direction: column; align-items: center; gap: 8px; }
   .pagination-info { width: 100%; justify-content: center; }
-  .modal-content-panel { width: 100%; margin: 0 8px; }
+  .modal-content-panel { width: 100%; margin: 0 8px; border-radius: 12px; }
   .gender-toggle, .status-toggle { flex-wrap: wrap; }
+  .row-2 { grid-template-columns: 1fr; gap: 12px; }
+  .user-card { border-radius: 12px; }
+  .col-actions { width: 80px; }
+  .action-menu { right: auto; left: 0; }
 }
 
 .form-group { margin-bottom: 0; }

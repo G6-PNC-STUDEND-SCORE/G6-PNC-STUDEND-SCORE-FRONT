@@ -354,14 +354,8 @@ defineEmits<{
   background: #fff;
   border: 1px solid #e9ecef;
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  flex: 1;
-  height: 1px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   transition: box-shadow 0.25s ease;
 }
 
@@ -478,15 +472,27 @@ defineEmits<{
 
 .table-wrap {
   width: 100%;
-  overflow: auto;
-  flex: 1;
-  min-height: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
-.table-wrap::-webkit-scrollbar-track { background: transparent; }
-.table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
-.table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 
 .col-check {
   width: 48px;
@@ -872,7 +878,227 @@ defineEmits<{
   transition: transform 0.3s ease;
 }
 
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .student-card {
+    border-radius: 14px;
+  }
+
+  .toolbar {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .toolbar-left {
+    gap: 6px;
+  }
+
+  .toolbar-right {
+    gap: 8px;
+  }
+
+  .search-box {
+    width: 160px;
+  }
+
+  .search-input {
+    padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+    font-size: 0.75rem;
+  }
+
+  .filter-label {
+    padding: 0.3rem 0.35rem 0.3rem 0.55rem;
+    font-size: 0.72rem;
+    gap: 5px;
+  }
+
+  .filter-label :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .filter-select {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.35rem;
+  }
+
+  .count-badge {
+    font-size: 0.68rem;
+    padding: 0.25rem 0.65rem;
+  }
+
+  .toolbar-right .btn {
+    font-size: 0.75rem !important;
+    padding: 0.3rem 0.65rem !important;
+  }
+
+  .toolbar-right .btn :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .table-wrap {
+    margin: 0 -6px;
+  }
+
+  .student-table thead th,
+  .student-table tbody td {
+    white-space: nowrap;
+    padding: 7px 8px;
+    font-size: 0.78rem;
+  }
+
+  .student-table thead th {
+    font-size: 0.65rem;
+    padding: 7px 8px;
+  }
+
+  .col-check {
+    width: 40px;
+    padding: 7px 6px !important;
+  }
+
+  .student-table thead th.col-check,
+  .student-table tbody td.col-check {
+    padding: 7px 6px !important;
+  }
+
+  .col-index {
+    width: 48px;
+  }
+
+  .col-student-id {
+    width: 100px;
+  }
+
+  .col-actions {
+    width: 90px;
+  }
+
+  .avatar, .avatar-img {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+
+  .avatar {
+    font-size: 0.55rem;
+  }
+
+  .student-name {
+    font-size: 0.78rem;
+  }
+
+  .bulk-bar {
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  .bulk-delete-btn,
+  .bulk-clear-btn {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+  }
+
+  .pagination-bar {
+    padding: 6px 14px;
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .pagination-info {
+    gap: 4px;
+  }
+
+  .rows-label {
+    font-size: 0.72rem;
+  }
+
+  .rows-btn {
+    padding: 3px 8px;
+    font-size: 0.68rem;
+  }
+
+  .page-nav {
+    width: 26px;
+    height: 26px;
+  }
+
+  .page-nav :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .page-btn {
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+  }
+
+  .page-dots {
+    width: 20px;
+    font-size: 0.78rem;
+  }
+
+  .pagination-total {
+    font-size: 0.68rem;
+  }
+
+  .td-actions {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+  }
+
+  .td-actions .act-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+  }
+
+  .td-actions .act-btn :deep(svg) {
+    width: 13px;
+    height: 13px;
+  }
+}
+
 @media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .toolbar-left {
+    flex-direction: column;
+    width: 100%;
+  }
+  .toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .search-box {
+    width: 100%;
+    max-width: 100%;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .filter-label {
+    width: 100%;
+  }
+  .filter-label select {
+    flex: 1;
+  }
+  .student-card {
+    border-radius: 12px;
+  }
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
   .col-actions {
     width: 100px;
   }

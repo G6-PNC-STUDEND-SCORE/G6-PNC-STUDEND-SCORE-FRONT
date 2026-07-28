@@ -382,6 +382,7 @@
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile, type ProfileTeacherInfo, type ProfileStudentInfo } from '@/services/profileService'
+import { cacheService } from '@/services/cacheService'
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/apiHttp'
 import {
@@ -410,6 +411,8 @@ import {
   Building,
 } from '@lucide/vue'
 
+const PROFILE_CACHE_KEY = 'user_profile_data'
+
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
 const PROFILE_CACHE_TTL = 30_000
@@ -421,6 +424,12 @@ function isProfileCacheStale(): boolean {
 function invalidateProfileCache() {
   cachedProfile = null
   profileCacheTime = 0
+  cacheService.remove(PROFILE_CACHE_KEY)
+}
+
+// Check sidebar-preloaded cache (shared via cacheService with 5min TTL)
+function checkPreloadedCache(): UserProfile | null {
+  return cacheService.get<UserProfile>(PROFILE_CACHE_KEY)
 }
 
 const auth = useAuthStore()
@@ -578,6 +587,18 @@ function applyProfile(profile: UserProfile) {
 }
 
 async function loadProfile() {
+  // Try sidebar-preloaded cache first (instant!)
+  const preloaded = checkPreloadedCache()
+  if (preloaded) {
+    cachedProfile = preloaded
+    profileCacheTime = Date.now()
+    applyProfile(preloaded)
+    loading.value = false
+    // Refresh in background so next visit is also fast
+    refreshProfileInBackground()
+    return
+  }
+
   if (cachedProfile && !isProfileCacheStale()) {
     applyProfile(cachedProfile)
     loading.value = false
@@ -589,12 +610,30 @@ async function loadProfile() {
     const profile = await getProfile()
     cachedProfile = profile
     profileCacheTime = Date.now()
+    cacheService.set(PROFILE_CACHE_KEY, profile, 5 * 60_000)
     applyProfile(profile)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
     fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
   } finally {
     loading.value = false
+  }
+}
+
+// Refresh profile data in background without showing a spinner
+async function refreshProfileInBackground() {
+  // Don't overwrite user's unsaved edits if the edit modal is open
+  if (showEditModal.value) return
+  
+  try {
+    const profile = await getProfile()
+    cachedProfile = profile
+    profileCacheTime = Date.now()
+    cacheService.set(PROFILE_CACHE_KEY, profile, 5 * 60_000)
+    // Silently update the form fields so data stays fresh
+    applyProfile(profile)
+  } catch {
+    // Keep showing cached data, background refresh is best-effort
   }
 }
 
@@ -771,10 +810,6 @@ onUnmounted(() => {
    PAGE LAYOUT — matches Users page exactly
    ═══════════════════════════════════════════════ */
 .profile-page {
-  height: calc(100vh - 96px);
-  width: calc(100% + 12px);
-  margin-top: -6px;
-  margin-left: -6px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -1585,18 +1620,85 @@ onUnmounted(() => {
 /* ═══════════════════════════════════════════════
    RESPONSIVE
    ═══════════════════════════════════════════════ */
+/* Tablet portrait */
 @media (max-width: 900px) {
   .profile-page { padding: 16px; }
   .stats-row { grid-template-columns: 1fr 1fr; }
+  .stat-tile { padding: 14px 16px; }
+  .stat-value { max-width: 120px; }
   .profile-layout { grid-template-columns: 1fr; }
   .profile-side { position: static; }
+  .info-card { padding: 16px; }
   .info-grid { grid-template-columns: 1fr; }
   .security-body { grid-template-columns: 1fr; }
   .edit-grid { grid-template-columns: 1fr; }
+  .modal-body-custom { padding: 12px; }
 }
 
+/* Small tablet / large phone */
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 12px;
+    height: auto;
+    min-height: calc(100vh - 80px);
+  }
+  .stats-row { gap: 10px; }
+  .stat-tile { gap: 10px; padding: 12px 14px; }
+  .stat-icon { width: 36px; height: 36px; }
+  .stat-icon svg { width: 15px; height: 15px; }
+  .stat-value { font-size: 0.8rem; max-width: 100px; }
+  .profile-layout { gap: 12px; }
+  .side-cover { height: 70px; }
+  .avatar-xl { width: 68px !important; height: 68px !important; }
+  .side-name { font-size: 0.95rem; }
+  .info-card { border-radius: 12px; }
+  .security-actions { flex-direction: column; }
+  .security-actions button { width: 100%; justify-content: center; }
+}
+
+/* Phone */
 @media (max-width: 560px) {
+  .profile-page { padding: 10px; }
   .stats-row { grid-template-columns: 1fr; }
+  .stat-tile { padding: 10px 12px; }
+  .stat-value { max-width: none; }
+  .info-card-head { font-size: 0.82rem; }
+  .info-field { gap: 8px; }
+  .info-field-icon { width: 26px; height: 26px; }
+  .info-field-icon svg { width: 12px; height: 12px; }
+  .side-edit-btn { width: calc(100% - 24px); margin: 12px 12px 0; }
+  .side-meta { padding: 10px 14px 0; }
+}
+
+/* Small phone */
+@media (max-width: 480px) {
+  .profile-page { padding: 8px; }
+  .side-cover { height: 56px; }
+  .avatar-xl { width: 60px !important; height: 60px !important; }
+  .side-name { font-size: 0.85rem; }
+  .side-email { font-size: 0.72rem; }
+  .side-badges { gap: 4px; }
+  .role-badge,
+  .status-badge { font-size: 0.65rem; padding: 0.2rem 0.5rem; }
+  .info-card { border-radius: 10px; padding: 12px; }
+  .info-card-head { margin-bottom: 10px; font-size: 0.78rem; }
+  .info-grid { gap: 10px; }
+  .info-value { font-size: 0.8rem; }
+  .access-summary { flex-direction: column; align-items: stretch; }
+  .access-count { width: 100%; box-sizing: border-box; }
+}
+
+/* Tiny phone */
+@media (max-width: 360px) {
+  .profile-page { padding: 6px; }
+  .side-cover { height: 44px; }
+  .avatar-xl { width: 52px !important; height: 52px !important; }
+  .side-name { font-size: 0.78rem; }
+  .stat-tile { padding: 8px 10px; gap: 8px; }
+  .stat-icon { width: 30px; height: 30px; }
+  .info-card { padding: 10px; }
+  .edit-grid { gap: 10px; }
+  .form-label { font-size: 0.72rem; }
 }
 
 </style>

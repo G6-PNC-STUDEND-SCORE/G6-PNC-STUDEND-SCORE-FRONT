@@ -61,3 +61,54 @@
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ─── Tablet: 768px - 991px ─── */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .table-wrap {
+    margin: 0 -8px;
+    padding: 0 4px;
+  }
+
+  .data-table-base thead th,
+  .data-table-base tbody td {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .data-table-base thead th {
+    font-size: 0.65rem;
+  }
+
+  .data-table-base tbody td {
+    white-space: nowrap;
+  }
+}
+
+/* ─── Responsive Table ─── */
+@media (max-width: 767.98px) {
+  .data-table-base thead th,
+  .data-table-base tbody td {
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+  }
+
+  .data-table-base thead th {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-wrap {
+    margin: 0 -4px;
+  }
+
+  .data-table-base thead th,
+  .data-table-base tbody td {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+  }
+
+  .data-table-base tbody td {
+    white-space: nowrap;
+  }
+}

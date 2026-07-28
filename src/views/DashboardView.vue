@@ -16,7 +16,7 @@
           <p>Your academic snapshot is ready — everything you need at a glance.</p>
         </div>
         <button class="welcome-close" @click="dismissWelcome" title="Dismiss">
-          <X :size="16" />
+          <span aria-hidden="true">&times;</span>
         </button>
       </div>
     </div>
@@ -354,7 +354,6 @@ import type {
 } from '@/types/dashboard'
 import {
   Stars,
-  X,
   AlertTriangle,
   RefreshCw,
   LayoutDashboard,
@@ -1012,23 +1011,163 @@ function updateLastUpdated() {
 
 
 @media (max-width: 1199.98px) {
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.85rem;
+  }
 }
 
 @media (max-width: 991.98px) {
-  .dashboard-page { padding-inline: 0.75rem !important; }
-  .charts-grid { grid-template-columns: 1fr; }
+  .dashboard-page {
+    padding-inline: 0.75rem !important;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .welcome-card {
+    padding: 1.25rem 1.5rem;
+    border-radius: 20px;
+  }
+
+  .welcome-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .welcome-text h3 {
+    font-size: 1rem;
+  }
+
+  .tab-bar {
+    overflow-x: auto;
+    width: 100%;
+  }
 }
 
 @media (max-width: 767.98px) {
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .tab-bar { display: grid; grid-template-columns: 1fr; width: 100%; }
-  .tab-indicator { display: none; }
-  .tab-btn.active { background: #0f172a; color: #fff; }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+  }
+
+  .welcome-card {
+    padding: 1rem 1.25rem;
+    border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+
+  .welcome-content {
+    gap: 0.85rem;
+  }
+
+  .welcome-icon-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .welcome-text h3 {
+    font-size: 0.9rem;
+  }
+
+  .welcome-text p {
+    font-size: 0.75rem;
+  }
+
+  .welcome-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+  }
+
+  .tab-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .tab-indicator {
+    display: none;
+  }
+
+  .tab-btn.active {
+    background: #0f172a;
+    color: #fff;
+  }
+
+  .chart-card {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  .chart-title {
+    font-size: 0.8rem;
+  }
+
+  .chart-desc {
+    font-size: 0.68rem;
+  }
+
+  .skeleton-card {
+    padding: 1rem;
+    min-height: 110px;
+    border-radius: 16px;
+  }
 }
 
 @media (max-width: 480px) {
-  .stats-grid { grid-template-columns: 1fr; }
-  .welcome-content { flex-wrap: wrap; }
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .welcome-content {
+    flex-wrap: wrap;
+  }
+
+  .welcome-badge {
+    font-size: 0.6rem;
+  }
+
+  .welcome-text h3 {
+    font-size: 0.85rem;
+  }
+
+  .charts-grid {
+    gap: 0.65rem;
+  }
+
+  .chart-card {
+    padding: 0.85rem;
+    border-radius: 14px;
+  }
+
+  .error-banner {
+    padding: 0.6rem 0.85rem;
+    font-size: 0.75rem;
+    border-radius: 10px;
+    flex-wrap: wrap;
+  }
+
+  .skeleton-card {
+    padding: 0.85rem;
+    min-height: 95px;
+  }
+}
+
+@media (max-width: 360px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-btn {
+    font-size: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    min-width: 80px;
+  }
 }
 </style>

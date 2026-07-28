@@ -938,14 +938,202 @@ onMounted(() => {
 <style scoped>
 
 .teachers-page {
-  height: calc(100vh - 96px);
-  width: calc(100% + 12px);
-  margin-top: -6px;
-  margin-left: -6px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  max-height: 100%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.teachers-page::-webkit-scrollbar {
+  width: 6px;
+}
+
+.teachers-page::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.teachers-page::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .teacher-card {
+    border-radius: 14px;
+  }
+
+  .teacher-table thead th,
+  .teacher-table tbody td {
+    white-space: nowrap;
+    padding: 7px 8px;
+    font-size: 0.78rem;
+  }
+
+  .teacher-table thead th {
+    font-size: 0.65rem;
+    padding: 7px 8px;
+  }
+
+  .col-check {
+    width: 40px;
+    padding: 7px 6px !important;
+  }
+
+  .teacher-table thead th.col-check,
+  .teacher-table tbody td.col-check {
+    padding: 7px 6px !important;
+  }
+
+  .col-index {
+    width: 48px;
+  }
+
+  .col-actions {
+    width: 90px;
+  }
+
+  .teacher-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+
+  .teacher-avatar :deep(svg) {
+    width: 13px;
+    height: 13px;
+  }
+
+  .teacher-name {
+    font-size: 0.78rem;
+  }
+
+  .email-cell {
+    font-size: 0.75rem;
+  }
+
+  .td-actions {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+  }
+
+  .td-actions .act-btn {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+  }
+
+  .td-actions .act-btn :deep(svg) {
+    width: 13px;
+    height: 13px;
+  }
+
+  .pagination-bar {
+    padding: 6px 14px;
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .pagination-info {
+    gap: 4px;
+  }
+
+  .rows-label {
+    font-size: 0.72rem;
+  }
+
+  .rows-btn {
+    padding: 3px 8px;
+    font-size: 0.68rem;
+  }
+
+  .page-nav {
+    width: 26px;
+    height: 26px;
+  }
+
+  .page-nav :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .page-btn {
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+  }
+
+  .page-dots {
+    width: 20px;
+    font-size: 0.78rem;
+  }
+
+  .pagination-total {
+    font-size: 0.68rem;
+  }
+
+  .toolbar {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .toolbar-left {
+    gap: 6px;
+  }
+
+  .search-box {
+    width: 160px;
+  }
+
+  .search-input {
+    padding: 0.5rem 0.75rem 0.5rem 2.2rem;
+    font-size: 0.75rem;
+  }
+
+  .filter-label {
+    padding: 0.3rem 0.35rem 0.3rem 0.55rem;
+    font-size: 0.72rem;
+    gap: 5px;
+  }
+
+  .filter-label :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .filter-select {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.35rem;
+  }
+
+  .count-badge {
+    font-size: 0.68rem;
+    padding: 0.25rem 0.65rem;
+  }
+
+  .toolbar-right .btn {
+    font-size: 0.75rem !important;
+    padding: 0.3rem 0.65rem !important;
+  }
+
+  .toolbar-right .btn :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .bulk-bar {
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  .bulk-delete-btn,
+  .bulk-clear-btn {
+    font-size: 0.72rem;
+    padding: 4px 10px;
+  }
 }
 
 
@@ -953,19 +1141,36 @@ onMounted(() => {
   background: #fff;
   border: 1px solid #e9ecef;
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
-  flex: 1;
-  height: 1px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
   transition: box-shadow 0.25s ease;
 }
 
 .teacher-card:hover {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 
@@ -1266,4 +1471,119 @@ select.styled-input {
 .status-active { color: #16a34a; font-weight: 600; }
 .status-inactive { color: #94a3b8; font-weight: 600; }
 .status-suspended { color: #dc2626; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .teacher-card {
+    border-radius: 12px;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 14px;
+  }
+  .toolbar-left {
+    flex-direction: column;
+    width: 100%;
+  }
+  .toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .search-box {
+    width: 100%;
+    max-width: 100%;
+  }
+  .filter-group {
+    width: 100%;
+  }
+  .filter-label {
+    width: 100%;
+  }
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+  }
+  .pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
+  .col-actions {
+    width: 80px;
+  }
+  .table-wrap {
+    overflow-x: auto;
+  }
+  .modal-content-panel {
+    max-width: 100% !important;
+    margin: 0 8px;
+    border-radius: 12px;
+  }
+  .row-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .info-header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .info-value {
+    text-align: left;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .teachers-page {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .teacher-card {
+    border-radius: 10px;
+  }
+  .toolbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .toolbar-left {
+    gap: 8px;
+  }
+  .search-box {
+    min-width: 0;
+  }
+  .search-input {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.7rem 0.5rem 2.2rem;
+  }
+  .filter-select {
+    font-size: 0.85rem;
+  }
+  .teacher-name {
+    font-size: 0.8rem;
+  }
+  .email-cell {
+    font-size: 0.75rem;
+  }
+  .col-index {
+    width: 40px;
+    font-size: 0.75rem;
+  }
+  .col-actions {
+    width: 60px;
+  }
+  .pagination-bar {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .modal-content-panel {
+    margin: 0 4px;
+    border-radius: 10px;
+  }
+}
 </style>

@@ -24,4 +24,20 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.2s ease;
   --transition-slow: 0.3s ease;
+
+  /* Responsive breakpoint variables */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 72px;
+  --content-padding-lg: 20px;
+  --content-padding-md: 16px;
+  --content-padding-sm: 12px;
+  --content-padding-xs: 10px;
 }
+
+/* ─── Responsive breakpoints (for reference in components) ─── */
+/* Desktop: > 1199px */
+/* Tablet landscape: 992px - 1199px */
+/* Tablet portrait: 768px - 991px */
+/* Phone: < 768px */
+/* Small phone: < 480px */
+/* Tiny phone: < 360px */

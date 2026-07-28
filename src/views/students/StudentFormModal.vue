@@ -428,7 +428,26 @@ select.styled-input {
   border-radius: 8px;
   margin-bottom: 12px;
   border-left: 3px solid #ef4444;
+}@media (max-width: 768px) {
+  .modal-content-panel {
+    max-width: 100%;
+    margin: 0 8px;
+    border-radius: 12px;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .modal-head {
+    flex-wrap: wrap;
+    padding-right: 40px;
+  }
+  .modal-body-custom {
+    padding: 12px 16px 8px;
+  }
+  .modal-foot {
+    padding: 8px 16px 14px;
+  }
 }
 
-.me-2 { margin-right: 8px; }
-</style>
+.me-2 { margin-right: 8px; }</style>

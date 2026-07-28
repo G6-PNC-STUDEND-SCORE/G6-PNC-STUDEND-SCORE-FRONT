@@ -530,4 +530,85 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 .dark-mode .rp-export-menu button:hover { background: rgba(51, 65, 85, 0.6); color: #93c5fd; }
 .dark-mode .rp-rank { background: rgba(51, 65, 85, 0.6); color: #cbd5e1; }
 .dark-mode .rp-row-btn { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #93c5fd; }
+@media (max-width: 768px) {
+  .rp-filters {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.6rem 0.75rem;
+    gap: 0.6rem;
+  }
+  .rp-filter {
+    min-width: 100%;
+    flex: none;
+  }
+  .rp-table-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .rp-table-head .search-input-wrapper {
+    width: 100%;
+  }
+  .rp-card {
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+  .rp-rank {
+    width: 22px;
+    height: 22px;
+    font-size: 0.65rem;
+  }
+  .rp-export-menu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    min-width: unset;
+    width: 100%;
+    max-width: 100%;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.12);
+    padding: 0.5rem;
+    z-index: 9999;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .rp-export-menu button {
+    padding: 0.7rem 0.8rem;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-page {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+
+  .rp-card {
+    padding: 0.6rem;
+    border-radius: 12px;
+  }
+  .rp-error {
+    flex-wrap: wrap;
+    padding: 0.6rem 0.75rem;
+  }
+  .rp-error-retry {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  .rp-select {
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+  }
+  .rp-filters {
+    padding: 0.5rem 0.6rem;
+    gap: 0.5rem;
+  }
+  .rp-btn {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.82rem;
+  }
+}
 </style>
