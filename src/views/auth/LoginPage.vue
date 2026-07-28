@@ -342,12 +342,14 @@ onUnmounted(() => {
   height: 58px;
   width: auto;
   object-fit: contain;
-  transition: transform 0.3s ease;
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   margin-bottom: 0.5rem;
 }
 
 .login-logo:hover {
   transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 .login-title {
