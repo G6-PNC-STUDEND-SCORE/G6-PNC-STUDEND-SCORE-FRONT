@@ -6,8 +6,6 @@
       <button class="rp-error-retry" @click="loadAll"><RefreshCw :size="13" /> Retry</button>
     </div>
 
-
-
     <LoadingState v-if="loading" message="Compiling student rankings..." />
 
     <div v-else class="rp-card">

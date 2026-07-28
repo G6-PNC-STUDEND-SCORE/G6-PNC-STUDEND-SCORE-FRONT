@@ -19,6 +19,7 @@
         <div class="btn-group">
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
+          <button class="tb-btn" @click="showGradeBoundaries = true" title="Manage Grade Boundaries"><i class="bi bi-trophy"></i> <span>Grades</span></button>
           <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading">
             <template v-if="gsLoading">
               <i class="bi bi-arrow-repeat spinning"></i>
@@ -51,9 +52,9 @@
           </span>
 
         </div>
-        <div class="search-box">
+        <div class="search-box" @click="searchInput?.focus()">
           <i class="bi bi-search search-icon"></i>
-          <input v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
+          <input ref="searchInput" v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
         </div>
         <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
           <i class="bi bi-keyboard"></i>
@@ -76,11 +77,34 @@
       </div>
     </div>
 
+    <Transition name="selection-bar">
+      <div v-if="selectedEnrollmentIds.size > 0" class="selection-bar">
+        <div class="selection-bar-left">
+          <button class="selection-btn selection-btn-danger" @click="confirmBulkDelete">
+            <i class="bi bi-trash3"></i> Delete {{ selectedEnrollmentIds.size }} row{{ selectedEnrollmentIds.size > 1 ? 's' : '' }}
+          </button>
+        </div>
+        <div class="selection-bar-right">
+          <button class="selection-btn selection-btn-cancel" @click="selectedEnrollmentIds = new Set()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <div class="sheet-wrapper" tabindex="0" @keydown="onGlobalKeydown" ref="sheetContainer" @paste="onPaste" @copy="onCopy" @cut="onCut">
       <div class="sheet-scroll" @scroll="onScroll">
         <table class="sheet-table">
           <thead>
             <tr>
+              <th class="cell-header cell-frozen cell-checkbox-header">
+                <label class="checkbox-wrap header-checkbox" @click.stop>
+                  <input type="checkbox" ref="selectAllCheckbox"
+                    :checked="isAllRowsSelected"
+                    @change="toggleSelectAll" />
+                  <span class="checkmark"></span>
+                </label>
+              </th>
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
               <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
@@ -131,8 +155,19 @@
           </thead>
           <tbody>
             <tr v-for="(row, rowIndex) in visibleRows" :key="row.enrollment_id"
-              :class="{ 'row-selected': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
+              :class="{ 
+                'row-selected': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex,
+                'row-checked': selectedEnrollmentIds.has(row.enrollment_id) 
+              }"
               @contextmenu.prevent="showContextMenu($event, rowIndex)">
+              <td class="cell cell-frozen cell-checkbox" @click.stop="toggleRowSelection(row.enrollment_id)" :data-row-idx="rowIndex">
+                <label class="checkbox-wrap" @click.stop>
+                  <input type="checkbox" 
+                    :checked="selectedEnrollmentIds.has(row.enrollment_id)"
+                    @change="toggleRowSelection(row.enrollment_id)" />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
               <td class="cell cell-frozen row-num"
                 :class="{ 'row-num-highlighted': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
                 @click.stop>{{ rowIndex + 1 }}</td>
@@ -202,7 +237,9 @@
               </td>
 
               <td class="cell cell-total" :class="getTotalCellClass(row)">{{ row.total !== null ? row.total.toFixed(2) : '-' }}</td>
-              <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
+              <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">
+                <span class="grade-pill">{{ row.grade || '-' }}</span>
+              </td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
               <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
@@ -232,6 +269,10 @@
         <i class="bi bi-plus-lg"></i> Insert Row Below
       </div>
       <div class="context-menu-separator"></div>
+      <div class="context-menu-separator" v-if="selectedEnrollmentIds.size > 1"></div>
+      <div v-if="selectedEnrollmentIds.size > 1" class="context-menu-item text-danger" @click="confirmBulkDelete()">
+        <i class="bi bi-trash3"></i> Delete {{ selectedEnrollmentIds.size }} Selected Rows
+      </div>
       <div class="context-menu-item text-danger" @click="deleteRow(contextMenu.rowIdx)">
         <i class="bi bi-trash3"></i> Delete Row
       </div>
@@ -480,30 +521,37 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
-          <div class="modal-content-panel modal-sm-panel">
+          <div class="modal-content-panel modal-sm-panel delete-col-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="deleteConfirm = null" aria-label="Close">
                 <i class="bi bi-x-lg"></i>
               </button>
               <div class="modal-icon icon-delete">
-                <i class="bi bi-trash3"></i>
+                <i class="bi bi-exclamation-triangle"></i>
               </div>
               <div>
-                <h5>Delete Column</h5>
+                <h5 style="color: #dc2626;">Delete Column</h5>
                 <p class="modal-subtitle">This action cannot be undone</p>
               </div>
             </div>
             <div class="modal-body-custom">
-              <p class="delete-warning-text">
-                Are you sure you want to delete <strong>"{{ deleteConfirm.label }}"</strong>?
-                This removes the column and all its scores for every student.
-              </p>
+              <div class="delete-warning-box">
+                <div class="delete-warning-icon-wrap">
+                  <i class="bi bi-trash3"></i>
+                </div>
+                <p class="delete-warning-text">
+                  Are you sure you want to delete <strong>"{{ deleteConfirm.label }}"</strong>?
+                </p>
+                <p class="delete-warning-sub">
+                  This will permanently remove the column and <strong>all scores</strong> associated with it for every student. This action cannot be recovered.
+                </p>
+              </div>
             </div>
             <div class="modal-footer-custom">
               <button class="btn-outline" @click="deleteConfirm = null">Cancel</button>
               <button class="btn-danger-custom" @click="doDeleteColumn">
-                <i class="bi bi-trash3 me-1"></i>
-                Delete
+                <i class="bi bi-trash3-fill me-1"></i>
+                Delete Column
               </button>
             </div>
           </div>
@@ -778,6 +826,12 @@
       </Transition>
     </Teleport>
 
+    <GradeBoundaryModal
+      :visible="showGradeBoundaries"
+      @close="showGradeBoundaries = false"
+      @saved="onGradeBoundariesSaved"
+    />
+
     <div v-if="loading" class="loading-overlay"><div class="spinner"></div><span>Loading scores...</span></div>
   </div>
 </template>
@@ -789,7 +843,7 @@ import { useRouter, useRoute } from 'vue-router'
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
   renameColumn, updateWeights,
-  addEnrollment, deleteEnrollment, updateStudentInfo,
+  addEnrollment, deleteEnrollment, bulkDeleteEnrollments, updateStudentInfo,
   changeColumnType, getStudentNumbers, importFile,
   createGoogleSheet, getGoogleConfig, getGoogleStatus,
   importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken, ensureGoogleSheetShared, pushToGoogleSheet,
@@ -797,6 +851,10 @@ import {
 } from '@/services/scoreService'
 import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
 import { createAssessmentType } from '@/services/assessmentTypeService'
+import GradeBoundaryModal from '@/components/GradeBoundaryModal.vue'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm } = useConfirm()
 
 const router = useRouter()
 const route = useRoute()
@@ -808,8 +866,10 @@ const className = computed(() => (route.query.class_name as string) || '')
 const data = shallowRef<SpreadsheetResponse | null>(null)
 const loading = ref(false)
 const searchQuery = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
+const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 const pageSize = ref<number | 'all'>(10)
 const currentPage = ref(1)
 const importProgress = ref(0)
@@ -838,6 +898,8 @@ const selectedCol = ref<number | null>(null)
 const selectionStartRow = ref<number | null>(null)
 const selectionStartCol = ref<number | null>(null)
 const isRangeSelecting = ref(false)
+const selectedEnrollmentIds = ref<Set<number>>(new Set())
+
 
 const editingRow = ref<number | null>(null)
 const editingCol = ref<number | null>(null)
@@ -858,6 +920,7 @@ const inlineColName = ref('')
 const inlineColType = ref('quiz')
 const inlineColMax = ref<number | null>(100)
 const showWeights = ref(false)
+const showGradeBoundaries = ref(false)
 const showImport = ref(false)
 const gsLoading = ref(false)
 const gsSheetId = ref<string | null>(null)
@@ -1403,6 +1466,76 @@ function isCellSelected(rowIdx: number, colId: number): boolean {
 function expandAllRowsForSelection() {
   if (pageSize.value !== 'all') {
     pageSize.value = 'all'
+  }
+}
+
+const isAllRowsSelected = computed(() => {
+  const visible = filteredRows.value
+  return visible.length > 0 && visible.every(r => selectedEnrollmentIds.value.has(r.enrollment_id))
+})
+
+const isSomeRowsSelected = computed(() => {
+  const visible = filteredRows.value
+  return visible.some(r => selectedEnrollmentIds.value.has(r.enrollment_id))
+})
+
+function toggleRowSelection(enrollmentId: number) {
+  const newSet = new Set(selectedEnrollmentIds.value)
+  if (newSet.has(enrollmentId)) {
+    newSet.delete(enrollmentId)
+  } else {
+    newSet.add(enrollmentId)
+  }
+  selectedEnrollmentIds.value = newSet
+}
+
+function toggleSelectAll() {
+  if (isAllRowsSelected.value) {
+    selectedEnrollmentIds.value = new Set()
+  } else {
+    const newSet = new Set<number>()
+    for (const row of filteredRows.value) {
+      newSet.add(row.enrollment_id)
+    }
+    selectedEnrollmentIds.value = newSet
+  }
+}
+
+// Watch selectAllCheckbox indeterminate state
+watch([isAllRowsSelected, isSomeRowsSelected], () => {
+  if (selectAllCheckbox.value) {
+    selectAllCheckbox.value.indeterminate = isSomeRowsSelected.value && !isAllRowsSelected.value
+  }
+}, { immediate: true })
+
+async function confirmBulkDelete() {
+  const count = selectedEnrollmentIds.value.size
+  const ok = await confirm({
+    title: 'Delete Selected Rows',
+    message: `Delete ${count} selected student row${count > 1 ? 's' : ''}? This removes them from this subject and all their scores.`,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
+  if (!ok) return
+
+  const ids = [...selectedEnrollmentIds.value]
+  if (ids.length === 0) return
+
+  showSaveStatus('saving')
+  try {
+    const result = await bulkDeleteEnrollments(subjectId.value, termId.value, ids)
+    selectedEnrollmentIds.value = new Set()
+    showSaveStatus('saved')
+    pageSize.value = 'all'
+    await refreshData(true)
+    showToast(`Deleted ${result.deleted_count} student${result.deleted_count > 1 ? 's' : ''} successfully`, 'success')
+    if (result.errors && result.errors.length > 0) {
+      console.warn('Bulk delete had errors:', result.errors)
+    }
+  } catch (err) {
+    showSaveStatus('failed')
+    console.error('Failed to delete selected rows:', err)
+    showToast('Failed to delete rows', 'error')
   }
 }
 
@@ -2045,6 +2178,12 @@ function onGlobalKeydown(event: KeyboardEvent) {
     }
   }
 
+  if (event.shiftKey && event.key === 'Delete' && selectedEnrollmentIds.value.size > 0) {
+    event.preventDefault()
+    confirmBulkDelete()
+    return
+  }
+
   if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCol.value !== null) {
     event.preventDefault()
     if (isRangeSelecting.value) {
@@ -2677,6 +2816,12 @@ function redo() {
 
 function goBack() { router.push('/scores') }
 
+function onGradeBoundariesSaved() {
+  showGradeBoundaries.value = false
+  showToast('Grade boundaries updated successfully!', 'success', 3000)
+  refreshData(true)
+}
+
 async function refreshData(silent = false) {
   if (!subjectId.value || !termId.value) return
   if (!silent) loading.value = true
@@ -3266,7 +3411,7 @@ async function importExcelFile(file: File) {
   if (jsonData.length < 2) throw new Error('Excel file must contain at least a header row and one data row')
 
   await animateImportProgress(15, 35, 500, 'Parsing student data...')
-  const rows = parseTabularData(jsonData as (string | number)[][])
+  const rows = parseTabularData(jsonData as (string | number)[][], columns.value)
 
   importStatusText.value = 'Importing scores to server...'
   const animPromise = animateImportProgress(35, 65, 3000, 'Importing scores to server...')
@@ -3274,7 +3419,7 @@ async function importExcelFile(file: File) {
   importProgress.value = 70
 }
 
-function parseTabularData(jsonData: (string | number)[][]): Array<{
+function parseTabularData(jsonData: (string | number)[][], existingColumns: SpreadsheetColumn[] = []): Array<{
   student_name: string
   student_number?: string
   marks?: Record<string, number>
@@ -3287,15 +3432,34 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   if (nameIdx < 0) nameIdx = 0  // Default: first column is name
   if (idIdx < 0 || idIdx === nameIdx) idIdx = -1  // No ID column
 
-  const scoreColumns: { index: number; label: string }[] = []
+  // Build a lookup from label to existing column for type matching
+  const existingColumnByLabel = new Map<string, SpreadsheetColumn>()
+  for (const col of existingColumns) {
+    const normalizedLabel = col.label.trim().toLowerCase()
+    if (!existingColumnByLabel.has(normalizedLabel)) {
+      existingColumnByLabel.set(normalizedLabel, col)
+    }
+  }
+
+  const scoreColumns: { index: number; label: string; type: string }[] = []
   for (let i = 0; i < header.length; i++) {
     if (i === nameIdx || i === idIdx) continue
-    const label = header[i].replace(/\(.*?\)/g, '').trim() // Remove type info like "(quiz)"
-    const typeMatch = header[i].match(/\(([^)]+)\)/)
-    const type = typeMatch ? typeMatch[1].toLowerCase().trim() : 'unknown'
-    if (label && !/total|grade|remark/i.test(label)) {
-      scoreColumns.push({ index: i, label: `${label}_${type}` })
-    }
+    const headerText = header[i]
+    const label = headerText.replace(/\(.*?\)/g, '').trim() // Remove type info like "(quiz)"
+    const typeMatch = headerText.match(/\(([^)]+)\)/)
+    const headerType = typeMatch ? typeMatch[1].toLowerCase().trim() : ''
+
+    if (!label || /total|grade|remark/i.test(label)) continue
+
+    // Try to match this header against an existing column by label
+    const existing = existingColumnByLabel.get(label.toLowerCase())
+    const type = existing ? existing.type : (headerType || 'unknown')
+
+    scoreColumns.push({
+      index: i,
+      label: `${label}_${type}`,
+      type,
+    })
   }
 
   const rows: Array<{
@@ -3333,6 +3497,182 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   }
 
   return rows
+}
+
+async function importPdfFile(file: File) {
+  const pdfjsLib = await import('pdfjs-dist')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+
+  await animateImportProgress(0, 15, 400, 'Reading PDF file...')
+  const buffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
+
+  await animateImportProgress(15, 30, 500, 'Extracting text from PDF...')
+
+  // ── Extract ALL text from every page, grouped into lines ──
+  // Join cells on each line with TAB so we can split them back apart.
+  const existingCols = columns.value
+
+  // Build lookup: column label (lowercase) -> { label, type }
+  const columnMap = new Map<string, { label: string; type: string }>()
+  for (const col of existingCols) {
+    columnMap.set(col.label.toLowerCase().trim(), { label: col.label, type: col.type })
+  }
+
+  const lines: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+
+    const byY = new Map<number, Array<{ str: string; x: number }>>()
+    for (const item of content.items) {
+      const it = item as any
+      const y = Math.round((it.transform[5] || 0) * 2) / 2
+      if (!byY.has(y)) byY.set(y, [])
+      byY.get(y)!.push({ str: it.str, x: it.transform[4] || 0 })
+    }
+
+    const sortedRows = Array.from(byY.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([, items]) =>
+        items.sort((a, b) => a.x - b.x).map(c => c.str).join('\t')
+      )
+      .filter(r => r.trim().length > 0)
+
+    lines.push(...sortedRows)
+  }
+
+  await animateImportProgress(30, 45, 500, 'Parsing student data from PDF...')
+
+  // ── Find header line and map columns ──
+  // Uses the same approach as parseTabularData() for Excel.
+  let headerLineIndex = -1
+  let scoreHeader: string[] = []
+  let nameIdx = -1
+  let idIdx = -1
+
+  for (let li = 0; li < lines.length; li++) {
+    const parts = lines[li].split(/\t+|\s{2,}/).map(s => s.trim()).filter(Boolean)
+    if (parts.length < 3) continue
+
+    const lower = parts.map(p => p.toLowerCase())
+    const hasName = lower.some(p => /^(name|student|full.?name|student.?name)$/.test(p))
+    const hasScoreHeader = lower.some(p => /^(quiz|exam|test|midterm|final|assignment|project|score)/.test(p))
+
+    // Only treat this line as a header if it has name-like AND score-like columns
+    if (!hasName && !hasScoreHeader) continue
+
+    // Find name and ID column positions
+    nameIdx = parts.findIndex(p => /^(name|student|full.?name|student.?name)$/i.test(p.trim()))
+    idIdx = parts.findIndex(p => /^(id|no\.?|number|code)$/i.test(p.trim()))
+    if (nameIdx < 0) nameIdx = 0 // Default: first column is name
+    if (idIdx === nameIdx) idIdx = -1
+
+    // Map remaining columns — INCLUDE ALL even unmatched ones (backend will create them)
+    for (let pi = 0; pi < parts.length; pi++) {
+      if (pi === nameIdx || pi === idIdx) continue
+      const rawLabel = parts[pi].replace(/\(.*?\)/g, '').trim()
+      if (!rawLabel || /total|grade|remark/i.test(rawLabel)) continue
+
+      const cleanKey = rawLabel.toLowerCase().trim()
+      const matched = columnMap.get(cleanKey)
+      if (matched) {
+        scoreHeader.push(`${matched.label}_${matched.type}`)
+      } else {
+        // Fuzzy match
+        const fuzzy = existingCols.find(c =>
+          c.label.toLowerCase().includes(cleanKey) ||
+          cleanKey.includes(c.label.toLowerCase())
+        )
+        if (fuzzy) {
+          scoreHeader.push(`${fuzzy.label}_${fuzzy.type}`)
+        } else {
+          // No match — still include with 'unknown' so backend creates it
+          scoreHeader.push(`${rawLabel}_unknown`)
+        }
+      }
+    }
+
+    headerLineIndex = li
+    break // Found the header, stop looking
+  }
+
+  // ── Parse data rows ──
+  const dataRows: Array<{
+    student_name: string
+    student_number?: string
+    marks?: Record<string, number>
+  }> = []
+
+  if (headerLineIndex >= 0 && scoreHeader.length > 0) {
+    for (let ri = headerLineIndex + 1; ri < lines.length; ri++) {
+      const parts = lines[ri].split(/\t+|\s{2,}/).map(s => s.trim()).filter(Boolean)
+      if (parts.length < 2) continue
+
+      let studentName = (nameIdx >= 0 && nameIdx < parts.length) ? parts[nameIdx] : parts[0]
+      let studentNumber = (idIdx >= 0 && idIdx < parts.length) ? parts[idIdx] : ''
+
+      if (!studentNumber) {
+        const nm = studentName.match(/^(PNC\d+-\d+)\s+(.+)$/i)
+        if (nm) { studentNumber = nm[1]; studentName = nm[2] }
+      }
+
+      if (!studentName) continue
+      const nameLower = studentName.toLowerCase()
+      if (nameLower.includes('total') || nameLower.includes('average') ||
+          nameLower.includes('sum') || nameLower.includes('page') ||
+          nameLower.includes('subject') || nameLower.includes('generated')) continue
+
+      // Extract marks — score columns start after name/id columns
+      const marks: Record<string, number> = {}
+      const scoreStartIdx = Math.max(nameIdx, idIdx) + 1
+
+      for (let si = 0; si < scoreHeader.length; si++) {
+        const partIdx = scoreStartIdx + si
+        if (partIdx >= 0 && partIdx < parts.length) {
+          const val = parts[partIdx]
+          const num = Number(val.replace(/[,]/g, ''))
+          if (!isNaN(num) && val.trim().length > 0) {
+            marks[scoreHeader[si]] = num
+          }
+        }
+      }
+
+      dataRows.push({
+        student_name: studentName,
+        student_number: studentNumber || undefined,
+        marks: Object.keys(marks).length > 0 ? marks : undefined,
+      })
+    }
+  }
+
+  // ── Fallback: simple tabular parsing (no header detected) ──
+  if (dataRows.length === 0) {
+    for (let li = 0; li < lines.length; li++) {
+      const parts = lines[li].split(/\t+|\s{2,}/).map(s => s.trim()).filter(Boolean)
+      if (parts.length < 2) continue
+      const lineLower = lines[li].toLowerCase()
+      if (lineLower.includes('total') || lineLower.includes('average') ||
+          lineLower.includes('page') || lineLower.includes('generated')) continue
+
+      dataRows.push({
+        student_name: parts[0],
+        student_number: parts.length > 1 ? parts[1] : undefined,
+      })
+    }
+  }
+
+  await animateImportProgress(45, 65, 500, `Preparing ${dataRows.length} student records...`)
+
+  importStatusText.value = `Importing ${dataRows.length} records to server...`
+  animateImportProgress(65, 85, 3000, 'Importing scores to server...')
+
+  await importFile(subjectId.value, termId.value, {
+    rows: dataRows,
+    email_domain: selectedEmailDomain.value,
+  }, classId.value)
+
+  importProgress.value = 90
 }
 
 function exportCSV() {
@@ -3395,12 +3735,20 @@ async function exportPDF() {
     ;(doc as any).autoTable = (opts: any) => autoTablePlugin(doc, opts)
   }
   const cols = columns.value
-  
-  doc.setFontSize(14)
-  doc.text(`${data.value.subject?.name || 'Scores'} - ${data.value.term?.name || ''}`, 14, 15)
-  doc.setFontSize(9)
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 21)
-  
+
+  // ── Title ──
+  doc.setTextColor(30, 41, 59)
+  doc.setFontSize(11)
+  doc.text(`${data.value.subject?.name || 'Scores'} — ${data.value.term?.name || ''}`, 14, 16)
+
+  // ── Meta information line ──
+  doc.setTextColor(100, 116, 139)
+  doc.setFontSize(7)
+  const teacherNames = data.value.offerings?.map(o => o.teacher_name).filter(Boolean).join(', ') || ''
+  const metaLine = `Generated: ${new Date().toLocaleDateString()}  |  Students: ${rows.value.length}${teacherNames ? '  |  ' + teacherNames : ''}`
+  doc.text(metaLine, 14, 22)
+
+  // ── Table (one header row only — autoTable's own head) ──
   const head = [['#', 'Student Name', 'Student ID', ...cols.map(c => c.label), 'Total', 'Grade']]
   const body = rows.value.map((r, i) => [
     String(i + 1),
@@ -3413,21 +3761,95 @@ async function exportPDF() {
     r.total !== null ? r.total.toFixed(2) : '-',
     r.grade || '-',
   ])
-  
+
+  const fs = 7
+  const numWidth = 8
+  const nameWidth = 42
+  const idWidth = 24
+
   ;(doc as any).autoTable({
     head,
     body,
     startY: 26,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 28 },
+    styles: {
+      fontSize: fs,
+      cellPadding: 2,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
     },
+    headStyles: {
+      fillColor: [59, 130, 246],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    bodyStyles: {
+      valign: 'middle',
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
+    columnStyles: {
+      0: { cellWidth: numWidth, halign: 'center', textColor: [148, 163, 184] },
+      1: { cellWidth: nameWidth, halign: 'left' },
+      2: { cellWidth: idWidth, halign: 'left' },
+    },
+    didParseCell: function (data: any) {
+      const gradeIdx = head[0].length - 1
+      const totalIdx = head[0].length - 2
+      // Style the grade column with colors
+      if (data.column.index === gradeIdx) {
+        const grade = data.cell.raw as string
+        if (grade === 'A') {
+          data.cell.styles.textColor = [22, 163, 74]
+          data.cell.styles.fontStyle = 'bold'
+        } else if (grade === 'B+') {
+          data.cell.styles.textColor = [37, 99, 235]
+          data.cell.styles.fontStyle = 'bold'
+        } else if (grade === 'B') {
+          data.cell.styles.textColor = [37, 99, 235]
+        } else if (grade === 'C+') {
+          data.cell.styles.textColor = [180, 83, 9]
+        } else if (grade === 'C') {
+          data.cell.styles.textColor = [180, 83, 9]
+        } else if (grade === 'D') {
+          data.cell.styles.textColor = [147, 51, 234]
+        } else if (grade === 'F') {
+          data.cell.styles.textColor = [220, 38, 38]
+          data.cell.styles.fontStyle = 'bold'
+        }
+        data.cell.styles.halign = 'center'
+      }
+      // Bold total column
+      if (data.column.index === totalIdx) {
+        data.cell.styles.halign = 'center'
+        data.cell.styles.fontStyle = 'bold'
+      }
+    },
+    margin: { top: 26, bottom: 20 },
+    tableLineColor: [226, 232, 240],
+    tableLineWidth: 0.3,
   })
-  
+
+  // ── Summary footer ──
+  const finalY = (doc as any).lastAutoTable?.finalY || 34
+  const graded = rows.value.filter(r => r.grade !== null)
+  const passCount = graded.filter(r => isPassing(r.grade!)).length
+  const passRateVal = graded.length > 0 ? ((passCount / graded.length) * 100).toFixed(1) : '0.0'
+  const avgScore = averageScore.value.toFixed(1)
+
+  doc.setFillColor(241, 245, 249)
+  doc.rect(14, finalY + 6, pageWidth - 28, 14, 'F')
+  doc.setTextColor(71, 85, 105)
+  doc.setFontSize(7.5)
+  doc.text(`Total Students: ${rows.value.length}`, 18, finalY + 14)
+  doc.text(`Average Score: ${avgScore}%`, 70, finalY + 14)
+  doc.text(`Pass Rate: ${passRateVal}%`, 130, finalY + 14)
+  doc.text(`Grade Distribution: ${['A', 'B+', 'B', 'C+', 'C', 'D', 'F'].map(g => {
+    const count = rows.value.filter(r => r.grade === g).length
+    return count > 0 ? `${g}: ${count}` : ''
+  }).filter(Boolean).join(' | ')}`, 18, finalY + 22)
+
   doc.save(`scores-${data.value.subject?.name || 'export'}.pdf`)
   showExportMenu.value = false
   showSaveStatus('saved')
@@ -3519,8 +3941,11 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
 function refocusSheet() {
   if (showKeyboardShortcuts.value || showAddColumn.value || showWeights.value || showImport.value || showAddRowPopup.value) return
   if (editingRow.value !== null) return
+  // Don't steal focus from the search input or other form elements
+  const active = document.activeElement
+  if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return
   const container = sheetContainer.value
-  if (container && document.activeElement !== container) {
+  if (container && active !== container) {
     container.focus()
   }
 }
@@ -3903,6 +4328,37 @@ watch([subjectId, termId], () => {
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
 
+.cell-grade {
+  text-align: center !important;
+  overflow: visible !important;
+}
+
+.cell-grade .grade-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 3px 14px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.4;
+}
+
+.cell-grade:hover .grade-pill {
+  transform: scale(1.12);
+}
+
+.grade-a .grade-pill { background: #dcfce7; color: #15803d; box-shadow: 0 1px 3px rgba(22,163,74,0.15); border: 1px solid #bbf7d0; }
+.grade-b-plus .grade-pill { background: #dbeafe; color: #1d4ed8; box-shadow: 0 1px 3px rgba(37,99,235,0.15); border: 1px solid #bfdbfe; }
+.grade-b .grade-pill { background: #e0f2fe; color: #0369a1; box-shadow: 0 1px 3px rgba(37,99,235,0.1); border: 1px solid #bae6fd; }
+.grade-c-plus .grade-pill { background: #fef3c7; color: #b45309; box-shadow: 0 1px 3px rgba(245,158,11,0.15); border: 1px solid #fde68a; }
+.grade-c .grade-pill { background: #fef9c3; color: #a16207; box-shadow: 0 1px 3px rgba(245,158,11,0.1); border: 1px solid #fef08a; }
+.grade-d .grade-pill { background: #f3e8ff; color: #7c3aed; box-shadow: 0 1px 3px rgba(147,51,234,0.15); border: 1px solid #e9d5ff; }
+.grade-f .grade-pill { background: #fce4ec; color: #c62828; box-shadow: 0 1px 3px rgba(220,38,38,0.15); border: 1px solid #fecaca; }
+.grade-none .grade-pill { background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
 
 .cell {
   border: 1px solid #e2e8f0;
@@ -4174,17 +4630,6 @@ watch([subjectId, termId], () => {
   border-bottom: 2px solid #16a34a !important;
 }
 
-
-.grade-a { color: #16a34a !important; font-weight: 700 !important; }
-.grade-b-plus { color: #2563eb !important; font-weight: 700 !important; }
-.grade-b { color: #2563eb !important; font-weight: 700 !important; }
-.grade-c-plus { color: #b45309 !important; font-weight: 700 !important; }
-.grade-c { color: #b45309 !important; font-weight: 700 !important; }
-.grade-d { color: #9333ea !important; font-weight: 700 !important; }
-.grade-f { color: #dc2626 !important; font-weight: 700 !important; }
-.grade-none { color: #94a3b8 !important; }
-
-
 .loading-bar {
   position: absolute; top: 0; left: 0; right: 0; height: 3px;
   background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%);
@@ -4431,17 +4876,90 @@ watch([subjectId, termId], () => {
   color: #a16207;
 }
 
-.delete-warning-text {
+.delete-col-panel {
+  border-top: 4px solid #ef4444 !important;
+}
+
+.delete-warning-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 20px;
   text-align: center;
-  font-size: 0.875rem;
-  color: #475569;
-  line-height: 1.6;
-  margin: 8px 0;
+}
+
+.delete-warning-icon-wrap {
+  width: 48px;
+  height: 48px;
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  animation: deletePulse 1.5s ease-in-out infinite;
+}
+
+.delete-warning-icon-wrap i {
+  font-size: 20px;
+  color: #dc2626;
+}
+
+@keyframes deletePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.15); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+
+.delete-warning-text {
+  font-size: 0.95rem;
+  color: #1f2937;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  font-weight: 600;
 }
 
 .delete-warning-text strong {
-  color: #0f172a;
+  color: #dc2626;
   font-weight: 700;
+}
+
+.delete-warning-sub {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.delete-warning-sub strong {
+  color: #dc2626;
+}
+
+.btn-danger-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger-custom:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger-custom:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 
@@ -5183,5 +5701,212 @@ watch([subjectId, termId], () => {
 .toast-enter-from, .toast-leave-to {
   opacity: 0;
   transform: translateX(40px);
+}
+
+/* ── Checkbox Styles ────────────────────────────────────────── */
+.cell-checkbox-header {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+.cell-checkbox {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 0 !important;
+  text-align: center !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-wrap input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+}
+
+.checkmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  background: white;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-wrap:hover .checkmark {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.checkbox-wrap input:checked ~ .checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-wrap input:checked ~ .checkmark::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.checkbox-wrap input:indeterminate ~ .checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-wrap input:indeterminate ~ .checkmark::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+}
+
+.header-checkbox {
+  margin: 0 auto;
+}
+
+/* ── Checked row highlight ───────────────────────────────── */
+.row-checked .cell-checkbox .checkmark {
+  border-color: #3b82f6;
+  background: #3b82f6;
+}
+
+.row-checked .cell-checkbox .checkmark::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.row-checked .cell {
+  background: #eff6ff !important;
+}
+
+.row-checked:hover .cell {
+  background: #dbeafe !important;
+}
+
+/* ── Danger toolbar button ───────────────────────────────── */
+.tb-btn-danger {
+  color: #ef4444 !important;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+.tb-btn-danger:hover {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.tb-btn-danger i {
+  color: #ef4444;
+}
+
+/* ── Selection Action Bar ────────────────────────────────── */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  margin: 0 16px 6px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.08);
+}
+
+@keyframes selectionBarSlideIn {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.selection-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selection-bar-right {
+  display: flex;
+  align-items: center;
+}
+
+.selection-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.selection-btn-cancel {
+  background: transparent;
+  color: #64748b;
+  border-color: transparent;
+  padding: 4px 6px;
+}
+
+.selection-btn-cancel:hover {
+  background: rgba(0,0,0,0.05);
+  color: #475569;
+}
+
+.selection-btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.selection-btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.selection-btn-danger i {
+  font-size: 0.82rem;
+}
+
+/* Selection bar transition */
+.selection-bar-enter-active {
+  animation: selectionBarSlideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.selection-bar-leave-active {
+  animation: selectionBarSlideIn 0.15s ease-in reverse;
 }
 </style>

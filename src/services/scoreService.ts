@@ -163,6 +163,11 @@ export async function deleteEnrollment(subjectId: number, termId: number, enroll
   await http.delete(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/${enrollmentId}`)
 }
 
+export async function bulkDeleteEnrollments(subjectId: number, termId: number, enrollmentIds: number[]): Promise<{ deleted_count: number; errors: string[] }> {
+  const res = await http.post(`/spreadsheet/subject/${subjectId}/term/${termId}/enrollments/bulk-delete`, { enrollment_ids: enrollmentIds })
+  return res.data.data
+}
+
 export async function updateStudentInfo(subjectId: number, termId: number, enrollmentId: number, data: {
   student_name?: string
   student_number?: string
