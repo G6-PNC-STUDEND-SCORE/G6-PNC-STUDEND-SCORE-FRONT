@@ -11,7 +11,7 @@
         <!-- Logo Section -->
         <div class="login-header">
           <img
-            src="https://www.passerellesnumeriques.org/wp-content/uploads/2024/05/PN-Logo-English-Blue-Baseline.png"
+            :src="logoSrc"
             alt="Passerelles Numériques Cambodia"
             class="login-logo"
           />
@@ -122,6 +122,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { initGoogleClientId } from '@/services/googleAuthService'
+import logoSrc from '@/assets/images/pnc-logo.png'
 import { AlertTriangle, Mail, Lock, EyeOff, Eye, Check, LogIn } from '@lucide/vue'
 
 declare global {
@@ -342,12 +343,14 @@ onUnmounted(() => {
   height: 58px;
   width: auto;
   object-fit: contain;
-  transition: transform 0.3s ease;
+  border-radius: 12px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   margin-bottom: 0.5rem;
 }
 
 .login-logo:hover {
   transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
 
 .login-title {

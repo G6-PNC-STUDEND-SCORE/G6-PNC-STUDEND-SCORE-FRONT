@@ -27,7 +27,8 @@
 
 .search-box {
   position: relative;
-  width: 260px;
+  width: 150px;
+  flex-shrink: 0;
 }
 
 .search-icon {
@@ -37,17 +38,18 @@
   transform: translateY(-50%);
   color: #9ca3af;
   pointer-events: none;
+  font-size: 0.7rem;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.6rem 0.9rem 0.6rem 2.4rem;
-  font-size: 0.8125rem;
+  padding: 0.45rem 0.7rem 0.45rem 1.8rem;
+  font-size: 0.78rem;
   font-family: var(--font-family);
   color: #1f2937;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 8px;
   outline: none;
   transition: all 0.2s ease;
 }
@@ -56,7 +58,7 @@
 .search-input:hover { border-color: #cbd5e1; }
 .search-input:focus {
   border-color: #2563eb;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .filter-group {

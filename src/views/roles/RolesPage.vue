@@ -343,7 +343,7 @@ const saving = ref(false)
 const searchQuery = ref('')
 const currentPage = ref(1)
 const perPage = ref(10)
-const pageSizeOptions = [10, 25, 50]
+const pageSizeOptions = [10, 25, 50, 75, 100]
 
 const showCreateModal = ref(false)
 const creating = ref(false)

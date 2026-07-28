@@ -378,7 +378,7 @@ const filteredClasses = computed(() => {
 
 const pagination = usePagination<SchoolClass>({
   items: filteredClasses,
-  pageSizeOptions: [10, 25, 50],
+  pageSizeOptions: [10, 25, 50, 75, 100],
   initialPageSize: 10,
 })
 resetPage = pagination.resetPage

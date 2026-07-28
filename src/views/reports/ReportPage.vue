@@ -1,79 +1,9 @@
 <template>
-  <div class="py-4 report-page" :class="{ 'dark-mode': isDark }">
-    <PageHeader
-      title="Students & Report Cards"
-      subtitle="Student ranking and printable report cards"
-      :icon="FileText"
-    >
-      <button class="rp-btn" :disabled="loading" @click="loadAll">
-        <RefreshCw :size="14" :class="{ spinning: loading }" /> Refresh
-      </button>
-      <div v-if="canExport" class="rp-export">
-        <button class="rp-btn rp-btn-primary" :disabled="!filteredStudentRows.length" @click="showExportMenu = !showExportMenu">
-          <Download :size="14" /> Export
-          <ChevronDown :size="13" />
-        </button>
-        <div v-if="showExportMenu" class="rp-export-menu">
-          <button @click="runExport('pdf')"><FileText :size="14" /> PDF (.pdf)</button>
-          <button @click="runExport('xlsx')"><Sheet :size="14" /> Excel (.xlsx)</button>
-          <button @click="runExport('csv')"><FileSpreadsheet :size="14" /> CSV (.csv)</button>
-        </div>
-      </div>
-    </PageHeader>
-
+  <div class="report-page" :class="{ 'dark-mode': isDark }">
     <div v-if="error" class="rp-error">
       <AlertTriangle :size="16" />
       <span>{{ error }}</span>
       <button class="rp-error-retry" @click="loadAll"><RefreshCw :size="13" /> Retry</button>
-    </div>
-
-    <!-- Filters -->
-    <div class="rp-filters">
-      <div class="rp-filter">
-        <label>Academic Year</label>
-        <select v-model="filters.academic_year_id" class="rp-select">
-          <option :value="null">All years</option>
-          <option v-for="year in options.academic_years" :key="year.id" :value="year.id">{{ year.name }}</option>
-        </select>
-      </div>
-      <div class="rp-filter">
-        <label>Term</label>
-        <select v-model="filters.term_id" class="rp-select">
-          <option :value="null">All terms</option>
-          <option v-for="term in options.terms" :key="term.id" :value="term.id">{{ term.name }}</option>
-        </select>
-      </div>
-      <div class="rp-filter">
-        <label>Class</label>
-        <select v-model="filters.class_id" class="rp-select">
-          <option :value="null">All classes</option>
-          <option v-for="cls in options.classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
-        </select>
-      </div>
-      <div class="rp-filter">
-        <label>Subject</label>
-        <select v-model="filters.subject_id" class="rp-select">
-          <option :value="null">All subjects</option>
-          <option v-for="subject in options.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-        </select>
-      </div>
-      <div class="rp-filter">
-        <label>Teacher</label>
-        <select v-model="filters.teacher_id" class="rp-select">
-          <option :value="null">All teachers</option>
-          <option v-for="teacher in options.teachers" :key="teacher.id" :value="teacher.id">{{ teacher.name }}</option>
-        </select>
-      </div>
-      <div class="rp-filter">
-        <label>Generation</label>
-        <select v-model="filters.generation_id" class="rp-select">
-          <option :value="null">All generations</option>
-          <option v-for="gen in options.generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
-        </select>
-      </div>
-      <button v-if="activeFilterCount > 0" class="rp-clear" @click="clearFilters">
-        <XCircle :size="14" /> Clear ({{ activeFilterCount }})
-      </button>
     </div>
 
     <LoadingState v-if="loading" message="Compiling student rankings..." />
@@ -81,19 +11,81 @@
     <div v-else class="rp-card">
       <DataTable
         :columns="studentColumns"
-        :data="filteredStudentRows"
+        :data="paginatedRows"
         :row-key="(row) => row.student_id"
         @row-dblclick="(row) => openReportCard(row.student_id)"
       >
         <template #header>
           <div class="rp-table-head">
-            <div>
-              <h3 class="rp-table-title">Student Ranking &amp; Report Cards</h3>
-              <p class="rp-table-sub">
-                {{ filteredStudentRows.length }} students · double-click a row (or use the button) to open the report card
-              </p>
+            <div class="rp-table-head-top">
+              <div>
+                <h3 class="rp-table-title">Student Ranking &amp; Report Cards</h3>
+                <p class="rp-table-sub">
+                  {{ filteredStudentRows.length }} students
+                </p>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <SearchInput v-model="studentSearch" placeholder="Search name or student ID..." />
+                <div v-if="canExport" class="rp-export">
+                  <button class="rp-btn rp-btn-primary" :disabled="!filteredStudentRows.length" @click="showExportMenu = !showExportMenu">
+                    <Download :size="14" /> Export
+                    <ChevronDown :size="13" />
+                  </button>
+                  <div v-if="showExportMenu" class="rp-export-menu">
+                    <button @click="runExport('pdf')"><FileText :size="14" /> PDF (.pdf)</button>
+                    <button @click="runExport('xlsx')"><Sheet :size="14" /> Excel (.xlsx)</button>
+                    <button @click="runExport('csv')"><FileSpreadsheet :size="14" /> CSV (.csv)</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            <SearchInput v-model="studentSearch" placeholder="Search name or student ID..." />
+            <div class="rp-table-filters">
+              <div class="rp-filter">
+                <label>Academic Year</label>
+                <select v-model="filters.academic_year_id" class="rp-select">
+                  <option :value="null">All years</option>
+                  <option v-for="year in options.academic_years" :key="year.id" :value="year.id">{{ year.name }}</option>
+                </select>
+              </div>
+              <div class="rp-filter">
+                <label>Term</label>
+                <select v-model="filters.term_id" class="rp-select">
+                  <option :value="null">All terms</option>
+                  <option v-for="term in options.terms" :key="term.id" :value="term.id">{{ term.name }}</option>
+                </select>
+              </div>
+              <div class="rp-filter">
+                <label>Class</label>
+                <select v-model="filters.class_id" class="rp-select">
+                  <option :value="null">All classes</option>
+                  <option v-for="cls in options.classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
+                </select>
+              </div>
+              <div class="rp-filter">
+                <label>Subject</label>
+                <select v-model="filters.subject_id" class="rp-select">
+                  <option :value="null">All subjects</option>
+                  <option v-for="subject in options.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
+                </select>
+              </div>
+              <div class="rp-filter">
+                <label>Teacher</label>
+                <select v-model="filters.teacher_id" class="rp-select">
+                  <option :value="null">All teachers</option>
+                  <option v-for="teacher in options.teachers" :key="teacher.id" :value="teacher.id">{{ teacher.name }}</option>
+                </select>
+              </div>
+              <div class="rp-filter">
+                <label>Generation</label>
+                <select v-model="filters.generation_id" class="rp-select">
+                  <option :value="null">All generations</option>
+                  <option v-for="gen in options.generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
+                </select>
+              </div>
+              <button v-if="activeFilterCount > 0" class="rp-clear" @click="clearFilters">
+                <XCircle :size="14" /> Clear ({{ activeFilterCount }})
+              </button>
+            </div>
           </div>
         </template>
         <template #cell-rank="{ row }">
@@ -117,6 +109,48 @@
             <FileText :size="13" /> Report Card
           </button>
         </template>
+        <template #footer>
+          <div v-if="filteredStudentRows.length > 0" class="pagination-bar">
+            <div class="pagination-info">
+              <span class="rows-label">Rows per page:</span>
+              <div class="rows-selector">
+                <button
+                  v-for="size in pageSizeOptions"
+                  :key="size"
+                  class="rows-btn"
+                  :class="{ active: perPage === size }"
+                  @click="changePerPage(size)"
+                >
+                  {{ size }}
+                </button>
+              </div>
+            </div>
+
+            <div class="pagination-pages">
+              <button class="page-nav" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)" aria-label="Previous page">
+                <ChevronLeft :size="16" />
+              </button>
+              <template v-for="page in visiblePages" :key="page">
+                <button
+                  v-if="page !== '...'"
+                  class="page-btn"
+                  :class="{ active: currentPage === page }"
+                  @click="changePage(page as number)"
+                >
+                  {{ page }}
+                </button>
+                <span v-else class="page-dots">…</span>
+              </template>
+              <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" aria-label="Next page">
+                <ChevronRight :size="16" />
+              </button>
+            </div>
+
+            <div class="pagination-total">
+              {{ totalFrom }}-{{ totalTo }} of {{ filteredStudentRows.length }}
+            </div>
+          </div>
+        </template>
       </DataTable>
     </div>
 
@@ -133,6 +167,8 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import {
   AlertTriangle,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Download,
   FileSpreadsheet,
   FileText,
@@ -140,7 +176,6 @@ import {
   Sheet,
   XCircle,
 } from '@lucide/vue'
-import PageHeader from '@/components/common/PageHeader.vue'
 import SearchInput from '@/components/common/SearchInput.vue'
 import DataTable from '@/components/DataTable.vue'
 import LoadingState from '@/components/LoadingState.vue'
@@ -194,6 +229,10 @@ const activeFilterCount = computed(
   () => Object.values(filters).filter((value) => value !== null && value !== undefined).length,
 )
 
+const currentPage = ref(1)
+const perPage = ref(10)
+const pageSizeOptions = [10, 25, 50, 75, 100]
+
 const filteredStudentRows = computed(() => {
   const term = studentSearch.value.trim().toLowerCase()
   if (!term) return studentRows.value
@@ -204,6 +243,50 @@ const filteredStudentRows = computed(() => {
       row.class_name.toLowerCase().includes(term),
   )
 })
+
+const lastPage = computed(() => Math.max(1, Math.ceil(filteredStudentRows.value.length / perPage.value)))
+
+const paginatedRows = computed(() => {
+  const start = (currentPage.value - 1) * perPage.value
+  const end = start + perPage.value
+  return filteredStudentRows.value.slice(start, end)
+})
+
+const totalFrom = computed(() => filteredStudentRows.value.length === 0 ? 0 : (currentPage.value - 1) * perPage.value + 1)
+const totalTo = computed(() => Math.min(currentPage.value * perPage.value, filteredStudentRows.value.length))
+
+const visiblePages = computed(() => {
+  const pages: (number | string)[] = []
+  const total = lastPage.value
+  const current = currentPage.value
+
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+    return pages
+  }
+
+  pages.push(1)
+  if (current > 3) pages.push('...')
+
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let i = start; i <= end; i++) pages.push(i)
+
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+
+  return pages
+})
+
+function changePage(page: number) {
+  if (page < 1 || page > lastPage.value) return
+  currentPage.value = page
+}
+
+function changePerPage(size: number) {
+  perPage.value = size
+  currentPage.value = 1
+}
 
 const studentColumns = [
   { key: 'rank', label: '#', width: '56px' },
@@ -313,7 +396,14 @@ function closeExportMenu(event: MouseEvent) {
   if (!(event.target as HTMLElement).closest('.rp-export')) showExportMenu.value = false
 }
 
-watch(filters, loadAll, { deep: true })
+watch(filters, () => {
+  currentPage.value = 1
+  loadAll()
+}, { deep: true })
+
+watch(studentSearch, () => {
+  currentPage.value = 1
+})
 
 onMounted(async () => {
   document.addEventListener('click', closeExportMenu)
@@ -325,7 +415,16 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 </script>
 
 <style scoped>
-.report-page { font-family: 'Inter', 'Noto Sans Khmer', sans-serif; padding-bottom: 2rem !important; }
+.report-page {
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  height: calc(100vh - 96px);
+  width: calc(100% + 12px);
+  margin-top: -6px;
+  margin-left: -6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .rp-btn {
   display: inline-flex;
@@ -406,18 +505,6 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
   cursor: pointer;
 }
 
-.rp-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.75rem;
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
 .rp-filter { display: flex; flex-direction: column; gap: 0.2rem; min-width: 150px; flex: 1 1 150px; }
 .rp-filter label {
   font-size: 0.66rem;
@@ -454,20 +541,34 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 
 .rp-card {
   background: #fff;
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: 18px;
-  padding: 1.15rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(15, 23, 42, 0.03);
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.rp-table-head {
+.rp-table-head-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  margin-bottom: 12px;
 }
-.rp-table-title { font-size: 0.85rem; font-weight: 700; color: #0f172a; margin: 0; }
+.rp-table-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  padding: 0.85rem 0 0;
+  border-top: 1px solid #e9ecef;
+}
+.rp-table-title { font-size: 0.95rem; font-weight: 700; color: #0f172a; margin: 0; }
 .rp-table-sub { font-size: 0.72rem; color: #94a3b8; margin: 0.1rem 0 0; }
 
 .rp-rank {
@@ -518,10 +619,45 @@ onUnmounted(() => document.removeEventListener('click', closeExportMenu))
 }
 .rp-row-btn:hover { background: #eff6ff; border-color: #bfdbfe; }
 
+/* Make DataTable fill the flex height and remove its own border/background */
+.report-page :deep(.data-table-wrapper) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.report-page :deep(.table-header) {
+  padding: 12px 20px;
+}
+.report-page :deep(.table-responsive) {
+  flex: 1;
+  overflow-y: auto;
+}
+.report-page :deep(.table-responsive::-webkit-scrollbar) {
+  width: 4px;
+  height: 4px;
+}
+.report-page :deep(.table-responsive::-webkit-scrollbar-track) {
+  background: transparent;
+}
+.report-page :deep(.table-responsive::-webkit-scrollbar-thumb) {
+  background: #d1d5db;
+  border-radius: 2px;
+}
+.report-page :deep(.table-responsive::-webkit-scrollbar-thumb:hover) {
+  background: #9ca3af;
+}
+.report-page :deep(.table-footer) {
+  padding: 0;
+}
+
 /* Dark mode */
 .dark-mode .rp-btn { background: rgba(30, 41, 59, 0.9); border-color: #475569; color: #cbd5e1; }
 .dark-mode .rp-btn-primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-.dark-mode .rp-filters,
 .dark-mode .rp-card,
 .dark-mode .rp-export-menu { background: rgba(30, 41, 59, 0.95); border-color: rgba(71, 85, 105, 0.5); }
 .dark-mode .rp-select { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
