@@ -3,7 +3,7 @@
     <div class="header-bg"></div>
 
     <div class="header-left">
-      <button class="icon-btn mobile-menu-btn d-md-none" @click="toggleSidebar" title="Toggle menu">
+      <button class="icon-btn mobile-menu-btn d-md-none" @click="toggleSidebar" :title="t('header.toggleMenu')">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
           <path d="M3 5H17" />
           <path d="M3 10H17" />
@@ -13,7 +13,7 @@
 
       <span class="header-title">
         <GraduationCap :size="22" class="header-title-icon" />
-        <strong>Student Score Management System</strong>
+        <strong>{{ t('app.title') }}</strong>
       </span>
     </div>
 
@@ -25,7 +25,7 @@
       <button
         class="icon-btn"
         @click="theme.toggle()"
-        :title="theme.isDark ? 'Switch to Light mode' : 'Switch to Dark mode'"
+        :title="theme.isDark ? t('header.lightMode') : t('header.darkMode')"
       >
         <div class="theme-icon-wrapper" :class="{ 'rotate': theme.isDark }">
           <MoonStar v-if="theme.isDark" :size="18" />
@@ -56,12 +56,12 @@
         <div v-show="showDropdown" class="dropdown-menu">
           <RouterLink to="/profile" class="dropdown-item" @click="closeDropdown">
             <User :size="16" class="dropdown-item-icon" />
-            <span>Profile</span>
+            <span>{{ t('header.profile') }}</span>
           </RouterLink>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item dropdown-item-danger" @click="handleLogout">
             <LogOut :size="16" class="dropdown-item-icon" />
-            <span>Sign Out</span>
+            <span>{{ t('header.signOut') }}</span>
           </button>
         </div>
       </div>
@@ -72,6 +72,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
 import { storageUrl } from '@/services/apiHttp'
@@ -88,6 +89,7 @@ const emit = defineEmits<{
   'toggle-sidebar': []
 }>()
 
+const { t } = useI18n()
 const router = useRouter()
 const theme = useThemeStore()
 const auth = useAuthStore()

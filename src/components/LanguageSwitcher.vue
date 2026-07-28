@@ -1,8 +1,8 @@
 <template>
   <div class="language-switcher">
     <div class="dropdown" ref="dropdownRef">
-      <button 
-        class="dropdown-toggle" 
+      <button
+        class="dropdown-toggle"
         @click="toggleDropdown"
         :aria-expanded="isOpen"
         aria-haspopup="true"
@@ -13,7 +13,7 @@
           <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      
+
       <div class="dropdown-menu" :class="{ 'show': isOpen }">
         <button
           v-for="lang in languages"
@@ -44,7 +44,7 @@ const dropdownRef = ref<HTMLElement | null>(null)
 
 const languages = [
   { code: 'en', flag: '🇺🇸', name: 'English' },
-  { code: 'km', flag: '🇰🇭', name: 'ខ្មែរ' }
+  { code: 'km', flag: '🇰🇭', name: 'ភាសាខ្មែរ' }
 ]
 
 const currentLocale = computed(() => locale.value)

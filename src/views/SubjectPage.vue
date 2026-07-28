@@ -9,7 +9,7 @@
 
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
-      <span>Loading subjects…</span>
+      <span>{{ t('subjects.loading') }}</span>
     </div>
 
     <div v-else class="subject-card">
@@ -22,7 +22,7 @@
               @input="handleSearch"
               type="text"
               class="search-input"
-              placeholder="Search by name, teacher, class, or term..."
+              :placeholder="t('subjects.searchPlaceholder')"
             />
             <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''; handleSearch()">
               <X :size="14" />
@@ -31,20 +31,20 @@
           <div class="filter-group">
             <label class="filter-label">
               <ToggleLeft :size="16" />
-              <span>Status</span>
+              <span>{{ t('subjects.status') }}</span>
               <select v-model="statusFilter" @change="handleFilter" class="filter-select">
-                <option value="">All</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="">{{ t('app.all') }}</option>
+                <option value="Active">{{ t('subjects.active') }}</option>
+                <option value="Inactive">{{ t('subjects.inactive') }}</option>
               </select>
             </label>
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <CalendarDays :size="16" />
-              <span>Term</span>
+              <span>{{ t('subjects.terms') }}</span>
               <select v-model="termFilter" @change="handleFilter" class="filter-select">
-                <option value="">All</option>
+                <option value="">{{ t('app.all') }}</option>
                 <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.name }}</option>
               </select>
             </label>
@@ -58,28 +58,28 @@
             @click="openAddModal"
           >
             <Plus :size="15" />
-            Add Subject
+            {{ t('subjects.addSubject') }}
           </button>
           <span class="count-badge">
-            {{ filteredSubjects.length }} / {{ subjects.length }} subject{{ subjects.length !== 1 ? 's' : '' }}
+            {{ filteredSubjects.length }} / {{ subjects.length }} {{ t('subjects.subject').toLowerCase() }}{{ subjects.length !== 1 ? 's' : '' }}
           </span>
         </div>
       </div>
 
       <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <span class="bulk-count">{{ selectedIds.length }} {{ t('app.selected') }}</span>
         <button class="bulk-delete-btn" @click="showBulkDeleteModal = true">
           <Trash :size="16" />
-          Delete Selected
+          {{ t('app.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="clearSelection">{{ t('app.clearSelection') }}</button>
       </div>
 
       <div v-if="filteredSubjects.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
-          <h5>No subjects found</h5>
-          <p>{{ searchQuery ? 'Try a different search term.' : 'No subjects match the current filter.' }}</p>
+          <h5>{{ t('subjects.noSubjects') }}</h5>
+          <p>{{ searchQuery ? t('app.tryDifferentSearch') : t('app.noMatchFilter') }}</p>
         </div>
       </div>
 
@@ -97,12 +97,12 @@
                 />
               </th>
               <th class="col-index">#</th>
-              <th class="th-subject">Subject</th>
-              <th class="th-teacher">Teacher</th>
-              <th class="th-class">Class</th>
-              <th class="th-terms">Terms</th>
-              <th class="th-status">Status</th>
-              <th class="th-actions">Actions</th>
+              <th class="th-subject">{{ t('subjects.subject') }}</th>
+              <th class="th-teacher">{{ t('subjects.teacher') }}</th>
+              <th class="th-class">{{ t('subjects.class') }}</th>
+              <th class="th-terms">{{ t('subjects.terms') }}</th>
+              <th class="th-status">{{ t('subjects.status') }}</th>
+              <th class="th-actions">{{ t('subjects.actions') }}</th>
             </tr>
           </thead>
           <TransitionGroup name="row" tag="tbody">
@@ -131,7 +131,7 @@
                     class="teacher-more-chip"
                     :title="teacherNamesForSubject(subject).join(', ')"
                   >
-                    +{{ teacherNamesForSubject(subject).length - 2 }} more
+                    +{{ teacherNamesForSubject(subject).length - 2 }} {{ t('subjects.moreTeachers') }}
                   </span>
                 </div>
               </td>
@@ -144,7 +144,7 @@
                     class="teacher-more-chip"
                     :title="classNamesForSubject(subject).join(', ')"
                   >
-                    +{{ classNamesForSubject(subject).length - 2 }} more
+                    +{{ classNamesForSubject(subject).length - 2 }} {{ t('subjects.moreClasses') }}
                   </span>
                 </div>
               </td>
@@ -170,10 +170,10 @@
                 </span>
               </td>
               <td class="td-actions">
-                <button v-if="canUpdate" class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
+                <button v-if="canUpdate" class="act-btn" @click.stop="openEditModal(subject)" :title="t('common.edit')">
                   <Pencil :size="15" />
                 </button>
-                <button v-if="canDelete" class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
+                <button v-if="canDelete" class="act-btn act-danger" @click.stop="confirmDelete(subject)" :title="t('common.delete')">
                   <Trash2 :size="15" />
                 </button>
               </td>
@@ -184,7 +184,7 @@
 
       <div v-if="filteredSubjects.length > 0" class="pagination-bar">
         <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+          <span class="rows-label">{{ t('pagination.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pageSizeOptions"
@@ -203,7 +203,7 @@
             class="page-nav"
             :disabled="currentPage <= 1"
             @click="currentPage--"
-            aria-label="Previous page"
+            :aria-label="t('pagination.previous')"
           >
             <ChevronLeft :size="16" />
           </button>
@@ -224,14 +224,14 @@
             class="page-nav"
             :disabled="currentPage >= totalPages"
             @click="currentPage++"
-            aria-label="Next page"
+            :aria-label="t('pagination.next')"
           >
             <ChevronRight :size="16" />
           </button>
         </div>
 
         <div class="pagination-total">
-          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} of {{ filteredSubjects.length }}
+          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} {{ t('app.of') }} {{ filteredSubjects.length }}
         </div>
       </div>
     </div>
@@ -246,8 +246,8 @@
                 <CirclePlus v-else :size="20" />
               </div>
               <div>
-                <h3>{{ isEditMode ? 'Edit Subject' : 'New Subject' }}</h3>
-                <p>{{ isEditMode && store.currentSubject ? `Editing: ${store.currentSubject.name}` : 'Fill in the details to create a new subject.' }}</p>
+                <h3>{{ isEditMode ? t('subjects.editSubject') : t('subjects.newSubject') }}</h3>
+                <p>{{ isEditMode && store.currentSubject ? `${t('subjects.editSubject')}: ${store.currentSubject.name}` : t('subjects.newSubjectDesc') }}</p>
               </div>
               <button class="modal-x" @click="closeModal">&times;</button>
             </div>
@@ -255,13 +255,13 @@
               <div class="field">
                 <label>
                   <BookOpen :size="15" class="field-icon" />
-                  Subject Name <span class="req">*</span>
+                  {{ t('subjects.subjectNameLabel') }} <span class="req">*</span>
                 </label>
                 <div class="input-wrap">
                   <input
                     v-model="formData.name"
                     :class="{ err: errors.name }"
-                    placeholder="e.g. Web Development"
+                    :placeholder="t('subjects.namePlaceholder')"
                     required
                   />
                 </div>
@@ -274,34 +274,34 @@
                 <div class="field">
                   <label>
                     <Users :size="15" class="field-icon" />
-                    Teachers
+                    {{ t('subjects.teachersLabel') }}
                   </label>
                   <div v-if="teachers.length" class="check-list">
                     <label
-                      v-for="t in teachers"
-                      :key="t.id"
+                      v-for="tchr in teachers"
+                      :key="tchr.id"
                       class="check-item"
-                      :class="{ 'check-item-on': formData.teacher_ids.includes(t.id) }"
+                      :class="{ 'check-item-on': formData.teacher_ids.includes(tchr.id) }"
                     >
                       <input
                         type="checkbox"
-                        :value="t.id"
-                        :checked="formData.teacher_ids.includes(t.id)"
-                        @change="toggleFormTeacher(t.id)"
+                        :value="tchr.id"
+                        :checked="formData.teacher_ids.includes(tchr.id)"
+                        @change="toggleFormTeacher(tchr.id)"
                       />
                       <span class="check-dot"></span>
-                      <span class="check-label">{{ t.name }}</span>
+                      <span class="check-label">{{ tchr.name }}</span>
                     </label>
                   </div>
-                  <p v-else class="field-hint">No teachers available yet.</p>
+                  <p v-else class="field-hint">{{ t('subjects.noTeachers') }}</p>
                   <p v-if="formData.teacher_ids.length" class="field-count">
-                    {{ formData.teacher_ids.length }} selected
+                    {{ formData.teacher_ids.length }} {{ t('app.selected') }}
                   </p>
                 </div>
                 <div class="field">
                   <label>
                     <Layers :size="15" class="field-icon" />
-                    Classes
+                    {{ t('subjects.classesLabel') }}
                   </label>
                   <div v-if="classes.length" class="check-list">
                     <label
@@ -320,9 +320,9 @@
                       <span class="check-label">{{ c.name }}</span>
                     </label>
                   </div>
-                  <p v-else class="field-hint">No classes available yet.</p>
+                  <p v-else class="field-hint">{{ t('subjects.noClasses') }}</p>
                   <p v-if="formData.class_ids.length" class="field-count">
-                    {{ formData.class_ids.length }} selected
+                    {{ formData.class_ids.length }} {{ t('app.selected') }}
                   </p>
                 </div>
               </div>
@@ -332,12 +332,12 @@
               <div class="field">
                 <label>
                   <ToggleLeft :size="15" class="field-icon" />
-                  Status
+                  {{ t('subjects.statusLabel') }}
                 </label>
                 <div class="input-wrap">
                   <select v-model="formData.status" class="modern-input">
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">{{ t('subjects.active') }}</option>
+                    <option value="Inactive">{{ t('subjects.inactive') }}</option>
                   </select>
                 </div>
               </div>
@@ -347,7 +347,7 @@
               <div class="field">
                 <label>
                   <CalendarDays :size="15" class="field-icon" />
-                  Assign to Terms
+                  {{ t('subjects.assignTerms') }}
                 </label>
                 <div class="term-chips">
                   <button
@@ -368,11 +368,11 @@
               </div>
 
               <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
+                <button type="button" class="btn btn-ghost" @click="closeModal">{{ t('common.cancel') }}</button>
                 <button type="submit" class="btn btn-primary" :disabled="store.loading">
                   <span v-if="store.loading" class="spinner-sm"></span>
                   <Check v-else :size="16" />
-                  {{ isEditMode ? 'Save Changes' : 'Create Subject' }}
+                  {{ isEditMode ? t('subjects.saveChanges') : t('subjects.createSubject') }}
                 </button>
               </div>
             </form>
@@ -390,19 +390,19 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Subject</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('subjects.deleteSubject') }}</h3>
+                <p>{{ t('subjects.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ subjectToDelete?.name }}</strong>?</p>
+              <p class="del-text">{{ t('subjects.confirmDelete') }} <strong>{{ subjectToDelete?.name }}</strong>?</p>
             </div>
             <div class="modal-foot">
-              <button class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
+              <button class="btn btn-ghost" @click="closeDeleteModal">{{ t('common.cancel') }}</button>
               <button class="btn btn-danger" @click="handleDelete" :disabled="store.loading">
                 <span v-if="store.loading" class="spinner-sm"></span>
-                Delete
+                {{ t('common.delete') }}
               </button>
             </div>
           </div>
@@ -419,19 +419,19 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Subjects</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('subjects.deleteSubjects') }}</h3>
+                <p>{{ t('subjects.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ selectedIds.length }} subject(s)</strong>?</p>
+              <p class="del-text">{{ t('subjects.confirmDelete') }} <strong>{{ selectedIds.length }} {{ t('subjects.subject').toLowerCase() }}(s)</strong>?</p>
             </div>
             <div class="modal-foot">
-              <button class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
+              <button class="btn btn-ghost" @click="closeBulkDeleteModal">{{ t('common.cancel') }}</button>
               <button class="btn btn-danger" @click="handleBulkDelete" :disabled="store.loading">
                 <span v-if="store.loading" class="spinner-sm"></span>
-                Delete {{ selectedIds.length }} subject(s)
+                {{ t('common.delete') }} {{ selectedIds.length }} {{ t('subjects.subject').toLowerCase() }}(s)
               </button>
             </div>
           </div>
@@ -443,6 +443,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSubjectStore } from '@/stores/subject'
 import { useAuthStore } from '@/stores/auth'
 import type { Subject } from '@/services/subjectService'
@@ -478,6 +479,7 @@ import {
 import { cacheService } from '@/services/cacheService'
 import { useToast } from '@/composables/useToast'
 
+const { t } = useI18n()
 const { success: toastSuccess, error: toastError } = useToast()
 
 const CACHE_KEY = 'subject-terms'
@@ -595,7 +597,7 @@ async function handleBulkDelete() {
     const allOk = results.every(r => r.status === 'fulfilled')
     if (allOk) {
       store.clearMessages()
-      globalShowToast('Subjects deleted successfully')
+      globalShowToast(t('subjects.deletedBulkSuccess'))
       subjects.value = subjects.value.filter(s => !idsToDelete.includes(s.id))
       showBulkDeleteModal.value = false
       clearSelection()
@@ -604,15 +606,15 @@ async function handleBulkDelete() {
       }
     } else {
       store.clearMessages()
-      globalShowToast('Failed to delete some subjects', 'error')
+      globalShowToast(t('subjects.deleteFailed'), 'error')
     }
   } catch {
-    globalShowToast('Failed to delete subjects', 'error')
+    globalShowToast(t('subjects.deleteFailed'), 'error')
   }
 }
 
-function teacherName(t: { id: number; user?: { name?: string | null } | null }): string {
-  return t.user?.name || `Teacher #${t.id}`
+function teacherName(tchr: { id: number; user?: { name?: string | null } | null }): string {
+  return tchr.user?.name || `Teacher #${tchr.id}`
 }
 
 function teacherNamesForSubject(subj: SubjectWithTerms): string[] {
@@ -652,7 +654,8 @@ const filteredSubjects = computed(() => {
   if (statusFilter.value) r = r.filter((s) => s.status?.toLowerCase() === statusFilter.value.toLowerCase())
   if (termFilter.value !== '') r = r.filter((s) => s.term_ids.includes(termFilter.value as number))
   return r
-})  // ─── Helpers ───────────────────────────────────────────────────────
+})
+
 function subjectIconBg(_name: string): string {
   return '#2563eb'
 }
@@ -698,11 +701,11 @@ function debouncedSave(sid: number) {
         if (err?.response?.status === 404) {
           subjects.value = subjects.value.filter(s => s.id !== sid)
           cacheService.remove(CACHE_KEY)
-          globalShowToast('This subject no longer exists — it has been removed from the list.', 'error')
+          globalShowToast(t('subjects.noLongerExists'), 'error')
           return
         }
         await loadTermData()
-        globalShowToast('Auto-save failed. Please try toggling the term again.', 'error')
+        globalShowToast(t('subjects.deleteFailed'), 'error')
       }
     }, 800)
   )
@@ -764,7 +767,7 @@ function closeModal() {
 
 function validateForm() {
   let v = true
-  if (!formData.name.trim()) { errors.name = 'Name is required'; v = false } else errors.name = ''
+  if (!formData.name.trim()) { errors.name = t('subjects.nameRequired'); v = false } else errors.name = ''
   errors.class_ids = ''
   return v
 }
@@ -787,7 +790,7 @@ async function handleSubmit() {
         await loadTermData()
       }
       store.clearMessages()
-      globalShowToast('Subject updated successfully')
+      globalShowToast(t('subjects.updatedSuccess'))
     }
   } else {
     const newTermIds = [...formData.term_ids]
@@ -803,7 +806,7 @@ async function handleSubmit() {
       await store.fetchSubjects()
       await loadTermData()
       store.clearMessages()
-      globalShowToast('Subject created successfully')
+      globalShowToast(t('subjects.createdSuccess'))
       if (newTermIds.length) {
         const subj = subjects.value.find((s: any) => s.name === formData.name)
         if (subj) await subjectTermService.syncSubject(subj.id, newTermIds)
@@ -824,7 +827,7 @@ async function handleDelete() {
     subjects.value = subjects.value.filter(s => s.id !== targetId)
     closeDeleteModal()
     store.clearMessages()
-    globalShowToast('Subject deleted successfully')
+    globalShowToast(t('subjects.deletedSuccess'))
   }
 }
 

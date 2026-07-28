@@ -11,11 +11,11 @@
           <Stars :size="22" />
         </div>
         <div class="welcome-text">
-          <span class="welcome-badge">Dashboard</span>
-          <h3>Welcome back, Admin</h3>
-          <p>Your academic snapshot is ready — everything you need at a glance.</p>
+          <span class="welcome-badge">{{ t('dashboard.welcomeBadge') }}</span>
+          <h3>{{ t('dashboard.welcomeBack') }}</h3>
+          <p>{{ t('dashboard.welcomeMessage') }}</p>
         </div>
-        <button class="welcome-close" @click="dismissWelcome" title="Dismiss">
+        <button class="welcome-close" @click="dismissWelcome" :title="t('dashboard.dismiss')">
           <X :size="16" />
         </button>
       </div>
@@ -28,7 +28,7 @@
       <AlertTriangle :size="16" />
       <span>{{ dashboard.error }}</span>
       <button class="error-retry" @click="dashboard.fetchDashboardData">
-        <RefreshCw :size="14" /> Retry
+        <RefreshCw :size="14" /> {{ t('app.retry') }}
       </button>
     </div>
 
@@ -44,51 +44,51 @@
 
     <section v-else class="stats-grid mb-3">
       <KpiCard
-        label="Total Students"
+        :label="t('dashboard.totalStudents')"
         :value="dashboard.kpi.total_students"
         icon="mortarboard"
         iconClass="icon-blue"
-        :subtitle="`${studentActivityRate}% active`"
+        :subtitle="`${studentActivityRate}% ${t('dashboard.activeRate')}`"
       />
       <KpiCard
-        label="Active Students"
+        :label="t('dashboard.activeStudents')"
         :value="dashboard.kpi.active_students"
         icon="person-check"
         iconClass="icon-green"
       />
       <KpiCard
-        label="Total Teachers"
+        :label="t('dashboard.totalTeachers')"
         :value="dashboard.kpi.total_teachers"
         icon="people"
         iconClass="icon-violet"
       />
       <KpiCard
-        label="Average Score"
+        :label="t('dashboard.averageScore')"
         :value="dashboard.kpi.average_score"
         icon="bar-chart"
         iconClass="icon-orange"
         :decimals="2"
       />
       <KpiCard
-        label="Total Subjects"
+        :label="t('dashboard.totalSubjects')"
         :value="dashboard.kpi.total_subjects"
         icon="book"
         iconClass="icon-sky"
       />
       <KpiCard
-        label="Active Offerings"
+        :label="t('dashboard.activeOfferings')"
         :value="dashboard.kpi.active_subject_offerings"
         icon="calendar-check"
         iconClass="icon-mint"
       />
       <KpiCard
-        label="Total Enrollments"
+        :label="t('dashboard.totalEnrollments')"
         :value="dashboard.kpi.total_enrollments"
         icon="diagram-3"
         iconClass="icon-rose"
       />
       <KpiCard
-        label="Total Classes"
+        :label="t('dashboard.totalClasses')"
         :value="dashboard.kpi.total_classes"
         icon="building"
         iconClass="icon-amber"
@@ -112,8 +112,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Student Growth Over Time</h3>
-            <p class="chart-desc">Cumulative enrollment by month</p>
+            <h3 class="chart-title">{{ t('dashboard.chartStudentGrowth') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartStudentGrowthDesc') }}</p>
           </div>
           <span class="chart-tag blue">+12.5%</span>
         </div>
@@ -127,8 +127,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Students by Generation</h3>
-            <p class="chart-desc">Distribution across generations</p>
+            <h3 class="chart-title">{{ t('dashboard.chartStudentsByGen') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartStudentsByGenDesc') }}</p>
           </div>
           <span class="chart-tag violet">+8.3%</span>
         </div>
@@ -144,8 +144,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Students by Department</h3>
-            <p class="chart-desc">Enrollment by department</p>
+            <h3 class="chart-title">{{ t('dashboard.chartStudentsByDept') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartStudentsByDeptDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -158,8 +158,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Grade Distribution</h3>
-            <p class="chart-desc">Overall grade breakdown</p>
+            <h3 class="chart-title">{{ t('dashboard.chartGradeDist') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartGradeDistDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -174,8 +174,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Subject Average Scores</h3>
-            <p class="chart-desc">Performance by subject</p>
+            <h3 class="chart-title">{{ t('dashboard.chartSubjectAvg') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartSubjectAvgDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -188,8 +188,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Teacher Workload</h3>
-            <p class="chart-desc">Classes per teacher</p>
+            <h3 class="chart-title">{{ t('dashboard.chartTeacherWorkload') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartTeacherWorkloadDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -204,8 +204,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Assessment Type Averages</h3>
-            <p class="chart-desc">Marks by assessment type</p>
+            <h3 class="chart-title">{{ t('dashboard.chartAssessmentAvg') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartAssessmentAvgDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -218,8 +218,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Average Score by Term</h3>
-            <p class="chart-desc">Trend across terms</p>
+            <h3 class="chart-title">{{ t('dashboard.chartAvgScoreByTerm') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartAvgScoreByTermDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -234,8 +234,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Top 10 Students</h3>
-            <p class="chart-desc">Highest average scores</p>
+            <h3 class="chart-title">{{ t('dashboard.chartTopStudents') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartTopStudentsDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -248,8 +248,8 @@
       <div class="chart-card">
         <div class="chart-head">
           <div>
-            <h3 class="chart-title">Lowest Performing Subjects</h3>
-            <p class="chart-desc">Subjects needing attention</p>
+            <h3 class="chart-title">{{ t('dashboard.chartLowestSubjects') }}</h3>
+            <p class="chart-desc">{{ t('dashboard.chartLowestSubjectsDesc') }}</p>
           </div>
         </div>
         <EChart
@@ -263,7 +263,7 @@
     <section v-if="activeSection === 'activity'" class="charts-grid mb-3">
       <div class="chart-card">
         <DataTable
-          title="Recent Academic Activities"
+          :title="t('dashboard.tableRecentAcademic')"
           :columns="academicActivityColumns"
           :data="dashboard.charts.recent_academic_activities"
         >
@@ -280,7 +280,7 @@
 
       <div class="chart-card">
         <DataTable
-          title="Recent User Activities"
+          :title="t('dashboard.tableRecentUser')"
           :columns="userActivityColumns"
           :data="dashboard.charts.recent_user_activities"
         >
@@ -296,7 +296,7 @@
     <section v-if="activeSection === 'activity'" class="charts-grid mb-3">
       <div class="chart-card">
         <DataTable
-          title="Recently Generated Report Cards"
+          :title="t('dashboard.tableRecentReportCards')"
           :columns="reportCardColumns"
           :data="dashboard.charts.recent_report_cards"
         >
@@ -313,7 +313,7 @@
 
       <div class="chart-card">
         <DataTable
-          title="Recently Generated Transcripts"
+          :title="t('dashboard.tableRecentTranscripts')"
           :columns="transcriptColumns"
           :data="dashboard.charts.recent_transcripts"
         >
@@ -338,6 +338,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
 import { useDashboardStore } from '@/stores/dashboard'
 import KpiCard from '@/components/KpiCard.vue'
@@ -362,6 +363,7 @@ import {
   Activity,
 } from '@lucide/vue'
 
+const { t } = useI18n()
 const theme = useThemeStore()
 const dashboard = useDashboardStore()
 
@@ -371,9 +373,9 @@ const showWelcome = ref(localStorage.getItem('dashboard_welcome_dismissed') !== 
 let lastUpdatedTimer: ReturnType<typeof setInterval> | null = null
 
 const tabs = [
-  { id: 'overview' as const, label: 'Overview', component: LayoutDashboard },
-  { id: 'performance' as const, label: 'Performance', component: TrendingUp },
-  { id: 'activity' as const, label: 'Activity', component: Activity },
+  { id: 'overview' as const, label: t('dashboard.tabOverview'), component: LayoutDashboard },
+  { id: 'performance' as const, label: t('dashboard.tabPerformance'), component: TrendingUp },
+  { id: 'activity' as const, label: t('dashboard.tabActivity'), component: Activity },
 ]
 
 const tabIndicatorStyle = computed(() => {
@@ -390,34 +392,34 @@ function dismissWelcome() {
 }
 
 const academicActivityColumns = [
-  { key: 'student_name', label: 'Student' },
-  { key: 'action', label: 'Action' },
-  { key: 'total', label: 'Score' },
-  { key: 'grade', label: 'Grade' },
-  { key: 'created_at', label: 'Time' }
+  { key: 'student_name', label: t('dashboard.student') },
+  { key: 'action', label: t('dashboard.action') },
+  { key: 'total', label: t('dashboard.score') },
+  { key: 'grade', label: t('dashboard.grade') },
+  { key: 'created_at', label: t('dashboard.time') }
 ]
 
 const userActivityColumns = [
-  { key: 'user_name', label: 'User' },
-  { key: 'action', label: 'Action' },
-  { key: 'module', label: 'Module' },
-  { key: 'created_at', label: 'Time' }
+  { key: 'user_name', label: t('dashboard.user') },
+  { key: 'action', label: t('dashboard.action') },
+  { key: 'module', label: t('dashboard.module') },
+  { key: 'created_at', label: t('dashboard.time') }
 ]
 
 const reportCardColumns = [
-  { key: 'student_name', label: 'Student' },
-  { key: 'generation', label: 'Generation' },
-  { key: 'term', label: 'Term' },
-  { key: 'average', label: 'Average' },
-  { key: 'grade', label: 'Grade' }
+  { key: 'student_name', label: t('dashboard.student') },
+  { key: 'generation', label: t('dashboard.generation') },
+  { key: 'term', label: t('dashboard.term') },
+  { key: 'average', label: t('dashboard.average') },
+  { key: 'grade', label: t('dashboard.grade') }
 ]
 
 const transcriptColumns = [
-  { key: 'student_name', label: 'Student' },
-  { key: 'generation', label: 'Generation' },
-  { key: 'average', label: 'Average' },
-  { key: 'grade', label: 'Grade' },
-  { key: 'status', label: 'Status' }
+  { key: 'student_name', label: t('dashboard.student') },
+  { key: 'generation', label: t('dashboard.generation') },
+  { key: 'average', label: t('dashboard.average') },
+  { key: 'grade', label: t('dashboard.grade') },
+  { key: 'status', label: t('dashboard.status') }
 ]
 
 const studentActivityRate = computed(() => {
@@ -654,7 +656,7 @@ function updateLastUpdated() {
 .dashboard-page {
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
   padding-bottom: 2rem !important;
-  
+
 }
 
 .welcome-card {

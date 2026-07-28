@@ -12,7 +12,7 @@
         class="logo-toggle-btn"
         :class="{ 'collapsed': sidebar.collapsed }"
         @click="sidebar.toggle()"
-        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        :title="sidebar.collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')"
       >
         <ChevronLeft v-if="!sidebar.collapsed" :size="14" />
         <ChevronRight v-else :size="14" />
@@ -32,7 +32,7 @@
       </RouterLink>
 
       <template v-if="settingsLinks.length > 0">
-        <h6 class="menu-title mt-3 mb-2">Settings</h6>
+        <h6 class="menu-title mt-3 mb-2">{{ t('nav.administration') }}</h6>
 
         <RouterLink
           v-for="link in settingsLinks"
@@ -61,7 +61,7 @@
           @keydown.enter.prevent="goToProfile"
           role="button"
           tabindex="0"
-          :title="sidebar.collapsed ? 'Profile' : ''"
+          :title="sidebar.collapsed ? t('nav.profile') : ''"
         >
           <div class="avatar">
             <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
@@ -72,7 +72,7 @@
             <small class="text-secondary">{{ auth.user?.role }}</small>
           </div>
         </div>
-        <button class="logout-icon-btn" @click="showLogoutModal = true" title="Logout">
+        <button class="logout-icon-btn" @click="showLogoutModal = true" :title="t('auth.logout')">
           <LogOut :size="18" />
         </button>
       </div>
@@ -100,24 +100,24 @@
             <div class="logout-icon-wrap">
               <LogOut :size="20" />
             </div>
-            <h3 id="logout-title" class="logout-title">Confirm Logout</h3>
+            <h3 id="logout-title" class="logout-title">{{ t('auth.confirmLogout') }}</h3>
             <button class="logout-close-btn" @click="showLogoutModal = false" aria-label="Close modal">
               <X :size="18" />
             </button>
           </div>
 
           <div class="logout-modal-body">
-            <p class="logout-message">Are you sure you want to log out?</p>
+            <p class="logout-message">{{ t('auth.logoutMessage') }}</p>
           </div>
 
           <div class="logout-modal-footer">
             <button class="logout-btn logout-btn-cancel" @click="showLogoutModal = false" ref="cancelBtnRef">
               <X :size="16" />
-              Cancel
+              {{ t('common.cancel') }}
             </button>
             <button class="logout-btn logout-btn-confirm" @click="handleLogout" ref="confirmBtnRef">
               <LogOut :size="16" />
-              Logout
+              {{ t('auth.logout') }}
             </button>
           </div>
         </div>
@@ -129,6 +129,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
@@ -141,6 +142,7 @@ import {
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
@@ -182,20 +184,20 @@ interface NavLink {
 const navLinks = computed<NavLink[]>(() => {
   if (auth.user?.role === 'student') {
     return [
-      { to: '/portal', label: 'My Dashboard', icon: LayoutDashboard },
-      { to: '/portal/scores', label: 'My Scores', icon: ClipboardList },
-      { to: '/portal/transcript', label: 'My Transcript', icon: FileText },
+    { to: '/portal', label: t('nav.myDashboard'), icon: LayoutDashboard },
+    { to: '/portal/scores', label: t('nav.myScores'), icon: ClipboardList },
+    { to: '/portal/transcript', label: t('nav.myTranscript'), icon: FileText },
     ]
   }
   const links: NavLink[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/classes', label: 'Classes', icon: Users, permission: 'view-classes' },
-    { to: '/subjects', label: 'Subjects', icon: BookOpen, permission: 'view-subjects' },
-    { to: '/teachers', label: 'Teachers', icon: UserCheck, permission: 'view-teachers' },
-    { to: '/students', label: 'Students', icon: GraduationCap, permission: 'view-students' },
-    { to: '/scores', label: 'Scores', icon: ClipboardList, permission: 'view-scores' },
-    { to: '/reports', label: 'Reports', icon: FileText },
-    { to: '/activity-logs', label: 'Activity Log', icon: History, permission: 'view-activity-logs' },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/classes', label: t('nav.classes'), icon: Users, permission: 'view-classes' },
+    { to: '/subjects', label: t('nav.subjects'), icon: BookOpen, permission: 'view-subjects' },
+    { to: '/teachers', label: t('nav.teachers'), icon: UserCheck, permission: 'view-teachers' },
+    { to: '/students', label: t('nav.students'), icon: GraduationCap, permission: 'view-students' },
+    { to: '/scores', label: t('nav.scores'), icon: ClipboardList, permission: 'view-scores' },
+    { to: '/reports', label: t('nav.reports'), icon: FileText },
+    { to: '/activity-logs', label: t('nav.activityLog'), icon: History, permission: 'view-activity-logs' },
   ]
   return links.filter(link => !link.permission || auth.hasPermission(link.permission))
 })
@@ -204,10 +206,10 @@ const settingsLinks = computed<NavLink[]>(() => {
   if (auth.user?.role !== 'admin') return []
   const links: NavLink[] = []
   if (auth.hasPermission('view-users')) {
-    links.push({ to: '/users', label: 'Users', icon: User })
+    links.push({ to: '/users', label: t('nav.users'), icon: User })
   }
   if (auth.hasPermission('manage-roles-permissions')) {
-    links.push({ to: '/roles', label: 'Roles & Permissions', icon: Shield })
+    links.push({ to: '/roles', label: t('nav.rolesPermissions'), icon: Shield })
   }
   return links
 })
