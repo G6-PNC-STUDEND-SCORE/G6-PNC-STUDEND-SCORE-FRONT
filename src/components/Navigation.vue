@@ -137,6 +137,7 @@ import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText, History,
   User, Shield, LogOut, X, ChevronLeft, ChevronRight,
+  CalendarDays,
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
@@ -188,6 +189,7 @@ const navLinks = computed<NavLink[]>(() => {
   }
   const links: NavLink[] = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/academic-years', label: 'Academic Years', icon: CalendarDays, permission: 'view-academic-years' },
     { to: '/classes', label: 'Classes', icon: Users, permission: 'view-classes' },
     { to: '/subjects', label: 'Subjects', icon: BookOpen, permission: 'view-subjects' },
     { to: '/teachers', label: 'Teachers', icon: UserCheck, permission: 'view-teachers' },

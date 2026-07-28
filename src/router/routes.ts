@@ -88,6 +88,24 @@ export const routes: RouteRecordRaw[] = [
         meta: { roles: ['admin', 'teacher'] },
       },
       {
+        path: 'academic-years',
+        name: 'academic-years',
+        component: () => import('@/views/academic-years/AcademicYearPage.vue'),
+        meta: { roles: ['admin', 'teacher'] },
+      },
+      {
+        path: 'terms',
+        name: 'terms',
+        component: () => import('@/views/terms/TermPage.vue'),
+        meta: { roles: ['admin', 'teacher'] },
+      },
+      {
+        path: 'generations',
+        name: 'generations',
+        component: () => import('@/views/generations/GenerationPage.vue'),
+        meta: { roles: ['admin', 'teacher'] },
+      },
+      {
         path: 'users',
         name: 'users',
         component: () => import('@/views/users/UsersPage.vue'),

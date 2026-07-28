@@ -1,3 +1,4 @@
+/* ─── Empty State ─── */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -5,36 +6,44 @@
   justify-content: center;
   padding: 4rem 2rem;
   text-align: center;
-  background: #f8fafc;
-  border-radius: 16px;
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-lg);
   border: 1.5px dashed var(--color-border);
+  transition: border-color var(--transition-normal);
+}
+
+.empty-state:hover {
+  border-color: var(--color-border-dark);
 }
 
 .empty-state-icon {
   width: 56px;
   height: 56px;
-  border-radius: 16px;
-  background: #eef2ff;
-  color: #2563eb;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-lighter);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
   margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .empty-state h5 {
-  font-weight: 700;
+  font-weight: var(--font-weight-bold);
   color: var(--color-text);
   margin-bottom: 0.25rem;
 }
 
 .empty-state p {
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  max-width: 280px;
+  line-height: var(--line-height-normal);
 }
 
-
-
+/* ─── Empty Container (flex fill) ─── */
 .empty-container {
   flex: 1;
   display: flex;
@@ -49,17 +58,17 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .empty-container .empty-box h5 {
-  font-weight: 700;
-  color: #64748b;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-secondary);
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-lg);
 }
 
 .empty-container .empty-box p {
-  font-size: 0.85rem;
+  font-size: var(--font-size-md);
   margin: 0;
 }

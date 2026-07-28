@@ -237,7 +237,13 @@ export interface AvatarResponse {
 
 export interface AcademicYear {
   id: number
+  year?: number
   name: string
+  start_date?: string | null
+  end_date?: string | null
+  is_current?: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Teacher {

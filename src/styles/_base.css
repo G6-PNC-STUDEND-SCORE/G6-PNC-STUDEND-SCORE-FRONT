@@ -1,15 +1,78 @@
-* {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 html,
 body {
   height: 100%;
   font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-body);
+  background: var(--color-bg);
 }
 
+body {
+  overflow-x: hidden;
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-primary-dark);
+}
+
+::-moz-selection {
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-primary-dark);
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-dark);
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+  border: 0 solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ─── Focus Rings ─── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* ─── App Layout ─── */
 .app-layout {
   display: flex;
   min-height: 100vh;
@@ -37,13 +100,13 @@ body {
   overflow: hidden;
 }
 
+/* ─── Page Header ─── */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.5rem;
-  font-family: var(--font-family);
 }
 
 .page-header-left {
@@ -59,26 +122,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef2ff, #dbeafe);
-  color: #2563eb;
-  border-radius: 12px;
+  background: linear-gradient(135deg, var(--color-primary-lighter), var(--color-primary-light));
+  color: var(--color-primary);
+  border-radius: var(--radius-md);
   font-size: 1.2rem;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.12);
 }
 
 .page-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--color-text);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-heading);
   margin-bottom: 2px;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .page-subtitle {
-  font-size: 0.8125rem;
-  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
   margin: 0;
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
 }
 
 .page-header-actions {
@@ -88,6 +152,24 @@ body {
   flex-shrink: 0;
 }
 
+/* ─── Utility Classes ─── */
+.text-muted {
+  color: var(--color-text-muted) !important;
+}
+
+.text-secondary {
+  color: var(--color-text-secondary) !important;
+}
+
+.text-primary {
+  color: var(--color-primary) !important;
+}
+
+.fw-semibold {
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ─── Responsive ─── */
 @media (max-width: 767.98px) {
   .main-content.with-sidebar {
     padding-left: 0;
@@ -96,5 +178,19 @@ body {
   .page-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .page-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .main-content {
+    padding: 12px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .main-content {
+    padding: 16px;
   }
 }

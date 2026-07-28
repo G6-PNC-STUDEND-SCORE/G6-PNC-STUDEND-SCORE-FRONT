@@ -51,6 +51,7 @@ export const SELF_MANAGED_SCROLL_PAGES = [
   'teachers',
   'student',
   'subject',
+  'reports',
 ] as const
 
 export const ASSESSMENT_TYPES = {

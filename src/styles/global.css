@@ -10,3 +10,92 @@
 @import './_badges.css';
 @import './_empty.css';
 @import './_spinner.css';
+
+/* ─── Global Dark Mode ─── */
+html.dark-mode {
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text);
+}
+
+html.dark-mode body {
+  background: var(--color-dark-bg);
+  color: var(--color-dark-text);
+}
+
+html.dark-mode .main-content {
+  background: var(--color-dark-bg);
+}
+
+html.dark-mode .main-content::-webkit-scrollbar-thumb {
+  background: var(--color-dark-text-muted);
+}
+
+html.dark-mode .main-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dark-text-secondary);
+}
+
+html.dark-mode ::selection {
+  background: rgba(var(--color-primary-rgb), 0.25);
+  color: var(--color-dark-text);
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: var(--color-dark-text-muted);
+}
+
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-dark-text-secondary);
+}
+
+/* ─── Bootstrap Compat ─── */
+.dark-mode .card {
+  background: var(--color-dark-bg-card);
+  border-color: var(--color-dark-border);
+}
+
+.dark-mode .text-secondary {
+  color: var(--color-dark-text-secondary) !important;
+}
+
+.dark-mode .text-muted {
+  color: var(--color-dark-text-muted) !important;
+}
+
+.dark-mode .border-top,
+.dark-mode .border-bottom {
+  border-color: var(--color-dark-border) !important;
+}
+
+.dark-mode .bg-white {
+  background: var(--color-dark-bg-card) !important;
+}
+
+/* ─── Dark mode transitions (targeted) ─── */
+html.dark-mode *,
+html.dark-mode *::before,
+html.dark-mode *::after {
+  transition-property: background-color, border-color, color, box-shadow;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* ─── Utility: Animations ─── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

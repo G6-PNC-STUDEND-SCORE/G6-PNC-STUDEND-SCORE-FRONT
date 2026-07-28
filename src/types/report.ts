@@ -79,6 +79,7 @@ export interface StudentRankingRow {
   class_id: number
   class_name: string
   subject_count: number
+  subjects: string
   total: number
   average: number
   grade: string | null

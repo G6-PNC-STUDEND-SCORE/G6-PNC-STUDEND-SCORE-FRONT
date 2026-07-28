@@ -1,55 +1,57 @@
+/* ─── Base Table ─── */
 .data-table-base {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-md);
 }
 
 .data-table-base thead th {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f8fafc;
+  background: var(--color-bg-subtle);
   text-align: left;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--color-text-muted);
   padding: 10px 14px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
+  user-select: none;
 }
 
 .data-table-base tbody td {
   padding: 10px 14px;
-  border-bottom: 1px solid #f1f3f5;
-  color: #475569;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
   vertical-align: middle;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .data-table-base tbody tr:last-child td {
   border-bottom: none;
 }
 
+/* ─── Row States ─── */
 .data-row {
-  transition: background 0.2s ease, border-left 0.2s ease;
+  transition: background var(--transition-normal), border-left var(--transition-normal);
   border-left: 3px solid transparent;
 }
 
 .data-row:hover {
-  background: #f8fafc;
-  border-left-color: #2563eb;
+  background: var(--color-bg-hover);
+  border-left-color: var(--color-primary);
 }
 
 .row-selected {
-  background: #f0f5ff !important;
-  border-left-color: #2563eb !important;
+  background: var(--color-bg-active) !important;
+  border-left-color: var(--color-primary) !important;
 }
 
-
-
+/* ─── Table Wrap (Scrollable Container) ─── */
 .table-wrap {
   width: 100%;
   overflow: auto;
@@ -57,7 +59,64 @@
   min-height: 0;
 }
 
-.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
-.table-wrap::-webkit-scrollbar-track { background: transparent; }
-.table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
-.table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--color-border-dark);
+  border-radius: var(--radius-full);
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ─── Column Checkbox ─── */
+.col-check {
+  text-align: center;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: transform var(--transition-fast);
+}
+
+.table-checkbox:hover {
+  transform: scale(1.15);
+}
+
+.table-checkbox:active {
+  transform: scale(0.95);
+}
+
+/* ─── Dark Mode ─── */
+.dark-mode .data-table-base thead th {
+  background: rgba(30, 41, 59, 0.8);
+  color: var(--color-dark-text-secondary);
+  border-bottom-color: var(--color-dark-border);
+}
+
+.dark-mode .data-table-base tbody td {
+  color: var(--color-dark-text-secondary);
+  border-bottom-color: var(--color-dark-border-light);
+}
+
+.dark-mode .data-row:hover {
+  background: rgba(51, 65, 85, 0.3);
+  border-left-color: var(--color-info);
+}
+
+.dark-mode .row-selected {
+  background: rgba(37, 99, 235, 0.15) !important;
+  border-left-color: var(--color-info) !important;
+}
