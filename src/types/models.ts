@@ -225,9 +225,9 @@ export interface UserProfile {
 export interface ProfileUpdatePayload {
   name?: string
   email?: string
-  gender?: 'Male' | 'Female' | 'Other'
-  date_of_birth?: string
-  bio?: string
+  gender?: 'Male' | 'Female' | 'Other' | null
+  date_of_birth?: string | null
+  bio?: string | null
 }
 
 export interface AvatarResponse {
