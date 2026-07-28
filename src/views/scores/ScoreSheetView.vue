@@ -51,9 +51,9 @@
           </span>
 
         </div>
-        <div class="search-box">
+        <div class="search-box" @click="searchInput?.focus()">
           <i class="bi bi-search search-icon"></i>
-          <input v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
+          <input ref="searchInput" v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
         </div>
         <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
           <i class="bi bi-keyboard"></i>
@@ -76,11 +76,34 @@
       </div>
     </div>
 
+    <Transition name="selection-bar">
+      <div v-if="selectedEnrollmentIds.size > 0" class="selection-bar">
+        <div class="selection-bar-left">
+          <button class="selection-btn selection-btn-danger" @click="confirmBulkDelete">
+            <i class="bi bi-trash3"></i> Delete {{ selectedEnrollmentIds.size }} row{{ selectedEnrollmentIds.size > 1 ? 's' : '' }}
+          </button>
+        </div>
+        <div class="selection-bar-right">
+          <button class="selection-btn selection-btn-cancel" @click="selectedEnrollmentIds = new Set()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <div class="sheet-wrapper" tabindex="0" @keydown="onGlobalKeydown" ref="sheetContainer" @paste="onPaste" @copy="onCopy" @cut="onCut">
       <div class="sheet-scroll" @scroll="onScroll">
         <table class="sheet-table">
           <thead>
             <tr>
+              <th class="cell-header cell-frozen cell-checkbox-header">
+                <label class="checkbox-wrap header-checkbox" @click.stop>
+                  <input type="checkbox" ref="selectAllCheckbox"
+                    :checked="isAllRowsSelected"
+                    @change="toggleSelectAll" />
+                  <span class="checkmark"></span>
+                </label>
+              </th>
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
               <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
               <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
@@ -131,8 +154,19 @@
           </thead>
           <tbody>
             <tr v-for="(row, rowIndex) in visibleRows" :key="row.enrollment_id"
-              :class="{ 'row-selected': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
+              :class="{ 
+                'row-selected': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex,
+                'row-checked': selectedEnrollmentIds.has(row.enrollment_id) 
+              }"
               @contextmenu.prevent="showContextMenu($event, rowIndex)">
+              <td class="cell cell-frozen cell-checkbox" @click.stop="toggleRowSelection(row.enrollment_id)" :data-row-idx="rowIndex">
+                <label class="checkbox-wrap" @click.stop>
+                  <input type="checkbox" 
+                    :checked="selectedEnrollmentIds.has(row.enrollment_id)"
+                    @change="toggleRowSelection(row.enrollment_id)" />
+                  <span class="checkmark"></span>
+                </label>
+              </td>
               <td class="cell cell-frozen row-num"
                 :class="{ 'row-num-highlighted': (editingRow === null && isRowSelected(rowIndex)) || editingRow === rowIndex }"
                 @click.stop>{{ rowIndex + 1 }}</td>
@@ -205,7 +239,7 @@
               <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
-              <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
+              <td :colspan="4 + columns.length + 2" class="cell-frozen add-row-cell">
                 <i class="bi bi-plus-lg"></i> Add Student Row
               </td>
             </tr>
@@ -232,6 +266,10 @@
         <i class="bi bi-plus-lg"></i> Insert Row Below
       </div>
       <div class="context-menu-separator"></div>
+      <div class="context-menu-separator" v-if="selectedEnrollmentIds.size > 1"></div>
+      <div v-if="selectedEnrollmentIds.size > 1" class="context-menu-item text-danger" @click="confirmBulkDelete()">
+        <i class="bi bi-trash3"></i> Delete {{ selectedEnrollmentIds.size }} Selected Rows
+      </div>
       <div class="context-menu-item text-danger" @click="deleteRow(contextMenu.rowIdx)">
         <i class="bi bi-trash3"></i> Delete Row
       </div>
@@ -789,7 +827,7 @@ import { useRouter, useRoute } from 'vue-router'
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
   renameColumn, updateWeights,
-  addEnrollment, deleteEnrollment, updateStudentInfo,
+  addEnrollment, deleteEnrollment, bulkDeleteEnrollments, updateStudentInfo,
   changeColumnType, getStudentNumbers, importFile,
   createGoogleSheet, getGoogleConfig, getGoogleStatus,
   importFromGoogleSheets, exchangeGoogleToken, refreshGoogleToken, ensureGoogleSheetShared, pushToGoogleSheet,
@@ -797,6 +835,9 @@ import {
 } from '@/services/scoreService'
 import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
 import { createAssessmentType } from '@/services/assessmentTypeService'
+import { useConfirm } from '@/composables/useConfirm'
+
+const { confirm } = useConfirm()
 
 const router = useRouter()
 const route = useRoute()
@@ -808,8 +849,10 @@ const className = computed(() => (route.query.class_name as string) || '')
 const data = shallowRef<SpreadsheetResponse | null>(null)
 const loading = ref(false)
 const searchQuery = ref('')
+const searchInput = ref<HTMLInputElement | null>(null)
 const saveStatus = ref<'saving' | 'saved' | 'failed' | 'idle'>('idle')
 const sheetContainer = ref<HTMLElement | null>(null)
+const selectAllCheckbox = ref<HTMLInputElement | null>(null)
 const pageSize = ref<number | 'all'>(10)
 const currentPage = ref(1)
 const importProgress = ref(0)
@@ -838,6 +881,8 @@ const selectedCol = ref<number | null>(null)
 const selectionStartRow = ref<number | null>(null)
 const selectionStartCol = ref<number | null>(null)
 const isRangeSelecting = ref(false)
+const selectedEnrollmentIds = ref<Set<number>>(new Set())
+
 
 const editingRow = ref<number | null>(null)
 const editingCol = ref<number | null>(null)
@@ -1403,6 +1448,76 @@ function isCellSelected(rowIdx: number, colId: number): boolean {
 function expandAllRowsForSelection() {
   if (pageSize.value !== 'all') {
     pageSize.value = 'all'
+  }
+}
+
+const isAllRowsSelected = computed(() => {
+  const visible = filteredRows.value
+  return visible.length > 0 && visible.every(r => selectedEnrollmentIds.value.has(r.enrollment_id))
+})
+
+const isSomeRowsSelected = computed(() => {
+  const visible = filteredRows.value
+  return visible.some(r => selectedEnrollmentIds.value.has(r.enrollment_id))
+})
+
+function toggleRowSelection(enrollmentId: number) {
+  const newSet = new Set(selectedEnrollmentIds.value)
+  if (newSet.has(enrollmentId)) {
+    newSet.delete(enrollmentId)
+  } else {
+    newSet.add(enrollmentId)
+  }
+  selectedEnrollmentIds.value = newSet
+}
+
+function toggleSelectAll() {
+  if (isAllRowsSelected.value) {
+    selectedEnrollmentIds.value = new Set()
+  } else {
+    const newSet = new Set<number>()
+    for (const row of filteredRows.value) {
+      newSet.add(row.enrollment_id)
+    }
+    selectedEnrollmentIds.value = newSet
+  }
+}
+
+// Watch selectAllCheckbox indeterminate state
+watch([isAllRowsSelected, isSomeRowsSelected], () => {
+  if (selectAllCheckbox.value) {
+    selectAllCheckbox.value.indeterminate = isSomeRowsSelected.value && !isAllRowsSelected.value
+  }
+}, { immediate: true })
+
+async function confirmBulkDelete() {
+  const count = selectedEnrollmentIds.value.size
+  const ok = await confirm({
+    title: 'Delete Selected Rows',
+    message: `Delete ${count} selected student row${count > 1 ? 's' : ''}? This removes them from this subject and all their scores.`,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
+  if (!ok) return
+
+  const ids = [...selectedEnrollmentIds.value]
+  if (ids.length === 0) return
+
+  showSaveStatus('saving')
+  try {
+    const result = await bulkDeleteEnrollments(subjectId.value, termId.value, ids)
+    selectedEnrollmentIds.value = new Set()
+    showSaveStatus('saved')
+    pageSize.value = 'all'
+    await refreshData(true)
+    showToast(`Deleted ${result.deleted_count} student${result.deleted_count > 1 ? 's' : ''} successfully`, 'success')
+    if (result.errors && result.errors.length > 0) {
+      console.warn('Bulk delete had errors:', result.errors)
+    }
+  } catch (err) {
+    showSaveStatus('failed')
+    console.error('Failed to delete selected rows:', err)
+    showToast('Failed to delete rows', 'error')
   }
 }
 
@@ -2043,6 +2158,12 @@ function onGlobalKeydown(event: KeyboardEvent) {
         return
       case 'r': event.preventDefault(); return
     }
+  }
+
+  if (event.shiftKey && event.key === 'Delete' && selectedEnrollmentIds.value.size > 0) {
+    event.preventDefault()
+    confirmBulkDelete()
+    return
   }
 
   if ((event.key === 'Delete' || event.key === 'Backspace') && selectedCol.value !== null) {
@@ -3266,7 +3387,7 @@ async function importExcelFile(file: File) {
   if (jsonData.length < 2) throw new Error('Excel file must contain at least a header row and one data row')
 
   await animateImportProgress(15, 35, 500, 'Parsing student data...')
-  const rows = parseTabularData(jsonData as (string | number)[][])
+  const rows = parseTabularData(jsonData as (string | number)[][], columns.value)
 
   importStatusText.value = 'Importing scores to server...'
   const animPromise = animateImportProgress(35, 65, 3000, 'Importing scores to server...')
@@ -3274,7 +3395,7 @@ async function importExcelFile(file: File) {
   importProgress.value = 70
 }
 
-function parseTabularData(jsonData: (string | number)[][]): Array<{
+function parseTabularData(jsonData: (string | number)[][], existingColumns: SpreadsheetColumn[] = []): Array<{
   student_name: string
   student_number?: string
   marks?: Record<string, number>
@@ -3287,15 +3408,34 @@ function parseTabularData(jsonData: (string | number)[][]): Array<{
   if (nameIdx < 0) nameIdx = 0  // Default: first column is name
   if (idIdx < 0 || idIdx === nameIdx) idIdx = -1  // No ID column
 
-  const scoreColumns: { index: number; label: string }[] = []
+  // Build a lookup from label to existing column for type matching
+  const existingColumnByLabel = new Map<string, SpreadsheetColumn>()
+  for (const col of existingColumns) {
+    const normalizedLabel = col.label.trim().toLowerCase()
+    if (!existingColumnByLabel.has(normalizedLabel)) {
+      existingColumnByLabel.set(normalizedLabel, col)
+    }
+  }
+
+  const scoreColumns: { index: number; label: string; type: string }[] = []
   for (let i = 0; i < header.length; i++) {
     if (i === nameIdx || i === idIdx) continue
-    const label = header[i].replace(/\(.*?\)/g, '').trim() // Remove type info like "(quiz)"
-    const typeMatch = header[i].match(/\(([^)]+)\)/)
-    const type = typeMatch ? typeMatch[1].toLowerCase().trim() : 'unknown'
-    if (label && !/total|grade|remark/i.test(label)) {
-      scoreColumns.push({ index: i, label: `${label}_${type}` })
-    }
+    const headerText = header[i]
+    const label = headerText.replace(/\(.*?\)/g, '').trim() // Remove type info like "(quiz)"
+    const typeMatch = headerText.match(/\(([^)]+)\)/)
+    const headerType = typeMatch ? typeMatch[1].toLowerCase().trim() : ''
+
+    if (!label || /total|grade|remark/i.test(label)) continue
+
+    // Try to match this header against an existing column by label
+    const existing = existingColumnByLabel.get(label.toLowerCase())
+    const type = existing ? existing.type : (headerType || 'unknown')
+
+    scoreColumns.push({
+      index: i,
+      label: `${label}_${type}`,
+      type,
+    })
   }
 
   const rows: Array<{
@@ -3519,8 +3659,11 @@ function onColumnTypeChange(col: SpreadsheetColumn, event: Event) {
 function refocusSheet() {
   if (showKeyboardShortcuts.value || showAddColumn.value || showWeights.value || showImport.value || showAddRowPopup.value) return
   if (editingRow.value !== null) return
+  // Don't steal focus from the search input or other form elements
+  const active = document.activeElement
+  if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return
   const container = sheetContainer.value
-  if (container && document.activeElement !== container) {
+  if (container && active !== container) {
     container.focus()
   }
 }
@@ -5183,5 +5326,212 @@ watch([subjectId, termId], () => {
 .toast-enter-from, .toast-leave-to {
   opacity: 0;
   transform: translateX(40px);
+}
+
+/* ── Checkbox Styles ────────────────────────────────────────── */
+.cell-checkbox-header {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 0 !important;
+  text-align: center !important;
+}
+
+.cell-checkbox {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  padding: 0 !important;
+  text-align: center !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.checkbox-wrap input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 0;
+  height: 0;
+}
+
+.checkmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #cbd5e1;
+  border-radius: 4px;
+  background: white;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.checkbox-wrap:hover .checkmark {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.checkbox-wrap input:checked ~ .checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-wrap input:checked ~ .checkmark::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.checkbox-wrap input:indeterminate ~ .checkmark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.checkbox-wrap input:indeterminate ~ .checkmark::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+}
+
+.header-checkbox {
+  margin: 0 auto;
+}
+
+/* ── Checked row highlight ───────────────────────────────── */
+.row-checked .cell-checkbox .checkmark {
+  border-color: #3b82f6;
+  background: #3b82f6;
+}
+
+.row-checked .cell-checkbox .checkmark::after {
+  content: '';
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.row-checked .cell {
+  background: #eff6ff !important;
+}
+
+.row-checked:hover .cell {
+  background: #dbeafe !important;
+}
+
+/* ── Danger toolbar button ───────────────────────────────── */
+.tb-btn-danger {
+  color: #ef4444 !important;
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+}
+
+.tb-btn-danger:hover {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.tb-btn-danger i {
+  color: #ef4444;
+}
+
+/* ── Selection Action Bar ────────────────────────────────── */
+.selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  margin: 0 16px 6px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(59, 130, 246, 0.08);
+}
+
+@keyframes selectionBarSlideIn {
+  0% { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.selection-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selection-bar-right {
+  display: flex;
+  align-items: center;
+}
+
+.selection-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.selection-btn-cancel {
+  background: transparent;
+  color: #64748b;
+  border-color: transparent;
+  padding: 4px 6px;
+}
+
+.selection-btn-cancel:hover {
+  background: rgba(0,0,0,0.05);
+  color: #475569;
+}
+
+.selection-btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.selection-btn-danger:hover {
+  background: #dc2626;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  transform: translateY(-1px);
+}
+
+.selection-btn-danger i {
+  font-size: 0.82rem;
+}
+
+/* Selection bar transition */
+.selection-bar-enter-active {
+  animation: selectionBarSlideIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.selection-bar-leave-active {
+  animation: selectionBarSlideIn 0.15s ease-in reverse;
 }
 </style>
