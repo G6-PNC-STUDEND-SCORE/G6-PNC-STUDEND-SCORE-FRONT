@@ -19,6 +19,7 @@
         <div class="btn-group">
           <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
           <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
+          <button class="tb-btn" @click="showGradeBoundaries = true" title="Manage Grade Boundaries"><i class="bi bi-trophy"></i> <span>Grades</span></button>
           <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading">
             <template v-if="gsLoading">
               <i class="bi bi-arrow-repeat spinning"></i>
@@ -236,7 +237,9 @@
               </td>
 
               <td class="cell cell-total" :class="getTotalCellClass(row)">{{ row.total !== null ? row.total.toFixed(2) : '-' }}</td>
-              <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">{{ row.grade || '-' }}</td>
+              <td class="cell cell-grade" :class="'grade-' + (row.grade?.toLowerCase().replace('+', '-plus') || 'none')">
+                <span class="grade-pill">{{ row.grade || '-' }}</span>
+              </td>
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
               <td :colspan="4 + columns.length + 2" class="cell-frozen add-row-cell">
@@ -518,30 +521,37 @@
     <Teleport to="body">
       <Transition name="modal">
         <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
-          <div class="modal-content-panel modal-sm-panel">
+          <div class="modal-content-panel modal-sm-panel delete-col-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="deleteConfirm = null" aria-label="Close">
                 <i class="bi bi-x-lg"></i>
               </button>
               <div class="modal-icon icon-delete">
-                <i class="bi bi-trash3"></i>
+                <i class="bi bi-exclamation-triangle"></i>
               </div>
               <div>
-                <h5>Delete Column</h5>
+                <h5 style="color: #dc2626;">Delete Column</h5>
                 <p class="modal-subtitle">This action cannot be undone</p>
               </div>
             </div>
             <div class="modal-body-custom">
-              <p class="delete-warning-text">
-                Are you sure you want to delete <strong>"{{ deleteConfirm.label }}"</strong>?
-                This removes the column and all its scores for every student.
-              </p>
+              <div class="delete-warning-box">
+                <div class="delete-warning-icon-wrap">
+                  <i class="bi bi-trash3"></i>
+                </div>
+                <p class="delete-warning-text">
+                  Are you sure you want to delete <strong>"{{ deleteConfirm.label }}"</strong>?
+                </p>
+                <p class="delete-warning-sub">
+                  This will permanently remove the column and <strong>all scores</strong> associated with it for every student. This action cannot be recovered.
+                </p>
+              </div>
             </div>
             <div class="modal-footer-custom">
               <button class="btn-outline" @click="deleteConfirm = null">Cancel</button>
               <button class="btn-danger-custom" @click="doDeleteColumn">
-                <i class="bi bi-trash3 me-1"></i>
-                Delete
+                <i class="bi bi-trash3-fill me-1"></i>
+                Delete Column
               </button>
             </div>
           </div>
@@ -816,6 +826,12 @@
       </Transition>
     </Teleport>
 
+    <GradeBoundaryModal
+      :visible="showGradeBoundaries"
+      @close="showGradeBoundaries = false"
+      @saved="onGradeBoundariesSaved"
+    />
+
     <div v-if="loading" class="loading-overlay"><div class="spinner"></div><span>Loading scores...</span></div>
   </div>
 </template>
@@ -835,6 +851,7 @@ import {
 } from '@/services/scoreService'
 import { getStudentEmailDomains, type StudentEmailDomain } from '@/services/emailDomainRuleService'
 import { createAssessmentType } from '@/services/assessmentTypeService'
+import GradeBoundaryModal from '@/components/GradeBoundaryModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 
 const { confirm } = useConfirm()
@@ -903,6 +920,7 @@ const inlineColName = ref('')
 const inlineColType = ref('quiz')
 const inlineColMax = ref<number | null>(100)
 const showWeights = ref(false)
+const showGradeBoundaries = ref(false)
 const showImport = ref(false)
 const gsLoading = ref(false)
 const gsSheetId = ref<string | null>(null)
@@ -2798,6 +2816,12 @@ function redo() {
 
 function goBack() { router.push('/scores') }
 
+function onGradeBoundariesSaved() {
+  showGradeBoundaries.value = false
+  showToast('Grade boundaries updated successfully!', 'success', 3000)
+  refreshData(true)
+}
+
 async function refreshData(silent = false) {
   if (!subjectId.value || !termId.value) return
   if (!silent) loading.value = true
@@ -3475,6 +3499,182 @@ function parseTabularData(jsonData: (string | number)[][], existingColumns: Spre
   return rows
 }
 
+async function importPdfFile(file: File) {
+  const pdfjsLib = await import('pdfjs-dist')
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+
+  await animateImportProgress(0, 15, 400, 'Reading PDF file...')
+  const buffer = await file.arrayBuffer()
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
+
+  await animateImportProgress(15, 30, 500, 'Extracting text from PDF...')
+
+  // ── Extract ALL text from every page, grouped into lines ──
+  // Join cells on each line with TAB so we can split them back apart.
+  const existingCols = columns.value
+
+  // Build lookup: column label (lowercase) -> { label, type }
+  const columnMap = new Map<string, { label: string; type: string }>()
+  for (const col of existingCols) {
+    columnMap.set(col.label.toLowerCase().trim(), { label: col.label, type: col.type })
+  }
+
+  const lines: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+
+    const byY = new Map<number, Array<{ str: string; x: number }>>()
+    for (const item of content.items) {
+      const it = item as any
+      const y = Math.round((it.transform[5] || 0) * 2) / 2
+      if (!byY.has(y)) byY.set(y, [])
+      byY.get(y)!.push({ str: it.str, x: it.transform[4] || 0 })
+    }
+
+    const sortedRows = Array.from(byY.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([, items]) =>
+        items.sort((a, b) => a.x - b.x).map(c => c.str).join('\t')
+      )
+      .filter(r => r.trim().length > 0)
+
+    lines.push(...sortedRows)
+  }
+
+  await animateImportProgress(30, 45, 500, 'Parsing student data from PDF...')
+
+  // ── Find header line and map columns ──
+  // Uses the same approach as parseTabularData() for Excel.
+  let headerLineIndex = -1
+  let scoreHeader: string[] = []
+  let nameIdx = -1
+  let idIdx = -1
+
+  for (let li = 0; li < lines.length; li++) {
+    const parts = lines[li].split(/\t+|\s{2,}/).map(s => s.trim()).filter(Boolean)
+    if (parts.length < 3) continue
+
+    const lower = parts.map(p => p.toLowerCase())
+    const hasName = lower.some(p => /^(name|student|full.?name|student.?name)$/.test(p))
+    const hasScoreHeader = lower.some(p => /^(quiz|exam|test|midterm|final|assignment|project|score)/.test(p))
+
+    // Only treat this line as a header if it has name-like AND score-like columns
+    if (!hasName && !hasScoreHeader) continue
+
+    // Find name and ID column positions
+    nameIdx = parts.findIndex(p => /^(name|student|full.?name|student.?name)$/i.test(p.trim()))
+    idIdx = parts.findIndex(p => /^(id|no\.?|number|code)$/i.test(p.trim()))
+    if (nameIdx < 0) nameIdx = 0 // Default: first column is name
+    if (idIdx === nameIdx) idIdx = -1
+
+    // Map remaining columns — INCLUDE ALL even unmatched ones (backend will create them)
+    for (let pi = 0; pi < parts.length; pi++) {
+      if (pi === nameIdx || pi === idIdx) continue
+      const rawLabel = parts[pi].replace(/\(.*?\)/g, '').trim()
+      if (!rawLabel || /total|grade|remark/i.test(rawLabel)) continue
+
+      const cleanKey = rawLabel.toLowerCase().trim()
+      const matched = columnMap.get(cleanKey)
+      if (matched) {
+        scoreHeader.push(`${matched.label}_${matched.type}`)
+      } else {
+        // Fuzzy match
+        const fuzzy = existingCols.find(c =>
+          c.label.toLowerCase().includes(cleanKey) ||
+          cleanKey.includes(c.label.toLowerCase())
+        )
+        if (fuzzy) {
+          scoreHeader.push(`${fuzzy.label}_${fuzzy.type}`)
+        } else {
+          // No match — still include with 'unknown' so backend creates it
+          scoreHeader.push(`${rawLabel}_unknown`)
+        }
+      }
+    }
+
+    headerLineIndex = li
+    break // Found the header, stop looking
+  }
+
+  // ── Parse data rows ──
+  const dataRows: Array<{
+    student_name: string
+    student_number?: string
+    marks?: Record<string, number>
+  }> = []
+
+  if (headerLineIndex >= 0 && scoreHeader.length > 0) {
+    for (let ri = headerLineIndex + 1; ri < lines.length; ri++) {
+      const parts = lines[ri].split(/\t+|\s{2,}/).map(s => s.trim()).filter(Boolean)
+      if (parts.length < 2) continue
+
+      let studentName = (nameIdx >= 0 && nameIdx < parts.length) ? parts[nameIdx] : parts[0]
+      let studentNumber = (idIdx >= 0 && idIdx < parts.length) ? parts[idIdx] : ''
+
+      if (!studentNumber) {
+        const nm = studentName.match(/^(PNC\d+-\d+)\s+(.+)$/i)
+        if (nm) { studentNumber = nm[1]; studentName = nm[2] }
+      }
+
+      if (!studentName) continue
+      const nameLower = studentName.toLowerCase()
+      if (nameLower.includes('total') || nameLower.includes('average') ||
+          nameLower.includes('sum') || nameLower.includes('page') ||
+          nameLower.includes('subject') || nameLower.includes('generated')) continue
+
+      // Extract marks — score columns start after name/id columns
+      const marks: Record<string, number> = {}
+      const scoreStartIdx = Math.max(nameIdx, idIdx) + 1
+
+      for (let si = 0; si < scoreHeader.length; si++) {
+        const partIdx = scoreStartIdx + si
+        if (partIdx >= 0 && partIdx < parts.length) {
+          const val = parts[partIdx]
+          const num = Number(val.replace(/[,]/g, ''))
+          if (!isNaN(num) && val.trim().length > 0) {
+            marks[scoreHeader[si]] = num
+          }
+        }
+      }
+
+      dataRows.push({
+        student_name: studentName,
+        student_number: studentNumber || undefined,
+        marks: Object.keys(marks).length > 0 ? marks : undefined,
+      })
+    }
+  }
+
+  // ── Fallback: simple tabular parsing (no header detected) ──
+  if (dataRows.length === 0) {
+    for (let li = 0; li < lines.length; li++) {
+      const parts = lines[li].split(/\t+|\s{2,}/).map(s => s.trim()).filter(Boolean)
+      if (parts.length < 2) continue
+      const lineLower = lines[li].toLowerCase()
+      if (lineLower.includes('total') || lineLower.includes('average') ||
+          lineLower.includes('page') || lineLower.includes('generated')) continue
+
+      dataRows.push({
+        student_name: parts[0],
+        student_number: parts.length > 1 ? parts[1] : undefined,
+      })
+    }
+  }
+
+  await animateImportProgress(45, 65, 500, `Preparing ${dataRows.length} student records...`)
+
+  importStatusText.value = `Importing ${dataRows.length} records to server...`
+  animateImportProgress(65, 85, 3000, 'Importing scores to server...')
+
+  await importFile(subjectId.value, termId.value, {
+    rows: dataRows,
+    email_domain: selectedEmailDomain.value,
+  }, classId.value)
+
+  importProgress.value = 90
+}
+
 function exportCSV() {
   if (!data.value) return
   const cols = columns.value
@@ -3535,12 +3735,20 @@ async function exportPDF() {
     ;(doc as any).autoTable = (opts: any) => autoTablePlugin(doc, opts)
   }
   const cols = columns.value
-  
-  doc.setFontSize(14)
-  doc.text(`${data.value.subject?.name || 'Scores'} - ${data.value.term?.name || ''}`, 14, 15)
-  doc.setFontSize(9)
-  doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 21)
-  
+
+  // ── Title ──
+  doc.setTextColor(30, 41, 59)
+  doc.setFontSize(11)
+  doc.text(`${data.value.subject?.name || 'Scores'} — ${data.value.term?.name || ''}`, 14, 16)
+
+  // ── Meta information line ──
+  doc.setTextColor(100, 116, 139)
+  doc.setFontSize(7)
+  const teacherNames = data.value.offerings?.map(o => o.teacher_name).filter(Boolean).join(', ') || ''
+  const metaLine = `Generated: ${new Date().toLocaleDateString()}  |  Students: ${rows.value.length}${teacherNames ? '  |  ' + teacherNames : ''}`
+  doc.text(metaLine, 14, 22)
+
+  // ── Table (one header row only — autoTable's own head) ──
   const head = [['#', 'Student Name', 'Student ID', ...cols.map(c => c.label), 'Total', 'Grade']]
   const body = rows.value.map((r, i) => [
     String(i + 1),
@@ -3553,21 +3761,95 @@ async function exportPDF() {
     r.total !== null ? r.total.toFixed(2) : '-',
     r.grade || '-',
   ])
-  
+
+  const fs = 7
+  const numWidth = 8
+  const nameWidth = 42
+  const idWidth = 24
+
   ;(doc as any).autoTable({
     head,
     body,
     startY: 26,
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [248, 250, 252] },
-    columnStyles: {
-      0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 28 },
+    styles: {
+      fontSize: fs,
+      cellPadding: 2,
+      lineColor: [226, 232, 240],
+      lineWidth: 0.2,
     },
+    headStyles: {
+      fillColor: [59, 130, 246],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      halign: 'center',
+    },
+    bodyStyles: {
+      valign: 'middle',
+    },
+    alternateRowStyles: {
+      fillColor: [248, 250, 252],
+    },
+    columnStyles: {
+      0: { cellWidth: numWidth, halign: 'center', textColor: [148, 163, 184] },
+      1: { cellWidth: nameWidth, halign: 'left' },
+      2: { cellWidth: idWidth, halign: 'left' },
+    },
+    didParseCell: function (data: any) {
+      const gradeIdx = head[0].length - 1
+      const totalIdx = head[0].length - 2
+      // Style the grade column with colors
+      if (data.column.index === gradeIdx) {
+        const grade = data.cell.raw as string
+        if (grade === 'A') {
+          data.cell.styles.textColor = [22, 163, 74]
+          data.cell.styles.fontStyle = 'bold'
+        } else if (grade === 'B+') {
+          data.cell.styles.textColor = [37, 99, 235]
+          data.cell.styles.fontStyle = 'bold'
+        } else if (grade === 'B') {
+          data.cell.styles.textColor = [37, 99, 235]
+        } else if (grade === 'C+') {
+          data.cell.styles.textColor = [180, 83, 9]
+        } else if (grade === 'C') {
+          data.cell.styles.textColor = [180, 83, 9]
+        } else if (grade === 'D') {
+          data.cell.styles.textColor = [147, 51, 234]
+        } else if (grade === 'F') {
+          data.cell.styles.textColor = [220, 38, 38]
+          data.cell.styles.fontStyle = 'bold'
+        }
+        data.cell.styles.halign = 'center'
+      }
+      // Bold total column
+      if (data.column.index === totalIdx) {
+        data.cell.styles.halign = 'center'
+        data.cell.styles.fontStyle = 'bold'
+      }
+    },
+    margin: { top: 26, bottom: 20 },
+    tableLineColor: [226, 232, 240],
+    tableLineWidth: 0.3,
   })
-  
+
+  // ── Summary footer ──
+  const finalY = (doc as any).lastAutoTable?.finalY || 34
+  const graded = rows.value.filter(r => r.grade !== null)
+  const passCount = graded.filter(r => isPassing(r.grade!)).length
+  const passRateVal = graded.length > 0 ? ((passCount / graded.length) * 100).toFixed(1) : '0.0'
+  const avgScore = averageScore.value.toFixed(1)
+
+  doc.setFillColor(241, 245, 249)
+  doc.rect(14, finalY + 6, pageWidth - 28, 14, 'F')
+  doc.setTextColor(71, 85, 105)
+  doc.setFontSize(7.5)
+  doc.text(`Total Students: ${rows.value.length}`, 18, finalY + 14)
+  doc.text(`Average Score: ${avgScore}%`, 70, finalY + 14)
+  doc.text(`Pass Rate: ${passRateVal}%`, 130, finalY + 14)
+  doc.text(`Grade Distribution: ${['A', 'B+', 'B', 'C+', 'C', 'D', 'F'].map(g => {
+    const count = rows.value.filter(r => r.grade === g).length
+    return count > 0 ? `${g}: ${count}` : ''
+  }).filter(Boolean).join(' | ')}`, 18, finalY + 22)
+
   doc.save(`scores-${data.value.subject?.name || 'export'}.pdf`)
   showExportMenu.value = false
   showSaveStatus('saved')
@@ -4046,6 +4328,37 @@ watch([subjectId, termId], () => {
 .cell-total, .cell-grade { background: #fafafa; }
 .cell-total.cell-header, .cell-grade.cell-header { background: #e2e8f0; }
 
+.cell-grade {
+  text-align: center !important;
+  overflow: visible !important;
+}
+
+.cell-grade .grade-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  padding: 3px 14px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  line-height: 1.4;
+}
+
+.cell-grade:hover .grade-pill {
+  transform: scale(1.12);
+}
+
+.grade-a .grade-pill { background: #dcfce7; color: #15803d; box-shadow: 0 1px 3px rgba(22,163,74,0.15); border: 1px solid #bbf7d0; }
+.grade-b-plus .grade-pill { background: #dbeafe; color: #1d4ed8; box-shadow: 0 1px 3px rgba(37,99,235,0.15); border: 1px solid #bfdbfe; }
+.grade-b .grade-pill { background: #e0f2fe; color: #0369a1; box-shadow: 0 1px 3px rgba(37,99,235,0.1); border: 1px solid #bae6fd; }
+.grade-c-plus .grade-pill { background: #fef3c7; color: #b45309; box-shadow: 0 1px 3px rgba(245,158,11,0.15); border: 1px solid #fde68a; }
+.grade-c .grade-pill { background: #fef9c3; color: #a16207; box-shadow: 0 1px 3px rgba(245,158,11,0.1); border: 1px solid #fef08a; }
+.grade-d .grade-pill { background: #f3e8ff; color: #7c3aed; box-shadow: 0 1px 3px rgba(147,51,234,0.15); border: 1px solid #e9d5ff; }
+.grade-f .grade-pill { background: #fce4ec; color: #c62828; box-shadow: 0 1px 3px rgba(220,38,38,0.15); border: 1px solid #fecaca; }
+.grade-none .grade-pill { background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; }
 
 .cell {
   border: 1px solid #e2e8f0;
@@ -4318,14 +4631,7 @@ watch([subjectId, termId], () => {
 }
 
 
-.grade-a { color: #16a34a !important; font-weight: 700 !important; }
-.grade-b-plus { color: #2563eb !important; font-weight: 700 !important; }
-.grade-b { color: #2563eb !important; font-weight: 700 !important; }
-.grade-c-plus { color: #b45309 !important; font-weight: 700 !important; }
-.grade-c { color: #b45309 !important; font-weight: 700 !important; }
-.grade-d { color: #9333ea !important; font-weight: 700 !important; }
-.grade-f { color: #dc2626 !important; font-weight: 700 !important; }
-.grade-none { color: #94a3b8 !important; }
+
 
 
 .loading-bar {
@@ -4574,17 +4880,90 @@ watch([subjectId, termId], () => {
   color: #a16207;
 }
 
-.delete-warning-text {
+.delete-col-panel {
+  border-top: 4px solid #ef4444 !important;
+}
+
+.delete-warning-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 20px;
   text-align: center;
-  font-size: 0.875rem;
-  color: #475569;
-  line-height: 1.6;
-  margin: 8px 0;
+}
+
+.delete-warning-icon-wrap {
+  width: 48px;
+  height: 48px;
+  background: #fef2f2;
+  border: 2px solid #fecaca;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  animation: deletePulse 1.5s ease-in-out infinite;
+}
+
+.delete-warning-icon-wrap i {
+  font-size: 20px;
+  color: #dc2626;
+}
+
+@keyframes deletePulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.15); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+
+.delete-warning-text {
+  font-size: 0.95rem;
+  color: #1f2937;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  font-weight: 600;
 }
 
 .delete-warning-text strong {
-  color: #0f172a;
+  color: #dc2626;
   font-weight: 700;
+}
+
+.delete-warning-sub {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.delete-warning-sub strong {
+  color: #dc2626;
+}
+
+.btn-danger-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger-custom:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-danger-custom:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 
