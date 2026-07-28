@@ -293,7 +293,7 @@ const selectedGenerationFilter = ref<string | number | null>(null)
 
 const classCurrentPage = ref(1)
 const classPerPage = ref(10)
-const classPageSizeOptions = [10, 25, 50]
+const classPageSizeOptions = [10, 25, 50, 75, 100]
 
 const paginatedClasses = computed(() => {
   const start = (classCurrentPage.value - 1) * classPerPage.value
@@ -788,6 +788,10 @@ onMounted(async () => {
   min-height: 0;
   overflow-y: auto;
 }
+.classes-grid::-webkit-scrollbar { width: 4px; height: 4px; }
+.classes-grid::-webkit-scrollbar-track { background: transparent; }
+.classes-grid::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.classes-grid::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
 .classes-grid-inner {
   display: grid;
@@ -903,6 +907,10 @@ onMounted(async () => {
   min-height: 0;
   overflow-y: auto;
 }
+.term-sections::-webkit-scrollbar { width: 4px; height: 4px; }
+.term-sections::-webkit-scrollbar-track { background: transparent; }
+.term-sections::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.term-sections::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
 
 .term-sections-inner {
   display: flex;

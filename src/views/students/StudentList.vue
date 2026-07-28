@@ -264,7 +264,7 @@ const canDelete = computed(() => hasPermission('delete-students'))
 
 const currentPage = ref(1)
 const pageSize = ref(10)
-const pageSizeOptions = [10, 25, 50]
+const pageSizeOptions = [10, 25, 50, 75, 100]
 const selectedIds = ref<number[]>([])
 
 const props = defineProps<{
