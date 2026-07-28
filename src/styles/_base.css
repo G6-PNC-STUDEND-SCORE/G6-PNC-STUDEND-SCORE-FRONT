@@ -98,3 +98,115 @@ body {
     flex-direction: column;
   }
 }
+
+/* ── Professional Print Styles ───────────────────────────── */
+@media print {
+  /* Hide all UI chrome */
+  .sidebar,
+  .app-header,
+  .sc-toolbar,
+  .navigation,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  /* Reset body/layout for print */
+  html, body {
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: auto !important;
+  }
+
+  .app-layout {
+    display: block !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  .content-wrapper {
+    margin-left: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .main-content {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Score card page specific */
+  .score-card-page {
+    padding: 15mm !important;
+    max-width: none !important;
+  }
+
+  .sc-term-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .sc-overall {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  .sc-profile {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .sc-kpi-card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+
+  .sc-kpi-card:hover {
+    transform: none !important;
+  }
+
+  .sc-table tbody tr:hover td {
+    background: #fff !important;
+  }
+
+  .sc-progress-fill {
+    transition: none !important;
+  }
+
+  .sc-footer {
+    break-inside: avoid;
+  }
+
+  @page {
+    margin: 15mm;
+  }
+
+  /* Remove shadows and text effects for clean print */
+  * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure colored elements print correctly */
+  .sc-grade-badge,
+  .sc-result-badge,
+  .sc-verdict,
+  .sc-grade-badge.is-pass,
+  .sc-grade-badge.is-fail,
+  .grade-badge,
+  .sc-verdict.is-pass,
+  .sc-verdict.is-fail,
+  .sc-result-badge.is-pass,
+  .sc-result-badge.is-fail,
+  .term-avg-value {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

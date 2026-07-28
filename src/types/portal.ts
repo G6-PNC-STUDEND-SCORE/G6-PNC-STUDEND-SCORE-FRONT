@@ -8,6 +8,7 @@ export interface PortalProfile {
   currentTerm: string | null
   academicStatus: string | null
   avatar: string | null
+  avatarDataUrl: string | null
 }
 
 export interface PortalSummaryItem {

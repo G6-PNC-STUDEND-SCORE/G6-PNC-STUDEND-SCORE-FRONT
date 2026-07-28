@@ -138,6 +138,7 @@ import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText, History,
   User, Shield, LogOut, X, ChevronLeft, ChevronRight,
+  Award,
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
@@ -185,6 +186,7 @@ const navLinks = computed<NavLink[]>(() => {
       { to: '/portal', label: 'My Dashboard', icon: LayoutDashboard },
       { to: '/portal/scores', label: 'My Scores', icon: ClipboardList },
       { to: '/portal/transcript', label: 'My Transcript', icon: FileText },
+      { to: '/portal/score-card', label: 'Score Card', icon: Award },
     ]
   }
   const links: NavLink[] = [

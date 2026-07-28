@@ -127,6 +127,12 @@ export const routes: RouteRecordRaw[] = [
         component: () => import('@/views/portal/StudentTranscriptPage.vue'),
         meta: { roles: ['student'] },
       },
+      {
+        path: 'portal/score-card',
+        name: 'student-score-card',
+        component: () => import('@/views/portal/StudentScoreCardPage.vue'),
+        meta: { roles: ['student'] },
+      },
     ],
   },
 ]
