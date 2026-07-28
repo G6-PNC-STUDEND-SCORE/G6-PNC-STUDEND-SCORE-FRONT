@@ -1,5 +1,5 @@
 <template>
-  <div class="score-sheet" @click="refocusSheet">
+  <div :class="['score-sheet', { 'dark-mode': isDark }]" @click="refocusSheet">
     <div class="sheet-toolbar">
       <button class="tb-btn" @click="goBack" title="Back">
         <i class="bi bi-arrow-left"></i>
@@ -337,7 +337,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="renamingColumn" class="modal-overlay" @click.self="renamingColumn = null">
+        <div v-if="renamingColumn" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="renamingColumn = null">
           <div class="modal-content-panel modal-sm-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="renamingColumn = null" aria-label="Close">
@@ -376,7 +376,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showAddColumn" class="modal-overlay" @click.self="showAddColumn = false">
+        <div v-if="showAddColumn" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showAddColumn = false">
           <div class="modal-content-panel modal-sm-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="showAddColumn = false" aria-label="Close">
@@ -444,7 +444,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showWeights" class="modal-overlay" @click.self="showWeights = false">
+        <div v-if="showWeights" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showWeights = false">
           <div class="modal-content-panel modal-sm-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="showWeights = false" aria-label="Close">
@@ -520,7 +520,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="deleteConfirm" class="modal-overlay" @click.self="deleteConfirm = null">
+        <div v-if="deleteConfirm" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="deleteConfirm = null">
           <div class="modal-content-panel modal-sm-panel delete-col-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="deleteConfirm = null" aria-label="Close">
@@ -560,7 +560,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showAddRowPopup" class="modal-overlay" @click.self="showAddRowPopup = false">
+        <div v-if="showAddRowPopup" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showAddRowPopup = false">
           <div class="modal-content-panel modal-sm-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="showAddRowPopup = false" aria-label="Close">
@@ -599,7 +599,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showImport" class="modal-overlay" @click.self="showImport = false">
+        <div v-if="showImport" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showImport = false">
           <div class="import-modal">
             <div class="import-modal-head">
               <div class="import-modal-icon">
@@ -722,7 +722,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showKeyboardShortcuts" class="overlay" @click.self="showKeyboardShortcuts = false">
+        <div v-if="showKeyboardShortcuts" :class="['overlay', { 'dark-mode': isDark }]" @click.self="showKeyboardShortcuts = false">
           <div class="modal-card shortcuts-modal">
             <div class="modal-head">
               <div class="modal-icon icon-add">
@@ -778,7 +778,7 @@
     </Teleport>
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showGsLinkModal" class="modal-overlay" @click.self="showGsLinkModal = false">
+        <div v-if="showGsLinkModal" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showGsLinkModal = false">
           <div class="modal-content-panel modal-sm-panel">
             <div class="modal-header-custom">
               <button class="modal-close-btn" @click="showGsLinkModal = false" aria-label="Close">
@@ -819,7 +819,7 @@
 
     <Teleport to="body">
       <Transition name="toast">
-        <div v-if="toastVisible" class="toast-notification" :class="toastType">
+        <div v-if="toastVisible" class="toast-notification" :class="[toastType, { 'dark-mode': isDark }]">
           <i :class="toastIcon"></i>
           <span class="toast-message">{{ toastMessage }}</span>
         </div>
@@ -838,6 +838,7 @@
 
 <script setup lang="ts">
 import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef, onBeforeUnmount, onUnmounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useRouter, useRoute } from 'vue-router'
 
 import {
@@ -854,6 +855,8 @@ import { createAssessmentType } from '@/services/assessmentTypeService'
 import GradeBoundaryModal from '@/components/GradeBoundaryModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 const { confirm } = useConfirm()
 
 const router = useRouter()
@@ -5913,4 +5916,193 @@ watch([subjectId, termId], () => {
 .selection-bar-leave-active {
   animation: selectionBarSlideIn 0.15s ease-in reverse;
 }
+
+/* Dark mode */
+.dark-mode .score-sheet { background: #0f172a; color: #e2e8f0; }
+.dark-mode .sheet-toolbar { background: rgba(30, 41, 59, 0.95); border-bottom-color: #334155; }
+.dark-mode .tb-btn { color: #cbd5e1; }
+.dark-mode .tb-btn:hover { background: rgba(51, 65, 85, 0.5); color: #60a5fa; }
+.dark-mode .offering-item-main { color: #f1f5f9; }
+.dark-mode .offering-item-badge { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .offering-item-teachers { color: #94a3b8; }
+.dark-mode .stats-bar { background: rgba(30, 41, 59, 0.8); border-bottom-color: #334155; }
+.dark-mode .stat-label { color: #94a3b8; }
+.dark-mode .stat-value { color: #e2e8f0; }
+.dark-mode .search-box { background: rgba(51, 65, 85, 0.4); border-color: #475569; }
+.dark-mode .search-input { color: #e2e8f0; }
+.dark-mode .search-input::placeholder { color: #64748b; }
+.dark-mode .search-icon { color: #64748b; }
+.dark-mode .save-status { color: #94a3b8; }
+.dark-mode .save-status.saving { color: #fbbf24; }
+.dark-mode .save-status.saved { color: #4ade80; }
+.dark-mode .save-status.failed { color: #fca5a5; }
+.dark-mode .sheet-table thead { background: rgba(30, 41, 59, 0.95); }
+.dark-mode .cell-header { background: rgba(30, 41, 59, 0.95); color: #cbd5e1; border-color: #334155; }
+.dark-mode .cell-header.header-highlighted { background: rgba(59, 130, 246, 0.15); }
+.dark-mode .cell { color: #e2e8f0; border-color: rgba(71, 85, 105, 0.4); }
+.dark-mode .cell-score { background: rgba(30, 41, 59, 0.7); }
+.dark-mode .row-num { color: #64748b; }
+.dark-mode .cell-student-name { color: #f1f5f9; }
+.dark-mode .cell-total { color: #e2e8f0; }
+.dark-mode .grade-pill { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .add-row-cell { color: #64748b; }
+.dark-mode .add-row-cell:hover { color: #60a5fa; }
+.dark-mode .column-label { color: #e2e8f0; }
+.dark-mode .col-action-btn { color: #64748b; }
+.dark-mode .col-action-btn:hover { color: #60a5fa; }
+.dark-mode .col-type-badge { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .max-score-label { color: #64748b; }
+.dark-mode .selection-bar { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; }
+.dark-mode .selection-btn-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .selection-btn-danger:hover { background: rgba(239, 68, 68, 0.25); }
+.dark-mode .context-menu { background: #1e293b; border-color: #475569; }
+.dark-mode .context-menu-item { color: #cbd5e1; }
+.dark-mode .context-menu-item:hover { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .context-menu-separator { background: #334155; }
+.dark-mode .spinner { border-color: #334155; border-top-color: #3b82f6; }
+.dark-mode .loading-overlay { background: rgba(15, 23, 42, 0.85); }
+.dark-mode .import-progress-card { background: #1e293b; }
+.dark-mode .export-menu { background: #1e293b; border-color: #475569; }
+.dark-mode .export-menu-item { color: #cbd5e1; }
+.dark-mode .export-menu-item:hover { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .shortcuts-modal { background: #1e293b; }
+.dark-mode .shortcut-group-title { color: #f1f5f9; }
+.dark-mode .shortcut-desc { color: #94a3b8; }
+.dark-mode .shortcut-keys kbd { background: rgba(51, 65, 85, 0.5); color: #e2e8f0; border-color: #475569; }
+.dark-mode .toast-notification { background: #1e293b; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+.dark-mode .toast-notification.success { color: #4ade80; }
+.dark-mode .toast-notification.error { color: #fca5a5; }
+.dark-mode .import-modal { background: #1e293b; }
+.dark-mode .import-modal-head p { color: #94a3b8; }
+.dark-mode .import-zone { background: rgba(51, 65, 85, 0.3); border-color: #475569; }
+.dark-mode .import-zone-title { color: #e2e8f0; }
+.dark-mode .import-zone-sub { color: #64748b; }
+.dark-mode .import-file-main { background: rgba(51, 65, 85, 0.4); }
+.dark-mode .import-file-name { color: #e2e8f0; }
+.dark-mode .import-preview-stat { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .import-preview-label { color: #64748b; }
+.dark-mode .import-domain-select { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
+.dark-mode .import-domain-info { color: #94a3b8; }
+.dark-mode .import-domain-info-bar { color: #94a3b8; }
+.dark-mode .import-btn-secondary { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .import-btn-secondary:hover { background: rgba(71, 85, 105, 0.5); }
+.dark-mode .inline-add-col { background: #1e293b; border-color: #475569; }
+.dark-mode .inline-input { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
+.dark-mode .inline-select { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
+.dark-mode .sheet-wrapper { background: rgba(15, 23, 42, 0.95); }
+.dark-mode .sheet-scroll { background: transparent; }
+.dark-mode .sheet-table tbody tr:hover td { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .cell-frozen { background: rgba(30, 41, 59, 0.98) !important; }
+.dark-mode .cell-frozen.cell-student-name { background: rgba(30, 41, 59, 0.98) !important; }
+.dark-mode .cell-frozen.cell-student-id { background: rgba(30, 41, 59, 0.98) !important; }
+.dark-mode .cell-score { background: rgba(15, 23, 42, 0.6); }
+.dark-mode .row-selected td.cell-score { background: rgba(59, 130, 246, 0.08); }
+.dark-mode .row-selected .cell-frozen { background: rgba(59, 130, 246, 0.12) !important; }
+.dark-mode .row-checked td { background: rgba(59, 130, 246, 0.05); }
+.dark-mode .row-num-highlighted { background: rgba(59, 130, 246, 0.15) !important; }
+.dark-mode .row-num-header.header-highlighted { background: rgba(59, 130, 246, 0.2) !important; }
+.dark-mode .student-name-header.header-highlighted { background: rgba(59, 130, 246, 0.2) !important; }
+.dark-mode .student-id-header.header-highlighted { background: rgba(59, 130, 246, 0.2) !important; }
+.dark-mode .cell-total { background: rgba(30, 41, 59, 0.5); color: #e2e8f0; font-weight: 600; }
+.dark-mode .cell-grade { background: rgba(30, 41, 59, 0.5); }
+.dark-mode .grade-pill { background: rgba(51, 65, 85, 0.6); color: #94a3b8; padding: 2px 8px; border-radius: 4px; }
+.dark-mode .grade-a { background: rgba(34, 197, 94, 0.1); }
+.dark-mode .grade-a-plus { background: rgba(34, 197, 94, 0.15); }
+.dark-mode .grade-b { background: rgba(59, 130, 246, 0.1); }
+.dark-mode .grade-b-plus { background: rgba(59, 130, 246, 0.15); }
+.dark-mode .grade-c { background: rgba(251, 191, 36, 0.1); }
+.dark-mode .grade-d { background: rgba(239, 68, 68, 0.1); }
+.dark-mode .grade-f { background: rgba(239, 68, 68, 0.15); }
+.dark-mode .add-row-row:hover .add-row-cell { background: rgba(59, 130, 246, 0.08); }
+.dark-mode .add-row-cell { color: #64748b; border-bottom-color: #334155; }
+.dark-mode .header-content { color: #cbd5e1; }
+.dark-mode .column-actions { opacity: 0; }
+.dark-mode .cell-header:hover .column-actions { opacity: 1; }
+.dark-mode .col-action-delete { color: #fca5a5; }
+.dark-mode .col-type-badge { background: rgba(51, 65, 85, 0.5); color: #94a3b8; border-color: #475569; }
+.dark-mode .col-type-label { color: #94a3b8; }
+.dark-mode .col-type-chevron { color: #64748b; }
+.dark-mode .col-type-dropdown { background: #1e293b; border-color: #475569; }
+.dark-mode .col-type-option { color: #cbd5e1; }
+.dark-mode .col-type-option:hover { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .col-type-option.active { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .col-type-check { color: #60a5fa; }
+.dark-mode .col-type-dot { border-color: #475569; }
+.dark-mode .max-score-label { color: #64748b; font-size: 0.65rem; }
+.dark-mode .add-col-trigger { color: #64748b; }
+.dark-mode .add-col-trigger:hover { color: #60a5fa; background: rgba(59, 130, 246, 0.1); }
+.dark-mode .checkbox-wrap { border-color: #475569; }
+.dark-mode .checkbox-wrap input:checked ~ .checkmark { background: #3b82f6; border-color: #3b82f6; }
+.dark-mode .checkmark { border-color: #475569; background: transparent; }
+.dark-mode .cell-editor { background: rgba(30, 41, 59, 0.98); color: #e2e8f0; border-color: #3b82f6; }
+.dark-mode .cell-editor-wrapper { background: transparent; }
+.dark-mode .fill-handle { background: #3b82f6; color: #fff; }
+.dark-mode .fill-handle:hover { background: #60a5fa; }
+.dark-mode .btn-group { background: transparent; }
+.dark-mode .btn-group .tb-btn { color: #cbd5e1; }
+.dark-mode .btn-group .tb-btn:hover { background: rgba(51, 65, 85, 0.5); color: #60a5fa; }
+.dark-mode .kb-btn { color: #64748b; }
+.dark-mode .toolbar-meta { color: #94a3b8; }
+.dark-mode .gs-reconnect-link { color: #60a5fa; }
+.dark-mode .gs-reconnect-link:hover { color: #93c5fd; }
+.dark-mode .gs-sync-status { color: #94a3b8; }
+.dark-mode .spinning { border-color: #60a5fa transparent transparent; }
+.dark-mode .gs-icon path:first-child { fill: #34A853; }
+.dark-mode .weight-row { border-bottom-color: #334155; }
+.dark-mode .weight-name { color: #e2e8f0; }
+.dark-mode .weight-code { color: #64748b; }
+.dark-mode .weight-suffix { color: #64748b; }
+.dark-mode .weight-divider { background: #334155; }
+.dark-mode .weight-total-bar { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .weight-total-bar.weight-ok { color: #4ade80; }
+.dark-mode .weight-total-bar.weight-warn { color: #fbbf24; }
+.dark-mode .weight-hint { color: #fbbf24; }
+.dark-mode .new-type-header { color: #94a3b8; }
+.dark-mode .new-type-header:hover { color: #60a5fa; }
+.dark-mode .new-type-label { color: #94a3b8; }
+.dark-mode .no-assessments-text { color: #64748b; }
+.dark-mode .delete-warning-box { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .delete-warning-icon-wrap { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .delete-warning-text { color: #e2e8f0; }
+.dark-mode .delete-warning-sub { color: #94a3b8; }
+.dark-mode .icon-rename { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .icon-add { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .icon-weights { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.dark-mode .icon-delete { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+.dark-mode .import-modal-head { border-bottom-color: #334155; }
+.dark-mode .import-modal-head h3 { color: #f1f5f9; }
+.dark-mode .import-modal-close { color: #64748b; }
+.dark-mode .import-modal-close:hover { color: #cbd5e1; }
+.dark-mode .import-zone-over { border-color: #60a5fa; background: rgba(59, 130, 246, 0.1); }
+.dark-mode .import-zone-icon { color: #64748b; }
+.dark-mode .import-file-accent { background: #3b82f6; }
+.dark-mode .import-file-type-icon { color: #64748b; }
+.dark-mode .import-file-size { color: #64748b; }
+.dark-mode .import-file-remove { color: #64748b; }
+.dark-mode .import-file-remove:hover { color: #fca5a5; }
+.dark-mode .import-preview-stat-icon { background: rgba(51, 65, 85, 0.5); color: #64748b; }
+.dark-mode .import-preview-num { color: #e2e8f0; }
+.dark-mode .import-preview-cols { color: #94a3b8; }
+.dark-mode .import-domain { border-color: #475569; }
+.dark-mode .import-domain-required { border-color: #f59e0b; }
+.dark-mode .import-domain-hint { color: #94a3b8; }
+.dark-mode .import-domain-hint-warn { color: #fbbf24; }
+.dark-mode .import-btn-primary { background: #3b82f6; color: #fff; }
+.dark-mode .import-btn-primary:hover { background: #60a5fa; }
+.dark-mode .import-btn-primary:disabled { opacity: 0.5; }
+.dark-mode .inline-btn { background: #3b82f6; }
+.dark-mode .inline-btn:hover { background: #60a5fa; }
+.dark-mode .inline-btn-cancel { color: #64748b; }
+.dark-mode .inline-btn-cancel:hover { color: #fca5a5; }
+.dark-mode .btn-danger-custom { background: #dc2626; }
+.dark-mode .btn-danger-custom:hover { background: #ef4444; }
+.dark-mode .shortcuts-modal { background: #1e293b; }
+.dark-mode .shortcuts-body { border-top-color: #334155; }
+.dark-mode .shortcut-row { border-bottom-color: #334155; }
+.dark-mode .shortcut-group-title { color: #f1f5f9; }
+.dark-mode .shortcut-keys kbd { background: rgba(51, 65, 85, 0.5); color: #e2e8f0; border-color: #475569; }
+.dark-mode .shortcut-desc { color: #94a3b8; }
+.dark-mode .modal-card { background: #1e293b; }
+.dark-mode .selection-btn-cancel { color: #64748b; }
+.dark-mode .selection-btn-cancel:hover { color: #cbd5e1; }
 </style>

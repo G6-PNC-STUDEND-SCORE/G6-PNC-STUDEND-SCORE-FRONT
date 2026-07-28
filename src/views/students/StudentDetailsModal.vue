@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show && student" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="show && student" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="$emit('close')">
         <div class="modal-content-panel">
           <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">
             <i class="bi bi-x-lg"></i>
@@ -153,7 +153,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import type { Student } from '@/services/studentService'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const props = defineProps<{
   show: boolean
@@ -493,5 +497,22 @@ const genderIconStyle = computed(() => {
   background: #cbd5e1;
   border-radius: 2px;
 }
+
+/* Dark mode */
+.dark-mode .modal-content-panel { background: #1e293b; }
+.dark-mode .profile-section { background: linear-gradient(180deg, #162032 0%, #1e293b 100%); border-bottom-color: #334155; }
+.dark-mode .profile-name { color: #f1f5f9; }
+.dark-mode .badge-m { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .badge-f { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+.dark-mode .detail-card { background: rgba(51, 65, 85, 0.3); border-color: #475569; }
+.dark-mode .detail-card:hover { background: rgba(51, 65, 85, 0.5); border-color: #64748b; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+.dark-mode .detail-label { color: #64748b; }
+.dark-mode .detail-value { color: #e2e8f0; }
+.dark-mode .modal-close-btn { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .modal-close-btn:hover { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .stat-active { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.dark-mode .stat-inactive { background: rgba(71, 85, 105, 0.4); color: #94a3b8; }
+.dark-mode .profile-status-dot { border-color: #1e293b; }
+.dark-mode .btn-close-modal { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
 </style>
 

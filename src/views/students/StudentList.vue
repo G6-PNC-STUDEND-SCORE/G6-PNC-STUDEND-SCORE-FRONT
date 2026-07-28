@@ -1,5 +1,5 @@
 <template>
-  <div class="student-card">
+  <div :class="['student-card', { 'dark-mode': isDark }]">
     <div class="toolbar">
       <div class="toolbar-left">
         <div class="search-box">
@@ -240,6 +240,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { TransitionGroup } from 'vue'
 import type { Student } from '@/services/studentService'
 import {
@@ -256,6 +257,9 @@ import {
 } from '@lucide/vue'
 import type { Generation } from '@/types'
 import { usePermission } from '@/composables/usePermission'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const { hasPermission } = usePermission()
 const canCreate = computed(() => hasPermission('create-students'))
@@ -877,4 +881,46 @@ defineEmits<{
     width: 100px;
   }
 }
+
+/* Dark mode */
+.dark-mode .student-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+.dark-mode .student-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.dark-mode .toolbar { background: rgba(30, 41, 59, 0.8); border-bottom-color: #334155; }
+.dark-mode .search-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .search-input::placeholder { color: #64748b; }
+.dark-mode .search-input:hover { border-color: #64748b; }
+.dark-mode .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+.dark-mode .filter-label {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+.dark-mode .filter-label:hover { border-color: #64748b; }
+.dark-mode .filter-label :deep(svg) { color: #64748b; }
+.dark-mode .filter-select { color: #e2e8f0; background: transparent; }
+.dark-mode .student-name { color: #f1f5f9; }
+.dark-mode .meta-cell { color: #94a3b8; }
+.dark-mode .id-cell { color: #64748b; }
+.dark-mode .col-index { color: #64748b; }
+.dark-mode .avatar { background: linear-gradient(135deg, #3b82f6, #7c3aed); box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3); }
+.dark-mode .empty-box h5 { color: #94a3b8; }
+.dark-mode .empty-box p { color: #64748b; }
+.dark-mode .bulk-bar { background: rgba(239, 68, 68, 0.1); border-bottom-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .bulk-count { color: #fca5a5; }
+.dark-mode .bulk-clear-btn { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #94a3b8; }
+.dark-mode .bulk-clear-btn:hover { background: rgba(71, 85, 105, 0.5); border-color: #64748b; }
+.dark-mode .pagination-bar { background: rgba(30, 41, 59, 0.8); border-top-color: #334155; }
+.dark-mode .pagination-info { color: #94a3b8; }
+.dark-mode .rows-selector { background: rgba(51, 65, 85, 0.4); }
+.dark-mode .rows-btn { color: #94a3b8; }
+.dark-mode .rows-btn:hover { color: #e2e8f0; }
+.dark-mode .rows-btn.active { background: rgba(30, 41, 59, 0.8); color: #60a5fa; }
 </style>

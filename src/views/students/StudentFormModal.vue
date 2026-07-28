@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
+      <div v-if="show" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="$emit('close')">
         <div class="modal-content-panel">
           <div class="modal-head">
             <div class="modal-icon" :class="isEdit ? 'icon-edit' : 'icon-create'">
@@ -182,6 +182,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 
 import {
   SquarePen, UserPlus, AlertTriangle, User,
@@ -189,6 +191,9 @@ import {
 } from '@lucide/vue'
 
 import type { SchoolClass, Generation } from '@/types'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const props = defineProps<{
   show: boolean
@@ -431,4 +436,29 @@ select.styled-input {
 }
 
 .me-2 { margin-right: 8px; }
+
+/* Dark mode */
+.dark-mode .modal-content-panel { background: #1e293b; }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .styled-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .styled-input:hover { border-color: #64748b; }
+.dark-mode .styled-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.dark-mode .styled-input::placeholder { color: #64748b; }
+.dark-mode .form-label { color: #e2e8f0; }
+.dark-mode .field-icon { color: #64748b; }
+.dark-mode .section-divider { background: linear-gradient(to right, transparent, #334155, transparent); }
+.dark-mode .error-alert { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-left-color: #ef4444; }
+.dark-mode .field-err { color: #fca5a5; }
+.dark-mode .icon-create { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .icon-edit { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.dark-mode .btn-ghost { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .btn-ghost:hover { background: rgba(71, 85, 105, 0.5); }
+.dark-mode .opt { color: #64748b; }
 </style>

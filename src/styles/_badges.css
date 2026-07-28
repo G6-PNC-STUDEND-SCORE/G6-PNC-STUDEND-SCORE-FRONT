@@ -18,8 +18,8 @@
   letter-spacing: 0.01em;
 }
 
-.badge-active { background: #dbeafe; color: #1d4ed8; }
-.badge-inactive { background: #f1f5f9; color: #64748b; }
-.badge-suspended { background: #fef2f2; color: #dc2626; }
-.badge-male { background: #dbeafe; color: #1d4ed8; }
-.badge-female { background: #dbeafe; color: #1d4ed8; }
+.badge-active { background: var(--color-primary-light); color: var(--color-primary); }
+.badge-inactive { background: var(--color-bg-hover); color: var(--color-text-muted); }
+.badge-suspended { background: var(--color-danger-light); color: var(--color-danger); }
+.badge-male { background: var(--color-info-light); color: var(--color-info); }
+.badge-female { background: var(--color-info-light); color: var(--color-info); }

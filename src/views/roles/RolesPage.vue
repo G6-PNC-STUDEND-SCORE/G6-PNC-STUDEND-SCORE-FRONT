@@ -1,5 +1,5 @@
 <template>
-  <div class="pt-0 pb-4 roles-page">
+  <div :class="['pt-0 pb-4 roles-page', { 'dark-mode': isDark }]">
     <div v-if="error" class="alert-banner">
       <AlertTriangle :size="16" />
       {{ error }}
@@ -217,7 +217,7 @@
       </template>
     </div>
 
-    <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
+    <div v-if="showCreateModal" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showCreateModal = false">
       <div class="create-modal">
         <div class="create-modal-header">
           <h5>New Role</h5>
@@ -306,6 +306,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 import {
   ShieldCheck, Inbox, Plus, Trash2, Check, AlertTriangle,
   Search, ChevronLeft, ChevronRight,
@@ -998,4 +1002,75 @@ onMounted(loadAll)
 .create-modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.4rem; border-top: 1px solid #f1f5f9; }
 .btn-cancel { background: #f1f5f9; color: #475569; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 .btn-cancel:hover { background: #e2e8f0; }
+
+/* Dark mode */
+.dark-mode .role-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+.dark-mode .role-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.dark-mode .tab-bar { background: rgba(31, 41, 55, 0.7); border-color: rgba(75, 85, 99, 0.4); }
+.dark-mode .tab-btn { color: #9ca3af; }
+.dark-mode .tab-btn:hover { color: #e5e7eb; }
+.dark-mode .tab-btn.active { color: #f1f5f9; background: rgba(59, 130, 246, 0.2); border-bottom-color: #3b82f6; }
+.dark-mode .role-name-input { color: #f1f5f9; background: transparent; }
+.dark-mode .role-name-input:hover:not(:disabled), .dark-mode .role-name-input:focus:not(:disabled) { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .role-name-input:disabled { color: #64748b; }
+.dark-mode .role-slug-badge { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .role-desc-input { color: #94a3b8; background: transparent; }
+.dark-mode .role-desc-input:hover, .dark-mode .role-desc-input:focus { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .role-info-bar { background: rgba(51, 65, 85, 0.2); border-bottom-color: #334155; }
+.dark-mode .feature-name { color: #f1f5f9; }
+.dark-mode .perm-checkbox { accent-color: #3b82f6; }
+.dark-mode .cell-na { color: #475569; }
+.dark-mode .other-check { color: #cbd5e1; }
+.dark-mode .other-check:hover { color: #f1f5f9; }
+.dark-mode .data-row td { color: #cbd5e1; }
+.dark-mode .table-wrap::-webkit-scrollbar-thumb { background: #475569; }
+.dark-mode .table-wrap::-webkit-scrollbar-thumb:hover { background: #64748b; }
+.dark-mode .alert-banner { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .toolbar { background: rgba(30, 41, 59, 0.8); border-bottom-color: #334155; }
+.dark-mode .filter-label { background: rgba(51, 65, 85, 0.3); border-color: #475569; color: #94a3b8; }
+.dark-mode .filter-label :deep(svg) { color: #64748b; }
+.dark-mode .filter-select { color: #e2e8f0; background: transparent; }
+.dark-mode .search-icon { color: #64748b; }
+.dark-mode .search-input { background: rgba(51, 65, 85, 0.3); border-color: #475569; color: #e2e8f0; }
+.dark-mode .search-input::placeholder { color: #64748b; }
+.dark-mode .search-input:hover { border-color: #64748b; }
+.dark-mode .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+.dark-mode .count-badge { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .btn-add-role { background: #3b82f6; }
+.dark-mode .btn-add-role:hover { background: #60a5fa; }
+.dark-mode .btn-icon-danger { color: #fca5a5; }
+.dark-mode .btn-icon-danger:hover { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .pagination-bar { background: rgba(30, 41, 59, 0.8); border-top-color: #334155; }
+.dark-mode .pagination-info { color: #94a3b8; }
+.dark-mode .rows-selector { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .rows-btn { color: #94a3b8; }
+.dark-mode .rows-btn:hover { color: #e2e8f0; }
+.dark-mode .rows-btn.active { background: rgba(51, 65, 85, 0.6); color: #60a5fa; }
+.dark-mode .page-nav { background: rgba(51, 65, 85, 0.3); border-color: #475569; color: #94a3b8; }
+.dark-mode .page-nav:hover:not(:disabled) { border-color: #3b82f6; color: #60a5fa; background: rgba(59, 130, 246, 0.15); }
+.dark-mode .page-btn { color: #cbd5e1; }
+.dark-mode .page-btn:hover:not(.active) { background: rgba(51, 65, 85, 0.3); color: #60a5fa; }
+.dark-mode .page-btn.active { background: #3b82f6; color: #fff; }
+.dark-mode .page-dots { color: #64748b; }
+.dark-mode .pagination-total { color: #94a3b8; }
+.dark-mode .dirty-hint { color: #fbbf24; }
+.dark-mode .btn-save { background: #3b82f6; }
+.dark-mode .btn-save:hover:not(:disabled) { background: #60a5fa; }
+.dark-mode .empty-box h5 { color: #94a3b8; }
+.dark-mode .empty-box p { color: #64748b; }
+.dark-mode .create-modal { background: #1e293b; }
+.dark-mode .create-modal-header { border-bottom-color: #334155; }
+.dark-mode .create-modal-header h5 { color: #f1f5f9; }
+.dark-mode .modal-close { color: #64748b; }
+.dark-mode .modal-close:hover { color: #cbd5e1; }
+.dark-mode .create-modal-body label { color: #e2e8f0; }
+.dark-mode .modal-table-wrap { border-color: #334155; }
+.dark-mode .form-input { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
+.dark-mode .form-input:focus { border-color: #3b82f6; }
+.dark-mode .create-modal-footer { border-top-color: #334155; }
+.dark-mode .btn-cancel { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .btn-cancel:hover { background: rgba(71, 85, 105, 0.5); }
 </style>

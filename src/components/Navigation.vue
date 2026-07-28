@@ -1,5 +1,5 @@
 <template>
-  <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
+  <aside :class="['sidebar', { collapsed: sidebar.collapsed, 'dark-mode': theme.isDark }]">
     <div :class="['logo', sidebar.collapsed ? 'logo-collapsed' : 'logo-expanded', 'border-bottom']">
       <div class="sidebar-logo-wrap">
         <img :src="logoSrc" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
@@ -134,6 +134,7 @@ import { useSidebarStore } from '@/stores/sidebar'
 import { storageUrl } from '@/services/apiHttp'
 import { getUserInitials } from '@/utils'
 import logoSrc from '@/assets/images/pnc-logo.png'
+import { useThemeStore } from '@/stores/theme'
 import {
   LayoutDashboard, Users, BookOpen, UserCheck,
   GraduationCap, ClipboardList, FileText, History,
@@ -145,6 +146,7 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const sidebar = useSidebarStore()
+const theme = useThemeStore()
 
 const isProfileActive = computed(() => route.path === '/profile')
 
@@ -228,8 +230,8 @@ function goToProfile() {
 .sidebar {
   width: 240px;
   height: 100vh;
-  background: #fff;
-  border-right: 1px solid #e9ecef;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -237,7 +239,7 @@ function goToProfile() {
   left: 0;
   top: 0;
   z-index: 1000;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
 }
 
@@ -308,6 +310,11 @@ function goToProfile() {
   font-weight: 700;
   color: #1e3a5f;
   white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.sidebar.dark-mode .brand-name {
+  color: #f1f5f9;
 }
 
 .menu-title {
@@ -332,7 +339,7 @@ function goToProfile() {
   display: flex;
   align-items: center;
   text-decoration: none;
-  color: #556987;
+  color: var(--color-sidebar-text);
   padding: 10px 14px;
   margin-bottom: 3px;
   border-radius: 10px;
@@ -354,7 +361,7 @@ function goToProfile() {
   transform: translateY(-50%) scaleY(0);
   width: 3px;
   height: 20px;
-  background: #2563eb;
+  background: var(--color-primary);
   border-radius: 0 4px 4px 0;
   transition: transform 0.2s ease;
 }
@@ -371,8 +378,8 @@ function goToProfile() {
 }
 
 .sidebar-link:hover {
-  background: #f8fafc;
-  color: #2563eb;
+  background: var(--color-sidebar-hover);
+  color: var(--color-primary);
   padding-left: 20px;
 }
 
@@ -381,8 +388,8 @@ function goToProfile() {
 }
 
 .sidebar-link.router-link-active {
-  background: #e8f1ff;
-  color: #2563eb;
+  background: var(--color-sidebar-active);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
@@ -412,8 +419,8 @@ function goToProfile() {
   align-items: center;
   justify-content: center;
   border: none;
-  background: #f3f4f6;
-  color: #94a3b8;
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
   border-radius: 7px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -421,32 +428,32 @@ function goToProfile() {
 }
 
 .logo-toggle-btn:hover {
-  background: #eef2ff;
-  color: #2563eb;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .logo-toggle-btn.collapsed {
   width: 22px;
   height: 36px;
   border-radius: 6px 0 0 6px;
-  background: #eef2ff;
-  color: #2563eb;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
   margin-left: auto;
 }
 
 .logo-toggle-btn.collapsed:hover {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--color-primary-light);
+  color: var(--color-primary-hover);
 }
 
 
 .user-section {
-  background: white;
+  background: var(--color-sidebar-bg);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .user-section-active {
-  background: #e8f1ff;
+  background: var(--color-sidebar-active);
 }
 
 .user {
@@ -459,33 +466,33 @@ function goToProfile() {
 }
 
 .user:hover {
-  background: #eef2ff;
-  color: #2563eb;
+  background: var(--color-sidebar-hover);
+  color: var(--color-primary);
 }
 
 .user-active {
-  background: #e8f1ff;
-  color: #2563eb;
+  background: var(--color-sidebar-active);
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 .user-active .avatar {
-  box-shadow: 0 0 0 2px #2563eb;
+  box-shadow: 0 0 0 2px var(--color-primary);
 }
 
 .user-active .user-text h6 {
-  color: #2563eb;
+  color: var(--color-primary);
 }
 
 .user-active .user-text small {
-  color: #2563eb;
+  color: var(--color-primary);
 }
 
 .avatar {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--color-primary);
   color: white;
   display: flex;
   justify-content: center;
@@ -520,19 +527,21 @@ function goToProfile() {
 
 .user h6 {
   font-size: 0.95rem;
-  color: #1e293b;
+  color: var(--color-text);
   font-weight: 700;
+  transition: color 0.3s ease;
 }
 
 .user small {
   font-size: 0.8rem;
-  color: #64748b;
+  color: var(--color-text-muted);
+  transition: color 0.3s ease;
 }
 
 .logout-icon-btn {
   background: transparent;
   border: none;
-  color: #ef4444;
+  color: var(--color-danger);
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -545,7 +554,7 @@ function goToProfile() {
 }
 
 .logout-icon-btn:hover {
-  background: #fef2f2;
+  background: var(--color-danger-light);
   color: #dc2626;
 }
 
@@ -563,15 +572,13 @@ function goToProfile() {
 }
 
 .logout-modal {
-  background: #ffffff;
+  background: var(--color-bg-elevated);
   border-radius: 14px;
   width: 380px;
   max-width: 100%;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 12px 30px -4px rgba(0, 0, 0, 0.12),
-    0 24px 60px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
+  transition: background 0.3s ease;
 }
 
 /* ─── Header ─── */
@@ -599,9 +606,10 @@ function goToProfile() {
   flex: 1;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text);
   margin: 0;
   letter-spacing: -0.01em;
+  transition: color 0.3s ease;
 }
 
 .logout-close-btn {
@@ -610,7 +618,7 @@ function goToProfile() {
   border-radius: 8px;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -620,12 +628,12 @@ function goToProfile() {
 }
 
 .logout-close-btn:hover {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--color-bg-hover);
+  color: var(--color-text-secondary);
 }
 
 .logout-close-btn:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -636,10 +644,11 @@ function goToProfile() {
 
 .logout-message {
   font-size: 0.9rem;
-  color: #475569;
+  color: var(--color-text);
   margin: 0;
   text-align: center;
   line-height: 1.6;
+  transition: color 0.3s ease;
 }
 
 /* ─── Footer ─── */
@@ -666,12 +675,12 @@ function goToProfile() {
 }
 
 .logout-btn-cancel {
-  background: #f1f5f9;
-  color: #334155;
+  background: var(--color-bg-hover);
+  color: var(--color-text);
 }
 
 .logout-btn-cancel:hover {
-  background: #e2e8f0;
+  background: var(--color-border);
   transform: translateY(-1px);
 }
 

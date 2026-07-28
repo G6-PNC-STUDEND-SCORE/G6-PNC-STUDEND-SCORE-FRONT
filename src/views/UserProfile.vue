@@ -1,5 +1,5 @@
 <template>
-  <div class="profile-page">
+  <div :class="['profile-page', { 'dark-mode': isDark }]">
     <div v-if="loading && !cachedProfile" class="load-state">
       <div class="spinner"></div>
       <span>Loading profile…</span>
@@ -307,7 +307,7 @@
     <!-- Edit Modal -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+        <div v-if="showEditModal" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="showEditModal = false">
           <div class="modal-content-panel">
             <div class="modal-head">
               <div class="modal-icon icon-edit">
@@ -380,7 +380,11 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 import { getProfile, updateProfile, uploadAvatar, type UserProfile, type ProfileTeacherInfo, type ProfileStudentInfo } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/apiHttp'
@@ -1599,4 +1603,113 @@ onUnmounted(() => {
   .stats-row { grid-template-columns: 1fr; }
 }
 
+/* ═══════════════════════════════════════════════
+   DARK MODE — comprehensive
+   ═══════════════════════════════════════════════ */
+.dark-mode {
+  /* Page background */
+  background: #0f172a !important;
+  /* Loading state */
+}
+.dark-mode .load-state { color: #94a3b8; }
+.dark-mode .spinner { border-color: #334155; border-top-color: #94a3b8; }
+
+/* Error card */
+.dark-mode .error-card-inner { background: #1e293b; border-color: #334155; }
+.dark-mode .error-card-inner h5 { color: #f1f5f9; }
+.dark-mode .error-card-inner p { color: #94a3b8; }
+.dark-mode .retry-btn { background: #2563eb; }
+.dark-mode .retry-btn:hover { background: #1d4ed8; }
+
+/* Alerts */
+.dark-mode .alert-success { background: rgba(22, 163, 74, 0.12); color: #4ade80; border-color: rgba(22, 163, 74, 0.25); }
+.dark-mode .alert-error { background: rgba(220, 38, 38, 0.12); color: #fca5a5; border-color: rgba(220, 38, 38, 0.25); }
+
+/* Quick stats */
+.dark-mode .stat-tile { background: rgba(30, 41, 59, 0.95); border-color: rgba(71, 85, 105, 0.5); }
+.dark-mode .stat-tile:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); }
+.dark-mode .stat-value { color: #f1f5f9; }
+.dark-mode .stat-label { color: #94a3b8; }
+.dark-mode .icon-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .icon-green { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.dark-mode .icon-violet { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.dark-mode .icon-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+
+/* Side card */
+.dark-mode .side-card { background: rgba(30, 41, 59, 0.95); border-color: rgba(71, 85, 105, 0.5); }
+.dark-mode .side-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); }
+.dark-mode .side-name { color: #f1f5f9; }
+.dark-mode .side-email { color: #94a3b8; }
+
+/* Avatar */
+.dark-mode .avatar-xl { border-color: #1e293b; }
+.dark-mode .avatar-verified-badge { border-color: #1e293b; }
+
+/* Badges */
+.dark-mode .role-badge { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .role-admin { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .role-teacher { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .role-student { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .status-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.dark-mode .status-inactive { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+.dark-mode .status-suspended { background: rgba(220, 38, 38, 0.15); color: #fca5a5; }
+
+/* Side edit button */
+.dark-mode .side-edit-btn { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.25); color: #60a5fa; }
+.dark-mode .side-edit-btn:hover { background: rgba(59, 130, 246, 0.2); }
+
+/* Side divider & meta */
+.dark-mode .side-divider { background: #334155; }
+.dark-mode .side-meta li svg { color: #64748b; }
+.dark-mode .side-meta-label { color: #64748b; }
+.dark-mode .side-meta-value { color: #e2e8f0; }
+
+/* Info cards (right side) */
+.dark-mode .info-card { background: rgba(30, 41, 59, 0.95); border-color: rgba(71, 85, 105, 0.5); }
+.dark-mode .info-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); }
+.dark-mode .info-card-head { color: #f1f5f9; }
+.dark-mode .info-card-head svg { color: #60a5fa; }
+.dark-mode .info-field-icon { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .info-label { color: #64748b; }
+.dark-mode .info-value { color: #e2e8f0; }
+
+/* Bio */
+.dark-mode .bio-text { color: #cbd5e1; }
+.dark-mode .bio-empty { color: #64748b; }
+
+/* Chips */
+.dark-mode .chip { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border-color: rgba(59, 130, 246, 0.25); }
+.dark-mode .chip-blue { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border-color: rgba(59, 130, 246, 0.25); }
+.dark-mode .chip-violet { background: rgba(124, 58, 237, 0.12); color: #a78bfa; border-color: rgba(124, 58, 237, 0.25); }
+
+/* Access summary (admin) */
+.dark-mode .access-count { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05)); }
+.dark-mode .access-count-value { color: #60a5fa; }
+.dark-mode .access-count-label { color: #94a3b8; }
+
+/* Security section */
+.dark-mode .pw-group label { color: #cbd5e1; }
+.dark-mode .pw-input-box input { background: rgba(51, 65, 85, 0.4); border-color: #475569; color: #e2e8f0; }
+.dark-mode .pw-input-box input:hover { border-color: #64748b; }
+.dark-mode .pw-input-box input:focus { border-color: #3b82f6; background: rgba(30, 41, 59, 0.8); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.dark-mode .pw-input-box input::placeholder { color: #64748b; }
+.dark-mode .pw-eye { color: #64748b; }
+.dark-mode .pw-eye:hover { color: #60a5fa; background: rgba(51, 65, 85, 0.5); }
+
+/* Security actions */
+.dark-mode .security-actions { border-top-color: #334155; }
+.dark-mode .cancel-btn { background: rgba(51, 65, 85, 0.3); border-color: #475569; color: #94a3b8; }
+.dark-mode .cancel-btn:hover { background: rgba(71, 85, 105, 0.4); border-color: #64748b; color: #cbd5e1; }
+.dark-mode .save-btn { background: #2563eb; }
+.dark-mode .save-btn:hover { background: #1d4ed8; }
+
+/* Password messages */
+.dark-mode .msg-ok { color: #4ade80; }
+.dark-mode .msg-fail { color: #fca5a5; }
+
+/* Edit modal (teleported) */
+.dark-mode .edit-grid .modern-input { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
+.dark-mode .edit-grid .modern-input:hover { border-color: #64748b; }
+.dark-mode .edit-grid .modern-input:focus { border-color: #3b82f6; background: rgba(30, 41, 59, 0.8); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.dark-mode .form-label { color: #cbd5e1; }
 </style>

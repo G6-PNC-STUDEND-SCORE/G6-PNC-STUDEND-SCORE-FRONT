@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
       <span>Loading students…</span>
@@ -251,7 +251,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
 import { AlertTriangle, Trash2, ArrowRightFromLine, Check, Building, Mail, VenusAndMars, BookOpen, Users, ToggleLeft, Calendar, Hash } from '@lucide/vue'
@@ -270,6 +271,9 @@ const {
   handleBulkDelete,
   viewDetails, closeDetailsModal,
 } = useStudents()
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 onMounted(() => init())
 </script>
@@ -566,4 +570,36 @@ select.styled-input {
   .page-head-right { width: 100%; }
   .page-head-right .btn { flex: 1; justify-content: center; }
 }
+
+/* Dark mode */
+.dark-mode .modal-card { background: #1e293b; }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .styled-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .styled-input:hover { border-color: #64748b; }
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.dark-mode .styled-input::placeholder { color: #64748b; }
+.dark-mode .form-label { color: #e2e8f0; }
+.dark-mode .field-icon { color: #64748b; }
+.dark-mode .del-text { color: #cbd5e1; }
+.dark-mode .del-warning { color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
+.dark-mode .info-card { background: rgba(51, 65, 85, 0.3); border-color: #475569; }
+.dark-mode .info-row { border-bottom-color: #334155; }
+.dark-mode .info-label { color: #94a3b8; }
+.dark-mode .info-label svg { color: #64748b; }
+.dark-mode .info-value { color: #e2e8f0; }
+.dark-mode .info-heading h4 { color: #f1f5f9; }
+.dark-mode .info-role { color: #64748b; }
+.dark-mode .info-avatar { background: #334155; color: #94a3b8; }
+.dark-mode .msg-error { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-left-color: #ef4444; }
+.dark-mode .load-state { color: #94a3b8; }
 </style>

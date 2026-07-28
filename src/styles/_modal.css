@@ -10,16 +10,21 @@
   padding: 1rem;
 }
 
+html.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+
 .modal-content-panel {
-  background: #fff;
+  background: var(--color-bg-elevated);
   border-radius: 16px;
   width: 480px;
   max-width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
   animation: modal-in 0.25s ease-out;
   font-family: var(--font-family);
+  transition: background 0.3s ease;
 }
 
 @keyframes modal-in {
@@ -29,7 +34,7 @@
 
 .modal-content-panel::-webkit-scrollbar { width: 4px; }
 .modal-content-panel::-webkit-scrollbar-track { background: transparent; }
-.modal-content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+.modal-content-panel::-webkit-scrollbar-thumb { background: var(--color-text-muted); border-radius: 2px; }
 
 .modal-enter-active { transition: all 0.25s ease-out; }
 .modal-leave-active { transition: all 0.15s ease-in; }
@@ -60,8 +65,8 @@
   height: 32px;
   border-radius: 50%;
   border: none;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-bg-hover);
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -71,8 +76,8 @@
 }
 
 .modal-close-btn:hover {
-  background: #fee2e2;
-  color: #ef4444;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
   transform: rotate(90deg);
 }
 
@@ -99,16 +104,18 @@
 
 .modal-header-custom h5 {
   font-size: 1.1rem;
-  color: #0f172a;
+  color: var(--color-text);
   letter-spacing: -0.01em;
   margin: 0;
   white-space: nowrap;
+  transition: color 0.3s ease;
 }
 
 .modal-subtitle {
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--color-text-muted);
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .modal-body-custom {
@@ -148,8 +155,8 @@
   flex-wrap: nowrap;
 }
 
-.modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
-.modal-head p { font-size: 0.82rem; color: #64748b; margin: 0; }
+.modal-head h3 { font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; color: var(--color-text); transition: color 0.3s ease; }
+.modal-head p { font-size: 0.82rem; color: var(--color-text-muted); margin: 0; transition: color 0.3s ease; }
 
 .modal-x {
   position: absolute;
@@ -158,13 +165,14 @@
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
   line-height: 1;
   padding: 4px;
+  transition: color 0.2s ease;
 }
 
-.modal-x:hover { color: #475569; }
+.modal-x:hover { color: var(--color-text-secondary); }
 
 .modal-body { padding: 16px 24px 0; }
 

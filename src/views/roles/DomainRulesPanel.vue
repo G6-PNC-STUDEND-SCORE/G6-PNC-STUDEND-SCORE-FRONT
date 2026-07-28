@@ -1,5 +1,5 @@
 <template>
-  <div class="domain-rules-panel">
+  <div :class="['domain-rules-panel', { 'dark-mode': isDark }]">
     <div v-if="error" class="alert-banner">
       <AlertTriangle :size="16" />
       {{ error }}
@@ -107,7 +107,7 @@
       </button>
     </form>
 
-    <div v-if="confirmDelete" class="modal-overlay" @click.self="confirmDelete = null">
+    <div v-if="confirmDelete" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="confirmDelete = null">
       <div class="confirm-modal">
         <h5>Delete sign-in rule for "@{{ confirmDelete.domain }}"?</h5>
         <p class="text-secondary">
@@ -125,11 +125,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { AlertTriangle, Plus, Trash2, Pencil, Check, X } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { useRoleStore } from '@/stores/role'
 import type { EmailDomainRule } from '@/services/emailDomainRuleService'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useRoleStore()
 const { domainRules: rules, roles, error } = storeToRefs(store)
@@ -395,4 +399,37 @@ onMounted(async () => {
 .btn-delete-confirm { background: #dc2626; color: #fff; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 .btn-delete-confirm:hover:not(:disabled) { background: #b91c1c; }
 .btn-delete-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Dark mode */
+.dark-mode .alert-banner { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .panel-intro p { color: #94a3b8; }
+.dark-mode .table-wrap::-webkit-scrollbar-thumb { background: #475569; }
+.dark-mode .table-wrap::-webkit-scrollbar-thumb:hover { background: #64748b; }
+.dark-mode .domain-text { color: #e2e8f0; }
+.dark-mode .domain-text:hover { background: rgba(51, 65, 85, 0.5); }
+.dark-mode .btn-edit-domain { color: #64748b; }
+.dark-mode .btn-edit-domain:hover { background: rgba(51, 65, 85, 0.5); color: #60a5fa; }
+.dark-mode .domain-prefix { color: #64748b; }
+.dark-mode .domain-edit-input { background: rgba(51, 65, 85, 0.5); border-color: #3b82f6; color: #e2e8f0; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.dark-mode .btn-save-domain { background: #3b82f6; }
+.dark-mode .btn-save-domain:hover { background: #60a5fa; }
+.dark-mode .btn-cancel-domain { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .btn-cancel-domain:hover { background: rgba(71, 85, 105, 0.5); color: #cbd5e1; }
+.dark-mode .role-select { background: rgba(51, 65, 85, 0.3); border-color: #475569; color: #e2e8f0; }
+.dark-mode .role-select:focus { border-color: #3b82f6; }
+.dark-mode .active-checkbox { accent-color: #3b82f6; }
+.dark-mode .empty-row { color: #64748b; }
+.dark-mode .btn-icon-danger { color: #fca5a5; }
+.dark-mode .btn-icon-danger:hover { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .form-input { background: rgba(51, 65, 85, 0.3); border-color: #475569; color: #e2e8f0; }
+.dark-mode .form-input:focus { border-color: #3b82f6; }
+.dark-mode .btn-add-role { background: #3b82f6; }
+.dark-mode .btn-add-role:hover:not(:disabled) { background: #60a5fa; }
+.dark-mode .confirm-modal { background: #1e293b; }
+.dark-mode .confirm-modal h5 { color: #f1f5f9; }
+.dark-mode .confirm-modal p { color: #94a3b8; }
+.dark-mode .btn-cancel { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .btn-cancel:hover { background: rgba(71, 85, 105, 0.5); }
+.dark-mode .btn-delete-confirm { background: #dc2626; }
+.dark-mode .btn-delete-confirm:hover:not(:disabled) { background: #ef4444; }
 </style>

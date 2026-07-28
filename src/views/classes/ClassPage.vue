@@ -1,5 +1,5 @@
 <template>
-  <div class="classes-page">
+  <div :class="['classes-page', { 'dark-mode': isDark }]">
     <LoadingState v-if="loading && classes.length === 0" message="Loading classes..." />
 
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
@@ -46,7 +46,7 @@
           <button
             v-if="canCreate"
             class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
-            style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+            style="border-radius: 0.625rem; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
             @click="openCreateModal"
           >
             <Plus :size="15" />
@@ -318,6 +318,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { storeToRefs } from 'pinia'
 import {
   Users, Plus, AlertTriangle, Search, ToggleLeft, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen,
@@ -335,6 +336,9 @@ import { useSearchFilters } from '@/composables/useSearchFilters'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
 import { usePermission } from '@/composables/usePermission'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useClassStore()
 const { classes, loading, error, totalClasses } = storeToRefs(store)
@@ -849,4 +853,55 @@ select.styled-input {
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Dark mode */
+.dark-mode .class-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+.dark-mode .class-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.dark-mode .class-name { color: #f1f5f9; }
+.dark-mode .meta-cell { color: #94a3b8; }
+.dark-mode .col-index { color: #64748b; }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .styled-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .styled-input:hover { border-color: #64748b; }
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.dark-mode .styled-input::placeholder { color: #64748b; }
+.dark-mode .filter-label :deep(svg) { color: #64748b; }
+.dark-mode .form-label { color: #e2e8f0; }
+.dark-mode .field-icon { color: #64748b; }
+.dark-mode .section-divider {
+  background: linear-gradient(to right, transparent, #334155, transparent);
+}
+.dark-mode .class-avatar { box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3); }
+.dark-mode .modal-body-custom { color: #cbd5e1; }
+.dark-mode .error-alert {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+.dark-mode .field-err { color: #fca5a5; }
+.dark-mode .styled-input.err { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+.dark-mode .filter-label { color: #94a3b8; }
+.dark-mode .empty-box h5 { color: #94a3b8; }
+.dark-mode .empty-box p { color: #64748b; }
+.dark-mode .btn-ghost { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .btn-ghost:hover { background: rgba(71, 85, 105, 0.5); }
+.dark-mode .icon-create { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .icon-edit { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.dark-mode .actions-cell { color: #cbd5e1; }
 </style>

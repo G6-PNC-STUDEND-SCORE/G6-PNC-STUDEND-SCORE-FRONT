@@ -1,5 +1,5 @@
 <template>
-  <div class="py-4">
+  <div :class="['py-4', { 'dark-mode': isDark }]">
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-header-icon">
@@ -27,7 +27,12 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { Settings } from '@lucide/vue'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 </script>
 
 <style scoped>
@@ -52,4 +57,14 @@ import { Settings } from '@lucide/vue'
   font-size: 0.875rem;
   margin: 0;
 }
+
+/* Dark mode */
+.dark-mode .page-title { color: #f1f5f9; }
+.dark-mode .page-subtitle { color: #94a3b8; }
+.dark-mode .settings-section {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+.dark-mode .settings-section h5 { color: #f1f5f9; }
+.dark-mode .settings-section .text-secondary { color: #94a3b8 !important; }
 </style>

@@ -80,3 +80,28 @@ const { toast, hide } = useToast()
 .toast-enter-from { opacity: 0; transform: translateX(40px) scale(0.95); }
 .toast-leave-to { opacity: 0; transform: translateX(40px) scale(0.95); }
 </style>
+
+<!-- Global dark mode styles for toast (teleported to body, needs global) -->
+<style>
+html.dark .toast-notification.success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #6ee7b7;
+  border-left-color: #10b981;
+  border-top: 1px solid rgba(16, 185, 129, 0.2);
+  border-right: 1px solid rgba(16, 185, 129, 0.2);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+html.dark .toast-notification.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+  border-top: 1px solid rgba(239, 68, 68, 0.2);
+  border-right: 1px solid rgba(239, 68, 68, 0.2);
+  border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+</style>

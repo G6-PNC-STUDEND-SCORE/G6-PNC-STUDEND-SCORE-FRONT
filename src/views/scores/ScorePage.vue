@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
 
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
@@ -265,6 +265,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { TransitionGroup } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
@@ -277,6 +278,9 @@ import {
 } from '@lucide/vue'
 
 const CACHE_KEY = 'scores-subjects'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const router = useRouter()
 
@@ -1195,4 +1199,79 @@ onMounted(async () => {
 @media (max-width: 640px) {
   .classes-grid { grid-template-columns: 1fr; }
 }
+
+/* Dark mode */
+.dark-mode .scores-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+.dark-mode .class-card {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+.dark-mode .class-card:hover {
+  border-color: rgba(96, 165, 250, 0.25);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+.dark-mode .class-card-name { color: #f1f5f9; }
+.dark-mode .class-card-desc { color: #94a3b8; }
+.dark-mode .class-card-stat { color: #94a3b8; }
+.dark-mode .class-card-arrow { color: #475569; }
+.dark-mode .class-card-badge { background: rgba(51, 65, 85, 0.6); color: #94a3b8; }
+.dark-mode .term-section {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+.dark-mode .term-section-header:hover { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .term-section-name { color: #f1f5f9; }
+.dark-mode .term-section-count { color: #94a3b8; }
+.dark-mode .term-year-badge { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .term-section-arrow { color: #475569; }
+.dark-mode .subject-chip {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+.dark-mode .subject-chip:hover { background: rgba(59, 130, 246, 0.1); border-color: #60a5fa; }
+.dark-mode .subject-chip-name { color: #e2e8f0; }
+.dark-mode .subject-chip-code { color: #64748b; }
+.dark-mode .no-subjects-note { color: #64748b; }
+.dark-mode .stat-chip { background: rgba(51, 65, 85, 0.4); color: #94a3b8; }
+.dark-mode .empty-state h5 { color: #f1f5f9; }
+.dark-mode .empty-state .text-secondary { color: #94a3b8 !important; }
+.dark-mode .sort-btn { color: #64748b; }
+.dark-mode .sort-btn:hover { color: #cbd5e1; }
+.dark-mode .sort-btn-active { color: #60a5fa; }
+.dark-mode .tb-search {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+}
+.dark-mode .tb-search input { color: #e2e8f0; }
+.dark-mode .terms-back { color: #94a3b8; }
+.dark-mode .terms-back:hover { color: #60a5fa; }
+.dark-mode .terms-current { color: #e2e8f0; }
+.dark-mode .terms-sep { color: #475569; }
+.dark-mode .tb-clear { color: #64748b; }
+.dark-mode .tb-filter select {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .tb-filter select:focus { border-color: #3b82f6; }
+.dark-mode .empty-state-icon { background: rgba(51, 65, 85, 0.5); color: #64748b; }
+.dark-mode .loading-state { color: #94a3b8; }
+.dark-mode .spinner { border-color: #334155; border-top-color: #3b82f6; }
+.dark-mode .scores-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.dark-mode .term-toolbar { background: rgba(30, 41, 59, 0.8); border-bottom-color: #334155; }
+.dark-mode .sort-toggle { background: rgba(51, 65, 85, 0.4); }
+.dark-mode .sort-label { color: #64748b; }
+.dark-mode .sort-btn-active { background: rgba(51, 65, 85, 0.6); color: #60a5fa; }
+.dark-mode .tb-search svg { color: #64748b; }
+.dark-mode .tb-search input::placeholder { color: #64748b; }
+.dark-mode .stat-chip svg { color: #60a5fa; }
+.dark-mode .subject-chip-count { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .term-section:hover { border-color: rgba(59, 130, 246, 0.3); }
+.dark-mode .class-card-footer { border-top-color: #334155; }
+.dark-mode .class-card-stat svg { color: #475569; }
+.dark-mode .class-card-icon { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
       {{ store.error }}
@@ -238,7 +238,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showModal" class="overlay" @click.self="closeModal">
+        <div v-if="showModal" :class="['overlay', { 'dark-mode': isDark }]" @click.self="closeModal">
           <div class="modal-card modal-card-wide">
             <div class="modal-head">
               <div class="modal-icon" :class="isEditMode ? 'icon-edit' : 'icon-add'">
@@ -383,7 +383,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDeleteModal" class="overlay" @click.self="closeDeleteModal">
+        <div v-if="showDeleteModal" :class="['overlay', { 'dark-mode': isDark }]" @click.self="closeDeleteModal">
           <div class="modal-card modal-sm">
             <div class="modal-head">
               <div class="modal-icon icon-danger">
@@ -412,7 +412,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showBulkDeleteModal" class="overlay" @click.self="closeBulkDeleteModal">
+        <div v-if="showBulkDeleteModal" :class="['overlay', { 'dark-mode': isDark }]" @click.self="closeBulkDeleteModal">
           <div class="modal-card modal-sm">
             <div class="modal-head">
               <div class="modal-icon icon-danger">
@@ -443,6 +443,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed, watch } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useSubjectStore } from '@/stores/subject'
 import { useAuthStore } from '@/stores/auth'
 import type { Subject } from '@/services/subjectService'
@@ -511,6 +512,9 @@ const visiblePages = computed(() => {
   pages.push(total)
   return pages
 })
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useSubjectStore()
 const auth = useAuthStore()
@@ -1342,4 +1346,177 @@ onMounted(async () => {
   .page-container { padding: 0.75rem 1rem; }
   .row-2 { grid-template-columns: 1fr; }
 }
+
+/* ═══════════════════════════════════════════════
+   DARK MODE — comprehensive
+   ═══════════════════════════════════════════════ */
+
+/* ── Page & Card ── */
+.dark-mode { background: #0f172a !important; }
+.dark-mode .subject-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+.dark-mode .subject-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+
+/* ── Loading ── */
+.dark-mode .load-state { color: #94a3b8; }
+.dark-mode .spinner { border-color: #334155; border-top-color: #60a5fa; }
+
+/* ── Messages ── */
+.dark-mode .msg-error { background: rgba(220, 38, 38, 0.12); color: #fca5a5; border-left-color: #ef4444; }
+.dark-mode .msg-success { background: rgba(22, 163, 74, 0.12); color: #4ade80; border-left-color: #10b981; }
+
+/* ── Toolbar / Search / Filters ── */
+.dark-mode .search-box { background: rgba(51, 65, 85, 0.4); border-color: #475569; }
+.dark-mode .search-input { color: #e2e8f0; }
+.dark-mode .search-input::placeholder { color: #64748b; }
+.dark-mode .search-icon { color: #64748b; }
+.dark-mode .tb-clear { color: #64748b; }
+.dark-mode .tb-clear:hover { color: #94a3b8; }
+.dark-mode .filter-label { color: #cbd5e1; }
+.dark-mode .filter-select { background: rgba(51, 65, 85, 0.5); border-color: #475569; color: #e2e8f0; }
+.dark-mode .filter-select:focus { border-color: #3b82f6; }
+.dark-mode .count-badge { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+
+/* ── Bulk Bar ── */
+.dark-mode .bulk-bar { background: rgba(30, 41, 59, 0.95); border-color: #334155; }
+.dark-mode .bulk-count { color: #94a3b8; }
+.dark-mode .bulk-delete-btn { background: rgba(220, 38, 38, 0.15); color: #fca5a5; }
+.dark-mode .bulk-delete-btn:hover { background: rgba(220, 38, 38, 0.25); }
+.dark-mode .bulk-clear-btn { color: #94a3b8; }
+.dark-mode .bulk-clear-btn:hover { color: #cbd5e1; }
+
+/* ── Table ── */
+.dark-mode .col-index { color: #64748b; }
+.dark-mode .subj-name { color: #f1f5f9; }
+.dark-mode .meta-val { color: #94a3b8; }
+.dark-mode .subj-avatar { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+
+/* ── Status badge ── */
+.dark-mode .badge-active { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.dark-mode .badge-inactive { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+
+/* ── Teacher more chip ── */
+.dark-mode .teacher-more-chip { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
+
+/* ── Term toggles ── */
+.dark-mode .tog {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+.dark-mode .tog:hover { border-color: #60a5fa; background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+.dark-mode .tog-on { border-color: #3b82f6; background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+
+/* ── Action buttons ── */
+.dark-mode .act-btn { color: #94a3b8; }
+.dark-mode .act-btn:hover { background: rgba(51, 65, 85, 0.5); color: #60a5fa; }
+.dark-mode .act-danger:hover { background: rgba(220, 38, 38, 0.15); color: #fca5a5; }
+
+/* ── Empty state ── */
+.dark-mode .empty-box { color: #94a3b8; }
+.dark-mode .empty-box h5 { color: #64748b; }
+.dark-mode .empty-box p { color: #475569; }
+.dark-mode .empty-box svg { color: #475569; }
+
+/* ── Pagination ── */
+.dark-mode .pagination-bar { border-top-color: #334155; }
+.dark-mode .pagination-info { color: #94a3b8; }
+.dark-mode .rows-btn { background: rgba(51, 65, 85, 0.4); border-color: #475569; color: #94a3b8; }
+.dark-mode .rows-btn:hover { background: rgba(71, 85, 105, 0.5); color: #cbd5e1; }
+.dark-mode .rows-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.dark-mode .page-btn { background: transparent; color: #94a3b8; }
+.dark-mode .page-btn:hover { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .page-btn.active { background: #3b82f6; color: #fff; }
+.dark-mode .page-nav { background: rgba(51, 65, 85, 0.4); color: #94a3b8; }
+.dark-mode .page-nav:hover:not(:disabled) { background: rgba(71, 85, 105, 0.5); color: #cbd5e1; }
+.dark-mode .page-nav:disabled { opacity: 0.3; }
+.dark-mode .page-dots { color: #64748b; }
+.dark-mode .pagination-total { color: #94a3b8; }
+
+/* ── Overlay (teleported modals) ── */
+.dark-mode .overlay { background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(6px); }
+
+/* ── Modal card ── */
+.dark-mode .modal-card { background: #1e293b; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+
+/* ── Modal icons ── */
+.dark-mode .icon-add { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .icon-edit { background: rgba(217, 119, 6, 0.15); color: #fbbf24; }
+.dark-mode .icon-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+/* ── Form fields ── */
+.dark-mode .field label { color: #e2e8f0; }
+.dark-mode .field-icon { color: #64748b; }
+.dark-mode .field-err { color: #fca5a5; }
+.dark-mode .field-hint { color: #64748b; }
+.dark-mode .field-count { color: #60a5fa; }
+
+/* ── Inputs ── */
+.dark-mode .input-wrap input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .input-wrap input:hover { border-color: #64748b; }
+.dark-mode .input-wrap input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.dark-mode .input-wrap input::placeholder { color: #64748b; }
+
+/* ── Section divider ── */
+.dark-mode .section-divider { background: linear-gradient(to right, transparent, #334155, transparent); }
+
+/* ── Check list (teacher/class) ── */
+.dark-mode .check-list { background: rgba(30, 41, 59, 0.8); border-color: #475569; }
+.dark-mode .check-list::-webkit-scrollbar-thumb { background: #475569; }
+.dark-mode .check-item { color: #cbd5e1; }
+.dark-mode .check-item:hover { background: rgba(51, 65, 85, 0.4); }
+.dark-mode .check-item-on { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+.dark-mode .check-item-on:hover { background: rgba(59, 130, 246, 0.15); }
+.dark-mode .check-dot { background: rgba(51, 65, 85, 0.5); border-color: #64748b; }
+.dark-mode .check-item-on .check-dot {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* ── Term chips ── */
+.dark-mode .term-chip {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+.dark-mode .term-chip:hover { border-color: #60a5fa; background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+.dark-mode .term-chip-on { border-color: #3b82f6; background: rgba(59, 130, 246, 0.15); color: #60a5fa; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+
+/* ── Modern select ── */
+.dark-mode .modern-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .modern-input:hover { background: rgba(51, 65, 85, 0.7); border-color: #64748b; }
+.dark-mode .modern-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+
+/* ── Delete text ── */
+.dark-mode .del-text { color: #cbd5e1; }
+
+/* ── Table checkbox ── */
+.dark-mode .table-checkbox { accent-color: #3b82f6; }
+
+/* ── Row styles ── */
+.dark-mode .data-row:hover { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .row-selected { background: rgba(59, 130, 246, 0.08) !important; }
+
+/* ── Table head ── */
+.dark-mode .subject-table thead th { color: #94a3b8; border-bottom-color: #334155; }
+.dark-mode .subject-table tbody td { border-bottom-color: rgba(51, 65, 85, 0.5); }
 </style>

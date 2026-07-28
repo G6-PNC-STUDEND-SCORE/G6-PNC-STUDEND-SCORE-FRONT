@@ -5,9 +5,10 @@
   flex-wrap: wrap;
   gap: 12px;
   padding: 16px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--color-bg-toolbar);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .toolbar-left {
@@ -36,7 +37,7 @@
   left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: #9ca3af;
+  color: var(--color-text-muted);
   pointer-events: none;
   font-size: 0.7rem;
 }
@@ -46,19 +47,19 @@
   padding: 0.45rem 0.7rem 0.45rem 1.8rem;
   font-size: 0.78rem;
   font-family: var(--font-family);
-  color: #1f2937;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  color: var(--color-input-text);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
   border-radius: 8px;
   outline: none;
   transition: all 0.2s ease;
 }
 
-.search-input::placeholder { color: #9ca3af; }
-.search-input:hover { border-color: #cbd5e1; }
+.search-input::placeholder { color: var(--color-text-muted); }
+.search-input:hover { border-color: var(--color-border-hover); }
 .search-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--color-input-focus-border);
+  box-shadow: 0 0 0 3px var(--color-input-focus-shadow);
 }
 
 .filter-group {
@@ -73,15 +74,15 @@
   gap: 8px;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: #64748b;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  color: var(--color-text-secondary);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
   border-radius: 10px;
   padding: 0.4rem 0.5rem 0.4rem 0.75rem;
   transition: all 0.2s ease;
 }
 
-.filter-label:hover { border-color: #cbd5e1; }
+.filter-label:hover { border-color: var(--color-border-hover); }
 
 .filter-select {
   border: none;
@@ -89,7 +90,7 @@
   font-size: 0.8125rem;
   font-family: var(--font-family);
   font-weight: 600;
-  color: #334155;
+  color: var(--color-text);
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
   cursor: pointer;
@@ -99,9 +100,10 @@
 .count-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #2563eb;
-  background: #eff6ff;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
   padding: 0.4rem 0.85rem;
   border-radius: 100px;
   white-space: nowrap;
+  transition: color 0.3s ease, background 0.3s ease;
 }

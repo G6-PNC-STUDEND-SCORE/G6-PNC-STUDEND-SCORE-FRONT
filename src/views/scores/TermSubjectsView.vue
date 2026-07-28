@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
       <span>Loading subjects…</span>
@@ -102,6 +102,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useRouter, useRoute } from 'vue-router'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { cacheService } from '@/services/cacheService'
@@ -109,6 +110,9 @@ import {
   ArrowLeft, Inbox, BookOpen, ChevronRight,
   Users, School, ArrowUpDown,
 } from '@lucide/vue'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const CACHE_KEY = 'scores-subjects'
 
@@ -568,4 +572,42 @@ onMounted(async () => {
   .page-container { padding: 0.75rem 1rem; }
   .subjects-grid { grid-template-columns: 1fr; }
 }
+
+/* Dark mode */
+.dark-mode .scores-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+.dark-mode .scores-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.dark-mode .load-state { color: #94a3b8; }
+.dark-mode .spinner { border-color: #334155; border-top-color: #3b82f6; }
+.dark-mode .breadcrumb-back { color: #94a3b8; }
+.dark-mode .breadcrumb-back:hover { color: #60a5fa; }
+.dark-mode .breadcrumb-sep { color: #475569; }
+.dark-mode .breadcrumb-current { color: #60a5fa; }
+.dark-mode .breadcrumb-term { color: #e2e8f0; }
+.dark-mode .tb-result-count { color: #64748b; }
+.dark-mode .class-filter-btn { background: rgba(51, 65, 85, 0.4); border-color: #475569; color: #94a3b8; }
+.dark-mode .class-filter-btn:hover { border-color: #3b82f6; color: #60a5fa; background: rgba(59, 130, 246, 0.1); }
+.dark-mode .class-filter-btn.active { background: rgba(59, 130, 246, 0.15); border-color: #3b82f6; color: #60a5fa; }
+.dark-mode .sort-toggle { background: rgba(51, 65, 85, 0.4); }
+.dark-mode .sort-label { color: #64748b; }
+.dark-mode .sort-btn { color: #64748b; }
+.dark-mode .sort-btn:hover { color: #cbd5e1; }
+.dark-mode .sort-btn-active { background: rgba(51, 65, 85, 0.6); color: #60a5fa; }
+.dark-mode .subject-card {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(71, 85, 105, 0.4);
+}
+.dark-mode .subject-card:hover { border-color: rgba(96, 165, 250, 0.3); }
+.dark-mode .subj-name { color: #f1f5f9; }
+.dark-mode .subj-code { background: rgba(51, 65, 85, 0.5); color: #94a3b8; }
+.dark-mode .subj-dot { color: #475569; }
+.dark-mode .subj-enrollment { color: #94a3b8; }
+.dark-mode .subj-enrollment svg { color: #64748b; }
+.dark-mode .subj-arrow { color: #475569; }
+.dark-mode .subject-card:hover .subj-arrow { color: #60a5fa; }
+.dark-mode .empty-state h5 { color: #f1f5f9; }
+.dark-mode .empty-state .text-secondary { color: #94a3b8 !important; }
+.dark-mode .empty-state-icon { background: rgba(51, 65, 85, 0.5); color: #64748b; }
 </style>

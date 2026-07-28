@@ -1,34 +1,40 @@
 <template>
   <Modal :model-value="confirmState.show" max-width="420px" @update:model-value="cancel">
-    <div class="modal-head">
-      <div class="modal-icon" :class="confirmState.danger ? 'icon-danger' : 'icon-default'">
-        <AlertTriangle :size="20" />
+    <div :class="{ 'dark-mode': isDark }">
+      <div class="modal-head">
+        <div class="modal-icon" :class="confirmState.danger ? 'icon-danger' : 'icon-default'">
+          <AlertTriangle :size="20" />
+        </div>
+        <div class="modal-title-group">
+          <h3 :class="{ 'title-danger': confirmState.danger }">{{ confirmState.title }}</h3>
+          <p class="confirm-message">{{ confirmState.message }}</p>
+        </div>
+        <button class="modal-x" @click="cancel">&times;</button>
       </div>
-      <div class="modal-title-group">
-        <h3 :class="{ 'title-danger': confirmState.danger }">{{ confirmState.title }}</h3>
-        <p class="confirm-message">{{ confirmState.message }}</p>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-ghost" @click="cancel">{{ confirmState.cancelLabel }}</button>
+        <button
+          type="button"
+          :class="confirmState.danger ? 'btn btn-danger' : 'btn btn-primary'"
+          @click="accept"
+        >
+          {{ confirmState.confirmLabel }}
+        </button>
       </div>
-      <button class="modal-x" @click="cancel">&times;</button>
-    </div>
-    <div class="modal-foot">
-      <button type="button" class="btn btn-ghost" @click="cancel">{{ confirmState.cancelLabel }}</button>
-      <button
-        type="button"
-        :class="confirmState.danger ? 'btn btn-danger' : 'btn btn-primary'"
-        @click="accept"
-      >
-        {{ confirmState.confirmLabel }}
-      </button>
     </div>
   </Modal>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { AlertTriangle } from '@lucide/vue'
 import Modal from './Modal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 
 const { confirmState, accept, cancel } = useConfirm()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 </script>
 
 <style scoped>
@@ -55,6 +61,7 @@ const { confirmState, accept, cancel } = useConfirm()
   color: #0f172a;
   line-height: 1.4;
   letter-spacing: -0.01em;
+  transition: color 0.3s ease;
 }
 .title-danger { color: #dc2626 !important; }
 
@@ -100,4 +107,13 @@ const { confirmState, accept, cancel } = useConfirm()
   gap: 10px;
   padding: 20px 24px 24px;
 }
+
+/* Dark mode */
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .title-danger { color: #fca5a5 !important; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; background: rgba(51, 65, 85, 0.5); }
+.dark-mode .icon-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.dark-mode .icon-default { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .confirm-message { color: #cbd5e1; }
 </style>

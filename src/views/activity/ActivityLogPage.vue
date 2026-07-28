@@ -1,5 +1,5 @@
 <template>
-  <div class="al-page">
+  <div :class="['al-page', { 'dark-mode': isDark }]">
     <PageHeader
       title="Activity Log"
       subtitle="Every create, update, delete, sign-in and export performed by admins and teachers"
@@ -262,6 +262,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import {
   AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Download,
   FileSpreadsheet, FileText, FileType,
@@ -275,6 +276,9 @@ import { useAuthStore } from '@/stores/auth'
 import { extractErrorMessage, getUserInitials, debounce } from '@/utils'
 import { DEBOUNCE } from '@/constants'
 import type { ActivityLogEntry, ActivityLogFilterOptions } from '@/types'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const auth = useAuthStore()
 
@@ -1057,4 +1061,72 @@ onMounted(loadLogs)
   .search-box { width: 100%; }
   .pagination-bar { flex-direction: column; align-items: center; }
 }
+
+/* Dark mode */
+.dark-mode .al-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+.dark-mode .al-btn {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+.dark-mode .al-btn:hover:not(:disabled) { background: rgba(71, 85, 105, 0.5); border-color: #64748b; }
+.dark-mode .al-toolbar { border-bottom-color: #334155; }
+.dark-mode .search-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+.dark-mode .al-filter span { color: #94a3b8; }
+.dark-mode .al-select {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .al-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15); }
+.dark-mode .al-table thead th {
+  background: #0f172a;
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+.dark-mode .al-table tbody td {
+  color: #cbd5e1;
+  border-bottom-color: #334155;
+}
+.dark-mode .al-table tbody tr:hover { background: rgba(51, 65, 85, 0.3); }
+.dark-mode .al-table tbody tr.row-selected { background: rgba(239, 68, 68, 0.1); }
+.dark-mode .al-table tbody tr.row-selected:hover { background: rgba(239, 68, 68, 0.15); }
+.dark-mode .user-name { color: #f1f5f9; }
+.dark-mode .avatar { background: #3b82f6; }
+.dark-mode .module-badge { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+.dark-mode .description-cell { color: #cbd5e1; }
+.dark-mode .description-cell:hover .desc-text { color: #60a5fa; }
+.dark-mode .time-cell { color: #64748b; }
+.dark-mode .al-error { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .al-clear { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+.dark-mode .export-menu { background: #1e293b; border-color: #475569; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+.dark-mode .export-menu-item { color: #cbd5e1; }
+.dark-mode .export-menu-item:hover { background: rgba(51, 65, 85, 0.5); color: #60a5fa; }
+.dark-mode .modal-card { background: #1e293b; }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .detail-label { color: #64748b; }
+.dark-mode .detail-value { color: #e2e8f0; }
+.dark-mode .detail-desc { color: #cbd5e1; }
+.dark-mode .del-text { color: #cbd5e1; }
+.dark-mode .btn-ghost { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .btn-ghost:hover { background: rgba(71, 85, 105, 0.5); }
+.dark-mode .bulk-bar { background: rgba(239, 68, 68, 0.1); border-bottom-color: rgba(239, 68, 68, 0.2); }
+.dark-mode .bulk-count { color: #fca5a5; }
+.dark-mode .bulk-clear-btn { color: #94a3b8; }
+.dark-mode .bulk-clear-btn:hover { color: #cbd5e1; }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="login-page">
+  <div :class="['login-page', { 'dark-mode': isDark }]">
     <!-- Background decorative shapes -->
     <div class="bg-shape bg-shape-1"></div>
     <div class="bg-shape bg-shape-2"></div>
@@ -118,9 +118,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 import { initGoogleClientId } from '@/services/googleAuthService'
 import logoSrc from '@/assets/images/pnc-logo.png'
 import { AlertTriangle, Mail, Lock, EyeOff, Eye, Check, LogIn } from '@lucide/vue'
@@ -783,4 +787,21 @@ onUnmounted(() => {
     height: 250px;
   }
 }
+
+/* Dark mode */
+.dark-mode .login-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+.dark-mode .login-title { color: #f1f5f9; }
+.dark-mode .login-subtitle { color: #94a3b8; }
+.dark-mode .form-group label { color: #e2e8f0; }
+.dark-mode .login-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .login-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.dark-mode .login-btn { background: #2563eb; }
+.dark-mode .login-btn:hover { background: #1d4ed8; }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="modelValue" class="modal-overlay" @click.self="$emit('update:modelValue', false)">
+      <div v-if="modelValue" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="$emit('update:modelValue', false)">
         <div class="modal-content-panel" :style="maxWidth ? { maxWidth } : {}">
           <slot />
         </div>
@@ -11,6 +11,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
+
 defineProps<{
   modelValue: boolean
   maxWidth?: string
@@ -19,6 +22,9 @@ defineProps<{
 defineEmits<{
   'update:modelValue': [value: boolean]
 }>()
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 </script>
 
 <style scoped>
@@ -44,6 +50,7 @@ defineEmits<{
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   animation: modal-in 0.25s ease-out;
   font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  transition: background 0.3s ease;
 }
 
 @keyframes modal-in {
@@ -63,4 +70,13 @@ defineEmits<{
 
 .modal-enter-active .modal-content-panel,
 .modal-leave-active .modal-content-panel { transition: transform 0.25s ease-out; }
+
+/* Dark mode */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+.dark-mode .modal-content-panel::-webkit-scrollbar-thumb { background: #475569; }
 </style>

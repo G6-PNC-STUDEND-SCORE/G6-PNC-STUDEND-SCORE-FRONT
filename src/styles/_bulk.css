@@ -3,15 +3,15 @@
   align-items: center;
   gap: 12px;
   padding: 10px 20px;
-  background: #fef2f2;
-  border-bottom: 1px solid #fecaca;
+  background: var(--color-danger-light);
+  border-bottom: 1px solid var(--color-danger);
   animation: slideDown 0.2s ease-out;
 }
 
 .bulk-count {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #991b1b;
+  color: var(--color-danger);
 }
 
 .bulk-delete-btn {
@@ -20,7 +20,7 @@
   gap: 6px;
   padding: 6px 14px;
   border: none;
-  background: #ef4444;
+  background: var(--color-danger);
   color: #fff;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -36,9 +36,9 @@
   display: inline-flex;
   align-items: center;
   padding: 6px 14px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  color: #64748b;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
   font-size: 0.8125rem;
   font-weight: 500;
   border-radius: 8px;
@@ -47,7 +47,7 @@
   font-family: var(--font-family);
 }
 
-.bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.bulk-clear-btn:hover { background: var(--color-bg-hover); border-color: var(--color-border-hover); }
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-8px); }

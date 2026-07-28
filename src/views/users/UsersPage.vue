@@ -1,10 +1,10 @@
 <template>
-  <div class="users-page">
+  <div :class="['users-page', { 'dark-mode': isDark }]">
     <div v-if="loading && users.length === 0" class="text-center py-5">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
         <span class="visually-hidden">Loading...</span>
       </div>
-      <p class="mt-2" style="color: #6b7280;">Loading users...</p>
+      <p class="mt-2 loading-text">Loading users...</p>
     </div>
 
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
@@ -50,8 +50,7 @@
         <div class="toolbar-right">
           <button
             v-if="canCreate"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold"
-            style="border-radius: 0.625rem; background: #2563eb; padding: 0.35rem 0.875rem; font-size: 0.8125rem; flex-shrink: 0;"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 border-0 fw-semibold add-user-btn"
             @click="openCreateModal"
           >
             <Plus :size="15" />
@@ -241,7 +240,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showFormModal" class="modal-overlay" @click.self="closeFormModal">
+        <div v-if="showFormModal" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="closeFormModal">
           <div class="modal-content-panel">
             <div class="modal-head">
               <div class="modal-icon" :class="isEditing ? 'icon-edit' : 'icon-create'">
@@ -388,7 +387,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
+        <div v-if="showDeleteModal" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="closeDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
               <div class="modal-icon icon-danger">
@@ -424,7 +423,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showBulkDeleteModal" class="modal-overlay" @click.self="closeBulkDeleteModal">
+        <div v-if="showBulkDeleteModal" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="closeBulkDeleteModal">
           <div class="modal-content-panel" style="max-width: 400px;">
             <div class="modal-head">
               <div class="modal-icon icon-danger">
@@ -459,7 +458,7 @@
 
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showDetailsModal && detailUser" class="modal-overlay" @click.self="closeDetailsModal">
+        <div v-if="showDetailsModal && detailUser" :class="['modal-overlay', { 'dark-mode': isDark }]" @click.self="closeDetailsModal">
           <div class="modal-content-panel" style="max-width: 460px;">
             <div class="modal-head">
               <div class="modal-icon icon-info">
@@ -473,15 +472,15 @@
             </div>
 
             <div class="modal-body-custom">
-              <div class="d-flex align-items-center gap-3 mb-4 pb-3" style="border-bottom: 1px solid #f1f5f9;">
+              <div class="d-flex align-items-center gap-3 mb-4 pb-3 detail-separator" style="border-bottom: 1px solid #f1f5f9;">
                 <div
-                  class="d-flex align-items-center justify-content-center rounded-3 fw-bold text-white flex-shrink-0 shadow-sm"
+                  class="d-flex align-items-center justify-content-center rounded-3 fw-bold text-white flex-shrink-0 shadow-sm detail-avatar"
                   :style="{ width: '54px', height: '54px', fontSize: '1.125rem', background: '#2563eb' }"
                 >
                   {{ getInitials(detailUser.name) }}
                 </div>
                 <div>
-                  <h6 class="mb-1 fw-bold" style="color: #0f172a;">{{ detailUser.name }}</h6>
+                  <h6 class="mb-1 fw-bold detail-name" style="color: #0f172a;">{{ detailUser.name }}</h6>
                   <span class="role-badge" :class="getRoleBadgeClass(detailUser.role?.slug || '')">
                     {{ detailUser.role?.name || '—' }}
                   </span>
@@ -550,7 +549,11 @@
 <script setup lang="ts">
 import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, Inbox } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, TransitionGroup, type Component } from 'vue'
+import { useThemeStore } from '@/stores/theme'
 import { usePermission } from '@/composables/usePermission'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
@@ -1290,6 +1293,17 @@ select.styled-input {
   min-width: 0;
 }
 
+.add-user-btn {
+  border-radius: 0.625rem;
+  padding: 0.35rem 0.875rem;
+  font-size: 0.8125rem;
+  flex-shrink: 0;
+}
+
+.loading-text {
+  color: #6b7280;
+}
+
 .del-text {
   font-size: 0.9rem;
   color: #475569;
@@ -1327,4 +1341,100 @@ select.styled-input {
 .row-move {
   transition: transform 0.3s ease;
 }
+
+/* ──────────────────────────────────────────────
+   Dark mode — polished, modern look
+   ────────────────────────────────────────────── */
+.dark-mode .user-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+.dark-mode .user-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); }
+.dark-mode .user-name { color: #f1f5f9; }
+.dark-mode .email-cell { color: #94a3b8; }
+.dark-mode .user-cell { color: #e2e8f0; }
+.dark-mode .data-row { border-left-color: transparent; }
+.dark-mode .data-row:hover { border-left-color: #3b82f6; }
+.dark-mode .user-table tbody td { color: #cbd5e1; }
+.dark-mode .col-index { color: #64748b; }
+.dark-mode .avatar {
+  background: linear-gradient(135deg, #3b82f6, #7c3aed);
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+.dark-mode .modal-card { background: #1e293b; }
+.dark-mode .modal-head h3 { color: #f1f5f9; }
+.dark-mode .modal-head p { color: #94a3b8; }
+.dark-mode .modal-x { color: #64748b; }
+.dark-mode .modal-x:hover { color: #cbd5e1; }
+.dark-mode .styled-input {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+.dark-mode .styled-input:hover { border-color: #64748b; }
+.dark-mode .styled-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+.dark-mode .styled-input::placeholder { color: #64748b; }
+.dark-mode .styled-input.err { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15); }
+.dark-mode select.styled-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+.dark-mode .form-label { color: #e2e8f0; }
+.dark-mode .field-icon { color: #64748b; }
+.dark-mode .field-hint { color: #64748b; }
+.dark-mode .section-divider { background: linear-gradient(to right, transparent, #334155, transparent); }
+.dark-mode .load-state { color: #94a3b8; }
+.dark-mode .msg-error { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-left-color: #ef4444; }
+.dark-mode .loading-text { color: #94a3b8; }
+.dark-mode .empty-box h5 { color: #94a3b8; }
+.dark-mode .empty-box p { color: #64748b; }
+.dark-mode .btn-ghost { background: rgba(51, 65, 85, 0.5); color: #cbd5e1; }
+.dark-mode .btn-ghost:hover { background: rgba(71, 85, 105, 0.5); }
+.dark-mode .icon-create { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .icon-edit { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.dark-mode .icon-info { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .icon-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+.dark-mode .modal-body-custom { color: #cbd5e1; }
+.dark-mode .modal-body { color: #cbd5e1; }
+.dark-mode .field-err { color: #fca5a5; }
+.dark-mode .error-alert { background: rgba(239, 68, 68, 0.1); color: #fca5a5; border-left-color: #ef4444; }
+.dark-mode .del-text { color: #cbd5e1; }
+.dark-mode .del-warning { color: #fca5a5; background: rgba(239, 68, 68, 0.1); }
+
+/* Action dropdown */
+.dark-mode .action-trigger {
+  background: rgba(51, 65, 85, 0.4);
+  color: #94a3b8;
+}
+.dark-mode .action-trigger:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+.dark-mode .action-menu {
+  background: #1e293b;
+  border-color: #475569;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+.dark-mode .action-item { color: #cbd5e1; }
+.dark-mode .action-item.view:hover { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .action-item.edit:hover { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.dark-mode .action-item.delete:hover { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.dark-mode .dropdown-divider { background: #334155; }
+
+/* Role badges */
+.dark-mode .role-admin { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .role-teacher { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.dark-mode .role-student { background: rgba(16, 185, 129, 0.2); color: #4ade80; }
+
+/* Detail modal */
+.dark-mode .detail-avatar { background: linear-gradient(135deg, #3b82f6, #7c3aed) !important; }
+.dark-mode .detail-name { color: #f1f5f9 !important; }
+.dark-mode .detail-separator { border-bottom-color: #334155 !important; }
+.dark-mode .detail-row { border-bottom-color: #334155; }
+.dark-mode .detail-label { color: #64748b; }
+.dark-mode .detail-value { color: #e2e8f0; }
+.dark-mode .d-flex.align-items-center.gap-3.mb-4.pb-3 { border-bottom-color: #334155 !important; }
+.badge.bg-light.text-dark { transition: background 0.3s ease, color 0.3s ease; }
+.dark-mode .badge.bg-light.text-dark { background: rgba(51, 65, 85, 0.5) !important; color: #e2e8f0 !important; }
 </style>

@@ -5,17 +5,18 @@
   justify-content: center;
   padding: 4rem 2rem;
   text-align: center;
-  background: #f8fafc;
+  background: var(--color-bg-hover);
   border-radius: 16px;
   border: 1.5px dashed var(--color-border);
+  transition: background 0.3s ease;
 }
 
 .empty-state-icon {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: #eef2ff;
-  color: #2563eb;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -31,6 +32,7 @@
 
 .empty-state p {
   font-size: 0.875rem;
+  color: var(--color-text-secondary);
 }
 
 
@@ -49,12 +51,12 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 
 .empty-container .empty-box h5 {
   font-weight: 700;
-  color: #64748b;
+  color: var(--color-text-secondary);
   margin: 0;
   font-size: 1rem;
 }
@@ -62,4 +64,5 @@
 .empty-container .empty-box p {
   font-size: 0.85rem;
   margin: 0;
+  color: var(--color-text-muted);
 }
