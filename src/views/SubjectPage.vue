@@ -486,7 +486,7 @@ const CACHE_KEY = 'subject-terms'
 
 const currentPage = ref(1)
 const pageSize = ref(10)
-const pageSizeOptions = [10, 25, 50]
+const pageSizeOptions = [10, 25, 50, 75, 100]
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredSubjects.value.length / pageSize.value)))
 

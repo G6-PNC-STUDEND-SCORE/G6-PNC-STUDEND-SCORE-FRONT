@@ -1,32 +1,5 @@
 <template>
   <div class="al-page">
-    <PageHeader
-      title="Activity Log"
-      subtitle="Every create, update, delete, sign-in and export performed by admins and teachers"
-      :icon="History"
-    >
-      <button class="al-btn" :disabled="loading" @click="loadLogs">
-        <RefreshCw :size="14" :class="{ spinning: loading }" /> Refresh
-      </button>
-      <div class="export-dropdown" ref="exportBtnRef">
-        <button class="al-btn al-btn-export" :disabled="logs.length === 0" @click="toggleExportMenu" title="Export">
-          <Download :size="14" /> <span>Export</span>
-          <ChevronDown :size="10" style="margin-left:2px" />
-        </button>
-        <div v-if="showExportMenu" class="export-menu">
-          <div class="export-menu-item" @click="exportLogsAsCSV">
-            <FileText :size="15" /> Export as CSV
-          </div>
-          <div class="export-menu-item" @click="exportLogsAsExcel">
-            <FileSpreadsheet :size="15" /> Export as Excel
-          </div>
-          <div class="export-menu-item" @click="exportLogsAsPDF">
-            <FileType :size="15" /> Export as PDF
-          </div>
-        </div>
-      </div>
-    </PageHeader>
-
     <div v-if="error" class="al-error">
       <AlertTriangle :size="16" />
       <span>{{ error }}</span>
@@ -48,27 +21,40 @@
 
         <div class="al-filter-group">
           <label class="al-filter">
-            <span>Module</span>
             <select v-model="moduleFilter" class="al-select" @change="applyFilters">
               <option value="">All modules</option>
               <option v-for="m in filterOptions.modules" :key="m" :value="m">{{ m }}</option>
             </select>
           </label>
           <label class="al-filter">
-            <span>Action</span>
             <select v-model="actionFilter" class="al-select" @change="applyFilters">
               <option value="">All actions</option>
               <option v-for="a in filterOptions.actions" :key="a" :value="a">{{ a }}</option>
             </select>
           </label>
           <label class="al-filter">
-            <span>From</span>
             <input v-model="dateFrom" type="date" class="al-select" @change="applyFilters" />
           </label>
           <label class="al-filter">
-            <span>To</span>
             <input v-model="dateTo" type="date" class="al-select" @change="applyFilters" />
           </label>
+          <div class="export-dropdown" ref="exportBtnRef">
+            <button class="al-btn al-btn-export" :disabled="logs.length === 0" @click="toggleExportMenu" title="Export">
+              <Download :size="14" /> <span>Export</span>
+              <ChevronDown :size="10" style="margin-left:2px" />
+            </button>
+            <div v-if="showExportMenu" class="export-menu">
+              <div class="export-menu-item" @click="exportLogsAsCSV">
+                <FileText :size="15" /> Export as CSV
+              </div>
+              <div class="export-menu-item" @click="exportLogsAsExcel">
+                <FileSpreadsheet :size="15" /> Export as Excel
+              </div>
+              <div class="export-menu-item" @click="exportLogsAsPDF">
+                <FileType :size="15" /> Export as PDF
+              </div>
+            </div>
+          </div>
           <button v-if="hasActiveFilters" class="al-clear" @click="clearFilters">
             <XCircle :size="14" /> Clear
           </button>
@@ -186,9 +172,6 @@
         <div v-if="detailLog" class="modal-overlay" @click.self="detailLog = null">
           <div class="modal-card modal-detail">
             <div class="modal-head">
-              <div class="modal-icon icon-info">
-                <History :size="20" />
-              </div>
               <div>
                 <h3>Activity Detail</h3>
                 <p>Full information for this log entry</p>
@@ -265,12 +248,12 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import {
   AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Download,
   FileSpreadsheet, FileText, FileType,
-  History, RefreshCw, Search, Trash2, XCircle,
+  RefreshCw, Search, Trash2, XCircle,
 } from '@lucide/vue'
-import PageHeader from '@/components/common/PageHeader.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import LoadingState from '@/components/LoadingState.vue'
 import { activityLogService } from '@/services/activityLogService'
+import { exportTableToPdf } from '@/utils/reportExport'
 import { useAuthStore } from '@/stores/auth'
 import { extractErrorMessage, getUserInitials, debounce } from '@/utils'
 import { DEBOUNCE } from '@/constants'
@@ -348,70 +331,14 @@ async function exportLogsAsExcel() {
 async function exportLogsAsPDF() {
   showExportMenu.value = false
   try {
-    const { default: jsPDF } = await import('jspdf')
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
-
-    const pageW = doc.internal.pageSize.getWidth()
-    doc.setFontSize(14)
-    doc.text('Activity Log', pageW / 2, 16, { align: 'center' })
-    doc.setFontSize(8)
-    doc.text(`Generated: ${new Date().toLocaleString()}  |  ${logs.value.length} entries`, pageW / 2, 22, { align: 'center' })
-
-    const headers = ['User', 'Action', 'Module', 'Description', 'Time']
-    const colWidths = [38, 24, 24, 76, 38]
-    const rows = logs.value.map(log => [log.user_name, log.action, log.module, log.description, log.created_at])
-
-    let y = 30
-    const lineH = 6
-
-    // Draw header row
-    doc.setFillColor(37, 99, 235)
-    doc.setTextColor(255, 255, 255)
-    doc.setFontSize(8)
-    let x = 10
-    headers.forEach((h, i) => {
-      doc.rect(x, y, colWidths[i], lineH, 'F')
-      doc.text(h, x + 1, y + 4)
-      x += colWidths[i]
+    await exportTableToPdf({
+      title: 'Activity Log',
+      subtitle: `${logs.value.length} entries`,
+      head: ['User', 'Action', 'Module', 'Description', 'Time'],
+      body: logs.value.map(log => [log.user_name, log.action, log.module, log.description, log.created_at]),
+      filename: `activity-log-${new Date().toISOString().slice(0, 10)}`,
+      orientation: 'landscape',
     })
-    y += lineH
-
-    // Draw data rows
-    doc.setTextColor(51, 65, 85)
-    rows.forEach((row, ri) => {
-      if (y >= 190) {
-        doc.addPage()
-        y = 16
-        // Redraw header on new page
-        doc.setFillColor(37, 99, 235)
-        doc.setTextColor(255, 255, 255)
-        x = 10
-        headers.forEach((h, i) => {
-          doc.rect(x, y, colWidths[i], lineH, 'F')
-          doc.text(h, x + 1, y + 4)
-          x += colWidths[i]
-        })
-        y += lineH
-        doc.setTextColor(51, 65, 85)
-      }
-      if (ri % 2 === 0) {
-        doc.setFillColor(248, 250, 252)
-        x = 10
-        colWidths.forEach(w => {
-          doc.rect(x, y, w, lineH, 'F')
-          x += w
-        })
-      }
-      x = 10
-      row.forEach((cell, ci) => {
-        const text = ci === 3 && cell.length > 38 ? cell.slice(0, 38) + '...' : cell
-        doc.text(text, x + 1, y + 4)
-        x += colWidths[ci]
-      })
-      y += lineH
-    })
-
-    doc.save(`activity-log-${new Date().toISOString().slice(0, 10)}.pdf`)
   } catch (e) {
     console.error('PDF export failed:', e)
   }
@@ -578,7 +505,16 @@ onMounted(loadLogs)
 </script>
 
 <style scoped>
-.al-page { font-family: 'Inter', 'Noto Sans Khmer', sans-serif; padding-bottom: 2rem; }
+.al-page {
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  height: calc(100vh - 96px);
+  width: calc(100% + 12px);
+  margin-top: -6px;
+  margin-left: -6px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .al-btn {
   display: inline-flex;
@@ -636,6 +572,11 @@ onMounted(loadLogs)
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .al-toolbar {
@@ -793,7 +734,7 @@ onMounted(loadLogs)
 .al-table tbody tr.row-selected { background: #fef2f2; }
 .al-table tbody tr.row-selected:hover { background: #fee2e2; }
 
-.table-wrap { width: 100%; overflow-x: auto; }
+.table-wrap { width: 100%; overflow-x: auto; overflow-y: auto; flex: 1; min-height: 0; }
 .al-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.8125rem; }
 .al-table thead th {
   background: #f8fafc;

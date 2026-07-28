@@ -529,7 +529,7 @@ function applyFilters() {
 
 const currentPage = ref(1)
 const perPage = ref(10)
-const pageSizeOptions = [10, 25, 50]
+const pageSizeOptions = [10, 25, 50, 75, 100]
 
 const pagination = computed(() => {
   const total = totalTeachers.value
