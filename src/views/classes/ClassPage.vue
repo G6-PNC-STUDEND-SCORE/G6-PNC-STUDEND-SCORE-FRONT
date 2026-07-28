@@ -603,9 +603,7 @@ onMounted(async () => {
 
 .classes-page {
   height: calc(100vh - 96px);
-  width: calc(100% + 12px);
-  margin-top: -6px;
-  margin-left: -6px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;

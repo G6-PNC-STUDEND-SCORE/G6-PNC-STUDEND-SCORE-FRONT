@@ -1127,9 +1127,6 @@ onMounted(async () => {
   color: #94a3b8;
 }
 
-
-
-
 .card-enter-active,
 .card-leave-active {
   transition: all 0.3s ease;
