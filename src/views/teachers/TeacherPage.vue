@@ -1,5 +1,5 @@
 <template>
-  <div class="teachers-page">
+  <div :class="['teachers-page', { 'dark-mode': isDark }]">
     <div v-if="loading && teachers.length === 0" class="text-center py-5">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
         <span class="visually-hidden">Loading...</span>
@@ -488,12 +488,18 @@ import {
   Calendar,
 } from '@lucide/vue'
 import { ref, computed, onMounted, TransitionGroup } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
+import { useThemeStore } from '@/stores/theme'
 import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
 import type { User, UserRole, CreateUserPayload, UpdateUserPayload } from '@/services/userService'
 import { getUser } from '@/services/userService'
 import { usePermission } from '@/composables/usePermission'
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useUserStore()
 const { users, loading, error, totalUsers, lastPage } = storeToRefs(store)
@@ -1266,4 +1272,149 @@ select.styled-input {
 .status-active { color: #16a34a; font-weight: 600; }
 .status-inactive { color: #94a3b8; font-weight: 600; }
 .status-suspended { color: #dc2626; font-weight: 600; }
+
+/* ════════════════════════════════════════
+   DARK MODE — TEACHERS PAGE
+   ════════════════════════════════════════ */
+.dark-mode .teacher-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .teacher-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .teacher-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .email-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #94a3b8;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1;
+}
+
+.dark-mode .styled-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .styled-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.dark-mode .styled-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode select.styled-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-color: #1e293b;
+}
+
+.dark-mode select.styled-input option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-mode .error-alert {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .section-divider {
+  background: linear-gradient(to right, transparent, #334155, transparent);
+}
+
+.dark-mode .icon-create {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .icon-edit {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.dark-mode .icon-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .del-warning {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.dark-mode .info-heading h4 {
+  color: #f1f5f9;
+}
+
+.dark-mode .info-role {
+  color: #94a3b8;
+}
+
+.dark-mode .info-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: #334155;
+}
+
+.dark-mode .info-row {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .info-label {
+  color: #94a3b8;
+}
+
+.dark-mode .info-label svg {
+  color: #64748b;
+}
+
+.dark-mode .info-value {
+  color: #e2e8f0;
+}
+
+.dark-mode .field-hint {
+  color: #64748b;
+}
+
+.dark-mode .teacher-avatar {
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.dark-mode .filter-label :deep(svg) {
+  color: #64748b;
+}
 </style>

@@ -183,7 +183,19 @@ function gradeStyle(grade: string | null) {
   return color ? { color, background: `${color}1a` } : {}
 }
 
-const CACHE_TTL = 5 * 60_000 // 5 minutes
+function getMessage(): string {
+  if (!card.value) return ''
+  const { student, summary } = card.value
+  const firstName = (student.name ?? 'Student').split(' ')[0]
+  if (summary.result === 'pass') {
+    return summary.rank === 1
+      ? `Outstanding work, ${firstName}! You're ranked #1 in your class this term.`
+      : `Great job, ${firstName}! Keep up the strong performance.`
+  }
+  return `${firstName}, this term didn't go as planned — talk to your teacher about a plan to catch up next term.`
+}
+
+const CACHE_TTL = 5 * 60_000
 
 function cacheKey() {
   return `report_card_${props.studentId}_${JSON.stringify(props.filters)}`
@@ -191,14 +203,12 @@ function cacheKey() {
 
 async function load() {
   if (!props.studentId) return
-
   const cached = cacheService.get<StudentReportCard>(cacheKey())
   if (cached) {
     error.value = ''
     card.value = cached
     return
   }
-
   loading.value = true
   error.value = ''
   try {
@@ -224,9 +234,7 @@ watch(
   () => [props.modelValue, props.studentId],
   ([open]) => {
     if (open) load()
-    else {
-      card.value = null
-    }
+    else { card.value = null }
   },
   { immediate: true },
 )

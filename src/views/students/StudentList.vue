@@ -9,22 +9,22 @@
             @input="$emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
             type="text"
             class="search-input"
-            placeholder="Search by name..."
+:placeholder="t('students.searchPlaceholder')"
           />
         </div>
 
         <div class="filter-group">
           <label class="filter-label">
             <VenusAndMars :size="16" />
-            <span>Gender</span>
+            <span>{{ t('students.gender') }}</span>
             <select
               :value="genderFilter"
               @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
               class="filter-select"
             >
-              <option value="">All</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
+              <option value="">{{ t('common.all') }}</option>
+              <option value="Male">{{ t('students.male') }}</option>
+              <option value="Female">{{ t('students.female') }}</option>
             </select>
           </label>
         </div>
@@ -241,6 +241,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { TransitionGroup } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 import type { Student } from '@/services/studentService'
 import {
   Search,
@@ -876,5 +879,500 @@ defineEmits<{
   .col-actions {
     width: 100px;
   }
+}
+
+/* ════════════════════════════════════════
+   DARK MODE — STUDENT LIST
+   ════════════════════════════════════════ */
+.dark-mode .student-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .student-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .toolbar {
+  background: transparent;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .search-box {
+  background: transparent;
+}
+
+.dark-mode .search-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .search-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .search-icon {
+  color: #64748b;
+}
+
+.dark-mode .filter-label {
+  background: transparent;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .filter-label:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .filter-label :deep(svg) {
+  color: #64748b;
+}
+
+.dark-mode .filter-select {
+  color: #cbd5e1;
+}
+
+.dark-mode .filter-select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-mode .count-badge {
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+
+.dark-mode .table-wrap {
+  border-top: 1px solid transparent;
+}
+
+.dark-mode .student-table thead th {
+  background: rgba(15, 23, 42, 0.3);
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .student-table tbody tr {
+  border-bottom-color: #2a3a4e;
+}
+
+.dark-mode .student-table tbody tr:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+.dark-mode .data-row.row-selected {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.dark-mode .student-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .avatar {
+  background: #2563eb;
+}
+
+.dark-mode .meta-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .class-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .id-number-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .id-cell {
+  color: #64748b;
+}
+
+.dark-mode .col-index {
+  color: #64748b;
+}
+
+.dark-mode .table-checkbox {
+  accent-color: #3b82f6;
+}
+
+.dark-mode .pagination-bar {
+  background: rgba(15, 23, 42, 0.2);
+  border-top-color: #334155;
+}
+
+.dark-mode .pagination-info {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-label {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-selector {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.dark-mode .rows-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-btn:hover {
+  color: #cbd5e1;
+}
+
+.dark-mode .rows-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .page-nav {
+  background: transparent;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .page-nav:hover:not(:disabled) {
+  border-color: #60a5fa;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode .page-nav:disabled {
+  opacity: 0.3;
+  border-color: #334155;
+}
+
+.dark-mode .page-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .page-btn:hover:not(.active) {
+  background: rgba(51, 65, 85, 0.4);
+  color: #93c5fd;
+}
+
+.dark-mode .page-btn.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.dark-mode .page-dots {
+  color: #64748b;
+}
+
+.dark-mode .pagination-total {
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-bar {
+  background: rgba(239, 68, 68, 0.08);
+  border-bottom-color: rgba(239, 68, 68, 0.2);
+}
+
+.dark-mode .bulk-count {
+  color: #fca5a5;
+}
+
+.dark-mode .bulk-delete-btn {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.dark-mode .bulk-delete-btn:hover {
+  background: #dc2626;
+}
+
+.dark-mode .bulk-clear-btn {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-clear-btn:hover {
+  background: rgba(51, 65, 85, 0.7);
+  border-color: #64748b;
+}
+
+.dark-mode .empty-container .empty-box {
+  color: #64748b;
+}
+
+.dark-mode .empty-container .empty-box h5 {
+  color: #94a3b8;
+}
+
+.dark-mode .td-actions .act-btn {
+  background: rgba(51, 65, 85, 0.4);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .td-actions .act-btn:hover {
+  background: rgba(51, 65, 85, 0.6);
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.dark-mode .td-actions .act-danger:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+.dark-mode .student-table thead th.col-check,
+.dark-mode .student-table tbody td.col-check {
+  background: transparent;
+}
+
+.dark-mode .btn-primary {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.dark-mode .table-wrap::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark-mode .table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+</style>
+
+<!-- ════════════════════════════════════════
+     DARK MODE — NON-SCOPED
+     (scoped styles can't reach .dark-mode on parent)
+     ════════════════════════════════════════ -->
+<style>
+.dark-mode .student-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dark-mode .student-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-mode .toolbar {
+  border-bottom-color: #334155 !important;
+}
+
+.dark-mode .search-input {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .search-input::placeholder {
+  color: #64748b !important;
+}
+
+.dark-mode .search-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark-mode .search-icon {
+  color: #64748b !important;
+}
+
+.dark-mode .filter-label {
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .filter-select {
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .filter-select option {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .count-badge {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: #93c5fd !important;
+}
+
+.dark-mode .student-table thead th {
+  background: rgba(15, 23, 42, 0.3) !important;
+  color: #94a3b8 !important;
+  border-bottom-color: #334155 !important;
+}
+
+.dark-mode .student-table tbody tr {
+  border-bottom-color: #2a3a4e !important;
+}
+
+.dark-mode .student-table tbody tr:hover {
+  background: rgba(51, 65, 85, 0.3) !important;
+}
+
+.dark-mode .data-row.row-selected {
+  background: rgba(59, 130, 246, 0.08) !important;
+}
+
+.dark-mode .student-name {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .meta-cell {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .class-cell {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .id-number-cell {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .id-cell {
+  color: #64748b !important;
+}
+
+.dark-mode .col-index {
+  color: #64748b !important;
+}
+
+.dark-mode .table-checkbox {
+  accent-color: #3b82f6 !important;
+}
+
+.dark-mode .pagination-bar {
+  background: rgba(15, 23, 42, 0.2) !important;
+  border-top-color: #334155 !important;
+}
+
+.dark-mode .pagination-info {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .rows-selector {
+  background: rgba(51, 65, 85, 0.4) !important;
+}
+
+.dark-mode .rows-btn {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .rows-btn.active {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #93c5fd !important;
+}
+
+.dark-mode .page-nav {
+  background: transparent !important;
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .page-nav:hover:not(:disabled) {
+  border-color: #60a5fa !important;
+  color: #60a5fa !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark-mode .page-btn {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .page-btn:hover:not(.active) {
+  background: rgba(51, 65, 85, 0.4) !important;
+  color: #93c5fd !important;
+}
+
+.dark-mode .page-btn.active {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+.dark-mode .page-dots {
+  color: #64748b !important;
+}
+
+.dark-mode .pagination-total {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .bulk-bar {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-bottom-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+.dark-mode .bulk-count {
+  color: #fca5a5 !important;
+}
+
+.dark-mode .bulk-delete-btn {
+  background: rgba(239, 68, 68, 0.8) !important;
+}
+
+.dark-mode .bulk-delete-btn:hover {
+  background: #dc2626 !important;
+}
+
+.dark-mode .bulk-clear-btn {
+  background: rgba(51, 65, 85, 0.5) !important;
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .empty-box {
+  color: #64748b !important;
+}
+
+.dark-mode .empty-box h5 {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .td-actions .act-btn {
+  background: rgba(51, 65, 85, 0.4) !important;
+  border-color: #475569 !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .td-actions .act-btn:hover {
+  background: rgba(51, 65, 85, 0.6) !important;
+  border-color: #60a5fa !important;
+  color: #60a5fa !important;
+}
+
+.dark-mode .td-actions .act-danger:hover {
+  border-color: #f87171 !important;
+  color: #f87171 !important;
+}
+
+.dark-mode .status-badge {
+  border-color: #475569 !important;
+}
+
+.dark-mode .badge-active {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #34d399 !important;
+}
+
+.dark-mode .badge-inactive {
+  background: rgba(100, 116, 139, 0.15) !important;
+  color: #94a3b8 !important;
+}
+
+.dark-mode .btn-primary {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
 }
 </style>

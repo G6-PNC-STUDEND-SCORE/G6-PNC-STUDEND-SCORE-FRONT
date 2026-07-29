@@ -1,5 +1,5 @@
 <template>
-  <div class="pt-0 pb-4 roles-page">
+  <div :class="['pt-0 pb-4 roles-page', { 'dark-mode': isDark }]">
     <div v-if="error" class="alert-banner">
       <AlertTriangle :size="16" />
       {{ error }}
@@ -8,10 +8,10 @@
     <div class="role-card">
       <div class="tab-bar">
         <button class="tab-btn" :class="{ active: activeTab === 'permissions' }" @click="activeTab = 'permissions'">
-          Permissions
+          {{ t('roles.permissions') }}
         </button>
         <button class="tab-btn" :class="{ active: activeTab === 'domains' }" @click="activeTab = 'domains'">
-          Sign-in Domains
+          {{ t('roles.signInDomains') }}
         </button>
       </div>
 
@@ -22,7 +22,7 @@
         <div class="toolbar-left">
           <label class="filter-label">
             <ShieldCheck :size="16" />
-            <span>Role</span>
+            <span>{{ t('users.role') }}</span>
             <select v-model.number="selectedRoleId" class="filter-select" @change="onRoleChange">
               <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
             </select>
@@ -34,7 +34,7 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search feature..."
+:placeholder="t('roles.searchFeature')"
               @input="currentPage = 1"
             />
           </div>
@@ -306,15 +306,21 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   ShieldCheck, Inbox, Plus, Trash2, Check, AlertTriangle,
   Search, ChevronLeft, ChevronRight,
 } from '@lucide/vue'
+import { useThemeStore } from '@/stores/theme'
 import { storeToRefs } from 'pinia'
 import { useRoleStore } from '@/stores/role'
 import { useConfirm } from '@/composables/useConfirm'
 import type { Permission } from '@/services/permissionService'
 import DomainRulesPanel from './DomainRulesPanel.vue'
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useRoleStore()
 const { roles, permissionsByGroup, error } = storeToRefs(store)
@@ -998,4 +1004,175 @@ onMounted(loadAll)
 .create-modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.4rem; border-top: 1px solid #f1f5f9; }
 .btn-cancel { background: #f1f5f9; color: #475569; border: none; border-radius: 10px; padding: 0.55rem 1.1rem; font-size: 0.8125rem; font-weight: 600; cursor: pointer; }
 .btn-cancel:hover { background: #e2e8f0; }
+
+/* ════════════════════════════════════════
+   DARK MODE — ROLES PAGE
+   ════════════════════════════════════════ */
+.dark-mode .role-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .role-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .tab-bar {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .tab-btn {
+  color: #64748b;
+}
+
+.dark-mode .tab-btn:hover {
+  color: #cbd5e1;
+}
+
+.dark-mode .tab-btn.active {
+  color: #60a5fa;
+  border-bottom-color: #60a5fa;
+}
+
+.dark-mode .toolbar {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .filter-label {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .filter-label :deep(svg) {
+  color: #64748b;
+}
+
+.dark-mode .filter-select {
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input:focus {
+  border-color: #3b82f6;
+}
+
+.dark-mode .search-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .feature-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .other-check {
+  color: #cbd5e1;
+}
+
+.dark-mode .cell-na {
+  color: #475569;
+}
+
+.dark-mode .role-info-bar {
+  background: rgba(30, 41, 59, 0.5);
+  border-bottom-color: #334155;
+}
+
+.dark-mode .role-name-input {
+  color: #f1f5f9;
+}
+
+.dark-mode .role-name-input:hover:not(:disabled), .dark-mode .role-name-input:focus:not(:disabled) {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.dark-mode .role-desc-input {
+  color: #94a3b8;
+}
+
+.dark-mode .role-desc-input:hover, .dark-mode .role-desc-input:focus {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.dark-mode .alert-banner {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.dark-mode .create-modal {
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .create-modal-header {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .create-modal-header h5 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-close {
+  color: #64748b;
+}
+
+.dark-mode .form-group label {
+  color: #cbd5e1;
+}
+
+.dark-mode .form-input {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .form-input:focus {
+  border-color: #3b82f6;
+}
+
+.dark-mode .create-modal-footer {
+  border-top-color: #334155;
+}
+
+.dark-mode .btn-cancel {
+  background: rgba(51, 65, 85, 0.5);
+  color: #cbd5e1;
+}
+
+.dark-mode .btn-cancel:hover {
+  background: rgba(71, 85, 105, 0.6);
+}
+
+.dark-mode .btn-icon-danger {
+  color: #f87171;
+}
+
+.dark-mode .btn-icon-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.dark-mode .btn-add-role {
+  background: #2563eb;
+}
+
+.dark-mode .modal-table-wrap {
+  border-color: #334155;
+}
+
+.dark-mode .empty-container .empty-box h5 {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-container .empty-box p {
+  color: #64748b;
+}
 </style>

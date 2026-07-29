@@ -1,6 +1,6 @@
 <template>
-  <div class="classes-page">
-    <LoadingState v-if="loading && classes.length === 0" message="Loading classes..." />
+  <div :class="['classes-page', { 'dark-mode': isDark }]">
+    <LoadingState v-if="loading && classes.length === 0" :message="t('classes.loading')" />
 
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
       <AlertTriangle :size="16" />
@@ -16,26 +16,26 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search by name, generation, or room..."
+              :placeholder="t('classes.searchPlaceholder')"
             />
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <ToggleLeft :size="16" />
-              <span>Status</span>
+              <span>{{ t('common.status') }}</span>
               <select v-model="filters.status" class="filter-select">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="">{{ t('common.all') }}</option>
+                <option value="active">{{ t('common.active') }}</option>
+                <option value="inactive">{{ t('common.inactive') }}</option>
               </select>
             </label>
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <CalendarDays :size="16" />
-              <span>Generation</span>
+              <span>{{ t('classes.generation') }}</span>
               <select v-model="filters.generation" class="filter-select">
-                <option value="">All</option>
+                <option value="">{{ t('common.all') }}</option>
                 <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
               </select>
             </label>
@@ -50,28 +50,28 @@
             @click="openCreateModal"
           >
             <Plus :size="15" />
-            Add Class
+            {{ t('classes.addClass') }}
           </button>
 
           <span class="count-badge">
-            {{ totalClasses }} class{{ totalClasses !== 1 ? 'es' : '' }}
+            {{ totalClasses }} {{ t('classes.class') }}{{ totalClasses !== 1 ? 'es' : '' }}
           </span>
         </div>
       </div>
 
       <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <span class="bulk-count">{{ selectedIds.length }} {{ t('common.selected') }}</span>
         <button class="bulk-delete-btn" @click="confirmBulkDelete">
           <Trash :size="16" />
-          Delete Selected
+          {{ t('common.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="clearSelection">{{ t('common.clearSelection') }}</button>
       </div>
 
       <div v-if="filteredClasses.length === 0" class="empty-container">
         <EmptyState
-          title="No classes found"
-          :message="searchQuery ? 'Try a different search term.' : 'No classes match the current filter.'"
+          :title="t('classes.noClassesFound')"
+          :message="searchQuery ? t('classes.tryDifferentSearch') : t('classes.noClassesMatchFilter')"
         >
           <template #icon><Inbox :size="24" /></template>
         </EmptyState>
@@ -128,7 +128,7 @@
               class="status-badge"
               :class="(row as SchoolClass).is_active ? 'badge-active' : 'badge-inactive'"
             >
-              {{ (row as SchoolClass).is_active ? 'Active' : 'Inactive' }}
+              {{ (row as SchoolClass).is_active ? t('common.active') : t('common.inactive') }}
             </span>
           </template>
           <template #cell-actions="{ row }">
@@ -145,8 +145,7 @@
       </div>
 
       <div v-if="filteredClasses.length > 0" class="pagination-bar">
-        <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+        <div class="pagination-info">            <span class="rows-label">{{ t('common.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pagination.pageSizeOptions"
@@ -165,7 +164,7 @@
             class="page-nav"
             :disabled="pagination.currentPage.value <= 1"
             @click="pagination.changePage(pagination.currentPage.value - 1)"
-            aria-label="Previous page"
+:aria-label="t('common.previousPage')"
           >
             <ChevronLeft :size="16" />
           </button>
@@ -186,7 +185,7 @@
             class="page-nav"
             :disabled="pagination.currentPage.value >= pagination.totalPages.value"
             @click="pagination.changePage(pagination.currentPage.value + 1)"
-            aria-label="Next page"
+:aria-label="t('common.nextPage')"
           >
             <ChevronRight :size="16" />
           </button>
@@ -204,9 +203,8 @@
           <SquarePen v-if="isEditMode" :size="18" />
           <Plus v-else :size="18" />
         </div>
-        <div>
-          <h3>{{ isEditMode ? 'Edit Class' : 'Add New Class' }}</h3>
-          <p>{{ isEditMode ? 'Update class information' : 'Fill in the new class details' }}</p>
+        <div>            <h3>{{ isEditMode ? t('classes.editClass') : t('classes.addNewClass') }}</h3>
+          <p>{{ isEditMode ? t('classes.updateInfo') : t('classes.fillDetails') }}</p>
         </div>
         <button class="modal-x" @click="closeFormModal">&times;</button>
       </div>
@@ -221,7 +219,7 @@
           <div class="form-group">
             <label class="form-label">
               <Users :size="15" class="field-icon" />
-              Class Name <span class="req">*</span>
+              {{ t('classes.className') }} <span class="req">*</span>
             </label>
             <div class="input-wrap">
               <input
@@ -229,11 +227,11 @@
                 type="text"
                 class="styled-input"
                 :class="{ err: formError && !formData.name.trim() }"
-                placeholder="e.g. Class A"
+                :placeholder="t('classes.classNamePlaceholder')"
                 required
               />
             </div>
-            <span v-if="formError && !formData.name.trim()" class="field-err">Class name is required</span>
+            <span v-if="formError && !formData.name.trim()" class="field-err">{{ t('classes.classNameRequired') }}</span>
           </div>
 
           <div class="section-divider"></div>
@@ -241,15 +239,15 @@
           <div class="form-group">
             <label class="form-label">
               <CalendarDays :size="15" class="field-icon" />
-              Generation <span class="req">*</span>
+              {{ t('classes.generation') }} <span class="req">*</span>
             </label>
             <div class="input-wrap">
               <select v-model.number="formData.generation_id" class="styled-input" required>
-                <option :value="null">— Select generation —</option>
+                <option :value="null">— {{ t('classes.selectGeneration') }} —</option>
                 <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
               </select>
             </div>
-            <span v-if="formError && !formData.generation_id" class="field-err">Please select a generation</span>
+            <span v-if="formError && !formData.generation_id" class="field-err">{{ t('classes.selectGenerationRequired') }}</span>
           </div>
 
           <div class="section-divider"></div>
@@ -258,14 +256,14 @@
             <div class="form-group">
               <label class="form-label">
                 <DoorOpen :size="15" class="field-icon" />
-                Room
+                {{ t('classes.room') }}
               </label>
               <div class="input-wrap">
                 <input
                   v-model="formData.room"
                   type="text"
                   class="styled-input"
-                  placeholder="e.g. B12"
+                  :placeholder="t('classes.roomPlaceholder')"
                 />
               </div>
             </div>
@@ -273,12 +271,12 @@
             <div class="form-group">
               <label class="form-label">
                 <ToggleLeft :size="15" class="field-icon" />
-                Status
+                {{ t('common.status') }}
               </label>
               <div class="input-wrap">
                 <select v-model="formData.is_active" class="styled-input">
-                  <option :value="true">Active</option>
-                  <option :value="false">Inactive</option>
+                  <option :value="true">{{ t('common.active') }}</option>
+                  <option :value="false">{{ t('common.inactive') }}</option>
                 </select>
               </div>
             </div>
@@ -289,13 +287,13 @@
           <div class="form-group">
             <label class="form-label">
               <FileText :size="15" class="field-icon" />
-              Description
+              {{ t('classes.description') }}
             </label>
             <div class="input-wrap">
               <textarea
                 v-model="formData.description"
                 class="styled-input"
-                placeholder="Optional notes..."
+                :placeholder="t('classes.optionalNotes')"
                 rows="3"
                 style="resize: vertical; min-height: 60px;"
               ></textarea>
@@ -304,11 +302,11 @@
         </div>
 
         <div class="modal-foot">
-          <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
+          <button type="button" class="btn btn-ghost" @click="closeFormModal">{{ t('common.cancel') }}</button>
           <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
             <span v-if="formSubmitting" class="spinner-sm"></span>
             <Check v-else :size="16" />
-            <span>{{ isEditMode ? 'Save Changes' : 'Create Class' }}</span>
+            <span>{{ isEditMode ? t('classes.saveChanges') : t('classes.createClass') }}</span>
           </button>
         </div>
       </form>
@@ -318,11 +316,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import {
   Users, Plus, AlertTriangle, Search, ToggleLeft, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen,
   Check, Inbox, Trash, CalendarDays, DoorOpen, FileText,
 } from '@lucide/vue'
+import { useThemeStore } from '@/stores/theme'
 import { useClassStore } from '@/stores/class'
 import type { SchoolClass } from '@/services/classService'
 import { getAcademicYears } from '@/services/academicYearService'
@@ -338,6 +338,10 @@ import { usePermission } from '@/composables/usePermission'
 
 const store = useClassStore()
 const { classes, loading, error, totalClasses } = storeToRefs(store)
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const toast = useToast()
 const { confirm } = useConfirm()
@@ -386,11 +390,11 @@ resetPage = pagination.resetPage
 const columns = computed(() => [
   ...(canDelete.value ? [{ key: 'check', label: '', width: '48px' }] : []),
   { key: 'index', label: '#', width: '64px' },
-  { key: 'name', label: 'Class Name' },
-  { key: 'generation', label: 'Generation' },
-  { key: 'room', label: 'Room' },
-  { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Actions', width: '90px' },
+  { key: 'name', label: t('classes.className') },
+  { key: 'generation', label: t('classes.generation') },
+  { key: 'room', label: t('classes.room') },
+  { key: 'status', label: t('common.status') },
+  { key: 'actions', label: t('common.actions'), width: '90px' },
 ])
 
 function generationLabel(cls: SchoolClass): string {
@@ -451,11 +455,11 @@ function closeFormModal() {
 
 async function handleSubmit() {
   if (!formData.name.trim()) {
-    formError.value = 'Class name is required'
+    formError.value = t('classes.classNameRequired')
     return
   }
   if (!formData.generation_id) {
-    formError.value = 'Please select a generation'
+    formError.value = t('classes.selectGenerationRequired')
     return
   }
 
@@ -472,10 +476,10 @@ async function handleSubmit() {
         is_active: formData.is_active,
       })
       if (ok) {
-        toast.success('Class updated successfully')
+        toast.success(t('classes.updatedSuccess'))
         closeFormModal()
       } else {
-        formError.value = store.error || 'Failed to update class'
+        formError.value = store.error || t('classes.updateFailed')
       }
     } else {
       const ok = await store.createClass({
@@ -486,38 +490,37 @@ async function handleSubmit() {
         is_active: formData.is_active,
       } as Partial<SchoolClass>)
       if (ok) {
-        toast.success('Class created successfully')
+        toast.success(t('classes.createdSuccess'))
         closeFormModal()
       } else {
-        formError.value = store.error || 'Failed to create class'
+        formError.value = store.error || t('classes.createFailed')
       }
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    formError.value = err.response?.data?.message || err.message || 'Operation failed'
+    formError.value = err.response?.data?.message || err.message || t('classes.operationFailed')
   } finally {
     formSubmitting.value = false
   }
 }
 
-async function confirmDelete(cls: SchoolClass) {
-  const ok = await confirm({
-    title: 'Delete Class',
-    message: `Are you sure you want to delete "${cls.name}"? The class and all associated data will be permanently removed.`,
-    confirmLabel: 'Delete',
-    danger: true,
-  })
+async function confirmDelete(cls: SchoolClass) {      const ok = await confirm({
+        title: t('classes.deleteClass'),
+        message: t('classes.deleteConfirm', { name: cls.name }),
+        confirmLabel: t('common.delete'),
+        danger: true,
+      })
   if (!ok) return
 
   try {
     const deleted = await store.deleteClass(cls.id)
     if (deleted) {
-      toast.success('Class deleted successfully')
+      toast.success(t('classes.deletedSuccess'))
       if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
         pagination.changePage(pagination.currentPage.value - 1)
       }
     } else {
-      toast.error(store.error || 'Failed to delete class')
+      toast.error(store.error || t('classes.deleteFailed'))
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
@@ -564,9 +567,9 @@ function clearSelection() {
 async function confirmBulkDelete() {
   const count = selectedIds.value.length
   const ok = await confirm({
-    title: 'Delete Classes',
-    message: `Are you sure you want to delete ${count} class(es)? These classes and all associated data will be permanently removed.`,
-    confirmLabel: `Delete ${count} class(es)`,
+    title: t('classes.deleteClasses'),
+    message: t('classes.bulkDeleteConfirm', { count }),
+    confirmLabel: t('classes.deleteCount', { count }),
     danger: true,
   })
   if (!ok) return
@@ -576,17 +579,17 @@ async function confirmBulkDelete() {
     const results = await Promise.allSettled(idsToDelete.map(id => store.deleteClass(id)))
     const allOk = results.every(r => r.status === 'fulfilled')
     if (allOk) {
-      toast.success(`${idsToDelete.length} class(es) deleted successfully`)
+      toast.success(t('classes.bulkDeleteSuccess', { count: idsToDelete.length }))
       clearSelection()
       if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
         pagination.changePage(pagination.currentPage.value - 1)
       }
     } else {
-      toast.error('Failed to delete some classes')
+      toast.error(t('classes.deleteFailed'))
     }
   } catch (e: unknown) {
     const err = e as { message?: string }
-    toast.error(err.message || 'Failed to delete classes')
+    toast.error(err.message || t('classes.deleteFailed'))
   }
 }
 
@@ -847,4 +850,102 @@ select.styled-input {
 .table-wrap::-webkit-scrollbar-track { background: transparent; }
 .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
 .table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ════════════════════════════════════════
+   DARK MODE — CLASS PAGE
+   ════════════════════════════════════════ */
+.dark-mode .class-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .class-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .class-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .meta-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #94a3b8;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1;
+}
+
+.dark-mode .styled-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .styled-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.dark-mode .styled-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode select.styled-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-color: #1e293b;
+}
+
+.dark-mode select.styled-input option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-mode .error-alert {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .section-divider {
+  background: linear-gradient(to right, transparent, #334155, transparent);
+}
+
+.dark-mode .filter-label :deep(svg) {
+  color: #64748b;
+}
+
+.dark-mode .class-avatar {
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.dark-mode .icon-create {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .icon-edit {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
 </style>

@@ -9,8 +9,8 @@
               <UserPlus v-else :size="18" />
             </div>
             <div>
-              <h3>{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h3>
-              <p>{{ isEdit ? 'Update student information' : 'Fill in the student details' }}</p>
+              <h3>{{ isEdit ? t('students.editStudent') : t('students.addNewStudent') }}</h3>
+              <p>{{ isEdit ? t('students.updateInfo') : t('students.fillDetails') }}</p>
             </div>
             <button class="modal-x" @click="$emit('close')">&times;</button>
           </div>
@@ -24,7 +24,7 @@
               <div class="form-group">
                 <label class="form-label">
                   <User :size="14" class="field-icon" />
-                  Full Name <span class="req">*</span>
+                  {{ t('students.fullName') }} <span class="req">*</span>
                 </label>
                 <div class="input-wrap">
                   <input
@@ -33,7 +33,7 @@
                     type="text"
                     class="styled-input"
                     :class="{ err: error && !name.trim() }"
-                    placeholder="e.g. John Smith"
+                    :placeholder="t('students.namePlaceholder')"
                     required
                   />
                 </div>
@@ -46,7 +46,7 @@
                 <div class="form-group form-group-flex">
                   <label class="form-label">
                     <Mail :size="14" class="field-icon" />
-                    Email Address <span class="req">*</span>
+                    {{ t('login.email') }} <span class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <input
@@ -55,7 +55,7 @@
                       type="email"
                       class="styled-input"
                       :class="{ err: error && !email?.trim() }"
-                      placeholder="student@example.com"
+                      :placeholder="t('students.emailPlaceholder')"
                       required
                     />
                   </div>
@@ -65,7 +65,7 @@
                 <div class="form-group form-group-flex">
                   <label class="form-label">
                     <Lock :size="14" class="field-icon" />
-                    Password <span class="req">*</span>
+                    {{ t('login.password') }} <span class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <input
@@ -74,7 +74,7 @@
                       type="password"
                       class="styled-input"
                       :class="{ err: error && (!password || password.length < 8) }"
-                      placeholder="Min. 8 characters"
+                      :placeholder="t('students.passwordHint')"
                       required
                       minlength="8"
                     />
@@ -128,9 +128,8 @@
 
               <div class="form-group">
                 <label class="form-label">
-                  <Building :size="14" class="field-icon" />
-                  Assign to Class
-                  <span class="opt">(optional)</span>
+                  <Building :size="14" class="field-icon" />                    {{ t('students.assignToClass') }}
+                  <span class="opt">({{ t('students.optional') }})</span>
                 </label>
                 <div class="input-wrap">
                   <select
@@ -138,7 +137,7 @@
                     @change="$emit('update:class-id', Number(($event.target as HTMLSelectElement).value) || null)"
                     class="styled-input"
                   >
-                    <option :value="null">— Not assigned —</option>
+                    <option :value="null">— {{ t('students.notAssigned') }} —</option>
                     <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
                   </select>
                 </div>
@@ -149,8 +148,8 @@
               <div class="form-group">
                 <label class="form-label">
                   <Users :size="14" class="field-icon" />
-                  Generation
-                  <span class="opt">(optional)</span>
+                  {{ t('classes.generation') }}
+                  <span class="opt">({{ t('students.optional') }})</span>
                 </label>
                 <div class="input-wrap">
                   <select
@@ -158,7 +157,7 @@
                     @change="$emit('update:generation-id', Number(($event.target as HTMLSelectElement).value) || null)"
                     class="styled-input"
                   >
-                    <option :value="null">— Not selected —</option>
+                    <option :value="null">— {{ t('students.notSelected') }} —</option>
                     <option v-for="gen in generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
                   </select>
                 </div>
@@ -167,11 +166,11 @@
             </div>
 
             <div class="modal-foot">
-              <button type="button" class="btn btn-ghost" @click="$emit('close')">Cancel</button>
+              <button type="button" class="btn btn-ghost" @click="$emit('close')">{{ t('common.cancel') }}</button>
               <button type="submit" class="btn btn-primary" :disabled="submitting">
                 <span v-if="submitting" class="spinner-sm"></span>
                 <Check v-else :size="16" />
-                <span>{{ isEdit ? 'Save Changes' : 'Create Student' }}</span>
+                <span>{{ isEdit ? t('classes.saveChanges') : t('students.createStudent') }}</span>
               </button>
             </div>
           </form>
@@ -182,6 +181,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 
 import {
   SquarePen, UserPlus, AlertTriangle, User,
@@ -189,6 +189,8 @@ import {
 } from '@lucide/vue'
 
 import type { SchoolClass, Generation } from '@/types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   show: boolean
@@ -431,4 +433,122 @@ select.styled-input {
 }
 
 .me-2 { margin-right: 8px; }
+</style>
+
+<!-- ════════════════════════════════════════
+     DARK MODE — NON-SCOPED
+     (scoped styles can't reach .dark-mode on parent)
+     ════════════════════════════════════════ -->
+<style>
+.dark-mode .modal-content-panel {
+  background: #1e293b !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .modal-x {
+  color: #64748b !important;
+}
+
+.dark-mode .modal-x:hover {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .icon-create {
+  background: rgba(37, 99, 235, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+.dark-mode .icon-edit {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .field-icon {
+  color: #64748b !important;
+}
+
+.dark-mode .styled-input {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .styled-input:hover {
+  border-color: #64748b !important;
+}
+
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+
+.dark-mode .styled-input::placeholder {
+  color: #64748b !important;
+}
+
+.dark-mode select.styled-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-color: #1e293b !important;
+}
+
+.dark-mode select.styled-input option {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .section-divider {
+  background: linear-gradient(to right, transparent, #334155, transparent) !important;
+}
+
+.dark-mode .error-alert {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #fca5a5 !important;
+  border-left-color: #ef4444 !important;
+}
+
+.dark-mode .opt {
+  color: #64748b !important;
+}
+
+.dark-mode .modal-content-panel::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+}
+
+.dark-mode .btn-ghost {
+  background: rgba(51, 65, 85, 0.5) !important;
+  border-color: #475569 !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .btn-ghost:hover {
+  background: rgba(51, 65, 85, 0.7) !important;
+  border-color: #60a5fa !important;
+}
+
+.dark-mode .btn-primary {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #fff !important;
+}
+
+.dark-mode .btn-danger {
+  background: rgba(239, 68, 68, 0.8) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
 </style>

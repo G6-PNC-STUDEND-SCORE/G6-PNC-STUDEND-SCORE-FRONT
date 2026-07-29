@@ -15,138 +15,146 @@
         <div class="ring"></div>
         <div class="ring"></div>
       </div>
-      <p class="loading-text">Loading your dashboard…</p>
+      <p class="loading-text">{{ t('portal.loadingDashboard') }}</p>
     </div>
 
-    <!-- Main Content -->
+    <!-- Main Content — one master card, matching the admin/teacher dashboard -->
     <template v-else-if="portal">
-      <!-- Profile Card -->
-      <div class="profile-card">
-        <div class="profile-avatar-ring" @click="showLightbox = true" role="button" tabindex="0" @keydown.enter.prevent="showLightbox = true" title="View full photo">
-          <div class="profile-avatar">
-            <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="Student photo" @error="onAvatarError" />
-            <span v-else class="avatar-initials">{{ avatarFallback }}</span>
+      <div class="master-card">
+        <!-- Card Header -->
+        <div class="master-header">
+          <div class="master-header-left">
+            <div class="profile-avatar-ring" @click="showLightbox = true" role="button" tabindex="0" @keydown.enter.prevent="showLightbox = true" title="View full photo">
+              <div class="profile-avatar">
+                <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="Student photo" @error="onAvatarError" />
+                <span v-else class="avatar-initials">{{ avatarFallback }}</span>
+              </div>
+              <div class="status-dot" :class="portal.profile.academicStatus === 'Active' ? 'online' : 'away'"></div>
+              <div class="avatar-expand-hint">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+              </div>
+            </div>
+            <div>
+              <h1 class="master-title">{{ portal.profile.name }}</h1>
+              <p class="master-subtitle">{{ t('portal.academicPerformance') }}</p>
+            </div>
           </div>
-          <div class="status-dot" :class="portal.profile.academicStatus === 'Active' ? 'online' : 'away'"></div>
-          <div class="avatar-expand-hint">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-          </div>
-        </div>
-        <div class="profile-info">
-          <h1 class="profile-name">{{ portal.profile.name }}</h1>
-          <div class="profile-meta">
-            <span v-if="portal.profile.studentId" class="meta-chip">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <div class="master-header-right">
+            <span v-if="hasValue(portal.profile.studentId)" class="meta-chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2.5"/><circle cx="8.5" cy="10.5" r="2"/><path d="M5.5 16c0.8-1.7 2.2-2.5 3-2.5s2.2 0.8 3 2.5"/><line x1="14" y1="9" x2="19" y2="9"/><line x1="14" y1="12.5" x2="19" y2="12.5"/></svg>
               {{ portal.profile.studentId }}
             </span>
-            <span v-if="portal.profile.class" class="meta-chip">
+            <span v-if="hasValue(portal.profile.class)" class="meta-chip">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
               {{ portal.profile.class }}
             </span>
-            <span v-if="portal.profile.currentTerm" class="meta-chip">
+            <span v-if="hasValue(portal.profile.currentTerm)" class="meta-chip">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               {{ portal.profile.currentTerm }}
             </span>
-            <span v-if="portal.profile.academicStatus" class="meta-chip status-chip" :class="portal.profile.academicStatus.toLowerCase()">
+            <span v-if="hasValue(portal.profile.academicStatus)" class="status-badge" :class="portal.profile.academicStatus!.toLowerCase()">
               <span class="dot"></span>
               {{ portal.profile.academicStatus }}
             </span>
           </div>
         </div>
-      </div>
 
-      <!-- Summary Stats Grid -->
-      <div class="stat-grid">
-        <div
-          v-for="(item, idx) in portal.summary"
-          :key="item.label"
-          class="stat-tile"
-          :style="{ '--delay': `${idx * 0.08}s` }"
-        >
-          <div class="stat-icon" :class="item.iconClass">
-            <i :class="item.icon"></i>
-          </div>
-          <div class="stat-body">
-            <div class="stat-value">
-              <template v-if="typeof item.value === 'string'">
-                {{ item.value }}
-              </template>
-              <template v-else>
-                {{ item.value.toFixed(item.decimals) }}
-              </template>
+        <!-- Summary Stats -->
+        <div class="master-section">
+          <div class="stat-grid">
+            <div
+              v-for="(item, idx) in portal.summary"
+              :key="item.label"
+              class="stat-tile"
+              :style="{ '--delay': `${idx * 0.08}s` }"
+            >
+              <div class="stat-tile-top">
+                <div class="stat-icon" :class="item.iconClass">
+                  <i :class="item.icon"></i>
+                </div>
+                <span v-if="item.subtitle" class="stat-pill">{{ item.subtitle }}</span>
+              </div>
+              <div class="stat-value">
+                <template v-if="typeof item.value === 'string'">
+                  {{ item.value }}
+                </template>
+                <template v-else>
+                  {{ item.value.toFixed(item.decimals) }}
+                </template>
+              </div>
+              <div class="stat-label">{{ item.label }}</div>
             </div>
-            <div class="stat-label">{{ item.label }}</div>
-            <div class="stat-subtitle">{{ item.subtitle }}</div>
           </div>
-          <div class="stat-glow" :class="item.iconClass"></div>
         </div>
-      </div>
 
-      <!-- Progress Bars -->
-      <div class="progress-row" v-if="portal.progress">
-        <div v-for="p in portal.progress" :key="p.label" class="progress-item">
-          <div class="progress-header">
-            <div class="progress-info">
-              <i :class="p.icon"></i>
-              <span class="progress-label">{{ p.label }}</span>
+        <!-- Progress Bars -->
+        <div class="master-section" v-if="portal.progress">
+          <div class="progress-row">
+            <div v-for="p in portal.progress" :key="p.label" class="progress-item">
+              <div class="progress-header">
+                <div class="progress-info">
+                  <i :class="p.icon"></i>
+                  <span class="progress-label">{{ p.label }}</span>
+                </div>
+                <span class="progress-value">{{ p.display }}</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" :style="{ width: p.value + '%', background: p.color }"></div>
+              </div>
             </div>
-            <span class="progress-value">{{ p.display }}</span>
-          </div>
-          <div class="progress-track">
-            <div class="progress-fill" :style="{ width: p.value + '%', background: p.color }"></div>
           </div>
         </div>
-      </div>
 
-      <!-- Current Subjects Section -->
-      <div class="section-card">
-        <div class="section-header">
-          <div class="section-title-group">
-            <svg class="section-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-            <h3 class="section-title">Current Subjects</h3>
+        <!-- Current Subjects -->
+        <div class="master-section">
+          <div class="section-header">
+            <div class="section-title-group">
+              <svg class="section-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              <h3 class="section-title">{{ t('portal.currentSubjects') }}</h3>
+            </div>
+            <span class="section-count">{{ portal.currentSubjects.length }} subject{{ portal.currentSubjects.length !== 1 ? 's' : '' }}</span>
           </div>
-          <span class="section-count">{{ portal.currentSubjects.length }} subject{{ portal.currentSubjects.length !== 1 ? 's' : '' }}</span>
-        </div>
-        <div class="table-wrap">
-          <table class="subjects-table">
-            <colgroup>
-              <col class="col-subject" />
-              <col class="col-teacher" />
-              <col class="col-score" />
-              <col class="col-grade" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>Subject</th>
-                <th>Teacher</th>
-                <th class="col-center">Score</th>
-                <th class="col-center">Grade</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="s in portal.currentSubjects" :key="s.id" class="subject-row">
-                <td>
-                  <span class="subject-name">{{ s.name }}</span>
-                </td>
-                <td>
-                  <span class="cell-teacher">{{ s.teacher || '—' }}</span>
-                </td>
-                <td class="col-center">
-                  <span class="score-value" :class="scoreClass(s.currentScore)">{{ s.currentScore.toFixed(1) }}</span>
-                </td>
-                <td class="col-center">
-                  <span v-if="s.grade" class="grade-badge" :class="gradeClass(s.grade)">{{ s.grade }}</span>
-                  <span v-else class="grade-badge grade-none">—</span>
-                </td>
-              </tr>
-              <tr v-if="portal.currentSubjects.length === 0">
-                <td colspan="4" class="empty-row">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                  <p>No subjects enrolled this term.</p>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-wrap">
+            <table class="subjects-table">
+              <colgroup>
+                <col class="col-subject" />
+                <col class="col-teacher" />
+                <col class="col-score" />
+                <col class="col-grade" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>{{ t('portal.subject') }}</th>
+                  <th>{{ t('portal.teacher') }}</th>
+                  <th class="col-center">{{ t('portal.score') }}</th>
+                  <th class="col-center">{{ t('portal.grade') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="s in portal.currentSubjects" :key="s.id" class="subject-row">
+                  <td>
+                    <span class="subject-name">{{ s.name }}</span>
+                  </td>
+                  <td>
+                    <span class="cell-teacher">{{ s.teacher || '—' }}</span>
+                  </td>
+                  <td class="col-center">
+                    <span class="score-value" :class="scoreClass(s.currentScore)">{{ s.currentScore.toFixed(1) }}</span>
+                  </td>
+                  <td class="col-center">
+                    <span v-if="s.grade" class="grade-badge" :class="gradeClass(s.grade)">{{ s.grade }}</span>
+                    <span v-else class="grade-badge grade-none">—</span>
+                  </td>
+                </tr>
+                <tr v-if="portal.currentSubjects.length === 0">
+                  <td colspan="4" class="empty-row">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <p>{{ t('portal.noSubjectsEnrolled') }}</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </template>
@@ -167,10 +175,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { getPortal, type PortalData } from '@/services/studentPortalService'
 import { storageUrl } from '@/services/apiHttp'
 import { getUserInitials } from '@/utils'
 
+const { t } = useI18n()
 const portal = ref<PortalData | null>(null)
 const loading = ref(true)
 const error = ref('')
@@ -188,6 +198,11 @@ const avatarFallback = computed(() => {
 
 function onAvatarError() {
   avatarLoadFailed.value = true
+}
+
+/** Backend sends '—' as a placeholder for unset fields — treat it as absent so we don't render an empty-looking chip. */
+function hasValue(v: string | null | undefined): boolean {
+  return !!v && v.trim() !== '' && v.trim() !== '—'
 }
 
 function scoreClass(score: number): string {
@@ -223,10 +238,8 @@ onMounted(async () => {
   font-family: 'Inter', 'Noto Sans Khmer', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 12px 0;
+  gap: 18px;
+  padding: 8px 0;
 }
 
 /* ── Fade Transition ── */
@@ -282,32 +295,53 @@ onMounted(async () => {
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { color: #64748b; font-size: 1rem; font-weight: 500; }
 
-/* ── Profile Card ── */
-.profile-card {
+/* ── Master Card ── */
+/* One card wraps the whole page — same shell as the admin/teacher dashboard. */
+.master-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Card Header ── */
+.master-header {
   display: flex;
   align-items: center;
-  gap: 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  padding: 28px 32px;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 8px 32px rgba(99, 102, 241, 0.06);
-  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f1f3;
 }
-.profile-card:hover {
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    0 12px 40px rgba(99, 102, 241, 0.10);
-  transform: translateY(-1px);
+.master-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.master-header-right {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ── Internal Sections ── */
+.master-section {
+  padding: 16px 24px 24px;
+}
+.master-section + .master-section {
+  border-top: 1px solid #f0f1f3;
+  margin-top: 0;
+  padding-top: 20px;
 }
 
 .profile-avatar-ring {
   position: relative;
   flex-shrink: 0;
   cursor: pointer;
-  border-radius: 20px;
+  border-radius: 12px;
   transition: transform 0.2s ease;
 }
 .profile-avatar-ring:hover {
@@ -318,15 +352,15 @@ onMounted(async () => {
 }
 
 .profile-avatar {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06));
+  color: #3b82f6;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
   overflow: hidden;
   position: relative;
 }
@@ -337,15 +371,16 @@ onMounted(async () => {
   display: block;
 }
 .avatar-initials {
-  font-size: 1.5rem;
+  font-size: 0.85rem;
   font-weight: 700;
+  color: #3b82f6;
 }
 
 .avatar-expand-hint {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
-  border-radius: 20px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,83 +392,90 @@ onMounted(async () => {
 
 .status-dot {
   position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: 16px;
-  height: 16px;
+  bottom: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  border: 3px solid #fff;
+  border: 2px solid #fff;
   background: #94a3b8;
 }
-.status-dot.online { background: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.15); }
+.status-dot.online { background: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.15); }
 .status-dot.away { background: #f59e0b; }
 
-.profile-info { flex: 1; min-width: 0; }
-.profile-name {
-  font-size: 1.45rem;
-  font-weight: 700;
+.master-title {
+  font-size: 1rem;
+  font-weight: 800;
   color: #0f172a;
-  margin: 0 0 10px;
-  line-height: 1.3;
+  margin: 0;
+  line-height: 1.2;
 }
-.profile-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+.master-subtitle {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin: 2px 0 0;
+  line-height: 1.2;
 }
 
 .meta-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: #475569;
-  background: #f1f5f9;
-  padding: 6px 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  padding: 5px 11px;
   border-radius: 100px;
   white-space: nowrap;
 }
-.meta-chip svg { opacity: 0.6; flex-shrink: 0; }
-.status-chip .dot {
+.meta-chip svg { opacity: 0.7; flex-shrink: 0; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 100px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.status-badge .dot {
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: currentColor;
 }
-.status-chip.active { color: #16a34a; background: #f0fdf4; }
-.status-chip.inactive { color: #94a3b8; background: #f1f5f9; }
-.status-chip.suspended { color: #dc2626; background: #fef2f2; }
+.status-badge.active { color: #16a34a; background: #f0fdf4; border-color: #bbf7d0; }
+.status-badge.inactive { color: #64748b; background: #f8fafc; border-color: #e5e7eb; }
+.status-badge.suspended { color: #dc2626; background: #fef2f2; border-color: #fecaca; }
 
 /* ── Stats Grid ── */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
 }
 
 .stat-tile {
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 24px 26px;
+  border-radius: 16px;
+  padding: 18px 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: all 0.25s ease;
   animation: tileIn 0.5s ease both;
   animation-delay: var(--delay);
-  overflow: hidden;
 }
 .stat-tile:hover {
   border-color: #cbd5e1;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.06),
-    0 0 0 1px rgba(99, 102, 241, 0.08);
-  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 
 @keyframes tileIn {
@@ -441,79 +483,82 @@ onMounted(async () => {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.stat-tile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .stat-icon {
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.35rem;
-  transition: transform 0.3s ease;
+  font-size: 1.05rem;
 }
-.stat-tile:hover .stat-icon { transform: scale(1.1) rotate(-4deg); }
-.stat-icon.icon-blue { background: #eff6ff; color: #2563eb; }
-.stat-icon.icon-green { background: #f0fdf4; color: #16a34a; }
-.stat-icon.icon-violet { background: #f5f3ff; color: #7c3aed; }
-.stat-icon.icon-orange { background: #fff7ed; color: #ea580c; }
-.stat-icon.icon-purple { background: #faf5ff; color: #9333ea; }
+/* One consistent blue, matching the admin/teacher dashboard's KPI icons —
+   every stat uses the same color there regardless of what it measures. */
+.stat-icon,
+.stat-icon.icon-blue,
+.stat-icon.icon-green,
+.stat-icon.icon-violet,
+.stat-icon.icon-orange,
+.stat-icon.icon-purple {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06));
+  color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
 
-.stat-body { flex: 1; min-width: 0; }
+.stat-pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 100px;
+  white-space: nowrap;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .stat-value {
-  font-size: 1.75rem;
+  font-size: 1.6rem;
   font-weight: 800;
   color: #0f172a;
   line-height: 1.2;
   letter-spacing: -0.02em;
 }
 .stat-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: #334155;
-  margin-top: 3px;
+  color: #6b7280;
+  margin-top: 4px;
 }
-.stat-subtitle {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  margin-top: 2px;
-  font-weight: 500;
-}
-
-.stat-glow {
-  position: absolute;
-  top: -40%;
-  right: -20%;
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  opacity: 0.04;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.stat-tile:hover .stat-glow { opacity: 0.08; }
-.stat-glow.icon-blue { background: radial-gradient(circle, #2563eb, transparent); }
-.stat-glow.icon-green { background: radial-gradient(circle, #16a34a, transparent); }
-.stat-glow.icon-violet { background: radial-gradient(circle, #7c3aed, transparent); }
-.stat-glow.icon-orange { background: radial-gradient(circle, #ea580c, transparent); }
-.stat-glow.icon-purple { background: radial-gradient(circle, #9333ea, transparent); }
 
 /* ── Progress Row ── */
 .progress-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
 }
 .progress-item {
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 20px 22px;
+  border-radius: 14px;
+  padding: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
 }
 .progress-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
 }
 .progress-header {
   display: flex;
@@ -524,66 +569,79 @@ onMounted(async () => {
 .progress-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
+  gap: 9px;
+  font-size: 0.825rem;
   font-weight: 600;
   color: #334155;
 }
-.progress-info i { font-size: 1rem; color: #64748b; }
+.progress-info i {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #3b82f6;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06));
+  border-radius: 9px;
+}
 .progress-value {
   font-size: 0.8125rem;
   font-weight: 700;
   color: #64748b;
+  font-variant-numeric: tabular-nums;
 }
 .progress-track {
   width: 100%;
-  height: 8px;
+  height: 9px;
   background: #f1f5f9;
   border-radius: 100px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .progress-fill {
   height: 100%;
   border-radius: 100px;
   transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.08);
 }
+.progress-fill[style*="width: 0%"] { box-shadow: none; }
 
-/* ── Section Card ── */
-.section-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  padding: 28px 32px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-  transition: box-shadow 0.3s ease;
-}
-.section-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-}
-
+/* ── Section Header (within a master-section) ── */
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .section-title-group {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.section-icon { color: #6366f1; flex-shrink: 0; }
+.section-icon {
+  flex-shrink: 0;
+  color: #3b82f6;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.06));
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+}
 .section-title {
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
 .section-count {
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
-  background: #f1f5f9;
+  color: #6b7280;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
   padding: 5px 12px;
   border-radius: 100px;
 }
@@ -762,19 +820,19 @@ onMounted(async () => {
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  .portal-page { gap: 20px; padding: 8px 0; }
-  .profile-card { flex-direction: column; text-align: center; padding: 24px 20px; }
-  .profile-meta { justify-content: center; }
-  .profile-avatar { width: 64px; height: 64px; }
-  .avatar-initials { font-size: 1.25rem; }
-  .stat-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
-  .stat-tile { flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px; }
-  .stat-icon { width: 44px; height: 44px; font-size: 1.1rem; }
-  .stat-value { font-size: 1.4rem; }
-  .section-card { padding: 20px; }
+  .portal-page { gap: 14px; padding: 8px 0; }
+  .master-header { flex-direction: column; align-items: flex-start; padding: 16px; }
+  .master-header-right { width: 100%; }
+  .master-section { padding: 14px 16px 20px; }
+  .profile-avatar { width: 36px; height: 36px; }
+  .avatar-initials { font-size: 0.8rem; }
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-tile { padding: 14px; }
+  .stat-icon { width: 36px; height: 36px; font-size: 0.95rem; }
+  .stat-value { font-size: 1.3rem; }
   .subjects-table thead th,
   .subjects-table tbody td { padding: 12px 14px; }
-  .section-title { font-size: 0.95rem; }
+  .section-title { font-size: 0.85rem; }
   .lightbox-overlay { padding: 20px; }
   .lightbox-close { top: 16px; right: 16px; width: 40px; height: 40px; }
 }

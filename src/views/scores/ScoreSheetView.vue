@@ -1,11 +1,11 @@
 <template>
-  <div class="score-sheet" @click="refocusSheet">
+  <div :class="['score-sheet', { 'dark-mode': isDark }]" @click="refocusSheet">
     <div class="sheet-toolbar">
-      <button class="tb-btn" @click="goBack" title="Back">
+      <button class="tb-btn" @click="goBack" :title="t('scoreSheet.back')">
         <i class="bi bi-arrow-left"></i>
       </button>
       <div class="offering-info">
-        <span class="offering-item offering-item-main">{{ data?.subject?.name || 'Subject' }}</span>
+        <span class="offering-item offering-item-main">{{ data?.subject?.name || t('scoreSheet.subject') }}</span>
         <span class="offering-item offering-item-badge offering-term">{{ data?.term?.name }}</span>
         <span v-if="className" class="offering-item offering-item-badge offering-class">
           {{ className }}
@@ -17,9 +17,9 @@
       <div class="toolbar-spacer"></div>
       <div class="toolbar-actions">
         <div class="btn-group">
-          <button class="tb-btn" @click="showAddColumn = true" title="Add Column"><i class="bi bi-plus-lg"></i> <span>Add</span></button>
-          <button class="tb-btn" @click="showWeights = true" title="Weight Configuration"><i class="bi bi-sliders"></i> <span>Weights</span></button>
-          <button class="tb-btn" @click="showGradeBoundaries = true" title="Manage Grade Boundaries"><i class="bi bi-trophy"></i> <span>Grades</span></button>
+          <button class="tb-btn" @click="showAddColumn = true" :title="t('scoreSheet.addColumn')"><i class="bi bi-plus-lg"></i> <span>{{ t('scoreSheet.add') }}</span></button>
+          <button class="tb-btn" @click="showWeights = true" :title="t('scoreSheet.weights')"><i class="bi bi-sliders"></i> <span>{{ t('scoreSheet.weights') }}</span></button>
+          <button class="tb-btn" @click="showGradeBoundaries = true" :title="t('scoreSheet.grades')"><i class="bi bi-trophy"></i> <span>{{ t('scoreSheet.grades') }}</span></button>
           <button class="tb-btn" @click="openGoogleSheetsDirect" title="Create and open Google Sheet with all scores" :disabled="gsLoading">
             <template v-if="gsLoading">
               <i class="bi bi-arrow-repeat spinning"></i>
@@ -34,27 +34,27 @@
                 <path d="M16.5 9.5v9" stroke="white" stroke-width="1.2"/>
               </svg>
             </template>
-            <span>{{ gsLoading ? 'Creating...' : 'Google Sheets' }}</span>
+            <span>{{ gsLoading ? t('scoreSheet.creating') : t('scoreSheet.googleSheets') }}</span>
           </button>
-          <button class="tb-btn" @click="showImport = true" title="Import CSV, Excel, or PDF file"><i class="bi bi-cloud-upload"></i> <span>Import</span></button>
+          <button class="tb-btn" @click="showImport = true" :title="t('scoreSheet.importTitle')"><i class="bi bi-cloud-upload"></i> <span>{{ t('scoreSheet.import') }}</span></button>
           <div class="export-dropdown" @click.stop>
-            <button class="tb-btn" @click="showExportMenu = !showExportMenu" title="Export" ref="exportBtnRef"><i class="bi bi-download"></i> <span>Export</span> <i class="bi bi-chevron-down" style="font-size:0.6rem;margin-left:2px"></i></button>
+            <button class="tb-btn" @click="showExportMenu = !showExportMenu" :title="t('scoreSheet.export')" ref="exportBtnRef"><i class="bi bi-download"></i> <span>{{ t('scoreSheet.export') }}</span> <i class="bi bi-chevron-down" style="font-size:0.6rem;margin-left:2px"></i></button>
             <div v-if="showExportMenu" class="export-menu">
-              <div class="export-menu-item" @click="exportFormat('xlsx')"><i class="bi bi-file-earmark-excel"></i> Export as Excel (.xlsx)</div>
-              <div class="export-menu-item" @click="exportFormat('pdf')"><i class="bi bi-filetype-pdf"></i> Export as PDF</div>
+              <div class="export-menu-item" @click="exportFormat('xlsx')"><i class="bi bi-file-earmark-excel"></i> {{ t('scoreSheet.exportExcel') }}</div>
+              <div class="export-menu-item" @click="exportFormat('pdf')"><i class="bi bi-filetype-pdf"></i> {{ t('scoreSheet.exportPdf') }}</div>
             </div>
           </div>
         </div>
         <div class="toolbar-meta">
           <span v-if="gsReconnectNeeded" class="gs-sync-status gs-reconnect-needed">
             <i class="bi bi-exclamation-triangle-fill" style="color:#f59e0b;font-size:11px"></i>
-            <a class="gs-reconnect-link" @click="openGoogleSheetsDirect" title="Re-connect Google account">Reconnect Google</a>
+            <a class="gs-reconnect-link" @click="openGoogleSheetsDirect" :title="t('scoreSheet.reconnectTitle')">{{ t('scoreSheet.reconnect') }}</a>
           </span>
 
         </div>
         <div class="search-box" @click="searchInput?.focus()">
           <i class="bi bi-search search-icon"></i>
-          <input ref="searchInput" v-model="searchQuery" type="text" class="search-input" placeholder="Search student..." />
+          <input ref="searchInput" v-model="searchQuery" type="text" class="search-input" :placeholder="t('scoreSheet.searchStudent')" />
         </div>
         <button class="tb-btn kb-btn" @click="showKeyboardShortcuts = true" title="Keyboard shortcuts (?)">
           <i class="bi bi-keyboard"></i>
@@ -67,12 +67,12 @@
     </div>
 
     <div class="stats-bar" v-if="data">
-      <div class="stat-item"><span class="stat-label">Students</span><span class="stat-value">{{ filteredRows.length }}</span></div>
-      <div class="stat-item"><span class="stat-label">Avg Score</span><span class="stat-value">{{ averageScore.toFixed(1) }}</span></div>
-      <div class="stat-item"><span class="stat-label">Pass Rate</span><span class="stat-value">{{ passRate.toFixed(1) }}%</span></div>
-      <div class="stat-item"><span class="stat-label">Top</span><span class="stat-value">{{ topStudent }}</span></div>
+      <div class="stat-item"><span class="stat-label">{{ t('scoreSheet.students') }}</span><span class="stat-value">{{ filteredRows.length }}</span></div>
+      <div class="stat-item"><span class="stat-label">{{ t('scoreSheet.avgScore') }}</span><span class="stat-value">{{ averageScore.toFixed(1) }}</span></div>
+      <div class="stat-item"><span class="stat-label">{{ t('scoreSheet.passRate') }}</span><span class="stat-value">{{ passRate.toFixed(1) }}%</span></div>
+      <div class="stat-item"><span class="stat-label">{{ t('scoreSheet.top') }}</span><span class="stat-value">{{ topStudent }}</span></div>
       <div class="stat-item" v-if="data.offerings?.length">
-        <span class="stat-label">Teachers</span>
+        <span class="stat-label">{{ t('scoreSheet.teachers') }}</span>
         <span class="stat-value">{{ data.offerings.map(o => o.teacher_name).filter(Boolean).join(', ') }}</span>
       </div>
     </div>
@@ -81,7 +81,7 @@
       <div v-if="selectedEnrollmentIds.size > 0" class="selection-bar">
         <div class="selection-bar-left">
           <button class="selection-btn selection-btn-danger" @click="confirmBulkDelete">
-            <i class="bi bi-trash3"></i> Delete {{ selectedEnrollmentIds.size }} row{{ selectedEnrollmentIds.size > 1 ? 's' : '' }}
+            <i class="bi bi-trash3"></i> {{ t('scoreSheet.deleteRows', { count: selectedEnrollmentIds.size }) }}
           </button>
         </div>
         <div class="selection-bar-right">
@@ -106,8 +106,8 @@
                 </label>
               </th>
               <th class="cell-header cell-frozen row-num-header" :class="{ 'header-highlighted': isRowHeaderHighlighted() }">#</th>
-              <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">Student Name</th>
-              <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">ID</th>
+              <th class="cell-header cell-frozen student-name-header" :class="{ 'header-highlighted': selectedCol === -1 }">{{ t('scoreSheet.studentName') }}</th>
+              <th class="cell-header cell-frozen student-id-header" :class="{ 'header-highlighted': selectedCol === 0 }">{{ t('scoreSheet.id') }}</th>
               <th v-for="col in columns" :key="col.id" class="cell-header" :class="[getColumnTypeClass(col.type), { 'header-highlighted': selectedCol === col.id }]" :style="{ width: '140px', minWidth: '140px', maxWidth: '140px' }">
                 <div class="header-content column-header-content">
                   <div class="column-label-row">
@@ -137,8 +137,8 @@
                 </div>
                 <div v-if="col.max_score" class="max-score-label">/ {{ col.max_score }}</div>
               </th>
-              <th class="cell-header cell-total">Total</th>
-              <th class="cell-header cell-grade">Grade</th>
+              <th class="cell-header cell-total">{{ t('scoreSheet.total') }}</th>
+              <th class="cell-header cell-grade">{{ t('scoreSheet.grade') }}</th>
               <th class="cell-header add-col-header">
                 <div class="add-col-trigger" @click.stop="showInlineAddColumn = !showInlineAddColumn" title="Add column"><i class="bi bi-plus-lg"></i></div>
                 <div v-if="showInlineAddColumn" class="inline-add-col" @click.stop>
@@ -243,7 +243,7 @@
             </tr>
             <tr class="add-row-row" @click="showAddRowPopup = true">
               <td :colspan="3 + columns.length + 2" class="cell-frozen add-row-cell">
-                <i class="bi bi-plus-lg"></i> Add Student Row
+                <i class="bi bi-plus-lg"></i> {{ t('scoreSheet.addStudentRow') }}
               </td>
             </tr>
           </tbody>
@@ -284,7 +284,7 @@
 
     <div v-if="filteredRows.length > 0" class="pagination-bar">
       <div class="pagination-info">
-        <span class="rows-label">Rows per page:</span>
+        <span class="rows-label">{{ t('scoreSheet.rowsPerPage') }}</span>
         <div class="rows-selector">
           <button
             v-for="size in [10, 25, 50, 75, 100]"
@@ -302,7 +302,7 @@
           class="page-nav"
           :disabled="currentPage <= 1"
           @click="currentPage--"
-          aria-label="Previous page"
+          :aria-label="t('scoreSheet.prevPage')"
         >
           <i class="bi bi-chevron-left"></i>
         </button>
@@ -321,7 +321,7 @@
           class="page-nav"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
-          aria-label="Next page"
+          :aria-label="t('scoreSheet.nextPage')"
         >
           <i class="bi bi-chevron-right"></i>
         </button>
@@ -330,9 +330,7 @@
       <div class="pagination-total" v-if="pageSize !== 'all'">
         {{ (currentPage - 1) * (pageSize as number) + 1 }}-{{ Math.min(currentPage * (pageSize as number), filteredRows.length) }} of {{ filteredRows.length }}
       </div>
-      <div class="pagination-total" v-else>
-        All {{ filteredRows.length }} rows
-      </div>
+      <div class="pagination-total" v-else>{{ t('scoreSheet.allRows', { count: filteredRows.length }) }}</div>
     </div>
 
     <Teleport to="body">
@@ -839,6 +837,8 @@
 <script setup lang="ts">
 import { ref, shallowRef, computed, onMounted, watch, nextTick, reactive, triggerRef, onBeforeUnmount, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useThemeStore } from '@/stores/theme'
 
 import {
   getSpreadsheetBySubjectAndTerm, updateCellMark, addColumn, deleteColumn,
@@ -855,6 +855,10 @@ import GradeBoundaryModal from '@/components/GradeBoundaryModal.vue'
 import { useConfirm } from '@/composables/useConfirm'
 
 const { confirm } = useConfirm()
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const router = useRouter()
 const route = useRoute()
@@ -1801,7 +1805,13 @@ function saveEdit() {
   const newValue = editValue.value === '' ? null : parseFloat(editValue.value)
   if (newValue !== null) {
     if (isNaN(newValue)) { cancelEdit(); return }
-    if (newValue < 0 || newValue > 100) { cancelEdit(); return }
+    const col = columns.value.find(c => c.id === detailId)
+    const maxAllowed = col?.max_score ?? 100
+    if (newValue < 0 || newValue > maxAllowed) {
+      showSaveStatus('failed')
+      cancelEdit()
+      return
+    }
   }
 
   if (isRangeSelecting.value && newValue !== null) {
@@ -2752,7 +2762,9 @@ function pasteValueToCell(row: SpreadsheetRow, colId: number, value: string): Pr
   if (colId > 0) {
     const numValue = parseFloat(value)
     if (isNaN(numValue)) return
-    if (numValue < 0 || numValue > 100) return
+    const pasteCol = columns.value.find(c => c.id === colId)
+    const pasteMaxAllowed = pasteCol?.max_score ?? 100
+    if (numValue < 0 || numValue > pasteMaxAllowed) return
     const detailId = colId
     const oldValue = getCellMark(row, detailId)
     const actualRow = rows.value.find(r => r.enrollment_id === row.enrollment_id)
@@ -5908,5 +5920,604 @@ watch([subjectId, termId], () => {
 }
 .selection-bar-leave-active {
   animation: selectionBarSlideIn 0.15s ease-in reverse;
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════
+     DARK MODE — NON-SCOPED (."dark-mode" is on parent component)
+     ════════════════════════════════════════════════════════════ -->
+<style>
+.dark-mode .score-sheet {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .sheet-toolbar {
+  background: #0f172a !important;
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-mode .offering-info {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.dark-mode .offering-item { color: #94a3b8 !important; }
+.dark-mode .offering-item-main { color: #f1f5f9 !important; }
+.dark-mode .offering-item-badge.offering-term {
+  background: #1e3a5f !important;
+  color: #93c5fd !important;
+  border-color: #1d4ed8 !important;
+}
+.dark-mode .offering-item-badge.offering-class {
+  background: #1a3d2b !important;
+  color: #86efac !important;
+  border-color: #166534 !important;
+}
+.dark-mode .offering-item-teachers { color: #64748b !important; }
+
+.dark-mode .tb-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.dark-mode .tb-btn:hover {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2) !important;
+}
+.dark-mode .kb-btn:hover {
+  background: #1e3a5f !important;
+  border-color: #3b82f6 !important;
+  color: #93c5fd !important;
+}
+
+.dark-mode .stats-bar {
+  background: #1a2332 !important;
+  border-bottom-color: #1e293b !important;
+}
+.dark-mode .stat-label { color: #64748b !important; }
+.dark-mode .stat-value { color: #f1f5f9 !important; }
+
+.dark-mode .search-box {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+.dark-mode .search-box:focus-within {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+.dark-mode .search-icon { color: #64748b !important; }
+.dark-mode .search-input { color: #f1f5f9 !important; }
+.dark-mode .search-input::placeholder { color: #64748b !important; }
+
+.dark-mode .gs-sync-status { background: #1a3d2b !important; }
+.dark-mode .gs-reconnect-needed { background: #3d2a1a !important; }
+.dark-mode .gs-reconnect-link { color: #fb923c !important; }
+
+.dark-mode .save-status { color: #94a3b8 !important; }
+
+.dark-mode .cell-header {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .cell-frozen { background: #0f172a !important; }
+.dark-mode .cell-frozen.cell-header { background: #1e293b !important; }
+
+.dark-mode .cell {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+.dark-mode .cell-score {
+  background: #0f172a !important;
+}
+.dark-mode .cell-total {
+  background: #1a2332 !important;
+  color: #f1f5f9 !important;
+}
+.dark-mode .cell-grade {
+  background: #1a2332 !important;
+}
+
+.dark-mode .grade-pill {
+  color: #f1f5f9 !important;
+}
+.dark-mode .cell-value {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .row-selected .cell-frozen,
+.dark-mode .row-selected .cell {
+  background: #1e3a5f !important;
+}
+
+.dark-mode .row-checked .cell-frozen,
+.dark-mode .row-checked .cell {
+  background: #1a2d4a !important;
+}
+
+.dark-mode .header-highlighted {
+  background: #1a3d2b !important;
+  border-color: #22c55e !important;
+  color: #86efac !important;
+}
+
+.dark-mode .row-num-highlighted {
+  background: #1a3d2b !important;
+  border-color: #22c55e !important;
+  color: #86efac !important;
+}
+
+.dark-mode .sheet-scroll::-webkit-scrollbar-thumb {
+  background: #475569 !important;
+}
+.dark-mode .sheet-scroll::-webkit-scrollbar-thumb:hover {
+  background: #64748b !important;
+}
+
+.dark-mode .add-row-row .add-row-cell {
+  background: #1a2332 !important;
+  color: #64748b !important;
+  border-color: #1e293b !important;
+}
+.dark-mode .add-row-row:hover .add-row-cell {
+  background: #1e3a5f !important;
+  color: #93c5fd !important;
+}
+
+.dark-mode .selection-bar {
+  background: #1e3a5f !important;
+  border-color: #3b82f6 !important;
+}
+.dark-mode .selection-btn-danger {
+  background: #3b1a1a !important;
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+}
+.dark-mode .selection-btn-cancel {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .pagination-bar {
+  background: #0f172a !important;
+  border-top-color: #1e293b !important;
+}
+.dark-mode .pagination-info .rows-label { color: #94a3b8 !important; }
+.dark-mode .rows-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .rows-btn.active {
+  background: #2563eb !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+.dark-mode .page-btn {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.dark-mode .page-btn.active {
+  background: #2563eb !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+.dark-mode .page-nav {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .page-nav:hover:not(:disabled) {
+  background: #334155 !important;
+  border-color: #475569 !important;
+}
+.dark-mode .page-dots { color: #64748b !important; }
+.dark-mode .pagination-total { color: #94a3b8 !important; }
+
+.dark-mode .col-type-badge {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .col-type-label { color: #94a3b8 !important; }
+.dark-mode .col-type-chevron { color: #64748b !important; }
+.dark-mode .col-type-dropdown {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.dark-mode .col-type-option {
+  color: #cbd5e1 !important;
+}
+.dark-mode .col-type-option:hover {
+  background: #334155 !important;
+}
+.dark-mode .col-type-option.active {
+  background: #1e3a5f !important;
+  color: #93c5fd !important;
+}
+.dark-mode .col-type-check { color: #3b82f6 !important; }
+.dark-mode .col-type-dot { color: #64748b !important; }
+
+.dark-mode .export-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.dark-mode .export-menu-item {
+  color: #cbd5e1 !important;
+}
+.dark-mode .export-menu-item:hover {
+  background: #334155 !important;
+}
+
+.dark-mode .column-actions .col-action-btn {
+  background: transparent !important;
+  color: #64748b !important;
+}
+.dark-mode .column-actions .col-action-btn:hover {
+  background: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.dark-mode .col-action-delete:hover {
+  color: #fca5a5 !important;
+  background: #3b1a1a !important;
+}
+
+.dark-mode .inline-add-col {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.dark-mode .inline-input {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.dark-mode .inline-input::placeholder { color: #64748b !important; }
+.dark-mode .inline-select {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.dark-mode .inline-btn {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+.dark-mode .inline-btn-cancel {
+  color: #94a3b8 !important;
+}
+
+.dark-mode .context-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.dark-mode .context-menu-item {
+  color: #e2e8f0 !important;
+}
+.dark-mode .context-menu-item:hover {
+  background: #334155 !important;
+}
+.dark-mode .context-menu-item.text-danger {
+  color: #fca5a5 !important;
+}
+.dark-mode .context-menu-separator {
+  border-bottom-color: #334155 !important;
+}
+
+.dark-mode .loading-overlay {
+  background: rgba(15, 23, 42, 0.85) !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .max-score-label {
+  color: #64748b !important;
+}
+
+.dark-mode .column-label {
+  color: #cbd5e1 !important;
+}
+
+/* ─── Cell Editor ─── */
+.dark-mode .cell-editor {
+  background: #1e293b !important;
+  border-color: #3b82f6 !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.dark-mode .fill-handle {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+
+/* ─── Checkbox ─── */
+.dark-mode .checkbox-wrap .checkmark {
+  background: #0f172a !important;
+  border-color: #475569 !important;
+}
+.dark-mode .checkbox-wrap input:checked + .checkmark {
+  background: #2563eb !important;
+  border-color: #3b82f6 !important;
+}
+
+/* ─── MODALS (Teleported) ─── */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7) !important;
+}
+.dark-mode .modal-content-panel,
+.dark-mode .modal-card {
+  background: #1e293b !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+}
+.dark-mode .modal-header-custom h5 { color: #f1f5f9 !important; }
+.dark-mode .modal-subtitle { color: #94a3b8 !important; }
+.dark-mode .modal-close-btn {
+  color: #64748b !important;
+}
+.dark-mode .modal-close-btn:hover {
+  background: #334155 !important;
+  color: #e2e8f0 !important;
+}
+.dark-mode .modal-icon.icon-rename { background: #1e3a5f !important; color: #93c5fd !important; }
+.dark-mode .modal-icon.icon-add { background: #1e3a5f !important; color: #93c5fd !important; }
+.dark-mode .modal-icon.icon-weights { background: #3d2a1a !important; color: #fcd34d !important; }
+.dark-mode .modal-icon.icon-delete { background: #3b1a1a !important; color: #fca5a5 !important; }
+
+.dark-mode .modal-head h3 { color: #f1f5f9 !important; }
+.dark-mode .modal-head p { color: #94a3b8 !important; }
+.dark-mode .modal-x { color: #64748b !important; }
+.dark-mode .modal-x:hover { color: #e2e8f0 !important; background: #334155 !important; }
+
+.dark-mode .modern-input {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.dark-mode .modern-input::placeholder { color: #64748b !important; }
+.dark-mode .modern-input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+.dark-mode select.modern-input option {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1 !important;
+}
+.dark-mode .form-label i { color: #64748b !important; }
+
+.dark-mode .btn-outline {
+  background: transparent !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.dark-mode .btn-outline:hover {
+  background: #334155 !important;
+}
+
+.dark-mode .btn-primary-custom {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+.dark-mode .btn-primary-custom:hover {
+  background: #1d4ed8 !important;
+}
+
+.dark-mode .btn-danger-custom {
+  background: #dc2626 !important;
+  color: #fff !important;
+}
+.dark-mode .btn-danger-custom:hover {
+  background: #b91c1c !important;
+}
+
+/* ─── Weight Modal ─── */
+.dark-mode .weight-row {
+  border-bottom-color: #334155 !important;
+}
+.dark-mode .weight-name { color: #f1f5f9 !important; }
+.dark-mode .weight-code { color: #64748b !important; }
+.dark-mode .weight-suffix { color: #94a3b8 !important; }
+.dark-mode .weight-divider { border-bottom-color: #334155 !important; }
+.dark-mode .weight-total-bar {
+  background: #1a2332 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .weight-total-bar.weight-ok {
+  background: #1a3d2b !important;
+  color: #86efac !important;
+}
+.dark-mode .weight-total-bar.weight-warn {
+  background: #3d2a1a !important;
+  color: #fcd34d !important;
+}
+.dark-mode .new-type-header {
+  color: #94a3b8 !important;
+}
+.dark-mode .new-type-header:hover {
+  color: #cbd5e1 !important;
+}
+.dark-mode .new-type-label { color: #94a3b8 !important; }
+.dark-mode .no-assessments-text { color: #64748b !important; }
+.dark-mode .field-hint { color: #64748b !important; }
+
+/* ─── Delete Warning ─── */
+.dark-mode .delete-warning-box {
+  background: #3b1a1a !important;
+  border-color: #991b1b !important;
+}
+.dark-mode .delete-warning-icon-wrap {
+  background: #7f1d1d !important;
+  color: #fca5a5 !important;
+}
+.dark-mode .delete-warning-text { color: #fca5a5 !important; }
+.dark-mode .delete-warning-sub { color: #94a3b8 !important; }
+
+/* ─── Import Modal ─── */
+.dark-mode .import-modal {
+  background: #1e293b !important;
+}
+.dark-mode .import-modal-head {
+  border-bottom-color: #334155 !important;
+}
+.dark-mode .import-modal-head h3 { color: #f1f5f9 !important; }
+.dark-mode .import-modal-head p { color: #94a3b8 !important; }
+.dark-mode .import-modal-close {
+  color: #64748b !important;
+}
+.dark-mode .import-modal-close:hover {
+  background: #334155 !important;
+  color: #e2e8f0 !important;
+}
+.dark-mode .import-formats { color: #94a3b8 !important; }
+.dark-mode .import-format-excel {
+  background: #1a3d2b !important;
+  color: #86efac !important;
+}
+.dark-mode .import-format-pdf {
+  background: #3b1a1a !important;
+  color: #fca5a5 !important;
+}
+.dark-mode .import-zone {
+  background: #1a2332 !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .import-zone:hover {
+  background: #1e3a5f !important;
+  border-color: #3b82f6 !important;
+}
+.dark-mode .import-zone-over {
+  background: #1e3a5f !important;
+  border-color: #3b82f6 !important;
+}
+.dark-mode .import-zone-icon { color: #64748b !important; }
+.dark-mode .import-zone-title { color: #cbd5e1 !important; }
+.dark-mode .import-zone-sub { color: #64748b !important; }
+
+.dark-mode .import-file {
+  background: #1a2332 !important;
+  border-color: #334155 !important;
+}
+.dark-mode .import-file-accent { background: #3b82f6 !important; }
+.dark-mode .import-file-name { color: #f1f5f9 !important; }
+.dark-mode .import-file-size { color: #64748b !important; }
+.dark-mode .import-file-remove {
+  color: #64748b !important;
+}
+.dark-mode .import-file-remove:hover {
+  background: #3b1a1a !important;
+  color: #fca5a5 !important;
+}
+.dark-mode .import-file-type-icon {
+  background: #1e3a5f !important;
+  color: #93c5fd !important;
+}
+
+.dark-mode .import-preview {
+  background: #1a2332 !important;
+  border-color: #334155 !important;
+}
+.dark-mode .import-preview-stat { color: #94a3b8 !important; }
+.dark-mode .import-preview-num { color: #f1f5f9 !important; }
+.dark-mode .import-preview-label { color: #64748b !important; }
+.dark-mode .import-preview-stat-icon { color: #94a3b8 !important; }
+.dark-mode .import-icon-students { background: #1e3a5f !important; color: #93c5fd !important; }
+.dark-mode .import-icon-columns { background: #1a3d2b !important; color: #86efac !important; }
+.dark-mode .import-icon-cols { background: #3d2a1a !important; color: #fcd34d !important; }
+.dark-mode .import-preview-cols { color: #cbd5e1 !important; }
+
+.dark-mode .import-domain { border-color: #334155 !important; }
+.dark-mode .import-domain-info { color: #94a3b8 !important; }
+.dark-mode .import-domain-select {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+.dark-mode .import-domain-select.select-warn {
+  border-color: #f59e0b !important;
+}
+.dark-mode .import-domain-hint { color: #94a3b8 !important; }
+.dark-mode .import-domain-hint-warn {
+  color: #fcd34d !important;
+}
+.dark-mode .import-domain-info-bar {
+  background: #1a2332 !important;
+  color: #94a3b8 !important;
+}
+.dark-mode .import-modal-body { background: #1a2332 !important; }
+.dark-mode .import-modal-foot {
+  background: #0f172a !important;
+  border-top-color: #334155 !important;
+}
+.dark-mode .import-btn-secondary {
+  background: transparent !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+.dark-mode .import-btn-secondary:hover {
+  background: #334155 !important;
+}
+.dark-mode .import-btn-primary {
+  background: #2563eb !important;
+  color: #fff !important;
+}
+.dark-mode .import-btn-primary:hover {
+  background: #1d4ed8 !important;
+}
+
+/* ─── Keyboard Shortcuts Modal ─── */
+.dark-mode .shortcuts-modal {
+  background: #1e293b !important;
+}
+.dark-mode .shortcut-group-title { color: #94a3b8 !important; }
+.dark-mode .shortcut-keys kbd {
+  background: #334155 !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 1px 0 #475569 !important;
+}
+.dark-mode .shortcut-desc { color: #cbd5e1 !important; }
+
+/* ─── Toast ─── */
+.dark-mode .toast-notification {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+
+/* ─── Import Progress Overlay ─── */
+.dark-mode .import-progress-overlay {
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+.dark-mode .import-progress-card {
+  background: #1e293b !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+}
+.dark-mode .import-progress-status { color: #cbd5e1 !important; }
+.dark-mode .import-progress-bar-track {
+  background: #334155 !important;
+}
+.dark-mode .import-progress-bar-fill {
+  background: linear-gradient(90deg, #2563eb, #3b82f6) !important;
+}
+.dark-mode .import-progress-pct { color: #94a3b8 !important; }
+
+.dark-mode .spinner {
+  border-color: rgba(255,255,255,0.1) !important;
+  border-top-color: #3b82f6 !important;
+}
+
+.dark-mode .modal-sm-panel {
+  background: #1e293b !important;
 }
 </style>
