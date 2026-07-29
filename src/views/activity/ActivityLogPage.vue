@@ -1,5 +1,5 @@
 <template>
-  <div class="al-page">
+  <div :class="['al-page', { 'dark-mode': isDark }]">
     <div v-if="error" class="al-error">
       <AlertTriangle :size="16" />
       <span>{{ error }}</span>
@@ -14,7 +14,7 @@
             v-model="searchQuery"
             type="text"
             class="search-input"
-            placeholder="Search description or user..."
+:placeholder="t('activityLog.searchPlaceholder')"
             @input="applyFilters"
           />
         </div>
@@ -22,13 +22,13 @@
         <div class="al-filter-group">
           <label class="al-filter">
             <select v-model="moduleFilter" class="al-select" @change="applyFilters">
-              <option value="">All modules</option>
+              <option value="">{{ t('activityLog.allModules') }}</option>
               <option v-for="m in filterOptions.modules" :key="m" :value="m">{{ m }}</option>
             </select>
           </label>
           <label class="al-filter">
             <select v-model="actionFilter" class="al-select" @change="applyFilters">
-              <option value="">All actions</option>
+              <option value="">{{ t('activityLog.allActions') }}</option>
               <option v-for="a in filterOptions.actions" :key="a" :value="a">{{ a }}</option>
             </select>
           </label>
@@ -40,23 +40,23 @@
           </label>
           <div class="export-dropdown" ref="exportBtnRef">
             <button class="al-btn al-btn-export" :disabled="logs.length === 0" @click="toggleExportMenu" title="Export">
-              <Download :size="14" /> <span>Export</span>
+              <Download :size="14" /> <span>{{ t('activityLog.export') }}</span>
               <ChevronDown :size="10" style="margin-left:2px" />
             </button>
             <div v-if="showExportMenu" class="export-menu">
               <div class="export-menu-item" @click="exportLogsAsCSV">
-                <FileText :size="15" /> Export as CSV
+                <FileText :size="15" /> {{ t('activityLog.exportCsv') }}
               </div>
               <div class="export-menu-item" @click="exportLogsAsExcel">
-                <FileSpreadsheet :size="15" /> Export as Excel
+                <FileSpreadsheet :size="15" /> {{ t('activityLog.exportExcel') }}
               </div>
               <div class="export-menu-item" @click="exportLogsAsPDF">
-                <FileType :size="15" /> Export as PDF
+                <FileType :size="15" /> {{ t('activityLog.exportPdf') }}
               </div>
             </div>
           </div>
           <button v-if="hasActiveFilters" class="al-clear" @click="clearFilters">
-            <XCircle :size="14" /> Clear
+            <XCircle :size="14" /> {{ t('activityLog.clear') }}
           </button>
         </div>
       </div>
@@ -65,17 +65,17 @@
         <span class="bulk-count">{{ selectedIds.length }} selected</span>
         <button class="bulk-delete-btn" @click="showDeleteModal = true">
           <Trash2 :size="16" />
-          Delete Selected
+          {{ t('common.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="selectedIds = []">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="selectedIds = []">{{ t('common.clearSelection') }}</button>
       </div>
 
-      <LoadingState v-if="loading && logs.length === 0" message="Loading activity log..." />
+      <LoadingState v-if="loading && logs.length === 0" :message="t('activityLog.loading')" />
 
       <EmptyState
         v-else-if="logs.length === 0"
-        title="No activity found"
-        :message="hasActiveFilters ? 'Try a different search term or filter.' : 'Nothing has been recorded yet.'"
+        :title="t('activityLog.noActivity')"
+        :message="hasActiveFilters ? t('activityLog.tryDifferent') : t('activityLog.nothingYet')"
       />
 
       <div v-else class="table-wrap">
@@ -221,8 +221,8 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Logs</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('activityLog.deleteLogs') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="showDeleteModal = false">&times;</button>
             </div>
@@ -245,6 +245,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useThemeStore } from '@/stores/theme'
 import {
   AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Download,
   FileSpreadsheet, FileText, FileType,
@@ -259,7 +261,10 @@ import { extractErrorMessage, getUserInitials, debounce } from '@/utils'
 import { DEBOUNCE } from '@/constants'
 import type { ActivityLogEntry, ActivityLogFilterOptions } from '@/types'
 
+const { t } = useI18n()
 const auth = useAuthStore()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const loading = ref(true)
 const showExportMenu = ref(false)
@@ -537,6 +542,88 @@ onMounted(loadLogs)
 }
 .spinning { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ════════════════════════════════════════
+   DARK MODE — ACTIVITY LOG PAGE
+   ════════════════════════════════════════ */
+.dark-mode .al-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark-mode .al-toolbar {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .search-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode .al-select {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .al-select:focus {
+  border-color: #3b82f6;
+}
+
+.dark-mode .al-btn {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.dark-mode .al-btn:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.6);
+  border-color: #64748b;
+}
+
+.dark-mode .export-menu {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .export-menu-item {
+  color: #cbd5e1;
+}
+
+.dark-mode .export-menu-item:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #60a5fa;
+}
+
+.dark-mode .al-clear {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.dark-mode .user-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .description-cell {
+  color: #cbd5e1;
+}
+
+.dark-mode .time-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .module-badge {
+  background: rgba(51, 65, 85, 0.6);
+  color: #94a3b8;
+}
 
 .al-error {
   display: flex;

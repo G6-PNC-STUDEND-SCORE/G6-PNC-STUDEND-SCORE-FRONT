@@ -3,10 +3,10 @@
     <div v-if="error" class="rp-error">
       <AlertTriangle :size="16" />
       <span>{{ error }}</span>
-      <button class="rp-error-retry" @click="loadAll"><RefreshCw :size="13" /> Retry</button>
+      <button class="rp-error-retry" @click="loadAll"><RefreshCw :size="13" /> {{ t('retry') }}</button>
     </div>
 
-    <LoadingState v-if="loading" message="Compiling student rankings..." />
+    <LoadingState v-if="loading" :message="t('reports.compiling')" />
 
     <div v-else class="rp-card">
       <DataTable
@@ -19,71 +19,71 @@
           <div class="rp-table-head">
             <div class="rp-table-head-top">
               <div>
-                <h3 class="rp-table-title">Student Ranking &amp; Report Cards</h3>
+                <h3 class="rp-table-title">{{ t('reports.studentRanking') }}</h3>
                 <p class="rp-table-sub">
-                  {{ filteredStudentRows.length }} students
+                  {{ filteredStudentRows.length }} {{ t('reports.students') }}
                 </p>
               </div>
               <div class="d-flex align-items-center gap-2">
-                <SearchInput v-model="studentSearch" placeholder="Search name or student ID..." />
+                <SearchInput v-model="studentSearch" :placeholder="t('reports.searchPlaceholder')" />
                 <div v-if="canExport" class="rp-export">
                   <button class="rp-btn rp-btn-primary" :disabled="!filteredStudentRows.length" @click="showExportMenu = !showExportMenu">
-                    <Download :size="14" /> Export
+                    <Download :size="14" /> {{ t('activityLog.export') }}
                     <ChevronDown :size="13" />
                   </button>
                   <div v-if="showExportMenu" class="rp-export-menu">
-                    <button @click="runExport('pdf')"><FileText :size="14" /> PDF (.pdf)</button>
-                    <button @click="runExport('xlsx')"><Sheet :size="14" /> Excel (.xlsx)</button>
-                    <button @click="runExport('csv')"><FileSpreadsheet :size="14" /> CSV (.csv)</button>
+                    <button @click="runExport('pdf')"><FileText :size="14" /> {{ t('reports.exportPdf') }}</button>
+                    <button @click="runExport('xlsx')"><Sheet :size="14" /> {{ t('reports.exportExcel') }}</button>
+                    <button @click="runExport('csv')"><FileSpreadsheet :size="14" /> {{ t('reports.exportCsv') }}</button>
                   </div>
                 </div>
               </div>
             </div>
             <div class="rp-table-filters">
               <div class="rp-filter">
-                <label>Academic Year</label>
+                <label>{{ t('reports.academicYear') }}</label>
                 <select v-model="filters.academic_year_id" class="rp-select">
-                  <option :value="null">All years</option>
+                  <option :value="null">{{ t('reports.allYears') }}</option>
                   <option v-for="year in options.academic_years" :key="year.id" :value="year.id">{{ year.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Term</label>
+                <label>{{ t('reports.term') }}</label>
                 <select v-model="filters.term_id" class="rp-select">
-                  <option :value="null">All terms</option>
+                  <option :value="null">{{ t('reports.allTerms') }}</option>
                   <option v-for="term in options.terms" :key="term.id" :value="term.id">{{ term.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Class</label>
+                <label>{{ t('reports.class') }}</label>
                 <select v-model="filters.class_id" class="rp-select">
-                  <option :value="null">All classes</option>
+                  <option :value="null">{{ t('reports.allClasses') }}</option>
                   <option v-for="cls in options.classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Subject</label>
+                <label>{{ t('reports.subject') }}</label>
                 <select v-model="filters.subject_id" class="rp-select">
-                  <option :value="null">All subjects</option>
+                  <option :value="null">{{ t('reports.allSubjects') }}</option>
                   <option v-for="subject in options.subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Teacher</label>
+                <label>{{ t('reports.teacher') }}</label>
                 <select v-model="filters.teacher_id" class="rp-select">
-                  <option :value="null">All teachers</option>
+                  <option :value="null">{{ t('reports.allTeachers') }}</option>
                   <option v-for="teacher in options.teachers" :key="teacher.id" :value="teacher.id">{{ teacher.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Generation</label>
+                <label>{{ t('classes.generation') }}</label>
                 <select v-model="filters.generation_id" class="rp-select">
-                  <option :value="null">All generations</option>
+                  <option :value="null">{{ t('reports.allGenerations') }}</option>
                   <option v-for="gen in options.generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
                 </select>
               </div>
               <button v-if="activeFilterCount > 0" class="rp-clear" @click="clearFilters">
-                <XCircle :size="14" /> Clear ({{ activeFilterCount }})
+                <XCircle :size="14" /> {{ t('reports.clear') }} ({{ activeFilterCount }})
               </button>
             </div>
           </div>
@@ -100,19 +100,19 @@
         </template>
         <template #cell-result="{ row }">
           <span class="rp-result" :class="row.result === 'pass' ? 'is-pass' : 'is-fail'">
-            {{ row.result.toUpperCase() }}
+            {{ row.result === 'pass' ? t('pass').toUpperCase() : t('fail').toUpperCase() }}
           </span>
-          <span v-if="row.failed_subjects > 0" class="rp-muted"> ({{ row.failed_subjects }} failed)</span>
+          <span v-if="row.failed_subjects > 0" class="rp-muted"> ({{ row.failed_subjects }} {{ t('reports.failed') }})</span>
         </template>
         <template #cell-actions="{ row }">
           <button class="rp-row-btn" @click="openReportCard(row.student_id)">
-            <FileText :size="13" /> Report Card
+            <FileText :size="13" /> {{ t('reports.reportCard') }}
           </button>
         </template>
         <template #footer>
           <div v-if="filteredStudentRows.length > 0" class="pagination-bar">
             <div class="pagination-info">
-              <span class="rows-label">Rows per page:</span>
+              <span class="rows-label">{{ t('common.rowsPerPage') }}</span>
               <div class="rows-selector">
                 <button
                   v-for="size in pageSizeOptions"
@@ -127,7 +127,7 @@
             </div>
 
             <div class="pagination-pages">
-              <button class="page-nav" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)" aria-label="Previous page">
+              <button class="page-nav" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)" :aria-label="t('common.previousPage')">
                 <ChevronLeft :size="16" />
               </button>
               <template v-for="page in visiblePages" :key="page">
@@ -141,13 +141,13 @@
                 </button>
                 <span v-else class="page-dots">…</span>
               </template>
-              <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" aria-label="Next page">
+              <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" :aria-label="t('common.nextPage')">
                 <ChevronRight :size="16" />
               </button>
             </div>
 
             <div class="pagination-total">
-              {{ totalFrom }}-{{ totalTo }} of {{ filteredStudentRows.length }}
+              {{ totalFrom }}-{{ totalTo }} {{ t('common.of') }} {{ filteredStudentRows.length }}
             </div>
           </div>
         </template>
@@ -164,6 +164,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   AlertTriangle,
   ChevronDown,
@@ -189,6 +190,7 @@ import { usePermission } from '@/composables/usePermission'
 import { useToast } from '@/composables/useToast'
 import type { ReportFilterOptions, ReportFilters, StudentRankingRow } from '@/types'
 
+const { t } = useI18n()
 const theme = useThemeStore()
 const { hasPermission } = usePermission()
 const toast = useToast()
@@ -288,18 +290,18 @@ function changePerPage(size: number) {
   currentPage.value = 1
 }
 
-const studentColumns = [
+const studentColumns = computed(() => [
   { key: 'rank', label: '#', width: '56px' },
-  { key: 'student_name', label: 'Student' },
-  { key: 'student_number', label: 'Student ID' },
-  { key: 'class_name', label: 'Class' },
-  { key: 'subject_count', label: 'Subjects' },
-  { key: 'total', label: 'Total' },
-  { key: 'average', label: 'Average' },
-  { key: 'grade', label: 'Grade' },
-  { key: 'result', label: 'Result' },
+  { key: 'student_name', label: t('reports.colStudent') },
+  { key: 'student_number', label: t('reports.colStudentId') },
+  { key: 'class_name', label: t('reports.colClass') },
+  { key: 'subject_count', label: t('reports.colSubjects') },
+  { key: 'total', label: t('reports.colTotal') },
+  { key: 'average', label: t('reports.colAverage') },
+  { key: 'grade', label: t('reports.colGrade') },
+  { key: 'result', label: t('reports.colResult') },
   { key: 'actions', label: '', width: '140px' },
-]
+])
 
 function gradeStyle(grade: string | null) {
   const color = grade ? GRADE_COLORS[grade] : undefined
@@ -356,20 +358,20 @@ function scopeLabel(): string {
 
   if (year) parts.push(year)
   if (term) parts.push(term)
-  if (cls) parts.push(`Class ${cls}`)
+  if (cls) parts.push(`${t('reports.classPrefix')} ${cls}`)
   if (subject) parts.push(subject)
-  if (teacher) parts.push(`Teacher ${teacher}`)
+  if (teacher) parts.push(`${t('reports.teacherPrefix')} ${teacher}`)
   if (generation) parts.push(generation)
 
-  return parts.length ? parts.join(' · ') : 'All academic years, terms and classes'
+  return parts.length ? parts.join(' · ') : t('reports.allScope')
 }
 
 async function runExport(format: 'pdf' | 'xlsx' | 'csv') {
   showExportMenu.value = false
-  const payload = {
-    title: 'Student Ranking Report',
+  const    payload = {
+    title: t('reports.exportTitle'),
     subtitle: scopeLabel(),
-    head: ['#', 'Student', 'Student ID', 'Class', 'Subjects', 'Total', 'Average', 'Grade', 'Failed Subjects', 'Result'],
+    head: ['#', t('reports.colStudent'), t('reports.colStudentId'), t('reports.colClass'), t('reports.colSubjects'), t('reports.colTotal'), t('reports.colAverage'), t('reports.colGrade'), t('reports.failedSubjects'), t('reports.colResult')],
     body: filteredStudentRows.value.map((row) => [
       row.rank, row.student_name, row.student_number ?? '—', row.class_name, row.subject_count,
       row.total.toFixed(2), row.average.toFixed(2), row.grade ?? '—', row.failed_subjects,
@@ -381,7 +383,7 @@ async function runExport(format: 'pdf' | 'xlsx' | 'csv') {
     if (format === 'pdf') await exportTableToPdf(payload)
     else if (format === 'xlsx') await exportTableToExcel(payload)
     else exportTableToCsv(payload)
-    toast.success(`Report exported as ${format.toUpperCase()}`)
+    toast.success(t('reports.exportedAs', { format: format.toUpperCase() }))
   } catch (e) {
     toast.error(extractErrorMessage(e))
   }

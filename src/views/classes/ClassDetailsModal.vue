@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="show && classData" class="modal-overlay" @click.self="$emit('close')">
-        <div class="modal-content-panel bg-white rounded-4 shadow-lg" style="max-width: 460px;">
+        <div :class="['modal-content-panel', 'rounded-4', 'shadow-lg', { 'dark-mode': isDark }]" style="max-width: 460px;" :style="{ background: isDark ? '#1e293b' : '#fff' }">
           <div class="text-center pt-4 pb-3 px-4 border-bottom border-light">
             <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
                  style="width: 60px; height: 60px; background: linear-gradient(135deg, #eef2ff, #dbeafe);">
@@ -66,6 +66,12 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useThemeStore } from '@/stores/theme'
+
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
+
 defineProps<{
   show: boolean
   classData: {
@@ -115,4 +121,44 @@ defineEmits<{
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal-content-panel,
 .modal-leave-to .modal-content-panel { transform: scale(0.9); }
+
+/* ════════════════════════════════════════
+   DARK MODE — CLASS DETAILS MODAL
+   ════════════════════════════════════════ */
+.dark-mode.modal-content-panel {
+  background: #1e293b !important;
+}
+
+.dark-mode h5 {
+  color: #f1f5f9 !important;
+}
+
+.dark-mode .text-dark {
+  color: #e2e8f0 !important;
+}
+
+.dark-mode .border-light {
+  border-color: #334155 !important;
+}
+
+.dark-mode .bg-light.text-dark.rounded-pill {
+  background: #26344a !important;
+  color: #cbd5e1 !important;
+}
+
+.dark-mode .bg-success-subtle {
+  background: rgba(16, 185, 129, 0.12) !important;
+}
+
+.dark-mode .text-success-emphasis {
+  color: #4ade80 !important;
+}
+
+.dark-mode .bg-secondary-subtle {
+  background: rgba(100, 116, 139, 0.15) !important;
+}
+
+.dark-mode .text-secondary-emphasis {
+  color: #94a3b8 !important;
+}
 </style>

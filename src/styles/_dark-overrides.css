@@ -1,0 +1,310 @@
+/* ============================================================
+   App-wide dark-mode safety net.
+   Most page components hardcode literal colors (#fff, #0f172a, etc.)
+   rather than the CSS variables in _variables.css, so a var-only theme
+   switch wouldn't reach them. Instead of touching every view file, this
+   targets the class names that repeat across the app (cards, tables,
+   badges, forms) with :root[data-theme="dark"] overrides. Components
+   that already have their own explicit `.dark-mode` rules (DashboardView,
+   KpiCard, Header, etc.) are untouched and take precedence via specificity.
+   ============================================================ */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* ── Generic card/section surfaces ── */
+:root[data-theme="dark"] .master-card,
+:root[data-theme="dark"] .section-card,
+:root[data-theme="dark"] .stat-tile,
+:root[data-theme="dark"] .progress-item,
+:root[data-theme="dark"] .chart-card,
+:root[data-theme="dark"] .empty-container,
+:root[data-theme="dark"] .header-row,
+:root[data-theme="dark"] .page-head,
+:root[data-theme="dark"] .app-card,
+:root[data-theme="dark"] .modal-content,
+:root[data-theme="dark"] .kpi-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .master-header,
+:root[data-theme="dark"] .master-section + .master-section {
+  border-color: #334155 !important;
+}
+
+/* ── Text on dark surfaces ── */
+:root[data-theme="dark"] .master-title,
+:root[data-theme="dark"] .page-title,
+:root[data-theme="dark"] .section-title,
+:root[data-theme="dark"] .subject-name,
+:root[data-theme="dark"] .stat-value,
+:root[data-theme="dark"] .empty-container h4,
+:root[data-theme="dark"] h1,
+:root[data-theme="dark"] h2,
+:root[data-theme="dark"] h3,
+:root[data-theme="dark"] h4 {
+  color: #f1f5f9 !important;
+}
+
+:root[data-theme="dark"] .master-subtitle,
+:root[data-theme="dark"] .page-subtitle,
+:root[data-theme="dark"] .section-count,
+:root[data-theme="dark"] .stat-label,
+:root[data-theme="dark"] .cell-teacher,
+:root[data-theme="dark"] .empty-container p {
+  color: #94a3b8 !important;
+}
+
+/* ── Tables ── */
+:root[data-theme="dark"] table thead th {
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+:root[data-theme="dark"] table tbody td {
+  color: #cbd5e1 !important;
+  border-color: #293548 !important;
+}
+
+:root[data-theme="dark"] table tbody tr:hover {
+  background: #26344a !important;
+}
+
+/* ── Neutral pills / chips (ID, class, term meta) ── */
+:root[data-theme="dark"] .meta-chip,
+:root[data-theme="dark"] .section-count,
+:root[data-theme="dark"] .badge-neutral {
+  background: #26344a !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+/* ── Score/grade value chips keep their semantic tint but on a dark base ── */
+:root[data-theme="dark"] .score-value.score-none,
+:root[data-theme="dark"] .grade-none {
+  background: #26344a !important;
+  color: #94a3b8 !important;
+}
+
+/* ── Inputs & selects ── */
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] .form-input,
+:root[data-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-select {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+:root[data-theme="dark"] .form-input::placeholder,
+:root[data-theme="dark"] input::placeholder {
+  color: #64748b !important;
+}
+
+:root[data-theme="dark"] .form-label,
+:root[data-theme="dark"] label {
+  color: #cbd5e1;
+}
+
+/* ── Dividers ── */
+:root[data-theme="dark"] hr,
+:root[data-theme="dark"] .divider-line {
+  background: #334155 !important;
+  border-color: #334155 !important;
+}
+
+/* ============================================================
+   Shared CRUD-page chrome (_toolbar.css, _table.css, _pagination.css,
+   _badges.css, _form.css, _buttons.css, _modal.css, _empty.css).
+   These partials are reused verbatim by every admin list page
+   (Students, Classes, Teachers, Subjects, Users, Roles, Scores,
+   Activity Log), so overriding them here fixes dark mode across all
+   of those pages at once instead of file-by-file.
+   ============================================================ */
+
+/* Toolbar / search / filters */
+:root[data-theme="dark"] .toolbar {
+  background: #1e293b !important;
+  border-bottom-color: #334155 !important;
+}
+:root[data-theme="dark"] .search-input,
+:root[data-theme="dark"] .filter-label,
+:root[data-theme="dark"] .modern-input,
+:root[data-theme="dark"] .status-option {
+  background: #26344a !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+:root[data-theme="dark"] .search-input::placeholder,
+:root[data-theme="dark"] .modern-input::placeholder {
+  color: #64748b !important;
+}
+:root[data-theme="dark"] .filter-select {
+  color: #e2e8f0 !important;
+}
+:root[data-theme="dark"] .filter-select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+:root[data-theme="dark"] .count-badge {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+/* Data tables */
+:root[data-theme="dark"] .data-table-base thead th {
+  background: #172033 !important;
+  color: #94a3b8 !important;
+  border-bottom-color: #334155 !important;
+}
+:root[data-theme="dark"] .data-table-base tbody td {
+  color: #cbd5e1 !important;
+  border-bottom-color: #293548 !important;
+}
+:root[data-theme="dark"] .data-row:hover {
+  background: #26344a !important;
+}
+:root[data-theme="dark"] .row-selected {
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+/* Pagination */
+:root[data-theme="dark"] .pagination-bar {
+  background: #172033 !important;
+  border-top-color: #334155 !important;
+}
+:root[data-theme="dark"] .pagination-info,
+:root[data-theme="dark"] .pagination-total,
+:root[data-theme="dark"] .rows-btn,
+:root[data-theme="dark"] .page-btn,
+:root[data-theme="dark"] .page-nav {
+  color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .rows-selector {
+  background: #26344a !important;
+}
+:root[data-theme="dark"] .rows-btn.active {
+  background: #1e293b !important;
+  color: #60a5fa !important;
+}
+:root[data-theme="dark"] .page-nav {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+:root[data-theme="dark"] .page-btn:hover:not(.active) {
+  background: #26344a !important;
+  color: #60a5fa !important;
+}
+
+/* Status / gender badges */
+:root[data-theme="dark"] .badge-active { background: rgba(59, 130, 246, 0.18) !important; color: #60a5fa !important; }
+:root[data-theme="dark"] .badge-inactive { background: #26344a !important; color: #94a3b8 !important; }
+:root[data-theme="dark"] .badge-suspended { background: rgba(239, 68, 68, 0.18) !important; color: #f87171 !important; }
+:root[data-theme="dark"] .badge-male,
+:root[data-theme="dark"] .badge-female { background: rgba(59, 130, 246, 0.18) !important; color: #60a5fa !important; }
+
+/* Buttons */
+:root[data-theme="dark"] .btn-ghost,
+:root[data-theme="dark"] .btn-outline {
+  background: #26344a !important;
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+}
+:root[data-theme="dark"] .btn-ghost:hover,
+:root[data-theme="dark"] .btn-outline:hover {
+  background: #334155 !important;
+}
+:root[data-theme="dark"] .act-btn {
+  color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .act-btn:hover {
+  background: #26344a !important;
+  color: #60a5fa !important;
+}
+
+/* Modals */
+:root[data-theme="dark"] .modal-overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+:root[data-theme="dark"] .modal-content-panel {
+  background: #1e293b !important;
+  color: #e2e8f0;
+}
+:root[data-theme="dark"] .modal-header-custom h5,
+:root[data-theme="dark"] .modal-head h3 {
+  color: #f1f5f9 !important;
+}
+:root[data-theme="dark"] .modal-subtitle,
+:root[data-theme="dark"] .modal-head p {
+  color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .modal-close-btn {
+  background: #26344a !important;
+  color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .error-alert {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #fca5a5 !important;
+}
+
+/* Page-local modal variants (SubjectPage, ClassPage, etc. use their own
+   .overlay/.modal-card names instead of the shared _modal.css classes). */
+:root[data-theme="dark"] .overlay {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+:root[data-theme="dark"] .modal-card {
+  background: #1e293b !important;
+  color: #e2e8f0;
+}
+
+/* Toggle pills (term/class assignment chips) — repeated pattern across
+   several admin pages under names like .tog / .term-chip. */
+:root[data-theme="dark"] .tog,
+:root[data-theme="dark"] .term-chip {
+  background: #26344a !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+:root[data-theme="dark"] .tog:hover,
+:root[data-theme="dark"] .term-chip:hover {
+  background: #1e2b40 !important;
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+:root[data-theme="dark"] .tog-on,
+:root[data-theme="dark"] .term-chip-on {
+  background: rgba(59, 130, 246, 0.18) !important;
+  border-color: #3b82f6 !important;
+  color: #60a5fa !important;
+}
+
+/* ── Language switcher dropdown ── */
+:root[data-theme="dark"] .language-switcher .dropdown-menu {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4) !important;
+}
+:root[data-theme="dark"] .language-switcher .dropdown-item {
+  color: #cbd5e1 !important;
+}
+:root[data-theme="dark"] .language-switcher .dropdown-item:hover {
+  background: rgba(96, 165, 250, 0.1) !important;
+}
+:root[data-theme="dark"] .language-switcher .dropdown-item.active {
+  background: rgba(96, 165, 250, 0.15) !important;
+  color: #60a5fa !important;
+}
+
+/* Login page intentionally stays in light mode regardless of theme setting.
+   No dark-mode overrides are applied here. */

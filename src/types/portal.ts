@@ -12,7 +12,7 @@ export interface PortalProfile {
 
 export interface PortalSummaryItem {
   label: string
-  value: number
+  value: number | string
   decimals: number
   icon: string
   iconClass: string
@@ -29,10 +29,26 @@ export interface PortalCurrentSubject {
   progress: number
 }
 
+export interface PortalProgressItem {
+  label: string
+  value: number
+  display: string
+  color: string
+  icon: string
+}
+
+export interface PortalTermTrend {
+  term: string
+  gpa: number
+  average: number
+}
+
 export interface PortalData {
   profile: PortalProfile
   summary: PortalSummaryItem[]
+  termTrends: PortalTermTrend[]
   currentSubjects: PortalCurrentSubject[]
+  progress: PortalProgressItem[]
 }
 
 export interface TermScoreSubject {

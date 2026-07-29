@@ -1,5 +1,5 @@
 <template>
-  <div class="users-page">
+  <div :class="['users-page', { 'dark-mode': isDark }]">
     <div v-if="loading && users.length === 0" class="text-center py-5">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
         <span class="visually-hidden">Loading...</span>
@@ -21,16 +21,16 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search by name or email..."
+:placeholder="t('users.searchPlaceholder')"
               @input="applyFilters"
             />
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <ShieldCheck :size="16" />
-              <span>Role</span>
+              <span>{{ t('users.role') }}</span>
               <select v-model="roleFilter" class="filter-select" @change="applyFilters">
-                <option value="">All Roles</option>
+                <option value="">{{ t('users.allRoles') }}</option>
                 <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
               </select>
             </label>
@@ -55,7 +55,7 @@
             @click="openCreateModal"
           >
             <Plus :size="15" />
-            Add User
+            {{ t('users.addUser') }}
           </button>
 
           <span class="count-badge">
@@ -249,8 +249,8 @@
                 <UserPlus v-else :size="18" />
               </div>
               <div>
-                <h3>{{ isEditing ? 'Edit User' : 'Add New User' }}</h3>
-                <p>{{ isEditing ? 'Update user information and role' : 'Fill in the new user details' }}</p>
+                <h3>{{ isEditing ? t('users.editUser') : t('users.addNewUser') }}</h3>
+                <p>{{ isEditing ? t('users.updateInfo') : t('users.fillDetails') }}</p>
               </div>
               <button class="modal-x" @click="closeFormModal">&times;</button>
             </div>
@@ -395,8 +395,8 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete User</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('users.deleteUser') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
@@ -431,8 +431,8 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Users</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('users.deleteUsers') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
@@ -466,8 +466,8 @@
                 <IdCard :size="18" />
               </div>
               <div>
-                <h3>User Details</h3>
-                <p>Complete information about this user</p>
+                <h3>{{ t('users.userDetails') }}</h3>
+                <p>{{ t('users.completeInfo') }}</p>
               </div>
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
@@ -550,11 +550,17 @@
 <script setup lang="ts">
 import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, Inbox } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, TransitionGroup, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useThemeStore } from '@/stores/theme'
 import { usePermission } from '@/composables/usePermission'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
 import type { User } from '@/services/userService'
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useUserStore()
 const { users, roles, loading, error, totalUsers, lastPage } = storeToRefs(store)
@@ -1326,5 +1332,182 @@ select.styled-input {
 
 .row-move {
   transition: transform 0.3s ease;
+}
+
+/* ════════════════════════════════════════
+   DARK MODE — USERS PAGE
+   ════════════════════════════════════════ */
+.dark-mode .user-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .user-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .user-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .email-cell {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #94a3b8;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1;
+}
+
+.dark-mode .styled-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .styled-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.dark-mode .styled-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode select.styled-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-color: #1e293b;
+}
+
+.dark-mode select.styled-input option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-mode .error-alert {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .section-divider {
+  background: linear-gradient(to right, transparent, #334155, transparent);
+}
+
+.dark-mode .icon-create {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .icon-edit {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.dark-mode .icon-info {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .icon-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .del-warning {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.dark-mode .detail-row {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .detail-label {
+  color: #94a3b8;
+}
+
+.dark-mode .detail-value {
+  color: #e2e8f0;
+}
+
+.dark-mode .action-trigger {
+  background: rgba(51, 65, 85, 0.4);
+  color: #94a3b8;
+}
+
+.dark-mode .action-trigger:hover {
+  background: rgba(37, 99, 235, 0.12);
+  color: #60a5fa;
+}
+
+.dark-mode .action-menu {
+  background: #1e293b;
+  border-color: #475569;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .action-item {
+  color: #cbd5e1;
+}
+
+.dark-mode .action-item.view:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .action-item.edit:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .action-item.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+
+.dark-mode .dropdown-divider {
+  background: #334155;
+}
+
+.dark-mode .field-hint {
+  color: #64748b;
+}
+
+.dark-mode .avatar {
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+
+.dark-mode .bg-light.text-dark.rounded-pill {
+  background: #26344a !important;
+  color: #cbd5e1 !important;
 }
 </style>

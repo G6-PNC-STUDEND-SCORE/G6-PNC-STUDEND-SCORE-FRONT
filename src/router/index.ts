@@ -10,7 +10,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  const isLoginRoute = to.name === 'login'
+  const isLoginRoute = to.name === 'login' || to.name === 'forgot-password' || to.name === 'reset-password'
 
   if (!authStore.isAuthenticated) {
     return isLoginRoute ? true : '/login'

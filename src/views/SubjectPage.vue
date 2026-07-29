@@ -1,5 +1,5 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
     <div v-if="store.error" class="msg msg-error">
       <AlertTriangle :size="16" />
       {{ store.error }}
@@ -9,7 +9,7 @@
 
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
-      <span>Loading subjects…</span>
+      <span>{{ t('subjects.loading') }}</span>
     </div>
 
     <div v-else class="subject-card">
@@ -22,7 +22,7 @@
               @input="handleSearch"
               type="text"
               class="search-input"
-              placeholder="Search by name, teacher, class, or term..."
+              :placeholder="t('subjects.searchPlaceholder')"
             />
             <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''; handleSearch()">
               <X :size="14" />
@@ -31,20 +31,20 @@
           <div class="filter-group">
             <label class="filter-label">
               <ToggleLeft :size="16" />
-              <span>Status</span>
+              <span>{{ t('common.status') }}</span>
               <select v-model="statusFilter" @change="handleFilter" class="filter-select">
-                <option value="">All</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="">{{ t('common.all') }}</option>
+                <option value="Active">{{ t('common.active') }}</option>
+                <option value="Inactive">{{ t('common.inactive') }}</option>
               </select>
             </label>
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <CalendarDays :size="16" />
-              <span>Term</span>
+              <span>{{ t('subjects.term') }}</span>
               <select v-model="termFilter" @change="handleFilter" class="filter-select">
-                <option value="">All</option>
+                <option value="">{{ t('common.all') }}</option>
                 <option v-for="term in terms" :key="term.id" :value="term.id">{{ term.name }}</option>
               </select>
             </label>
@@ -58,28 +58,28 @@
             @click="openAddModal"
           >
             <Plus :size="15" />
-            Add Subject
+            {{ t('subjects.addSubject') }}
           </button>
           <span class="count-badge">
-            {{ filteredSubjects.length }} / {{ subjects.length }} subject{{ subjects.length !== 1 ? 's' : '' }}
+            {{ filteredSubjects.length }} / {{ subjects.length }} {{ t('subjects.subject') }}{{ subjects.length !== 1 ? 's' : '' }}
           </span>
         </div>
       </div>
 
       <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <span class="bulk-count">{{ selectedIds.length }} {{ t('common.selected') }}</span>
         <button class="bulk-delete-btn" @click="showBulkDeleteModal = true">
           <Trash :size="16" />
-          Delete Selected
+          {{ t('common.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="clearSelection">{{ t('common.clearSelection') }}</button>
       </div>
 
       <div v-if="filteredSubjects.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
-          <h5>No subjects found</h5>
-          <p>{{ searchQuery ? 'Try a different search term.' : 'No subjects match the current filter.' }}</p>
+          <h5>{{ t('subjects.noSubjectsFound') }}</h5>
+          <p>{{ searchQuery ? t('subjects.tryDifferentSearch') : t('subjects.noSubjectsMatchFilter') }}</p>
         </div>
       </div>
 
@@ -97,12 +97,12 @@
                 />
               </th>
               <th class="col-index">#</th>
-              <th class="th-subject">Subject</th>
-              <th class="th-teacher">Teacher</th>
-              <th class="th-class">Class</th>
-              <th class="th-terms">Terms</th>
-              <th class="th-status">Status</th>
-              <th class="th-actions">Actions</th>
+              <th class="th-subject">{{ t('subjects.subject') }}</th>
+              <th class="th-teacher">{{ t('subjects.teacher') }}</th>
+              <th class="th-class">{{ t('subjects.class') }}</th>
+              <th class="th-terms">{{ t('subjects.terms') }}</th>
+              <th class="th-status">{{ t('common.status') }}</th>
+              <th class="th-actions">{{ t('common.actions') }}</th>
             </tr>
           </thead>
           <TransitionGroup name="row" tag="tbody">
@@ -166,14 +166,14 @@
               </td>
               <td class="td-status">
                 <span class="status-badge" :class="(subject.status || '').toLowerCase() === 'active' ? 'badge-active' : 'badge-inactive'">
-                  {{ subject.status }}
+                  {{ (subject.status || '').toLowerCase() === 'active' ? t('common.active') : t('common.inactive') }}
                 </span>
               </td>
               <td class="td-actions">
-                <button v-if="canUpdate" class="act-btn" @click.stop="openEditModal(subject)" title="Edit">
+                <button v-if="canUpdate" class="act-btn" @click.stop="openEditModal(subject)" :title="t('common.edit')">
                   <Pencil :size="15" />
                 </button>
-                <button v-if="canDelete" class="act-btn act-danger" @click.stop="confirmDelete(subject)" title="Delete">
+                <button v-if="canDelete" class="act-btn act-danger" @click.stop="confirmDelete(subject)" :title="t('common.delete')">
                   <Trash2 :size="15" />
                 </button>
               </td>
@@ -184,7 +184,7 @@
 
       <div v-if="filteredSubjects.length > 0" class="pagination-bar">
         <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+          <span class="rows-label">{{ t('common.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pageSizeOptions"
@@ -203,7 +203,7 @@
             class="page-nav"
             :disabled="currentPage <= 1"
             @click="currentPage--"
-            aria-label="Previous page"
+            :aria-label="t('common.previousPage')"
           >
             <ChevronLeft :size="16" />
           </button>
@@ -224,14 +224,14 @@
             class="page-nav"
             :disabled="currentPage >= totalPages"
             @click="currentPage++"
-            aria-label="Next page"
+            :aria-label="t('common.nextPage')"
           >
             <ChevronRight :size="16" />
           </button>
         </div>
 
         <div class="pagination-total">
-          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} of {{ filteredSubjects.length }}
+          {{ (currentPage - 1) * pageSize + 1 }}-{{ Math.min(currentPage * pageSize, filteredSubjects.length) }} {{ t('common.of') }} {{ filteredSubjects.length }}
         </div>
       </div>
     </div>
@@ -246,8 +246,8 @@
                 <CirclePlus v-else :size="20" />
               </div>
               <div>
-                <h3>{{ isEditMode ? 'Edit Subject' : 'New Subject' }}</h3>
-                <p>{{ isEditMode && store.currentSubject ? `Editing: ${store.currentSubject.name}` : 'Fill in the details to create a new subject.' }}</p>
+                <h3>{{ isEditMode ? t('subjects.editSubject') : t('subjects.newSubject') }}</h3>
+                <p>{{ isEditMode && store.currentSubject ? `${t('subjects.editing')}: ${store.currentSubject.name}` : t('subjects.fillDetails') }}</p>
               </div>
               <button class="modal-x" @click="closeModal">&times;</button>
             </div>
@@ -255,13 +255,13 @@
               <div class="field">
                 <label>
                   <BookOpen :size="15" class="field-icon" />
-                  Subject Name <span class="req">*</span>
+                  {{ t('subjects.subjectName') }} <span class="req">*</span>
                 </label>
                 <div class="input-wrap">
                   <input
                     v-model="formData.name"
                     :class="{ err: errors.name }"
-                    placeholder="e.g. Web Development"
+                    :placeholder="t('subjects.subjectNamePlaceholder')"
                     required
                   />
                 </div>
@@ -274,7 +274,7 @@
                 <div class="field">
                   <label>
                     <Users :size="15" class="field-icon" />
-                    Teachers
+                    {{ t('subjects.teachers') }}
                   </label>
                   <div v-if="teachers.length" class="check-list">
                     <label
@@ -293,15 +293,15 @@
                       <span class="check-label">{{ t.name }}</span>
                     </label>
                   </div>
-                  <p v-else class="field-hint">No teachers available yet.</p>
+                  <p v-else class="field-hint">{{ t('subjects.noTeachers') }}</p>
                   <p v-if="formData.teacher_ids.length" class="field-count">
-                    {{ formData.teacher_ids.length }} selected
+                    {{ formData.teacher_ids.length }} {{ t('subjects.selected') }}
                   </p>
                 </div>
                 <div class="field">
                   <label>
                     <Layers :size="15" class="field-icon" />
-                    Classes
+                    {{ t('subjects.classes') }}
                   </label>
                   <div v-if="classes.length" class="check-list">
                     <label
@@ -320,9 +320,9 @@
                       <span class="check-label">{{ c.name }}</span>
                     </label>
                   </div>
-                  <p v-else class="field-hint">No classes available yet.</p>
+                  <p v-else class="field-hint">{{ t('subjects.noClasses') }}</p>
                   <p v-if="formData.class_ids.length" class="field-count">
-                    {{ formData.class_ids.length }} selected
+                    {{ formData.class_ids.length }} {{ t('subjects.selected') }}
                   </p>
                 </div>
               </div>
@@ -332,12 +332,12 @@
               <div class="field">
                 <label>
                   <ToggleLeft :size="15" class="field-icon" />
-                  Status
+                  {{ t('common.status') }}
                 </label>
                 <div class="input-wrap">
                   <select v-model="formData.status" class="modern-input">
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">{{ t('common.active') }}</option>
+                    <option value="Inactive">{{ t('common.inactive') }}</option>
                   </select>
                 </div>
               </div>
@@ -347,7 +347,7 @@
               <div class="field">
                 <label>
                   <CalendarDays :size="15" class="field-icon" />
-                  Assign to Terms
+                  {{ t('subjects.assignToTerms') }}
                 </label>
                 <div class="term-chips">
                   <button
@@ -368,11 +368,11 @@
               </div>
 
               <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" @click="closeModal">Cancel</button>
+                <button type="button" class="btn btn-ghost" @click="closeModal">{{ t('common.cancel') }}</button>
                 <button type="submit" class="btn btn-primary" :disabled="store.loading">
                   <span v-if="store.loading" class="spinner-sm"></span>
                   <Check v-else :size="16" />
-                  {{ isEditMode ? 'Save Changes' : 'Create Subject' }}
+                  {{ isEditMode ? t('subjects.saveChanges') : t('subjects.createSubject') }}
                 </button>
               </div>
             </form>
@@ -390,19 +390,19 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Subject</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('subjects.deleteSubject') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ subjectToDelete?.name }}</strong>?</p>
+              <p class="del-text">{{ t('subjects.deleteConfirm') }} <strong>{{ subjectToDelete?.name }}</strong>?</p>
             </div>
             <div class="modal-foot">
-              <button class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
+              <button class="btn btn-ghost" @click="closeDeleteModal">{{ t('common.cancel') }}</button>
               <button class="btn btn-danger" @click="handleDelete" :disabled="store.loading">
                 <span v-if="store.loading" class="spinner-sm"></span>
-                Delete
+                {{ t('common.delete') }}
               </button>
             </div>
           </div>
@@ -419,19 +419,19 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Subjects</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('subjects.deleteSubjects') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ selectedIds.length }} subject(s)</strong>?</p>
+              <p class="del-text">{{ t('subjects.bulkDeleteConfirm', { count: selectedIds.length }) }}</p>
             </div>
             <div class="modal-foot">
-              <button class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
+              <button class="btn btn-ghost" @click="closeBulkDeleteModal">{{ t('common.cancel') }}</button>
               <button class="btn btn-danger" @click="handleBulkDelete" :disabled="store.loading">
                 <span v-if="store.loading" class="spinner-sm"></span>
-                Delete {{ selectedIds.length }} subject(s)
+                {{ t('subjects.deleteCount', { count: selectedIds.length }) }}
               </button>
             </div>
           </div>
@@ -443,6 +443,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useThemeStore } from '@/stores/theme'
 import { useSubjectStore } from '@/stores/subject'
 import { useAuthStore } from '@/stores/auth'
 import type { Subject } from '@/services/subjectService'
@@ -511,6 +513,10 @@ const visiblePages = computed(() => {
   pages.push(total)
   return pages
 })
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const store = useSubjectStore()
 const auth = useAuthStore()
@@ -1341,5 +1347,449 @@ onMounted(async () => {
 @media (max-width: 768px) {
   .page-container { padding: 0.75rem 1rem; }
   .row-2 { grid-template-columns: 1fr; }
+}
+
+/* ════════════════════════════════════════
+   DARK MODE — SUBJECTS PAGE
+   ════════════════════════════════════════ */
+.dark-mode .page-container {
+  color: #e2e8f0;
+}
+
+.dark-mode .subject-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .subject-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .subj-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .meta-val {
+  color: #94a3b8;
+}
+
+.dark-mode .tog {
+  background: #26344a;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .tog:hover {
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .tog-on {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .teacher-more-chip {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #94a3b8;
+}
+
+.dark-mode .field label {
+  color: #cbd5e1;
+}
+
+.dark-mode .input-wrap input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .input-wrap input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .input-wrap input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .section-divider {
+  background: linear-gradient(to right, transparent, #334155, transparent);
+}
+
+.dark-mode .icon-add {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .icon-edit {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.dark-mode .icon-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .check-list {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.dark-mode .check-item {
+  color: #cbd5e1;
+}
+
+.dark-mode .check-item:hover {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+.dark-mode .check-item-on {
+  background: rgba(37, 99, 235, 0.12);
+  color: #60a5fa;
+}
+
+.dark-mode .check-dot {
+  background: transparent;
+  border-color: #64748b;
+}
+
+.dark-mode .check-item-on .check-dot {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.dark-mode .field-hint {
+  color: #64748b;
+}
+
+.dark-mode .field-count {
+  color: #60a5fa;
+}
+
+.dark-mode .term-chip {
+  background: #26344a;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .term-chip:hover {
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.dark-mode .term-chip-on {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .modern-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .modern-input:hover {
+  background: #26344a;
+}
+
+.dark-mode .modern-input:focus {
+  background: #26344a;
+  border-color: #3b82f6;
+}
+
+.dark-mode .load-state {
+  color: #94a3b8;
+}
+
+.dark-mode .msg-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .subj-avatar {
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+.dark-mode .toolbar {
+  background: transparent;
+}
+
+.dark-mode .search-box {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.dark-mode .search-box:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.dark-mode .search-icon {
+  color: #64748b;
+}
+
+.dark-mode .search-input {
+  color: #e2e8f0;
+}
+
+.dark-mode .search-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .tb-clear {
+  color: #64748b;
+}
+
+.dark-mode .tb-clear:hover {
+  color: #94a3b8;
+}
+
+.dark-mode .filter-label {
+  color: #94a3b8;
+}
+
+.dark-mode .filter-select {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .filter-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.dark-mode .count-badge {
+  background: rgba(51, 65, 85, 0.6);
+  color: #94a3b8;
+}
+
+.dark-mode .table-wrap {
+  border-top: 1px solid #334155;
+}
+
+.dark-mode .subject-table thead th {
+  background: rgba(15, 23, 42, 0.3);
+  color: #94a3b8;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .subject-table tbody tr {
+  border-bottom-color: #2a3a4e;
+}
+
+.dark-mode .subject-table tbody tr:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+.dark-mode .data-row.row-selected {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.dark-mode .row-selected td {
+  border-bottom-color: rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .col-index {
+  color: #64748b;
+}
+
+.dark-mode .table-checkbox {
+  accent-color: #3b82f6;
+}
+
+.dark-mode .pagination-bar {
+  border-top-color: #334155;
+}
+
+.dark-mode .pagination-info .rows-label {
+  color: #94a3b8;
+}
+
+.dark-mode .rows-btn {
+  background: transparent;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .rows-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #60a5fa;
+  color: #e2e8f0;
+}
+
+.dark-mode .rows-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.dark-mode .page-btn {
+  background: transparent;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .page-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #60a5fa;
+  color: #e2e8f0;
+}
+
+.dark-mode .page-btn.active {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+.dark-mode .page-nav {
+  background: transparent;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .page-nav:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #60a5fa;
+  color: #e2e8f0;
+}
+
+.dark-mode .page-nav:disabled {
+  opacity: 0.3;
+  border-color: #334155;
+}
+
+.dark-mode .page-dots {
+  color: #64748b;
+}
+
+.dark-mode .pagination-total {
+  color: #94a3b8;
+}
+
+.dark-mode .pagination-bar .pagination-info .rows-label {
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-bar {
+  background: rgba(59, 130, 246, 0.08);
+  border-top-color: #334155;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .bulk-count {
+  color: #93c5fd;
+}
+
+.dark-mode .bulk-delete-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.dark-mode .bulk-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.dark-mode .bulk-clear-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .bulk-clear-btn:hover {
+  color: #cbd5e1;
+}
+
+.dark-mode .empty-container {
+  background: transparent;
+}
+
+.dark-mode .empty-box {
+  color: #64748b;
+}
+
+.dark-mode .empty-box h5 {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-box :deep(svg) {
+  color: #475569;
+}
+
+.dark-mode .overlay {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.dark-mode .modal-card {
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .field-err {
+  color: #f87171;
+}
+
+.dark-mode .btn-ghost {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.dark-mode .btn-ghost:hover {
+  background: rgba(51, 65, 85, 0.8);
+  border-color: #60a5fa;
+}
+
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .table-checkbox {
+  accent-color: #3b82f6;
+}
+
+.dark-mode .teacher-stack .meta-val {
+  color: #94a3b8;
+}
+
+.dark-mode .spinner {
+  border-color: #334155;
+  border-top-color: #60a5fa;
 }
 </style>

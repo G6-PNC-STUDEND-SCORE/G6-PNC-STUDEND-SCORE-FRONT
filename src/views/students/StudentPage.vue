@@ -1,8 +1,8 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
-      <span>Loading students…</span>
+      <span>{{ t('students.loading') }}</span>
     </div>
 
     <div v-else-if="error" class="msg msg-error">
@@ -84,8 +84,8 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Student</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('students.deleteStudent') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
@@ -114,8 +114,8 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Students</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('students.deleteStudents') }}</h3>
+                <p>{{ t('students.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
@@ -145,8 +145,8 @@
                 <ArrowRightFromLine :size="20" />
               </div>
               <div>
-                <h3>Assign to Class</h3>
-                <p>Assign {{ selectedStudent?.user?.name }} to a class</p>
+                <h3>{{ t('students.assignToClass') }}</h3>
+                <p>{{ t('students.assignStudent') }} {{ selectedStudent?.user?.name }}</p>
               </div>
               <button class="modal-x" @click="closeAssignModal">&times;</button>
             </div>
@@ -155,7 +155,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <Building :size="15" class="field-icon" />
-                    Select Class <span class="req">*</span>
+                    {{ t('students.selectClass') }} <span class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <select
@@ -164,7 +164,7 @@
                       class="styled-input"
                       required
                     >
-                      <option :value="null" disabled>— Choose a class —</option>
+                      <option :value="null" disabled>— {{ t('students.chooseClass') }} —</option>
                       <option v-for="cls in classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
                     </select>
                   </div>
@@ -175,7 +175,7 @@
                 <button type="submit" class="btn btn-primary" :disabled="formSubmitting || !assignForm.class_id">
                   <span v-if="formSubmitting" class="spinner-sm"></span>
                   <Check v-else :size="16" />
-                  <span>Assign</span>
+                  <span>{{ t('students.assign') }}</span>
                 </button>
               </div>
             </form>
@@ -251,11 +251,17 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useThemeStore } from '@/stores/theme'
 import StudentList from './StudentList.vue'
 import StudentFormModal from './StudentFormModal.vue'
 import { AlertTriangle, Trash2, ArrowRightFromLine, Check, Building, Mail, VenusAndMars, BookOpen, Users, ToggleLeft, Calendar, Hash } from '@lucide/vue'
 import { useStudents } from './composables/useStudents.ts'
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const {
   loading, error, searchQuery, genderFilter, generationFilter, formSubmitting, formError,
@@ -565,5 +571,128 @@ select.styled-input {
   .page-head { flex-direction: column; align-items: flex-start; }
   .page-head-right { width: 100%; }
   .page-head-right .btn { flex: 1; justify-content: center; }
+}
+
+/* ════════════════════════════════════════
+   DARK MODE — STUDENTS PAGE
+   ════════════════════════════════════════ */
+.dark-mode .page-container {
+  color: #e2e8f0;
+}
+
+.dark-mode .modal-card {
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-x {
+  color: #64748b;
+}
+
+.dark-mode .modal-x:hover {
+  color: #94a3b8;
+}
+
+.dark-mode .form-label {
+  color: #cbd5e1;
+}
+
+.dark-mode .styled-input {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .styled-input:hover {
+  border-color: #64748b;
+}
+
+.dark-mode .styled-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+
+.dark-mode .styled-input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode select.styled-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-color: #1e293b;
+}
+
+.dark-mode select.styled-input option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-mode .icon-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.dark-mode .icon-assign {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.dark-mode .del-text {
+  color: #cbd5e1;
+}
+
+.dark-mode .del-warning {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+}
+
+.dark-mode .msg-error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .load-state {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+}
+
+.dark-mode .info-heading h4 {
+  color: #f1f5f9;
+}
+
+.dark-mode .info-role {
+  color: #94a3b8;
+}
+
+.dark-mode .info-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-color: #334155;
+}
+
+.dark-mode .info-row {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .info-label {
+  color: #94a3b8;
+}
+
+.dark-mode .info-label svg {
+  color: #64748b;
+}
+
+.dark-mode .info-value {
+  color: #e2e8f0;
 }
 </style>

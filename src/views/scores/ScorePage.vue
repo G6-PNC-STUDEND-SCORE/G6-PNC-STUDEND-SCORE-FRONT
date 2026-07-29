@@ -1,9 +1,9 @@
 <template>
-  <div class="page-container">
+  <div :class="['page-container', { 'dark-mode': isDark }]">
 
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
-        <span>{{ !selectedClass ? 'Loading classes...' : 'Loading terms...' }}</span>
+        <span>{{ !selectedClass ? t('scores.loadingClasses') : t('scores.loadingTerms') }}</span>
       </div>
 
       <template v-else>
@@ -16,7 +16,7 @@
                   <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search by name or room..."
+                    :placeholder="t('scores.searchPlaceholder')"
                   />
                   <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
                     <X :size="14" />
@@ -24,7 +24,7 @@
                 </div>
                 <div class="tb-filter" v-if="classGenerations.length > 0">
                   <select v-model="selectedGenerationFilter">
-                    <option :value="null">All Generations</option>
+                    <option :value="null">{{ t('scores.allGenerations') }}</option>
                     <option
                       v-for="gen in classGenerations"
                       :key="gen"
@@ -53,11 +53,11 @@
 
             <div v-if="filteredClasses.length === 0 && !loadingClasses" class="empty-state">
               <div class="empty-state-icon"><Inbox :size="24" /></div>
-              <h5 v-if="searchQuery || selectedGenerationFilter">No Matching Classes</h5>
-              <h5 v-else>No Classes Found</h5>
-              <p class="text-secondary" v-if="searchQuery">Try a different search term.</p>
-              <p class="text-secondary" v-else-if="selectedGenerationFilter">No classes found for this generation.</p>
-              <p class="text-secondary" v-else>No classes are available. Please create a class first.</p>
+              <h5 v-if="searchQuery || selectedGenerationFilter">{{ t('scores.noMatchingClasses') }}</h5>
+              <h5 v-else>{{ t('scores.noClassesFound') }}</h5>
+              <p class="text-secondary" v-if="searchQuery">{{ t('classes.tryDifferentSearch') }}</p>
+              <p class="text-secondary" v-else-if="selectedGenerationFilter">{{ t('scores.noClassesForGeneration') }}</p>
+              <p class="text-secondary" v-else>{{ t('scores.noClassesAvailable') }}</p>
             </div>
 
             <div v-else class="classes-grid">
@@ -154,7 +154,7 @@
             <div class="terms-header">
               <button class="terms-back" @click="selectClass(null)">
                 <ChevronLeft :size="15" />
-                <span>All Classes</span>
+                <span>{{ t('scores.allClasses') }}</span>
               </button>
               <ChevronRight :size="12" class="terms-sep" />
               <span class="terms-current">
@@ -169,7 +169,7 @@
                 <input
                   v-model="subjectSearchQuery"
                   type="text"
-                  placeholder="Search subjects..."
+                  :placeholder="t('scores.searchSubjects')"
                 />
                 <button v-if="subjectSearchQuery" class="tb-clear" @click="subjectSearchQuery = ''">
                   <X :size="14" />
@@ -178,7 +178,7 @@
 
               <div class="toolbar-right">
                 <div class="sort-toggle">
-                  <span class="sort-label">Sort by</span>
+                  <span class="sort-label">{{ t('scores.sortBy') }}</span>
                   <button
                     class="sort-btn"
                     :class="{ 'sort-btn-active': subjectSortMode === 'enrollment' }"
@@ -186,7 +186,7 @@
                     title="Sort by number of enrolled students"
                   >
                     <Users :size="14" />
-                    <span>Students</span>
+                    <span>{{ t('scores.students') }}</span>
                   </button>
                   <button
                     class="sort-btn"
@@ -195,7 +195,7 @@
                     title="Sort alphabetically by name"
                   >
                     <ArrowUpDown :size="14" />
-                    <span>A–Z</span>
+                    <span>{{ t('scores.aToZ') }}</span>
                   </button>
                 </div>
               </div>
@@ -203,8 +203,8 @@
 
             <div v-if="filteredTerms.length === 0" class="empty-state">
               <div class="empty-state-icon"><Inbox :size="24" /></div>
-              <h5>No Terms Found</h5>
-              <p class="text-secondary">No terms available for {{ selectedClass.name }} in this generation.</p>
+              <h5>{{ t('scores.noTermsFound') }}</h5>
+              <p class="text-secondary">{{ t('scores.noTermsAvailable') }} {{ selectedClass.name }}.</p>
             </div>
 
             <div v-else class="term-sections">
@@ -252,7 +252,7 @@
 
                 <div v-else class="no-subjects-note">
                   <BookOpen :size="12" />
-                  <span>No subjects for this term</span>
+                  <span>{{ t('scores.noSubjectsForTerm') }}</span>
                 </div>
               </div>
               </TransitionGroup>
@@ -266,7 +266,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { TransitionGroup } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useThemeStore } from '@/stores/theme'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { classService, type SchoolClass } from '@/services/classService'
 import { cacheService } from '@/services/cacheService'
@@ -277,6 +279,10 @@ import {
 } from '@lucide/vue'
 
 const CACHE_KEY = 'scores-subjects'
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 const router = useRouter()
 
@@ -1199,5 +1205,198 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .classes-grid { grid-template-columns: 1fr; }
+}
+
+/* ════════════════════════════════════════
+   DARK MODE — SCORES PAGE
+   ════════════════════════════════════════ */
+.dark-mode .page-container {
+  color: #e2e8f0;
+}
+
+.dark-mode .scores-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .scores-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .class-card {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: #475569;
+}
+
+.dark-mode .class-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .class-card-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .class-card-desc {
+  color: #94a3b8;
+}
+
+.dark-mode .class-card-badge {
+  background: #26344a;
+  color: #94a3b8;
+}
+
+.dark-mode .class-card-stat {
+  color: #64748b;
+}
+
+.dark-mode .class-card-stat svg {
+  color: #64748b;
+}
+
+.dark-mode .class-card-footer {
+  border-top-color: #334155;
+}
+
+.dark-mode .stat-chip {
+  background: #26344a;
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .stat-chip svg {
+  color: #60a5fa;
+}
+
+.dark-mode .tb-search {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.dark-mode .tb-search:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.dark-mode .tb-search input {
+  color: #e2e8f0;
+}
+
+.dark-mode .tb-search input::placeholder {
+  color: #64748b;
+}
+
+.dark-mode .tb-filter select {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark-mode .term-toolbar {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+
+.dark-mode .term-section {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: #475569;
+}
+
+.dark-mode .term-section:hover {
+  border-color: #60a5fa;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .term-section-header:hover {
+  background: rgba(51, 65, 85, 0.3);
+}
+
+.dark-mode .term-section-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .term-section-count {
+  color: #94a3b8;
+}
+
+.dark-mode .term-year-badge {
+  background: #26344a;
+  color: #94a3b8;
+}
+
+.dark-mode .term-section-icon {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(59, 130, 246, 0.15));
+}
+
+.dark-mode .terms-back {
+  color: #94a3b8;
+}
+
+.dark-mode .terms-back:hover {
+  background: rgba(51, 65, 85, 0.3);
+  color: #60a5fa;
+}
+
+.dark-mode .subject-chip {
+  background: #26344a;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+.dark-mode .subject-chip:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: var(--chip-color, #3b82f6);
+}
+
+.dark-mode .subject-chip-code {
+  background: rgba(51, 65, 85, 0.6);
+  color: #94a3b8;
+}
+
+.dark-mode .subject-chip-count {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .no-subjects-note {
+  color: #64748b;
+}
+
+.dark-mode .sort-toggle {
+  background: #26344a;
+}
+
+.dark-mode .sort-label {
+  color: #64748b;
+}
+
+.dark-mode .sort-btn {
+  color: #94a3b8;
+}
+
+.dark-mode .sort-btn:hover {
+  color: #e2e8f0;
+}
+
+.dark-mode .sort-btn-active {
+  background: rgba(30, 41, 59, 0.9);
+  color: #60a5fa;
+}
+
+.dark-mode .empty-state-icon {
+  background: #26344a;
+  color: #64748b;
+}
+
+.dark-mode .empty-state h5 {
+  color: #94a3b8;
+}
+
+.dark-mode .empty-state p {
+  color: #64748b;
+}
+
+.dark-mode .loading-state {
+  color: #94a3b8;
 }
 </style>

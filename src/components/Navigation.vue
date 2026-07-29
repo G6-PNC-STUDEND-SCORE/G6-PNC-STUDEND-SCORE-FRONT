@@ -1,5 +1,5 @@
 <template>
-  <aside :class="['sidebar', { collapsed: sidebar.collapsed }]">
+  <aside :class="['sidebar', { collapsed: sidebar.collapsed, 'dark-mode': isDark }]">
     <div :class="['logo', sidebar.collapsed ? 'logo-collapsed' : 'logo-expanded', 'border-bottom']">
       <div class="sidebar-logo-wrap">
         <img :src="logoSrc" alt="Passerelles Numériques Cambodia" class="sidebar-logo">
@@ -12,7 +12,7 @@
         class="logo-toggle-btn"
         :class="{ 'collapsed': sidebar.collapsed }"
         @click="sidebar.toggle()"
-        :title="sidebar.collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        :title="sidebar.collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')"
       >
         <ChevronLeft v-if="!sidebar.collapsed" :size="14" />
         <ChevronRight v-else :size="14" />
@@ -32,7 +32,7 @@
       </RouterLink>
 
       <template v-if="settingsLinks.length > 0">
-        <h6 class="menu-title mt-3 mb-2">Settings</h6>
+        <h6 class="menu-title mt-3 mb-2">{{ t('nav.settings') }}</h6>
 
         <RouterLink
           v-for="link in settingsLinks"
@@ -61,7 +61,7 @@
           @keydown.enter.prevent="goToProfile"
           role="button"
           tabindex="0"
-          :title="sidebar.collapsed ? 'Profile' : ''"
+          :title="sidebar.collapsed ? t('nav.profile') : ''"
         >
           <div class="avatar">
             <img v-if="userAvatarUrl" :src="userAvatarUrl" class="avatar-img" alt="avatar" />
@@ -72,7 +72,7 @@
             <small class="text-secondary">{{ auth.user?.role }}</small>
           </div>
         </div>
-        <button class="logout-icon-btn" @click="showLogoutModal = true" title="Logout">
+        <button class="logout-icon-btn" @click="showLogoutModal = true" :title="t('nav.logout')">
           <LogOut :size="18" />
         </button>
       </div>
@@ -100,24 +100,24 @@
             <div class="logout-icon-wrap">
               <LogOut :size="20" />
             </div>
-            <h3 id="logout-title" class="logout-title">Confirm Logout</h3>
+            <h3 id="logout-title" class="logout-title">{{ t('nav.confirmLogout') }}</h3>
             <button class="logout-close-btn" @click="showLogoutModal = false" aria-label="Close modal">
               <X :size="18" />
             </button>
           </div>
 
           <div class="logout-modal-body">
-            <p class="logout-message">Are you sure you want to log out?</p>
+            <p class="logout-message">{{ t('nav.logoutMessage') }}</p>
           </div>
 
           <div class="logout-modal-footer">
             <button class="logout-btn logout-btn-cancel" @click="showLogoutModal = false" ref="cancelBtnRef">
               <X :size="16" />
-              Cancel
+              {{ t('nav.cancel') }}
             </button>
             <button class="logout-btn logout-btn-confirm" @click="handleLogout" ref="confirmBtnRef">
               <LogOut :size="16" />
-              Logout
+              {{ t('nav.logout') }}
             </button>
           </div>
         </div>
@@ -128,9 +128,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
+import { useThemeStore } from '@/stores/theme'
 import { storageUrl } from '@/services/apiHttp'
 import { getUserInitials } from '@/utils'
 import logoSrc from '@/assets/images/pnc-logo.png'
@@ -141,10 +143,14 @@ import {
 } from '@lucide/vue'
 import type { Component } from 'vue'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const sidebar = useSidebarStore()
+const themeStore = useThemeStore()
+
+const isDark = computed(() => themeStore.isDark)
 
 const isProfileActive = computed(() => route.path === '/profile')
 
@@ -182,20 +188,20 @@ interface NavLink {
 const navLinks = computed<NavLink[]>(() => {
   if (auth.user?.role === 'student') {
     return [
-      { to: '/portal', label: 'My Dashboard', icon: LayoutDashboard },
-      { to: '/portal/scores', label: 'My Scores', icon: ClipboardList },
-      { to: '/portal/transcript', label: 'My Transcript', icon: FileText },
+      { to: '/portal', label: t('nav.myDashboard'), icon: LayoutDashboard },
+      { to: '/portal/scores', label: t('nav.myScores'), icon: ClipboardList },
+      { to: '/portal/transcript', label: t('nav.myTranscript'), icon: FileText },
     ]
   }
   const links: NavLink[] = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/classes', label: 'Classes', icon: Users, permission: 'view-classes' },
-    { to: '/subjects', label: 'Subjects', icon: BookOpen, permission: 'view-subjects' },
-    { to: '/teachers', label: 'Teachers', icon: UserCheck, permission: 'view-teachers' },
-    { to: '/students', label: 'Students', icon: GraduationCap, permission: 'view-students' },
-    { to: '/scores', label: 'Scores', icon: ClipboardList, permission: 'view-scores' },
-    { to: '/reports', label: 'Reports', icon: FileText },
-    { to: '/activity-logs', label: 'Activity Log', icon: History, permission: 'view-activity-logs' },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/classes', label: t('nav.classes'), icon: Users, permission: 'view-classes' },
+    { to: '/subjects', label: t('nav.subjects'), icon: BookOpen, permission: 'view-subjects' },
+    { to: '/teachers', label: t('nav.teachers'), icon: UserCheck, permission: 'view-teachers' },
+    { to: '/students', label: t('nav.students'), icon: GraduationCap, permission: 'view-students' },
+    { to: '/scores', label: t('nav.scores'), icon: ClipboardList, permission: 'view-scores' },
+    { to: '/reports', label: t('nav.reports'), icon: FileText },
+    { to: '/activity-logs', label: t('nav.activityLog'), icon: History, permission: 'view-activity-logs' },
   ]
   return links.filter(link => !link.permission || auth.hasPermission(link.permission))
 })
@@ -204,10 +210,10 @@ const settingsLinks = computed<NavLink[]>(() => {
   if (auth.user?.role !== 'admin') return []
   const links: NavLink[] = []
   if (auth.hasPermission('view-users')) {
-    links.push({ to: '/users', label: 'Users', icon: User })
+    links.push({ to: '/users', label: t('nav.users'), icon: User })
   }
   if (auth.hasPermission('manage-roles-permissions')) {
-    links.push({ to: '/roles', label: 'Roles & Permissions', icon: Shield })
+    links.push({ to: '/roles', label: t('nav.rolesPermissions'), icon: Shield })
   }
   return links
 })
@@ -762,5 +768,127 @@ function goToProfile() {
   .logout-title {
     font-size: 1rem;
   }
+}
+
+/* ════════════════════════════════════════
+   DARK MODE — SIDEBAR
+   ════════════════════════════════════════ */
+.dark-mode.sidebar {
+  background: #0f172a;
+  border-right-color: #1e293b;
+}
+
+.dark-mode .logo-expanded {
+  border-bottom-color: #1e293b !important;
+}
+
+.dark-mode .brand-name {
+  color: #e2e8f0;
+}
+
+.dark-mode .sidebar-link {
+  color: #94a3b8;
+}
+
+.dark-mode .sidebar-link:hover {
+  background: rgba(30, 41, 59, 0.6);
+  color: #60a5fa;
+}
+
+.dark-mode .sidebar-link.router-link-active {
+  background: rgba(37, 99, 235, 0.12);
+  color: #60a5fa;
+}
+
+.dark-mode .menu-title {
+  color: #64748b;
+}
+
+.dark-mode .user-section {
+  background: #0f172a;
+  border-top-color: #1e293b !important;
+}
+
+.dark-mode .user-section-active {
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.dark-mode .user:hover {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.dark-mode .user-active {
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.dark-mode .user h6 {
+  color: #e2e8f0;
+}
+
+.dark-mode .user small {
+  color: #64748b;
+}
+
+.dark-mode .logout-icon-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.dark-mode .logo-toggle-btn {
+  background: rgba(30, 41, 59, 0.8);
+  color: #64748b;
+}
+
+.dark-mode .logo-toggle-btn:hover {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .logo-toggle-btn.collapsed {
+  background: rgba(37, 99, 235, 0.12);
+  color: #60a5fa;
+}
+
+.dark-mode .logo-toggle-btn.collapsed:hover {
+  background: rgba(37, 99, 235, 0.2);
+  color: #93c5fd;
+}
+
+/* ── Logout modal dark mode ── */
+.dark-mode .logout-modal {
+  background: #1e293b;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 12px 30px -4px rgba(0, 0, 0, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.4);
+}
+
+.dark-mode .logout-title {
+  color: #f1f5f9;
+}
+
+.dark-mode .logout-close-btn {
+  color: #64748b;
+}
+
+.dark-mode .logout-close-btn:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+}
+
+.dark-mode .logout-message {
+  color: #94a3b8;
+}
+
+.dark-mode .logout-btn-cancel {
+  background: rgba(51, 65, 85, 0.5);
+  color: #cbd5e1;
+}
+
+.dark-mode .logout-btn-cancel:hover {
+  background: rgba(71, 85, 105, 0.6);
+}
+
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
 }
 </style>
