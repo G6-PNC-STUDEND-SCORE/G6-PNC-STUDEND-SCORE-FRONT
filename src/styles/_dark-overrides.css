@@ -306,5 +306,6 @@
   color: #60a5fa !important;
 }
 
-/* Login page intentionally stays in light mode regardless of theme setting.
-   No dark-mode overrides are applied here. */
+/* Auth pages (login, forgot-password, reset-password) stay in light mode.
+   The data-theme attribute is only set inside MainLayout.vue (after login),
+   so none of these :root[data-theme="dark"] selectors affect auth pages. */

@@ -1,17 +1,17 @@
 <template>
-  <div class="profile-page">
+  <div :class="['profile-page', { 'dark-mode': isDark }]">
     <div v-if="loading && !cachedProfile" class="load-state">
       <div class="spinner"></div>
-      <span>Loading profile…</span>
+      <span>{{ t('profile.loading') }}</span>
     </div>
 
     <div v-else-if="fetchError" class="error-card">
       <div class="error-card-inner">
         <div class="error-icon"><AlertTriangle :size="22" /></div>
-        <h5>Failed to Load Profile</h5>
+        <h5>{{ t('profile.failedToLoad') }}</h5>
         <p>{{ fetchError }}</p>
         <button class="retry-btn" @click="loadProfile">
-          <RefreshCw :size="14" /> Retry
+          <RefreshCw :size="14" /> {{ t('profile.retry') }}
         </button>
       </div>
     </div>
@@ -53,13 +53,13 @@
               <div class="user-meta-badges">
                 <span class="badge badge-role" :class="form.role">{{ form.role ? form.role.toUpperCase() : 'USER' }}</span>
                 <span class="badge badge-status" :class="form.status">{{ statusLabel }}</span>
-                <span v-if="form.emailVerifiedAt" class="badge badge-verified"><BadgeCheck :size="12" /> VERIFIED</span>
-                <span v-else class="badge badge-unverified">UNVERIFIED</span>
-                <span v-if="form.permissions.length" class="badge badge-perm-count"><Shield :size="12" /> {{ form.permissions.length }} PERMISSIONS</span>
+                <span v-if="form.emailVerifiedAt" class="badge badge-verified"><BadgeCheck :size="12" /> {{ t('profile.verified').toUpperCase() }}</span>
+                <span v-else class="badge badge-unverified">{{ t('profile.unverified').toUpperCase() }}</span>
+                <span v-if="form.permissions.length" class="badge badge-perm-count"><Shield :size="12" /> {{ t('profile.permissionCount', { count: form.permissions.length }) }}</span>
               </div>
             </div>
             <button class="btn btn-primary" @click="showEditModal = true">
-              <Pencil :size="14" /> Edit Profile
+              <Pencil :size="14" /> {{ t('profile.editProfile') }}
             </button>
           </div>
 
@@ -76,8 +76,8 @@
                     <Contact :size="16" />
                   </div>
                   <div class="box-header-title-wrap">
-                    <h3 class="box-header-title">Personal Details</h3>
-                    <span class="box-header-subtitle">Basic identity and contact info</span>
+                    <h3 class="box-header-title">{{ t('profile.personalDetails') }}</h3>
+                    <span class="box-header-subtitle">{{ t('profile.personalDetailsSub') }}</span>
                   </div>
                 </div>
                 <div class="box-fields-grid">
@@ -86,8 +86,8 @@
                       <UserIcon :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Full Name</span>
-                      <span class="field-value" :title="form.name">{{ form.name || 'N/A' }}</span>
+                      <span class="field-label">{{ t('profile.fullName') }}</span>
+                      <span class="field-value" :title="form.name">{{ form.name || t('profile.na') }}</span>
                     </div>
                   </div>
                   <div class="box-field-item">
@@ -95,8 +95,8 @@
                       <Mail :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Email Address</span>
-                      <span class="field-value" :title="form.email">{{ form.email || 'N/A' }}</span>
+                      <span class="field-label">{{ t('profile.emailAddress') }}</span>
+                      <span class="field-value" :title="form.email">{{ form.email || t('profile.na') }}</span>
                     </div>
                   </div>
                   <div class="box-field-item">
@@ -104,7 +104,7 @@
                       <Hash :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Account ID</span>
+                      <span class="field-label">{{ t('profile.accountId') }}</span>
                       <span class="field-value">{{ formattedUserId }}</span>
                     </div>
                   </div>
@@ -113,8 +113,8 @@
                       <Phone :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Phone Number</span>
-                      <span class="field-value">{{ form.phone || 'Not set' }}</span>
+                      <span class="field-label">{{ t('profile.phoneNumber') }}</span>
+                      <span class="field-value">{{ form.phone || t('profile.notSet') }}</span>
                     </div>
                   </div>
                   <div class="box-field-item">
@@ -122,8 +122,8 @@
                       <Users2 :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Gender</span>
-                      <span class="field-value">{{ form.gender || 'N/A' }}</span>
+                      <span class="field-label">{{ t('profile.gender') }}</span>
+                      <span class="field-value">{{ form.gender || t('profile.na') }}</span>
                     </div>
                   </div>
                   <div class="box-field-item">
@@ -131,7 +131,7 @@
                       <Calendar :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Date of Birth</span>
+                      <span class="field-label">{{ t('profile.dateOfBirth') }}</span>
                       <span class="field-value">{{ formattedDob || '—' }}</span>
                     </div>
                   </div>
@@ -145,8 +145,8 @@
                     <Clock :size="16" />
                   </div>
                   <div class="box-header-title-wrap">
-                    <h3 class="box-header-title">Account Details</h3>
-                    <span class="box-header-subtitle">Activity, privileges & history</span>
+                    <h3 class="box-header-title">{{ t('profile.accountDetails') }}</h3>
+                    <span class="box-header-subtitle">{{ t('profile.accountDetailsSub') }}</span>
                   </div>
                 </div>
                 <div class="box-fields-grid">
@@ -155,8 +155,8 @@
                       <Shield :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">System Role</span>
-                      <span class="field-value">{{ form.role ? form.role.toUpperCase() : 'N/A' }}</span>
+                      <span class="field-label">{{ t('profile.systemRole') }}</span>
+                      <span class="field-value">{{ form.role ? form.role.toUpperCase() : t('profile.na') }}</span>
                     </div>
                   </div>
                   <div class="box-field-item">
@@ -164,7 +164,7 @@
                       <BadgeCheck :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Email Status</span>
+                      <span class="field-label">{{ t('profile.emailStatus') }}</span>
                       <span class="field-value" :class="{ 'text-success': form.emailVerifiedAt }">
                         {{ emailVerifiedLabel }}
                       </span>
@@ -175,8 +175,8 @@
                       <Calendar :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Member Since</span>
-                      <span class="field-value">{{ formattedJoined || 'N/A' }}</span>
+                      <span class="field-label">{{ t('profile.memberSince') }}</span>
+                      <span class="field-value">{{ formattedJoined || t('profile.na') }}</span>
                     </div>
                   </div>
                   <div class="box-field-item">
@@ -184,7 +184,7 @@
                       <Clock :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Last Login</span>
+                      <span class="field-label">{{ t('profile.lastLogin') }}</span>
                       <span class="field-value" :title="formattedLastLogin">{{ relativeLastLogin }}</span>
                     </div>
                   </div>
@@ -193,7 +193,7 @@
                       <ShieldCheck :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Account Age</span>
+                      <span class="field-label">{{ t('profile.accountAge') }}</span>
                       <span class="field-value">{{ accountAgeLabel }}</span>
                     </div>
                   </div>
@@ -202,8 +202,8 @@
                       <FileText :size="14" />
                     </div>
                     <div class="field-text-group">
-                      <span class="field-label">Granted Rules</span>
-                      <span class="field-value">{{ form.permissions.length }} permission{{ form.permissions.length === 1 ? '' : 's' }}</span>
+                      <span class="field-label">{{ t('profile.grantedRules') }}</span>
+                      <span class="field-value">{{ t(form.permissions.length === 1 ? 'profile.permissions' : 'profile.permissions_plural', { count: form.permissions.length }) }}</span>
                     </div>
                   </div>
                 </div>
@@ -215,7 +215,7 @@
           <template v-if="(form.role === 'teacher' && teacherInfo) || (form.role === 'student' && studentInfo)">
             <div class="section-divider"></div>
             <div class="profile-section">
-              <h3 class="section-title-label">Academic Details</h3>
+              <h3 class="section-title-label">{{ t('profile.academicDetails') }}</h3>
               
               <!-- Student -->
               <div v-if="form.role === 'student' && studentInfo" class="icon-details-grid">
@@ -224,8 +224,8 @@
                     <FileText :size="15" />
                   </div>
                   <div class="item-text-stack">
-                    <span class="item-label">Student ID</span>
-                    <span class="item-value">{{ studentInfo.student_id_number || 'N/A' }}</span>
+                    <span class="item-label">{{ t('profile.studentId') }}</span>
+                    <span class="item-value">{{ studentInfo.student_id_number || t('profile.na') }}</span>
                   </div>
                 </div>
                 <div class="icon-detail-item">
@@ -233,8 +233,8 @@
                     <Users2 :size="15" />
                   </div>
                   <div class="item-text-stack">
-                    <span class="item-label">Class</span>
-                    <span class="item-value">{{ studentInfo.class || 'N/A' }}</span>
+                    <span class="item-label">{{ t('profile.class') }}</span>
+                    <span class="item-value">{{ studentInfo.class || t('profile.na') }}</span>
                   </div>
                 </div>
                 <div class="icon-detail-item">
@@ -242,8 +242,8 @@
                     <Calendar :size="15" />
                   </div>
                   <div class="item-text-stack">
-                    <span class="item-label">Generation</span>
-                    <span class="item-value">{{ studentInfo.generation || 'N/A' }}</span>
+                    <span class="item-label">{{ t('profile.generation') }}</span>
+                    <span class="item-value">{{ studentInfo.generation || t('profile.na') }}</span>
                   </div>
                 </div>
               </div>
@@ -255,8 +255,8 @@
                     <FileText :size="15" />
                   </div>
                   <div class="item-text-stack">
-                    <span class="item-label">Department</span>
-                    <span class="item-value">{{ teacherInfo.department || 'N/A' }}</span>
+                    <span class="item-label">{{ t('profile.department') }}</span>
+                    <span class="item-value">{{ teacherInfo.department || t('profile.na') }}</span>
                   </div>
                 </div>
                 <div class="icon-detail-item full-width">
@@ -264,10 +264,10 @@
                     <Users2 :size="15" />
                   </div>
                   <div class="item-text-stack">
-                    <span class="item-label">Classes Taught</span>
+                    <span class="item-label">{{ t('profile.classesTaught') }}</span>
                     <div class="badge-chips">
                       <span v-for="cls in teacherInfo.classes" :key="cls" class="chip-item">{{ cls }}</span>
-                      <span v-if="!teacherInfo.classes?.length" class="chip-empty">None</span>
+                      <span v-if="!teacherInfo.classes?.length" class="chip-empty">{{ t('profile.none') }}</span>
                     </div>
                   </div>
                 </div>
@@ -276,10 +276,10 @@
                     <FileText :size="15" />
                   </div>
                   <div class="item-text-stack">
-                    <span class="item-label">Subjects</span>
+                    <span class="item-label">{{ t('profile.subjects') }}</span>
                     <div class="badge-chips">
                       <span v-for="sub in teacherInfo.subjects" :key="sub" class="chip-item">{{ sub }}</span>
-                      <span v-if="!teacherInfo.subjects?.length" class="chip-empty">None</span>
+                      <span v-if="!teacherInfo.subjects?.length" class="chip-empty">{{ t('profile.none') }}</span>
                     </div>
                   </div>
                 </div>
@@ -296,14 +296,14 @@
                   <FileText :size="16" />
                 </div>
                 <div class="box-header-title-wrap">
-                  <h3 class="box-header-title">About Me</h3>
-                  <span class="box-header-subtitle">Personal biography and notes</span>
+                  <h3 class="box-header-title">{{ t('profile.aboutMe') }}</h3>
+                  <span class="box-header-subtitle">{{ t('profile.aboutMeSub') }}</span>
                 </div>
               </div>
               <div class="bio-box-content">
                 <p v-if="form.bio" class="bio-paragraph">{{ form.bio }}</p>
                 <div v-else class="bio-empty-box">
-                  <span class="bio-empty-text">No bio details set yet. Click <strong>Edit Profile</strong> to add a bio.</span>
+                  <span class="bio-empty-text">{{ t('profile.noBio') }} <strong>{{ t('profile.noBioHighlight') }}</strong>.</span>
                 </div>
               </div>
             </div>
@@ -318,14 +318,14 @@
                   <ShieldCheck :size="16" />
                 </div>
                 <div class="box-header-title-wrap">
-                  <h3 class="box-header-title">Security & Password</h3>
-                  <span class="box-header-subtitle">Update your account authentication credentials</span>
+                  <h3 class="box-header-title">{{ t('profile.securityPassword') }}</h3>
+                  <span class="box-header-subtitle">{{ t('profile.securityPasswordSub') }}</span>
                 </div>
               </div>
               <div class="password-form-compact">
                 <div class="form-inputs-row">
                   <div class="pw-field">
-                    <label class="pw-label">Current Password</label>
+                    <label class="pw-label">{{ t('profile.currentPassword') }}</label>
                     <div class="pw-wrapper">
                       <input :type="showCurrent ? 'text' : 'password'" v-model="password.current" placeholder="••••••••" />
                       <button class="pw-toggle-btn" @click="showCurrent = !showCurrent" type="button">
@@ -335,7 +335,7 @@
                     </div>
                   </div>
                   <div class="pw-field">
-                    <label class="pw-label">New Password</label>
+                    <label class="pw-label">{{ t('profile.newPassword') }}</label>
                     <div class="pw-wrapper">
                       <input :type="showNew ? 'text' : 'password'" v-model="password.new" placeholder="••••••••" />
                       <button class="pw-toggle-btn" @click="showNew = !showNew" type="button">
@@ -345,7 +345,7 @@
                     </div>
                   </div>
                   <div class="pw-field">
-                    <label class="pw-label">Confirm Password</label>
+                    <label class="pw-label">{{ t('profile.confirmPassword') }}</label>
                     <div class="pw-wrapper">
                       <input :type="showConfirm ? 'text' : 'password'" v-model="password.confirm" placeholder="••••••••" />
                       <button class="pw-toggle-btn" @click="showConfirm = !showConfirm" type="button">
@@ -361,10 +361,10 @@
                 </div>
 
                 <div class="pw-submit-actions">
-                  <button class="btn btn-reset" @click="resetPassword" type="button">Clear</button>
+                  <button class="btn btn-reset" @click="resetPassword" type="button">{{ t('profile.clear') }}</button>
                   <button class="btn btn-save" @click="updatePassword" :disabled="passwordSaving" type="button">
                     <span v-if="passwordSaving" class="spinner-sm"></span>
-                    <span v-else>Update Password</span>
+                    <span v-else>{{ t('profile.updatePassword') }}</span>
                   </button>
                 </div>
               </div>
@@ -384,8 +384,8 @@
                 <SquarePen :size="18" />
               </div>
               <div>
-                <h3>Edit Profile</h3>
-                <p>Update your personal information</p>
+                <h3>{{ t('profile.editProfileTitle') }}</h3>
+                <p>{{ t('profile.updateYourInfo') }}</p>
               </div>
               <button class="modal-x" @click="showEditModal = false">&times;</button>
             </div>
@@ -394,48 +394,48 @@
               <div class="modal-body-custom">
                 <div class="edit-grid">
                   <div class="form-group">
-                    <label class="form-label"><UserIcon :size="14" class="me-1" /> Full Name</label>
+                    <label class="form-label"><UserIcon :size="14" class="me-1" /> {{ t('profile.fullName') }}</label>
                     <div class="input-wrapper">
-                      <input type="text" v-model="form.name" class="modern-input" placeholder="Your full name" />
+                      <input type="text" v-model="form.name" class="modern-input" :placeholder="t('profile.namePlaceholder')" />
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label"><Mail :size="14" class="me-1" /> Email Address</label>
+                    <label class="form-label"><Mail :size="14" class="me-1" /> {{ t('profile.emailAddress') }}</label>
                     <div class="input-wrapper">
-                      <input type="email" v-model="form.email" class="modern-input" placeholder="you@example.com" />
+                      <input type="email" v-model="form.email" class="modern-input" :placeholder="t('profile.emailPlaceholder')" />
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label"><Users2 :size="14" class="me-1" /> Gender</label>
+                    <label class="form-label"><Users2 :size="14" class="me-1" /> {{ t('profile.gender') }}</label>
                     <div class="input-wrapper">
                       <select v-model="form.gender" class="modern-input">
-                        <option value="">N/A</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="">{{ t('profile.na') }}</option>
+                        <option value="Male">{{ t('profile.male') }}</option>
+                        <option value="Female">{{ t('profile.female') }}</option>
+                        <option value="Other">{{ t('profile.other') }}</option>
                       </select>
                     </div>
                   </div>
                   <div class="form-group">
-                    <label class="form-label"><Calendar :size="14" class="me-1" /> Date of Birth</label>
+                    <label class="form-label"><Calendar :size="14" class="me-1" /> {{ t('profile.dateOfBirth') }}</label>
                     <div class="input-wrapper">
                       <input type="date" v-model="form.dateOfBirth" class="modern-input" />
                     </div>
                   </div>
                   <div class="form-group" style="grid-column: 1 / -1;">
-                    <label class="form-label"><FileText :size="14" class="me-1" /> Bio</label>
+                    <label class="form-label"><FileText :size="14" class="me-1" /> {{ t('profile.bioLabel') }}</label>
                     <div class="input-wrapper">
-                      <textarea v-model="form.bio" class="modern-input" rows="3" placeholder="A short note about yourself..."></textarea>
+                      <textarea v-model="form.bio" class="modern-input" rows="3" :placeholder="t('profile.bioPlaceholder')"></textarea>
                     </div>
                   </div>
                 </div>
               </div>
               <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" @click="resetForm; showEditModal = false">Cancel</button>
+                <button type="button" class="btn btn-ghost" @click="resetForm; showEditModal = false">{{ t('profile.cancel') }}</button>
                 <button type="submit" class="btn btn-primary" :disabled="saving">
                   <span v-if="saving" class="spinner-sm"></span>
                   <Check v-else :size="16" />
-                  {{ saving ? 'Saving…' : 'Save Changes' }}
+                  {{ saving ? t('profile.saving') : t('profile.saveChanges') }}
                 </button>
               </div>
             </form>
@@ -450,7 +450,9 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { getProfile, updateProfile, uploadAvatar, type UserProfile, type ProfileTeacherInfo, type ProfileStudentInfo } from '@/services/profileService'
 import { storageUrl } from '@/services/apiHttp'
 import { http } from '@/services/apiHttp'
@@ -477,6 +479,10 @@ import {
   BadgeCheck,
   Shield,
 } from '@lucide/vue'
+
+const { t, locale } = useI18n()
+const themeStore = useThemeStore()
+const isDark = computed(() => themeStore.isDark)
 
 let cachedProfile: UserProfile | null = null
 let profileCacheTime = 0
@@ -567,19 +573,19 @@ const formattedDob = computed(() => formatDate(form.dateOfBirth, { year: 'numeri
 const formattedLastLogin = computed(() => formatDate(form.lastLogin, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))
 
 const formattedUserId = computed(() => {
-  if (!form.id) return 'N/A'
+  if (!form.id) return t('profile.na')
   return `#USR-${String(form.id).padStart(3, '0')}`
 })
 
 const emailVerifiedLabel = computed(() => {
-  return form.emailVerifiedAt ? 'Verified' : 'Unverified'
+  return form.emailVerifiedAt ? t('profile.verified') : t('profile.unverified')
 })
 
 function formatDate(value: string, options: Intl.DateTimeFormatOptions): string {
   if (!value) return ''
   const d = new Date(value)
   if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('en-US', options)
+  return d.toLocaleDateString(locale.value === 'km' ? 'km-KH' : 'en-US', options)
 }
 
 function normalizeEmpty(value: string): string | null {
@@ -588,8 +594,12 @@ function normalizeEmpty(value: string): string | null {
 }
 
 const statusLabel = computed(() => {
-  if (!form.status) return 'Active'
-  return form.status.charAt(0).toUpperCase() + form.status.slice(1)
+  if (!form.status) return t('profile.statusActive')
+  const key = `profile.status${form.status.charAt(0).toUpperCase() + form.status.slice(1)}`
+  const translated = t(key)
+  // fallback if key doesn't exist
+  if (translated === key) return form.status.charAt(0).toUpperCase() + form.status.slice(1)
+  return translated
 })
 
 const statusBadgeClass = computed(() => {
@@ -599,29 +609,29 @@ const statusBadgeClass = computed(() => {
 })
 
 const accountAgeLabel = computed(() => {
-  if (!form.joined) return 'N/A'
+  if (!form.joined) return t('profile.na')
   const joined = new Date(form.joined)
-  if (isNaN(joined.getTime())) return 'N/A'
+  if (isNaN(joined.getTime())) return t('profile.na')
   const days = Math.max(0, Math.floor((Date.now() - joined.getTime()) / 86_400_000))
-  if (days < 1) return 'Today'
-  if (days < 30) return `${days} day${days === 1 ? '' : 's'}`
-  if (days < 365) { const m = Math.floor(days / 30); return `${m} month${m === 1 ? '' : 's'}` }
+  if (days < 1) return t('profile.today')
+  if (days < 30) return t('profile.days', { count: days })
+  if (days < 365) { const m = Math.floor(days / 30); return t('profile.months', { count: m }) }
   const y = Math.floor(days / 365)
-  return `${y} year${y === 1 ? '' : 's'}`
+  return t('profile.years', { count: y })
 })
 
 const relativeLastLogin = computed(() => {
-  if (!form.lastLogin) return 'Never'
+  if (!form.lastLogin) return t('profile.never')
   const last = new Date(form.lastLogin)
-  if (isNaN(last.getTime())) return 'Never'
+  if (isNaN(last.getTime())) return t('profile.never')
   const seconds = Math.max(0, Math.floor((Date.now() - last.getTime()) / 1000))
-  if (seconds < 60) return 'Just now'
+  if (seconds < 60) return t('profile.justNow')
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return t('profile.minutesAgo', { count: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t('profile.hoursAgo', { count: hours })
   const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
+  if (days < 30) return t('profile.daysAgo', { count: days })
   return formatDate(form.lastLogin, { year: 'numeric', month: 'short', day: 'numeric' })
 })
 
@@ -669,7 +679,7 @@ async function loadProfile() {
     applyProfile(profile)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    fetchError.value = err.response?.data?.message || err.message || 'Failed to load profile'
+    fetchError.value = err.response?.data?.message || err.message || t('profile.failedToLoad')
   } finally {
     loading.value = false
   }
@@ -702,11 +712,11 @@ async function saveProfile() {
       }
     }
     showEditModal.value = false
-    successMessage.value = 'Profile updated successfully!'
+    successMessage.value = t('profile.profileUpdated')
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
-    saveError.value = err.response?.data?.message || err.message || 'Failed to save profile'
+    saveError.value = err.response?.data?.message || err.message || t('profile.failedToLoad')
     if (err.response?.data?.errors) {
       const errorMessages = Object.values(err.response.data.errors).flat()
       saveError.value = errorMessages.join(', ')
@@ -732,13 +742,13 @@ async function onFileChange(event: Event) {
   if (!file) return
 
   if (file.size > 2 * 1024 * 1024) {
-    saveError.value = 'Image must be less than 2MB'
+    saveError.value = t('profile.imageTooLarge')
     return
   }
 
   const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.type)) {
-    saveError.value = 'Only JPEG, PNG, GIF, and WebP images are allowed'
+    saveError.value = t('profile.invalidImageType')
     return
   }
 
@@ -756,12 +766,12 @@ async function onFileChange(event: Event) {
     if (auth.user) {
       auth.user.avatar = result.avatar
     }
-    successMessage.value = 'Photo uploaded successfully!'
+    successMessage.value = t('profile.photoUploaded')
     setTimeout(() => { successMessage.value = '' }, 4000)
   } catch (e: unknown) {
     avatarUrl.value = ''
     const err = e as { response?: { data?: { message?: string; errors?: Record<string, string[]> } }; message?: string }
-    saveError.value = err.response?.data?.message || err.message || 'Failed to upload photo'
+    saveError.value = err.response?.data?.message || err.message || t('profile.failedToLoad')
     if (err.response?.data?.errors) {
       const errorMessages = Object.values(err.response.data.errors).flat()
       saveError.value = errorMessages.join(', ')
@@ -791,19 +801,19 @@ async function updatePassword() {
   passwordStatus.value = ''
 
   if (!password.current || !password.new || !password.confirm) {
-    passwordMessage.value = 'Please fill in all password fields'
+    passwordMessage.value = t('profile.fillPasswords')
     passwordStatus.value = 'error'
     return
   }
 
   if (password.new.length < 8) {
-    passwordMessage.value = 'New password must be at least 8 characters'
+    passwordMessage.value = t('profile.passwordMinLength')
     passwordStatus.value = 'error'
     return
   }
 
   if (password.new !== password.confirm) {
-    passwordMessage.value = 'Passwords do not match'
+    passwordMessage.value = t('profile.passwordsDoNotMatch')
     passwordStatus.value = 'error'
     return
   }
@@ -817,14 +827,14 @@ async function updatePassword() {
       new_password_confirmation: password.confirm,
     })
 
-    passwordMessage.value = response.data.message || 'Password changed successfully'
+    passwordMessage.value = response.data.message || t('profile.passwordChanged')
     passwordStatus.value = 'success'
     password.current = ''
     password.new = ''
     password.confirm = ''
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    passwordMessage.value = err.response?.data?.message || err.message || 'Failed to change password'
+    passwordMessage.value = err.response?.data?.message || err.message || t('profile.failedToLoad')
     passwordStatus.value = 'error'
   } finally {
     passwordSaving.value = false
@@ -1714,6 +1724,317 @@ onUnmounted(() => {
 
 .btn-primary:hover {
   background: var(--color-primary-hover);
+}
+
+/* ========== DARK MODE ========== */
+.dark-mode.profile-page {
+  background: #0f172a;
+}
+
+.dark-mode .profile-card {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .profile-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .profile-content-wrap::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark-mode .profile-content-wrap::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark-mode .user-display-name {
+  color: #f1f5f9;
+}
+
+.dark-mode .btn-outline-edit {
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .btn-outline-edit:hover {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+.dark-mode .section-divider {
+  background: #334155;
+}
+
+.dark-mode .section-title-label {
+  color: #f1f5f9;
+}
+
+.dark-mode .detail-card-box {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .detail-card-box:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .card-box-header {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .box-header-title {
+  color: #f1f5f9;
+}
+
+.dark-mode .box-header-subtitle {
+  color: #64748b;
+}
+
+.dark-mode .box-field-item {
+  background: #0f172a;
+  border-color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .box-field-item:hover {
+  background: #1e293b;
+  border-color: rgba(59, 130, 246, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .field-icon-square {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .field-label {
+  color: #64748b;
+}
+
+.dark-mode .field-value {
+  color: #e2e8f0;
+}
+
+.dark-mode .item-square-icon {
+  background: rgba(51, 65, 85, 0.5);
+  color: #94a3b8;
+}
+
+.dark-mode .item-label {
+  color: #64748b;
+}
+
+.dark-mode .item-value {
+  color: #e2e8f0;
+}
+
+.dark-mode .chip-item {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .chip-empty {
+  color: #64748b;
+}
+
+.dark-mode .bio-box-content {
+  background: #0f172a;
+  border-color: #1e293b;
+}
+
+.dark-mode .bio-paragraph {
+  color: #e2e8f0;
+}
+
+.dark-mode .bio-empty-text {
+  color: #64748b;
+}
+
+.dark-mode .pw-label {
+  color: #94a3b8;
+}
+
+.dark-mode .pw-wrapper input {
+  color: #e2e8f0;
+  background: #0f172a;
+  border-color: #475569;
+}
+
+.dark-mode .pw-wrapper input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .pw-wrapper input::placeholder {
+  color: #475569;
+}
+
+.dark-mode .pw-toggle-btn {
+  color: #64748b;
+}
+
+.dark-mode .pw-toggle-btn:hover {
+  color: #60a5fa;
+}
+
+.dark-mode .pw-status-msg.success {
+  background: rgba(22, 163, 74, 0.08);
+  color: #34d399;
+}
+
+.dark-mode .pw-status-msg.error {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+}
+
+.dark-mode .btn-reset {
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark-mode .btn-reset:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #e2e8f0;
+}
+
+.dark-mode .alert-success {
+  background: rgba(22, 163, 74, 0.08);
+  color: #34d399;
+  border-color: rgba(22, 163, 74, 0.15);
+}
+
+.dark-mode .alert-error {
+  background: rgba(239, 68, 68, 0.08);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dark-mode .modal-content-panel {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark-mode .modal-head {
+  border-bottom-color: #334155;
+}
+
+.dark-mode .modal-head h3 {
+  color: #f1f5f9;
+}
+
+.dark-mode .modal-head p {
+  color: #64748b;
+}
+
+.dark-mode .modal-x {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-icon {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .form-group .modern-input {
+  color: #e2e8f0;
+  background: #0f172a;
+  border-color: #475569;
+}
+
+.dark-mode .form-group .modern-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.dark-mode .form-group .modern-input option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark-mode .form-label {
+  color: #94a3b8;
+}
+
+.dark-mode .modal-foot {
+  background: #0f172a;
+  border-top-color: #334155;
+}
+
+.dark-mode .btn-ghost {
+  color: #94a3b8;
+}
+
+.dark-mode .btn-ghost:hover {
+  background: rgba(51, 65, 85, 0.5);
+  color: #e2e8f0;
+}
+
+.dark-mode .avatar-uploading-loader {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+/* Dark mode badge overrides */
+.dark-mode .badge.admin {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dark-mode .badge.teacher {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.dark-mode .badge.student {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.dark-mode .badge.active {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.dark-mode .badge.inactive {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+}
+
+.dark-mode .badge.suspended {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.dark-mode .badge-verified {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.dark-mode .badge-unverified {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.2);
+}
+
+.dark-mode .badge-perm-count {
+  background: rgba(129, 140, 248, 0.12);
+  color: #818cf8;
+  border-color: rgba(129, 140, 248, 0.2);
+}
+
+.dark-mode .text-success {
+  color: #4ade80 !important;
 }
 
 /* Responsive */

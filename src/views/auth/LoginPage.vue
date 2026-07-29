@@ -80,7 +80,7 @@
               </span>
               <span class="checkbox-text">Remember me</span>
             </label>
-            <a href="#" class="forgot-link" @click.prevent>Forgot Password?</a>
+            <router-link to="/forgot-password" class="forgot-link">Forgot Password?</router-link>
           </div>
 
           <!-- Sign In Button -->
@@ -340,12 +340,12 @@ onUnmounted(() => {
 }
 
 .login-logo {
-  height: 58px;
+  height: 78px;
   width: auto;
   object-fit: contain;
   border-radius: 12px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .login-logo:hover {
@@ -445,7 +445,7 @@ onUnmounted(() => {
   width: 100%;
   padding: 0.55rem 0.875rem 0.55rem 2.75rem;
   font-size: 0.875rem;
-  color: #1e293b;
+  /* color: #bdc5d3; */
   font-weight: 500;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
@@ -732,7 +732,7 @@ onUnmounted(() => {
   }
 
   .login-logo {
-    height: 50px;
+    height: 64px;
   }
 
   .login-title {
