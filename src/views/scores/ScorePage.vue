@@ -3,7 +3,7 @@
 
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
-        <span>{{ !selectedClass ? 'Loading classes...' : 'Loading terms...' }}</span>
+        <span>{{ !selectedClass ? t('scores.loadingClasses') : t('scores.loadingTerms') }}</span>
       </div>
 
       <template v-else>
@@ -16,7 +16,7 @@
                   <input
                     v-model="searchQuery"
                     type="text"
-                    placeholder="Search by name or room..."
+                    :placeholder="t('scores.searchPlaceholder')"
                   />
                   <button v-if="searchQuery" class="tb-clear" @click="searchQuery = ''">
                     <X :size="14" />
@@ -24,7 +24,7 @@
                 </div>
                 <div class="tb-filter" v-if="classGenerations.length > 0">
                   <select v-model="selectedGenerationFilter">
-                    <option :value="null">All Generations</option>
+                    <option :value="null">{{ t('scores.allGenerations') }}</option>
                     <option
                       v-for="gen in classGenerations"
                       :key="gen"
@@ -38,26 +38,26 @@
               <div class="toolbar-right">
                 <div class="stat-chip" v-if="filteredClasses.length > 0">
                   <School :size="14" />
-                  <span>{{ filteredClasses.length }} Class{{ filteredClasses.length !== 1 ? 'es' : '' }}</span>
+                  <span>{{ t('scores.classCount', { count: filteredClasses.length }) }}</span>
                 </div>
                 <div class="stat-chip" v-if="classGenerations.length > 0">
                   <GraduationCap :size="14" />
-                  <span>{{ classGenerations.length }} Generation{{ classGenerations.length !== 1 ? 's' : '' }}</span>
+                  <span>{{ t('scores.generationCount', { count: classGenerations.length }) }}</span>
                 </div>
                 <div class="stat-chip" v-if="filteredTotalStudents > 0">
                   <Users :size="14" />
-                  <span>{{ filteredTotalStudents }} Student{{ filteredTotalStudents !== 1 ? 's' : '' }}</span>
+                  <span>{{ t('scores.studentCount', { count: filteredTotalStudents }) }}</span>
                 </div>
               </div>
             </div>
 
             <div v-if="filteredClasses.length === 0 && !loadingClasses" class="empty-state">
               <div class="empty-state-icon"><Inbox :size="24" /></div>
-              <h5 v-if="searchQuery || selectedGenerationFilter">No Matching Classes</h5>
-              <h5 v-else>No Classes Found</h5>
-              <p class="text-secondary" v-if="searchQuery">Try a different search term.</p>
-              <p class="text-secondary" v-else-if="selectedGenerationFilter">No classes found for this generation.</p>
-              <p class="text-secondary" v-else>No classes are available. Please create a class first.</p>
+              <h5 v-if="searchQuery || selectedGenerationFilter">{{ t('scores.noMatchingClasses') }}</h5>
+              <h5 v-else>{{ t('scores.noClassesFound') }}</h5>
+              <p class="text-secondary" v-if="searchQuery">{{ t('app.tryDifferentSearch') }}</p>
+              <p class="text-secondary" v-else-if="selectedGenerationFilter">{{ t('scores.noClassesGeneration') }}</p>
+              <p class="text-secondary" v-else>{{ t('scores.noClasses') }}</p>
             </div>
 
             <div v-else class="classes-grid">
@@ -82,11 +82,11 @@
                 <div class="class-card-footer">
                   <div class="class-card-stat" v-if="cls.students !== undefined && cls.students !== null">
                     <Users :size="12" />
-                    <span>{{ cls.students }} students</span>
+                    <span>{{ t('scores.studentCard', { count: cls.students }) }}</span>
                   </div>
                   <div class="class-card-stat" v-else>
                     <Calendar :size="12" />
-                    <span>{{ cls.academicYear?.name || cls.generation?.name || 'Current' }}</span>
+                    <span>{{ cls.academicYear?.name || cls.generation?.name || t('scores.current') }}</span>
                   </div>
                   <div class="class-card-arrow"><ChevronRight :size="16" /></div>
                 </div>
@@ -96,7 +96,7 @@
 
             <div v-if="filteredClasses.length > 0" class="pagination-bar">
               <div class="pagination-info">
-                <span class="rows-label">Rows per page:</span>
+                <span class="rows-label">{{ t('app.rowsPerPage') }}</span>
                 <div class="rows-selector">
                   <button
                     v-for="size in classPageSizeOptions"
@@ -115,7 +115,7 @@
                   class="page-nav"
                   :disabled="classCurrentPage <= 1"
                   @click="changeClassPage(classCurrentPage - 1)"
-                  aria-label="Previous page"
+                  :aria-label="t('app.previous')"
                 >
                   <ChevronLeft :size="16" />
                 </button>
@@ -136,14 +136,14 @@
                   class="page-nav"
                   :disabled="classCurrentPage >= classLastPage"
                   @click="changeClassPage(classCurrentPage + 1)"
-                  aria-label="Next page"
+                  :aria-label="t('app.next')"
                 >
                   <ChevronRight :size="16" />
                 </button>
               </div>
 
               <div class="pagination-total">
-                {{ classPagination.from }}-{{ classPagination.to }} of {{ classPagination.total }}
+                {{ classPagination.from }}-{{ classPagination.to }} {{ t('app.of') }} {{ classPagination.total }}
               </div>
             </div>
           </div>
@@ -154,7 +154,7 @@
             <div class="terms-header">
               <button class="terms-back" @click="selectClass(null)">
                 <ChevronLeft :size="15" />
-                <span>All Classes</span>
+                <span>{{ t('scores.allClasses') }}</span>
               </button>
               <ChevronRight :size="12" class="terms-sep" />
               <span class="terms-current">
@@ -169,7 +169,7 @@
                 <input
                   v-model="subjectSearchQuery"
                   type="text"
-                  placeholder="Search subjects..."
+                  :placeholder="t('scores.searchSubjects')"
                 />
                 <button v-if="subjectSearchQuery" class="tb-clear" @click="subjectSearchQuery = ''">
                   <X :size="14" />
@@ -178,7 +178,7 @@
 
               <div class="toolbar-right">
                 <div class="sort-toggle">
-                  <span class="sort-label">Sort by</span>
+                  <span class="sort-label">{{ t('scores.sortBy') }}</span>
                   <button
                     class="sort-btn"
                     :class="{ 'sort-btn-active': subjectSortMode === 'enrollment' }"
@@ -186,16 +186,16 @@
                     title="Sort by number of enrolled students"
                   >
                     <Users :size="14" />
-                    <span>Students</span>
+                    <span>{{ t('scores.students') }}</span>
                   </button>
                   <button
                     class="sort-btn"
                     :class="{ 'sort-btn-active': subjectSortMode === 'alphabetical' }"
                     @click="subjectSortMode = 'alphabetical'"
-                    title="Sort alphabetically by name"
+                    :title="t('scores.sortAZ')"
                   >
                     <ArrowUpDown :size="14" />
-                    <span>A–Z</span>
+                    <span>{{ t('scores.sortAZ') }}</span>
                   </button>
                 </div>
               </div>
@@ -203,8 +203,8 @@
 
             <div v-if="filteredTerms.length === 0" class="empty-state">
               <div class="empty-state-icon"><Inbox :size="24" /></div>
-              <h5>No Terms Found</h5>
-              <p class="text-secondary">No terms available for {{ selectedClass.name }} in this generation.</p>
+              <h5>{{ t('scores.noTermsFound') }}</h5>
+              <p class="text-secondary">{{ t('scores.noTermsForClass', { className: selectedClass.name }) }}</p>
             </div>
 
             <div v-else class="term-sections">
@@ -222,7 +222,7 @@
                     <div>
                       <h3 class="term-section-name">{{ term.name }}</h3>
                       <span class="term-section-count">
-                        {{ getTermSubjects(term.id).length }} subject{{ getTermSubjects(term.id).length !== 1 ? 's' : '' }}
+                        {{ t('scores.subjectCount', { count: getTermSubjects(term.id).length }) }}
                       </span>
                     </div>
                   </div>
@@ -252,7 +252,7 @@
 
                 <div v-else class="no-subjects-note">
                   <BookOpen :size="12" />
-                  <span>No subjects for this term</span>
+                  <span>{{ t('scores.noSubjectsForTerm') }}</span>
                 </div>
               </div>
               </TransitionGroup>
@@ -267,6 +267,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { TransitionGroup } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { classService, type SchoolClass } from '@/services/classService'
 import { cacheService } from '@/services/cacheService'
@@ -278,6 +279,7 @@ import {
 
 const CACHE_KEY = 'scores-subjects'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const subjectsData = ref<SubjectItem[]>([])

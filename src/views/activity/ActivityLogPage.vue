@@ -3,7 +3,7 @@
     <div v-if="error" class="al-error">
       <AlertTriangle :size="16" />
       <span>{{ error }}</span>
-      <button class="al-error-retry" @click="loadLogs"><RefreshCw :size="13" /> Retry</button>
+      <button class="al-error-retry" @click="loadLogs"><RefreshCw :size="13" /> {{ t('activityLog.retry') }}</button>
     </div>
 
     <div class="al-card">
@@ -14,7 +14,7 @@
             v-model="searchQuery"
             type="text"
             class="search-input"
-            placeholder="Search description or user..."
+            :placeholder="t('activityLog.searchPlaceholder')"
             @input="applyFilters"
           />
         </div>
@@ -22,13 +22,13 @@
         <div class="al-filter-group">
           <label class="al-filter">
             <select v-model="moduleFilter" class="al-select" @change="applyFilters">
-              <option value="">All modules</option>
+              <option value="">{{ t('activityLog.allModules') }}</option>
               <option v-for="m in filterOptions.modules" :key="m" :value="m">{{ m }}</option>
             </select>
           </label>
           <label class="al-filter">
             <select v-model="actionFilter" class="al-select" @change="applyFilters">
-              <option value="">All actions</option>
+              <option value="">{{ t('activityLog.allActions') }}</option>
               <option v-for="a in filterOptions.actions" :key="a" :value="a">{{ a }}</option>
             </select>
           </label>
@@ -39,43 +39,43 @@
             <input v-model="dateTo" type="date" class="al-select" @change="applyFilters" />
           </label>
           <div class="export-dropdown" ref="exportBtnRef">
-            <button class="al-btn al-btn-export" :disabled="logs.length === 0" @click="toggleExportMenu" title="Export">
-              <Download :size="14" /> <span>Export</span>
+            <button class="al-btn al-btn-export" :disabled="logs.length === 0" @click="toggleExportMenu" :title="t('activityLog.export')">
+              <Download :size="14" /> <span>{{ t('activityLog.export') }}</span>
               <ChevronDown :size="10" style="margin-left:2px" />
             </button>
             <div v-if="showExportMenu" class="export-menu">
               <div class="export-menu-item" @click="exportLogsAsCSV">
-                <FileText :size="15" /> Export as CSV
+                <FileText :size="15" /> {{ t('activityLog.exportCsv') }}
               </div>
               <div class="export-menu-item" @click="exportLogsAsExcel">
-                <FileSpreadsheet :size="15" /> Export as Excel
+                <FileSpreadsheet :size="15" /> {{ t('activityLog.exportExcel') }}
               </div>
               <div class="export-menu-item" @click="exportLogsAsPDF">
-                <FileType :size="15" /> Export as PDF
+                <FileType :size="15" /> {{ t('activityLog.exportPdf') }}
               </div>
             </div>
           </div>
           <button v-if="hasActiveFilters" class="al-clear" @click="clearFilters">
-            <XCircle :size="14" /> Clear
+            <XCircle :size="14" /> {{ t('activityLog.clear') }}
           </button>
         </div>
       </div>
 
       <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <span class="bulk-count">{{ selectedIds.length }} {{ t('activityLog.selected') }}</span>
         <button class="bulk-delete-btn" @click="showDeleteModal = true">
           <Trash2 :size="16" />
-          Delete Selected
+          {{ t('activityLog.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="selectedIds = []">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="selectedIds = []">{{ t('activityLog.clearSelection') }}</button>
       </div>
 
-      <LoadingState v-if="loading && logs.length === 0" message="Loading activity log..." />
+      <LoadingState v-if="loading && logs.length === 0" :message="t('activityLog.loading')" />
 
       <EmptyState
         v-else-if="logs.length === 0"
-        title="No activity found"
-        :message="hasActiveFilters ? 'Try a different search term or filter.' : 'Nothing has been recorded yet.'"
+        :title="t('activityLog.noLogs')"
+        :message="hasActiveFilters ? t('app.tryDifferentSearch') : t('app.noData')"
       />
 
       <div v-else class="table-wrap">
@@ -91,11 +91,11 @@
                   @change="toggleSelectAll"
                 />
               </th>
-              <th>User</th>
-              <th>Action</th>
-              <th>Module</th>
-              <th>Description</th>
-              <th>Time</th>
+              <th>{{ t('activityLog.user') }}</th>
+              <th>{{ t('activityLog.action') }}</th>
+              <th>{{ t('activityLog.module') }}</th>
+              <th>{{ t('activityLog.logDescription') }}</th>
+              <th>{{ t('activityLog.logTime') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -121,7 +121,7 @@
               <td class="description-cell" :title="log.description" @click="showDetail(log)">
                 <span class="desc-text">{{ log.description }}</span>
               </td>
-              <td class="time-cell" :title="new Date(log.created_at_raw).toLocaleString()">{{ log.created_at }}</td>
+              <td class="time-cell" :title="formatDate(log.created_at_raw)">{{ formatRelativeTime(log.created_at_raw) }}</td>
             </tr>
           </tbody>
         </table>
@@ -129,7 +129,7 @@
 
       <div v-if="logs.length > 0" class="pagination-bar">
         <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+          <span class="rows-label">{{ t('app.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pageSizeOptions"
@@ -144,7 +144,7 @@
         </div>
 
         <div class="pagination-pages">
-          <button class="page-nav" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)" aria-label="Previous page">
+          <button class="page-nav" :disabled="currentPage <= 1" @click="changePage(currentPage - 1)"            :aria-label="t('app.previous')">
             <ChevronLeft :size="16" />
           </button>
           <template v-for="page in visiblePages" :key="page">
@@ -158,12 +158,12 @@
             </button>
             <span v-else class="page-dots">…</span>
           </template>
-          <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" aria-label="Next page">
+          <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)"            :aria-label="t('app.next')">
             <ChevronRight :size="16" />
           </button>
         </div>
 
-        <div class="pagination-total">{{ total === 0 ? 0 : from }}-{{ to }} of {{ total }}</div>
+        <div class="pagination-total">{{ total === 0 ? 0 : from }}-{{ to }} {{ t('app.of') }} {{ total }}</div>
       </div>
     </div>
 
@@ -173,39 +173,39 @@
           <div class="modal-card modal-detail">
             <div class="modal-head">
               <div>
-                <h3>Activity Detail</h3>
-                <p>Full information for this log entry</p>
+                <h3>{{ t('activityLog.activityDetail') }}</h3>
+                <p>{{ t('activityLog.detailSubtitle') }}</p>
               </div>
               <button class="modal-x" @click="detailLog = null">&times;</button>
             </div>
             <div class="modal-body">
               <div class="detail-grid">
                 <div class="detail-field">
-                  <span class="detail-label">User</span>
+                  <span class="detail-label">{{ t('activityLog.user') }}</span>
                   <span class="detail-value">{{ detailLog.user_name }}</span>
                 </div>
                 <div class="detail-field">
-                  <span class="detail-label">Action</span>
+                  <span class="detail-label">{{ t('activityLog.action') }}</span>
                   <span class="detail-value">
                     <span class="action-badge" :class="getActionBadgeClass(detailLog.action)">{{ detailLog.action }}</span>
                   </span>
                 </div>
                 <div class="detail-field">
-                  <span class="detail-label">Module</span>
+                  <span class="detail-label">{{ t('activityLog.module') }}</span>
                   <span class="detail-value"><span class="module-badge">{{ detailLog.module }}</span></span>
                 </div>
                 <div class="detail-field">
-                  <span class="detail-label">Time</span>
+                  <span class="detail-label">{{ t('activityLog.logTime') }}</span>
                   <span class="detail-value">{{ new Date(detailLog.created_at_raw).toLocaleString() }}</span>
                 </div>
                 <div class="detail-field detail-field-full">
-                  <span class="detail-label">Description</span>
+                  <span class="detail-label">{{ t('activityLog.logDescription') }}</span>
                   <p class="detail-desc">{{ detailLog.description }}</p>
                 </div>
               </div>
             </div>
             <div class="modal-foot">
-              <button class="btn btn-ghost" @click="detailLog = null">Close</button>
+              <button class="btn btn-ghost" @click="detailLog = null">{{ t('app.close') }}</button>
             </div>
           </div>
         </div>
@@ -221,19 +221,19 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Logs</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('activityLog.deleteLogs') }}</h3>
+                <p>{{ t('activityLog.cannotUndo') }}</p>
               </div>
               <button class="modal-x" @click="showDeleteModal = false">&times;</button>
             </div>
             <div class="modal-body">
-              <p class="del-text">Are you sure you want to delete <strong>{{ selectedIds.length }} log(s)</strong>?</p>
+              <p class="del-text">{{ t('activityLog.deleteLogConfirm', { count: selectedIds.length }) }}</p>
             </div>
             <div class="modal-foot">
-              <button class="btn btn-ghost" @click="showDeleteModal = false">Cancel</button>
+              <button class="btn btn-ghost" @click="showDeleteModal = false">{{ t('app.cancel') }}</button>
               <button class="btn btn-danger" @click="handleDeleteLogs" :disabled="deleting">
                 <span v-if="deleting" class="spinner-sm"></span>
-                Delete {{ selectedIds.length }} log(s)
+                {{ t('activityLog.deleteLogBtn', { count: selectedIds.length }) }}
               </button>
             </div>
           </div>
@@ -245,6 +245,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   AlertTriangle, ChevronLeft, ChevronRight, ChevronDown, Download,
   FileSpreadsheet, FileText, FileType,
@@ -259,6 +260,7 @@ import { extractErrorMessage, getUserInitials, debounce } from '@/utils'
 import { DEBOUNCE } from '@/constants'
 import type { ActivityLogEntry, ActivityLogFilterOptions } from '@/types'
 
+const { t } = useI18n()
 const auth = useAuthStore()
 
 const loading = ref(true)
@@ -499,6 +501,43 @@ function getActionBadgeClass(action: string): string {
     Login: 'act-login', Logout: 'act-logout', Export: 'act-export', Import: 'act-import',
   }
   return map[action] || 'act-default'
+}
+
+function formatRelativeTime(isoString: string): string {
+  const now = Date.now()
+  const date = new Date(isoString).getTime()
+  const diffMs = now - date
+  if (diffMs < 0) return t('time.justNow')
+
+  const seconds = Math.floor(diffMs / 1000)
+  if (seconds < 10) return t('time.justNow')
+  if (seconds < 60) return t('time.secondsAgo', { n: seconds })
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return t('time.minutesAgo', { n: minutes })
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return t('time.hoursAgo', { n: hours })
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) return t('time.daysAgo', { n: days })
+
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return t('time.weeksAgo', { n: weeks })
+
+  const months = Math.floor(days / 30)
+  if (months < 12) return t('time.monthsAgo', { n: months })
+
+  const years = Math.floor(days / 365)
+  return t('time.yearsAgo', { n: years })
+}
+
+function formatDate(isoString: string): string {
+  try {
+    return new Date(isoString).toLocaleString()
+  } catch {
+    return isoString
+  }
 }
 
 onMounted(loadLogs)

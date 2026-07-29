@@ -19,16 +19,16 @@
           <div class="rp-table-head">
             <div class="rp-table-head-top">
               <div>
-                <h3 class="rp-table-title">Student Ranking &amp; Report Cards</h3>
+                <h3 class="rp-table-title">{{ t('reports.rankingTitle') }}</h3>
                 <p class="rp-table-sub">
-                  {{ filteredStudentRows.length }} students
+                  {{ t('reports.studentCount', { count: filteredStudentRows.length }) }}
                 </p>
               </div>
               <div class="d-flex align-items-center gap-2">
-                <SearchInput v-model="studentSearch" placeholder="Search name or student ID..." />
+                <SearchInput v-model="studentSearch" :placeholder="t('reports.searchPlaceholder')" />
                 <div v-if="canExport" class="rp-export">
                   <button class="rp-btn rp-btn-primary" :disabled="!filteredStudentRows.length" @click="showExportMenu = !showExportMenu">
-                    <Download :size="14" /> Export
+                    <Download :size="14" /> {{ t('reports.export') }}
                     <ChevronDown :size="13" />
                   </button>
                   <div v-if="showExportMenu" class="rp-export-menu">
@@ -41,40 +41,42 @@
             </div>
             <div class="rp-table-filters">
               <div class="rp-filter">
-                <label>Academic Year</label>
+                <label>{{ t('reports.academicYear') }}</label>
                 <select v-model="filters.academic_year_id" class="rp-select">
-                  <option :value="null">All years</option>
+                  <option :value="null">{{ t('reports.allYears') }}</option>
                   <option v-for="year in options.academic_years" :key="year.id" :value="year.id">{{ year.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Term</label>
+                <label>{{ t('reports.term') }}</label>
                 <select v-model="filters.term_id" class="rp-select">
-                  <option :value="null">All terms</option>
+                  <option :value="null">{{ t('reports.allTerms') }}</option>
                   <option v-for="term in options.terms" :key="term.id" :value="term.id">{{ term.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Class</label>
+                <label>{{ t('reports.class') }}</label>
                 <select v-model="filters.class_id" class="rp-select">
-                  <option :value="null">All classes</option>
+                  <option :value="null">{{ t('reports.allClasses') }}</option>
                   <option v-for="cls in options.classes" :key="cls.id" :value="cls.id">{{ cls.name }}</option>
                 </select>
               </div>
+              <div class="rp-filter">
+                <label>{{ t('reports.teacher') }}</label>
                 <select v-model="filters.teacher_id" class="rp-select">
-                  <option :value="null">All teachers</option>
+                  <option :value="null">{{ t('reports.allTeachers') }}</option>
                   <option v-for="teacher in options.teachers" :key="teacher.id" :value="teacher.id">{{ teacher.name }}</option>
                 </select>
               </div>
               <div class="rp-filter">
-                <label>Generation</label>
+                <label>{{ t('reports.generation') }}</label>
                 <select v-model="filters.generation_id" class="rp-select">
-                  <option :value="null">All generations</option>
+                  <option :value="null">{{ t('reports.allGenerations') }}</option>
                   <option v-for="gen in options.generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
                 </select>
               </div>
               <button v-if="activeFilterCount > 0" class="rp-clear" @click="clearFilters">
-                <XCircle :size="14" /> Clear ({{ activeFilterCount }})
+                <XCircle :size="14" /> {{ t('reports.clear') }} ({{ activeFilterCount }})
               </button>
             </div>
           </div>
@@ -129,6 +131,7 @@
                   @click="changePage(page as number)"
                 >
                   {{ page }}
+                </button>
                 <span v-else class="page-dots">…</span>
               </template>
               <button class="page-nav" :disabled="currentPage >= lastPage" @click="changePage(currentPage + 1)" aria-label="Next page">
@@ -137,7 +140,7 @@
             </div>
 
             <div class="pagination-total">
-              {{ totalFrom }}-{{ totalTo }} of {{ filteredStudentRows.length }}
+              {{ totalFrom }}-{{ totalTo }} {{ t('app.of') }} {{ filteredStudentRows.length }}
             </div>
           </div>
         </template>

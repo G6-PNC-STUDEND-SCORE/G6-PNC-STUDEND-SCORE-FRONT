@@ -10,6 +10,28 @@ body {
   font-family: var(--font-family);
 }
 
+/* ─── Khmer text: make Noto Sans Khmer appear darker / heavier ───
+   Noto Sans Khmer at weight 400 can look thin on screen. We apply
+   multiple techniques to make it read as dark and bold as English:
+     1. font-weight: 600 → bolder rendering for Khmer text
+     2. Hard (no-blur) text-shadow → thickens text edges without glow
+     3. Darker base color for Khmer mode (near-black vs dark slate)
+     4. Slight letter-spacing for better Khmer character clarity
+   Using inheritance avoids overriding headings/buttons that already
+   set their own weight. */
+html[lang="km"] {
+  --color-text: #05070c;
+}
+
+html[lang="km"] body,
+html[lang="km"] .app-layout,
+html[lang="km"] .main-content,
+html[lang="km"] .content-wrapper {
+  font-weight: 600;
+  text-shadow: 0.3px 0 0 currentColor;
+  letter-spacing: 0.01em;
+}
+
 .app-layout {
   display: flex;
   min-height: 100vh;

@@ -348,6 +348,13 @@ function goToProfile() {
   position: relative;
 }
 
+/* Khmer mode: sidebar links appear heavier/blacker */
+html[lang="km"] .sidebar-link {
+  font-weight: 600;
+  text-shadow: 0.3px 0 0 currentColor;
+  letter-spacing: 0.01em;
+}
+
 .sidebar-link::before {
   content: '';
   position: absolute;
@@ -386,6 +393,11 @@ function goToProfile() {
   background: #e8f1ff;
   color: #2563eb;
   font-weight: 600;
+}
+
+/* Khmer mode: active sidebar link even darker */
+html[lang="km"] .sidebar-link.router-link-active {
+  font-weight: 700;
 }
 
 .sidebar-link.router-link-active::before {

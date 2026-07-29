@@ -22,7 +22,7 @@
               @change="$emit('update:genderFilter', ($event.target as HTMLSelectElement).value)"
               class="filter-select"
             >
-              <option value="">{{ t('students.all') }}</option>
+              <option value="">{{ t('students.allGenders') }}</option>
               <option value="Male">{{ t('students.male') }}</option>
               <option value="Female">{{ t('students.female') }}</option>
             </select>
@@ -37,7 +37,7 @@
               @change="$emit('update:generationFilter', ($event.target as HTMLSelectElement).value === '' ? '' : Number(($event.target as HTMLSelectElement).value))"
               class="filter-select"
             >
-              <option value="">{{ t('students.all') }}</option>
+              <option value="">{{ t('students.allGenerations') }}</option>
               <option v-for="gen in generations" :key="gen.id" :value="gen.id">{{ gen.name }}</option>
             </select>
           </label>
@@ -56,7 +56,7 @@
         </button>
 
         <span class="count-badge">
-          {{ students.length }} {{ t('students.name').toLowerCase() }}{{ students.length !== 1 ? 's' : '' }}
+          {{ students.length }} {{ students.length !== 1 ? t('students.studentsLabel') : t('students.studentLabel') }}
         </span>
       </div>
     </div>
@@ -64,11 +64,11 @@
     <div v-if="canDelete && someSelected" class="bulk-bar">
         <span class="bulk-count">{{ selectedIds.length }} {{ t('app.selected') }}</span>
         <div class="bulk-actions">
-          <button class="bulk-delete-btn" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" :title="t('students.deleteStudents')">
+          <button class="bulk-delete-btn" @click="$emit('bulkDelete', [...selectedIds]); selectedIds = []" :title="t('students.deleteSelected')">
             <Trash2 :size="16" />
-            {{ t('app.deleteSelected') }}
+            {{ t('students.deleteSelected') }}
           </button>
-          <button class="bulk-clear-btn" @click="selectedIds = []" :title="t('app.clearSelection')">{{ t('app.clearSelection') }}</button>
+          <button class="bulk-clear-btn" @click="selectedIds = []" :title="t('students.clearSelection')">{{ t('students.clearSelection') }}</button>
         </div>
       </div>
 
@@ -91,17 +91,16 @@
                 :checked="allSelected"
                 :indeterminate="someSelected && !allSelected"
                 @change="toggleAll"
-                :aria-label="t('app.all')"
+                aria-label="Select all"
               />
             </th>
-            <th class="col-index">#</th>
-            <th>{{ t('students.name') }}</th>
-            <th class="col-student-id">{{ t('students.studentId') }}</th>
-            <th>{{ t('students.gender') }}</th>
-            <th>{{ t('students.class') }}</th>
-            <th>{{ t('students.generation') }}</th>
-            <th>{{ t('students.status') }}</th>
-            <th class="col-actions">{{ t('students.actions') }}</th>
+            <th class="col-index">#</th>              <th>{{ t('students.name') }}</th>
+              <th class="col-student-id">{{ t('students.idLabel') }}</th>
+              <th>{{ t('students.gender') }}</th>
+              <th>{{ t('students.class') }}</th>
+              <th>{{ t('students.generation') }}</th>
+              <th>{{ t('students.status') }}</th>
+              <th class="col-actions">{{ t('students.actions') }}</th>
           </tr>
         </thead>
         <TransitionGroup name="row" tag="tbody">
@@ -117,7 +116,7 @@
                 class="table-checkbox"
                 :checked="selectedIds.includes(student.id)"
                 @change="toggleRow(student.id)"
-                :aria-label="`${t('app.selected')} ${student.user?.name || student.id}`"
+                :aria-label="`Select ${student.user?.name || student.id}`"
               />
             </td>
             <td class="col-index">
@@ -146,7 +145,7 @@
               <span v-else class="meta-cell">—</span>
             </td>
             <td>
-              <span class="meta-cell">{{ student.user?.gender || '—' }}</span>
+              <span class="meta-cell">{{ translateGender(student.user?.gender) }}</span>
             </td>
             <td>
               <span v-if="student.class" class="class-cell">
@@ -162,18 +161,18 @@
                 class="status-badge"
                 :class="(student.user?.status || '') === 'active' ? 'badge-active' : 'badge-inactive'"
               >
-                {{ (student.user?.status || '') === 'active' ? t('students.active') : t('students.inactive') }}
+                {{ (student.user?.status || '') === 'active' ? t('students.statusActive') : t('students.statusInactive') }}
               </span>
             </td>
             <td class="col-actions" @click.stop>
               <div class="td-actions">
-                <button class="act-btn" :title="t('students.viewDetails')" @click="$emit('view', student)">
+                <button class="act-btn act-view" :title="t('students.viewDetails')" @click="$emit('view', student)">
                   <Eye :size="15" />
                 </button>
-                <button v-if="canUpdate" class="act-btn" :title="t('students.edit')" @click="$emit('edit', student)">
+                <button v-if="canUpdate" class="act-btn act-edit" :title="t('common.edit')" @click="$emit('edit', student)">
                   <Pencil :size="15" />
                 </button>
-                <button v-if="canDelete" class="act-btn act-danger" :title="t('students.deleteStudent')" @click="$emit('delete', student)">
+                <button v-if="canDelete" class="act-btn act-delete" :title="t('common.delete')" @click="$emit('delete', student)">
                   <Trash2 :size="15" />
                 </button>
               </div>
@@ -185,7 +184,7 @@
 
     <div v-if="students.length > 0" class="pagination-bar">
       <div class="pagination-info">
-        <span class="rows-label">{{ t('pagination.rowsPerPage') }}</span>
+        <span class="rows-label">{{ t('app.rowsPerPage') }}</span>
         <div class="rows-selector">
           <button
             v-for="size in pageSizeOptions"
@@ -204,7 +203,7 @@
           class="page-nav"
           :disabled="currentPage <= 1"
           @click="currentPage--"
-          :aria-label="t('pagination.previous')"
+          :aria-label="t('app.previous')"
         >
           <ChevronLeft :size="16" />
         </button>
@@ -225,7 +224,7 @@
           class="page-nav"
           :disabled="currentPage >= totalPages"
           @click="currentPage++"
-          :aria-label="t('pagination.next')"
+          :aria-label="t('app.next')"
         >
           <ChevronRight :size="16" />
         </button>
@@ -259,6 +258,7 @@ import type { Generation } from '@/types'
 import { usePermission } from '@/composables/usePermission'
 
 const { t } = useI18n()
+
 const { hasPermission } = usePermission()
 const canCreate = computed(() => hasPermission('create-students'))
 const canUpdate = computed(() => hasPermission('update-students'))
@@ -312,6 +312,13 @@ function toggleAll() {
   }
 }
 
+function translateGender(gender: string | null | undefined): string {
+  if (gender === 'Male') return t('students.male')
+  if (gender === 'Female') return t('students.female')
+  if (gender === 'Other') return t('common.other')
+  return '—'
+}
+
 const visiblePages = computed(() => {
   const pages: (number | string)[] = []
   const total = totalPages.value
@@ -349,3 +356,584 @@ defineEmits<{
   bulkDelete: [ids: number[]]
   add: []}>()
 </script>
+
+<style scoped>
+
+.student-card {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  flex: 1;
+  height: 1px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: box-shadow 0.25s ease;
+}
+
+.student-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.search-box {
+  position: relative;
+  width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.6rem 0.9rem 0.6rem 2.4rem;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  color: #1f2937;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.search-input::placeholder { color: #9ca3af; }
+
+.search-input:hover { border-color: #cbd5e1; }
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.filter-group { display: flex; align-items: center; }
+
+.filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.filter-label:hover { border-color: #cbd5e1; }
+
+.filter-label :deep(svg) { color: #94a3b8; }
+
+.filter-select {
+  border: none;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  font-weight: 600;
+  color: #334155;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.count-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 0.4rem 0.85rem;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.table-wrap::-webkit-scrollbar { width: 4px; height: 4px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+.table-wrap::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+.col-check {
+  width: 48px;
+  text-align: center;
+  padding: 10px 8px !important;
+}
+
+.student-table thead th.col-check,
+.student-table tbody td.col-check {
+  text-align: center;
+  padding: 10px 8px !important;
+  vertical-align: middle;
+}
+
+.col-index {
+  width: 64px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.id-cell {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.table-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #2563eb;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+}
+
+.col-actions {
+  text-align: center;
+  width: 110px;
+}
+
+.td-actions {
+  white-space: nowrap;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+
+/* ── Action Buttons ────────────────────────── */
+.act-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  outline: none;
+}
+
+.act-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.act-btn:active {
+  transform: scale(0.92);
+}
+
+
+.act-view:hover {
+  background: #dbeafe;
+  color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+
+
+.act-edit:hover {
+  background: #fef3c7;
+  color: #b45309;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+}
+
+
+.act-delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+
+.empty-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.empty-container .empty-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #94a3b8;
+}
+
+.empty-container .empty-box h5 {
+  font-weight: 700;
+  color: #64748b;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.empty-container .empty-box p {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  background: #2563eb;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.avatar-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.student-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 0.85rem;
+}
+
+.col-student-id {
+  width: 130px;
+  white-space: nowrap;
+  padding: 10px 14px !important;
+}
+
+.student-table thead th.col-student-id,
+.student-table tbody td.col-student-id {
+  padding: 10px 14px !important;
+  vertical-align: middle;
+}
+
+.id-number-cell {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #64748b;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  white-space: nowrap;
+}
+
+.class-cell {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.meta-cell {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+
+
+
+
+
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bulk-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.bulk-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.bulk-delete-btn:hover { background: #dc2626; }
+
+.bulk-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+}
+
+.bulk-clear-btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafbfc;
+  font-family: 'Inter', 'Noto Sans Khmer', sans-serif;
+  font-size: 0.8125rem;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.rows-label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.rows-selector {
+  display: flex;
+  gap: 2px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.rows-btn {
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.rows-btn:hover {
+  color: #334155;
+}
+
+.rows-btn.active {
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.page-nav {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.page-nav:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: #f0f5ff;
+}
+
+.page-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-btn {
+  min-width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.page-btn:hover:not(.active) {
+  background: #f1f5f9;
+  color: #2563eb;
+}
+
+.page-btn.active {
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.page-dots {
+  width: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+}
+
+.pagination-total {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.row-enter-active,
+.row-leave-active {
+  transition: all 0.3s ease;
+}
+
+.row-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.row-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.row-move {
+  transition: transform 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .col-actions {
+    width: 100px;
+  }
+}
+</style>
+
+

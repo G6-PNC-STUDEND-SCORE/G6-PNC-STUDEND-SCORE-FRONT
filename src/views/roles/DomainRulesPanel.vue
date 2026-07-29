@@ -6,20 +6,16 @@
     </div>
 
     <div class="panel-intro">
-      <p>
-        When someone signs in with Google for the first time, their role is decided by their
-        email's domain. Unrecognized domains are rejected. Add a rule here whenever a new
-        cohort's email pattern needs to be recognized automatically.
-      </p>
+      <p>{{ t('roles.domainsIntro') }}</p>
     </div>
 
     <div class="table-wrap">
       <table class="rules-table data-table-base">
         <thead>
           <tr>
-            <th>Email Domain</th>
-            <th>Assigned Role</th>
-            <th class="col-active">Active</th>
+            <th>{{ t('roles.emailDomain') }}</th>
+            <th>{{ t('roles.assignedRole') }}</th>
+            <th class="col-active">{{ t('roles.active') }}</th>
             <th class="col-actions"></th>
           </tr>
         </thead>
@@ -36,14 +32,14 @@
                 />
                 <button
                   class="btn-save-domain"
-                  title="Save changes"
+                  :title="t('roles.saveChanges')"
                   @click="onDomainSave(rule)"
                 >
                   <Check :size="14" />
                 </button>
                 <button
                   class="btn-cancel-domain"
-                  title="Cancel"
+                  :title="t('roles.cancel')"
                   @click="onDomainCancel"
                 >
                   <X :size="14" />
@@ -53,7 +49,7 @@
                 <span class="domain-prefix">@</span>{{ rule.domain }}
                 <button
                   class="btn-edit-domain"
-                  title="Edit domain"
+                  :title="t('roles.editDomain')"
                   @click="onDomainEditStart(rule)"
                 >
                   <Pencil :size="13" />
@@ -78,13 +74,13 @@
               />
             </td>
             <td class="col-actions">
-              <button class="btn-icon-danger" title="Delete rule" @click="confirmDelete = rule">
+              <button class="btn-icon-danger" :title="t('roles.deleteRule')" @click="confirmDelete = rule">
                 <Trash2 :size="15" />
               </button>
             </td>
           </tr>
           <tr v-if="rules.length === 0">
-            <td colspan="4" class="empty-row">No sign-in domain rules yet.</td>
+            <td colspan="4" class="empty-row">{{ t('roles.noDomainRules') }}</td>
           </tr>
         </tbody>
       </table>
@@ -94,29 +90,27 @@
       <input
         v-model="newDomain"
         class="form-input domain-input"
-        placeholder="e.g. kilo.passerellesnumeriques.org"
+        :placeholder="t('roles.domainPlaceholder')"
         required
       />
       <select v-model.number="newRoleId" class="form-input role-input" required>
-        <option :value="null" disabled>Assign role...</option>
+        <option :value="null" disabled>{{ t('roles.assignRole') }}</option>
         <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
       </select>
       <button class="btn-add-role" type="submit" :disabled="adding || !newDomain.trim() || !newRoleId">
         <Plus :size="15" />
-        {{ adding ? 'Adding...' : 'Add Rule' }}
+        {{ adding ? t('roles.adding') : t('roles.addRule') }}
       </button>
     </form>
 
     <div v-if="confirmDelete" class="modal-overlay" @click.self="confirmDelete = null">
       <div class="confirm-modal">
-        <h5>Delete sign-in rule for "@{{ confirmDelete.domain }}"?</h5>
-        <p class="text-secondary">
-          New Google sign-ins from this domain will be rejected until another rule is added.
-        </p>
+        <h5>{{ t('roles.deleteRuleConfirm', { domain: confirmDelete.domain }) }}</h5>
+        <p class="text-secondary">{{ t('roles.deleteRuleMessage') }}</p>
         <div class="confirm-modal-actions">
-          <button class="btn-cancel" @click="confirmDelete = null">Cancel</button>
+          <button class="btn-cancel" @click="confirmDelete = null">{{ t('roles.cancel') }}</button>
           <button class="btn-delete-confirm" :disabled="deleting" @click="doDelete">
-            {{ deleting ? 'Deleting...' : 'Delete Rule' }}
+            {{ deleting ? t('roles.deleting') : t('roles.deleteRule') }}
           </button>
         </div>
       </div>
@@ -126,11 +120,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { AlertTriangle, Plus, Trash2, Pencil, Check, X } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { useRoleStore } from '@/stores/role'
 import type { EmailDomainRule } from '@/services/emailDomainRuleService'
 
+const { t } = useI18n()
 const store = useRoleStore()
 const { domainRules: rules, roles, error } = storeToRefs(store)
 

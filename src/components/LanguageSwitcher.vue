@@ -1,41 +1,70 @@
 <template>
-  <div class="language-switcher">
-    <div class="dropdown" ref="dropdownRef">
-      <button
-        class="dropdown-toggle"
-        @click="toggleDropdown"
-        :aria-expanded="isOpen"
-        aria-haspopup="true"
+  <div class="language-switcher" ref="dropdownRef">
+    <button
+      class="lang-toggle"
+      @click="toggleDropdown"
+      :aria-expanded="isOpen"
+      aria-haspopup="true"
+      :title="currentLanguageName"
+    >
+      <img
+        :src="currentFlagSrc"
+        :alt="currentLanguageName"
+        class="flag-img"
+        width="22"
+        height="16"
+      />
+      <span class="lang-label">{{ currentLanguageName }}</span>
+      <svg
+        class="chevron"
+        :class="{ rotated: isOpen }"
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
       >
-        <span class="flag">{{ currentFlag }}</span>
-        <span class="language-name">{{ currentLanguageName }}</span>
-        <svg class="chevron" :class="{ 'rotated': isOpen }" width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+        <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
 
-      <div class="dropdown-menu" :class="{ 'show': isOpen }">
+    <Transition name="lang-dropdown">
+      <div v-if="isOpen" class="lang-menu">
         <button
           v-for="lang in languages"
           :key="lang.code"
-          class="dropdown-item"
-          :class="{ 'active': currentLocale === lang.code }"
+          class="lang-option"
+          :class="{ selected: currentLocale === lang.code }"
           @click="selectLanguage(lang.code)"
         >
-          <span class="flag">{{ lang.flag }}</span>
-          <span class="language-name">{{ lang.name }}</span>
-          <svg v-if="currentLocale === lang.code" class="check-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M3.5 8L6.5 11L12.5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <div class="option-left">
+            <img
+              :src="getFlagSrc(lang.code)"
+              :alt="lang.name"
+              class="flag-img"
+              width="24"
+              height="18"
+            />
+            <div class="option-text">
+              <span class="option-name">{{ lang.name }}</span>
+              <span class="option-native">{{ lang.native }}</span>
+            </div>
+          </div>
+          <div v-if="currentLocale === lang.code" class="check-badge">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2.5 6L5 8.5L9.5 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
         </button>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import UKFlag from '@/assets/images/UK.png'
+import KHFlag from '@/assets/images/KH.png'
 
 const { locale } = useI18n()
 
@@ -43,33 +72,49 @@ const isOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
 const languages = [
-  { code: 'en', flag: '🇺🇸', name: 'English' },
-  { code: 'km', flag: '🇰🇭', name: 'ភាសាខ្មែរ' }
+  {
+    code: 'en',
+    flag: UKFlag,
+    name: 'English',
+    native: 'English',
+  },
+  {
+    code: 'km',
+    flag: KHFlag,
+    name: 'Khmer',
+    native: 'ភាសាខ្មែរ',
+  },
 ]
 
 const currentLocale = computed(() => locale.value)
 
-const currentFlag = computed(() => {
-  const lang = languages.find(l => l.code === locale.value)
-  return lang?.flag || '🇺🇸'
+const currentFlagSrc = computed(() => {
+  const lang = languages.find((l) => l.code === locale.value)
+  return lang?.flag || UKFlag
 })
 
 const currentLanguageName = computed(() => {
-  const lang = languages.find(l => l.code === locale.value)
+  const lang = languages.find((l) => l.code === locale.value)
   return lang?.name || 'English'
 })
 
-const toggleDropdown = () => {
+function getFlagSrc(code: string) {
+  const lang = languages.find((l) => l.code === code)
+  return lang?.flag || UKFlag
+}
+
+function toggleDropdown() {
   isOpen.value = !isOpen.value
 }
 
-const selectLanguage = (langCode: string) => {
+function selectLanguage(langCode: string) {
   locale.value = langCode as 'en' | 'km'
   localStorage.setItem('language', langCode)
+  document.documentElement.setAttribute('lang', langCode)
   isOpen.value = false
 }
 
-const handleClickOutside = (event: MouseEvent) => {
+function handleClickOutside(event: MouseEvent) {
   if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
     isOpen.value = false
   }
@@ -85,109 +130,197 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ─── Container ─── */
 .language-switcher {
   position: relative;
+  user-select: none;
 }
 
-.dropdown {
-  position: relative;
-}
-
-.dropdown-toggle {
+/* ─── Toggle Button ─── */
+.lang-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  padding: 6px 10px 6px 8px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-  transition: all 0.2s ease;
-  min-width: 140px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+  font-family: inherit;
 }
 
-.dropdown-toggle:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+.lang-toggle:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
-.dropdown-toggle:focus {
+.lang-toggle:active {
+  transform: translateY(0px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.lang-toggle:focus-visible {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-.flag {
-  font-size: 18px;
+/* ─── Flag Image ─── */
+.flag-img {
+  border-radius: 3px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: block;
+}
+
+.lang-toggle .flag-img {
+  width: 22px;
+  height: 16px;
+}
+
+/* ─── Label ─── */
+.lang-label {
+  flex: 1;
+  text-align: left;
   line-height: 1;
 }
 
-.language-name {
-  flex: 1;
-  text-align: left;
-}
-
+/* ─── Chevron ─── */
 .chevron {
-  color: #9ca3af;
-  transition: transform 0.2s ease;
+  color: #94a3b8;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
 }
 
 .chevron.rotated {
   transform: rotate(180deg);
 }
 
-.dropdown-menu {
+/* ─── Dropdown Menu ─── */
+.lang-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  min-width: 160px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.06),
+    0 10px 24px -4px rgba(0, 0, 0, 0.08);
+  min-width: 200px;
+  padding: 4px;
   z-index: 1000;
+}
+
+/* ─── Transition ─── */
+.lang-dropdown-enter-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lang-dropdown-leave-active {
+  transition: all 0.15s ease-in;
+}
+.lang-dropdown-enter-from {
   opacity: 0;
-  visibility: hidden;
-  transform: translateY(-8px);
-  transition: all 0.2s ease;
+  transform: translateY(-6px) scale(0.97);
+}
+.lang-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
 }
 
-.dropdown-menu.show {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.dropdown-item {
+/* ─── Dropdown Option ─── */
+.lang-option {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: none;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #374151;
-  transition: background 0.15s ease;
+  color: #334155;
+  transition: all 0.15s ease;
   text-align: left;
+  font-family: inherit;
+  gap: 8px;
 }
 
-.dropdown-item:hover {
-  background: #f3f4f6;
+.lang-option:hover {
+  background: #f1f5f9;
 }
 
-.dropdown-item.active {
+.lang-option.selected {
   background: #eff6ff;
-  color: #3b82f6;
+  color: #2563eb;
 }
 
-.check-icon {
-  margin-left: auto;
-  color: #3b82f6;
+.lang-option:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #3b82f6;
+}
+
+.option-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.option-name {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #1e293b;
+}
+
+.lang-option.selected .option-name {
+  color: #2563eb;
+}
+
+.option-native {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.lang-option.selected .option-native {
+  color: #60a5fa;
+}
+
+.check-badge {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2563eb;
+  border-radius: 50%;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.lang-option:not(.selected) .check-badge {
+  display: none;
 }
 </style>

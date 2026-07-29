@@ -61,7 +61,7 @@
             {{ t('subjects.addSubject') }}
           </button>
           <span class="count-badge">
-            {{ filteredSubjects.length }} / {{ subjects.length }} {{ t('subjects.subject').toLowerCase() }}{{ subjects.length !== 1 ? 's' : '' }}
+            {{ filteredSubjects.length }} / {{ subjects.length }} {{ subjects.length !== 1 ? t('subjects.subjectsLabel') : t('subjects.subjectLabel') }}
           </span>
         </div>
       </div>
@@ -166,7 +166,7 @@
               </td>
               <td class="td-status">
                 <span class="status-badge" :class="(subject.status || '').toLowerCase() === 'active' ? 'badge-active' : 'badge-inactive'">
-                  {{ subject.status }}
+                  {{ (subject.status || '').toLowerCase() === 'active' ? t('common.active') : t('common.inactive') }}
                 </span>
               </td>
               <td class="td-actions">

@@ -8,10 +8,10 @@
     <div class="role-card">
       <div class="tab-bar">
         <button class="tab-btn" :class="{ active: activeTab === 'permissions' }" @click="activeTab = 'permissions'">
-          Permissions
+          {{ t('roles.tabPermissions') }}
         </button>
         <button class="tab-btn" :class="{ active: activeTab === 'domains' }" @click="activeTab = 'domains'">
-          Sign-in Domains
+          {{ t('roles.tabDomains') }}
         </button>
       </div>
 
@@ -22,7 +22,7 @@
         <div class="toolbar-left">
           <label class="filter-label">
             <ShieldCheck :size="16" />
-            <span>Role</span>
+            <span>{{ t('roles.roleName') }}</span>
             <select v-model.number="selectedRoleId" class="filter-select" @change="onRoleChange">
               <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
             </select>
@@ -34,7 +34,7 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search feature..."
+              :placeholder="t('roles.searchPlaceholder')"
               @input="currentPage = 1"
             />
           </div>
@@ -44,15 +44,15 @@
           <button
             v-if="selectedRole && selectedRole.slug !== 'admin'"
             class="btn-icon-danger"
-            title="Delete role"
+            :title="t('roles.deleteRole')"
             @click="doDeleteRole(selectedRole!)"
           >
             <Trash2 :size="15" />
           </button>
-          <span class="count-badge">{{ featureRows.length }} feature{{ featureRows.length !== 1 ? 's' : '' }}</span>
+          <span class="count-badge">{{ t('roles.featureCount', { count: featureRows.length }) }}</span>
           <button class="btn-add-role" @click="openCreateModal">
             <Plus :size="15" />
-            New Role
+            {{ t('roles.newRole') }}
           </button>
         </div>
       </div>
@@ -68,7 +68,7 @@
         <input
           v-model="editDescription"
           class="role-desc-input"
-          placeholder="Add a description..."
+          :placeholder="t('roles.descPlaceholder')"
           @change="renameRole"
         />
       </div>
@@ -76,8 +76,8 @@
       <div v-if="pagedRows.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
-          <h5>No features found</h5>
-          <p>{{ searchQuery ? 'Try a different search term.' : 'No features match the current filter.' }}</p>
+          <h5>{{ t('roles.noFeatures') }}</h5>
+          <p>{{ searchQuery ? t('app.tryDifferentSearch') : t('app.noMatchFilter') }}</p>
         </div>
       </div>
 
@@ -85,13 +85,13 @@
             <table class="perm-table data-table-base">
           <thead>
             <tr>
-              <th class="col-all">All</th>
-              <th class="col-feature">Feature</th>
-              <th class="col-action">View</th>
-              <th class="col-action">Create</th>
-              <th class="col-action">Update</th>
-              <th class="col-action">Delete</th>
-              <th class="col-other">Other</th>
+              <th class="col-all">{{ t('roles.all') }}</th>
+              <th class="col-feature">{{ t('roles.feature') }}</th>
+              <th class="col-action">{{ t('roles.view') }}</th>
+              <th class="col-action">{{ t('roles.create') }}</th>
+              <th class="col-action">{{ t('roles.update') }}</th>
+              <th class="col-action">{{ t('roles.delete') }}</th>
+              <th class="col-other">{{ t('roles.other') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -100,7 +100,7 @@
                 <input
                   type="checkbox"
                   class="perm-checkbox"
-                  title="Select all for this feature"
+                  :title="t('roles.selectAll')"
                   :checked="isRowFullySelected(row, selectedPermissionIds)"
                   :indeterminate.prop="isRowPartiallySelected(row, selectedPermissionIds)"
                   @change="toggleRow(row, ($event.target as HTMLInputElement).checked)"
@@ -167,7 +167,7 @@
 
       <div v-if="filteredRows.length > 0" class="pagination-bar">
         <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+          <span class="rows-label">{{ t('app.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pageSizeOptions"
@@ -182,7 +182,7 @@
         </div>
 
         <div class="pagination-pages">
-          <button class="page-nav" :disabled="currentPage <= 1" @click="currentPage--" aria-label="Previous page">
+          <button class="page-nav" :disabled="currentPage <= 1" @click="currentPage--" :aria-label="t('app.previous')">
             <ChevronLeft :size="16" />
           </button>
           <template v-for="page in visiblePages" :key="page">
@@ -196,21 +196,21 @@
             </button>
             <span v-else class="page-dots">…</span>
           </template>
-          <button class="page-nav" :disabled="currentPage >= lastPage" @click="currentPage++" aria-label="Next page">
+          <button class="page-nav" :disabled="currentPage >= lastPage" @click="currentPage++" :aria-label="t('app.next')">
             <ChevronRight :size="16" />
           </button>
         </div>
 
         <div class="pagination-total">
-          {{ filteredRows.length === 0 ? 0 : pagination.from }}-{{ pagination.to }} of {{ filteredRows.length }}
+          {{ filteredRows.length === 0 ? 0 : pagination.from }}-{{ pagination.to }} {{ t('app.of') }} {{ filteredRows.length }}
         </div>
 
         <div class="save-group">
-          <span v-if="isDirty" class="dirty-hint">Unsaved changes</span>
+          <span v-if="isDirty" class="dirty-hint">{{ t('roles.unsavedChanges') }}</span>
           <button class="btn-save" :disabled="!isDirty || saving" @click="savePermissions">
             <span v-if="saving" class="spinner-sm"></span>
             <Check v-else :size="15" />
-            {{ saving ? 'Saving...' : 'Save Changes' }}
+            {{ saving ? t('roles.saving') : t('roles.saveChanges') }}
           </button>
         </div>
       </div>
@@ -220,30 +220,30 @@
     <div v-if="showCreateModal" class="modal-overlay" @click.self="showCreateModal = false">
       <div class="create-modal">
         <div class="create-modal-header">
-          <h5>New Role</h5>
+          <h5>{{ t('roles.newRole') }}</h5>
           <button class="modal-close" @click="showCreateModal = false">&times;</button>
         </div>
         <div class="create-modal-body">
           <div class="form-group">
-            <label>Role Name</label>
-            <input v-model="newRole.name" class="form-input" placeholder="e.g. Coordinator" />
+            <label>{{ t('roles.roleName') }}</label>
+            <input v-model="newRole.name" class="form-input" :placeholder="t('roles.namePlaceholder')" />
           </div>
           <div class="form-group">
-            <label>Description</label>
-            <input v-model="newRole.description" class="form-input" placeholder="Optional" />
+            <label>{{ t('roles.description') }}</label>
+            <input v-model="newRole.description" class="form-input" :placeholder="t('roles.optional')" />
           </div>
 
           <div class="table-wrap modal-table-wrap">
         <table class="perm-table data-table-base">
               <thead>
                 <tr>
-                  <th class="col-all">All</th>
-                  <th class="col-feature">Feature</th>
-                  <th class="col-action">View</th>
-                  <th class="col-action">Create</th>
-                  <th class="col-action">Update</th>
-                  <th class="col-action">Delete</th>
-                  <th class="col-other">Other</th>
+                  <th class="col-all">{{ t('roles.all') }}</th>
+                  <th class="col-feature">{{ t('roles.feature') }}</th>
+                  <th class="col-action">{{ t('roles.view') }}</th>
+                  <th class="col-action">{{ t('roles.create') }}</th>
+                  <th class="col-action">{{ t('roles.update') }}</th>
+                  <th class="col-action">{{ t('roles.delete') }}</th>
+                  <th class="col-other">{{ t('roles.other') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,7 +252,7 @@
                     <input
                       type="checkbox"
                       class="perm-checkbox"
-                      title="Select all for this feature"
+                      :title="t('roles.selectAll')"
                       :checked="isRowFullySelected(row, newRole.permissionIds)"
                       :indeterminate.prop="isRowPartiallySelected(row, newRole.permissionIds)"
                       @change="toggleNewRoleRow(row, ($event.target as HTMLInputElement).checked)"
@@ -292,10 +292,10 @@
           </div>
         </div>
         <div class="create-modal-footer">
-          <button class="btn-cancel" @click="showCreateModal = false">Cancel</button>
+          <button class="btn-cancel" @click="showCreateModal = false">{{ t('roles.cancel') }}</button>
           <button class="btn-save" :disabled="!newRole.name.trim() || creating" @click="submitCreateRole">
             <span v-if="creating" class="spinner-sm"></span>
-            {{ creating ? 'Creating...' : 'Create Role' }}
+            {{ creating ? t('roles.creating') : t('roles.createRole') }}
           </button>
         </div>
       </div>
@@ -306,6 +306,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   ShieldCheck, Inbox, Plus, Trash2, Check, AlertTriangle,
   Search, ChevronLeft, ChevronRight,
@@ -316,6 +317,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import type { Permission } from '@/services/permissionService'
 import DomainRulesPanel from './DomainRulesPanel.vue'
 
+const { t } = useI18n()
 const store = useRoleStore()
 const { roles, permissionsByGroup, error } = storeToRefs(store)
 const { confirm } = useConfirm()
@@ -353,14 +355,49 @@ const newRole = ref<{ name: string; description: string; permissionIds: Set<numb
 
 const deleting = ref(false)
 
+const permGroupKeys: Record<string, string> = {
+  'students': 'roles.permGroups.students',
+  'teachers': 'roles.permGroups.teachers',
+  'classes': 'roles.permGroups.classes',
+  'subjects': 'roles.permGroups.subjects',
+  'scores': 'roles.permGroups.scores',
+  'departments': 'roles.permGroups.departments',
+  'generations': 'roles.permGroups.generations',
+  'report-cards': 'roles.permGroups.report-cards',
+  'transcripts': 'roles.permGroups.transcripts',
+  'reports': 'roles.permGroups.reports',
+  'activity-logs': 'roles.permGroups.activity-logs',
+  'users': 'roles.permGroups.users',
+  'email-domain-rules': 'roles.permGroups.email-domain-rules',
+  'grade-boundaries': 'roles.permGroups.grade-boundaries',
+  'assessment-types': 'roles.permGroups.assessment-types',
+  'terms': 'roles.permGroups.terms',
+  'system': 'roles.permGroups.system',
+}
+
+const actionLabelKeys: Record<string, string> = {
+  'view': 'roles.actions.view',
+  'create': 'roles.actions.create',
+  'update': 'roles.actions.update',
+  'delete': 'roles.actions.delete',
+  'generate': 'roles.actions.generate',
+  'export': 'roles.actions.export',
+  'import': 'roles.actions.import',
+  'manage': 'roles.actions.manage',
+}
+
 function formatGroupName(group: string): string {
+  const key = permGroupKeys[group]
+  if (key) return t(key)
   return group.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function actionLabel(perm: Permission, group: string): string {
   const suffix = `-${group}`
-  const action = perm.slug.endsWith(suffix) ? perm.slug.slice(0, -suffix.length) : perm.slug
-  return action.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const actionSlug = perm.slug.endsWith(suffix) ? perm.slug.slice(0, -suffix.length) : perm.slug
+  const key = actionLabelKeys[actionSlug]
+  if (key) return t(key)
+  return actionSlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 const featureRows = computed<FeatureRow[]>(() => {
@@ -569,9 +606,9 @@ async function submitCreateRole() {
 
 async function doDeleteRole(role: typeof roles.value[number]) {
   const ok = await confirm({
-    title: `Delete "${role.name}"?`,
-    message: 'Users currently assigned this role will keep it, but it will no longer appear as an option. This can\'t be undone.',
-    confirmLabel: 'Delete Role',
+    title: t('roles.deleteConfirmTitle', { name: role.name }),
+    message: t('roles.deleteConfirmMessage'),
+    confirmLabel: t('roles.deleteRole'),
     danger: true,
   })
   if (!ok) return

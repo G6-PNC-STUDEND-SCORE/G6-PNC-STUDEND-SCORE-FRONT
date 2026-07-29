@@ -7,9 +7,14 @@ if (savedLang === 'kh') {
   localStorage.setItem('language', 'km')
 }
 
+const initialLocale = localStorage.getItem('language') || 'en'
+
+// Sync <html> lang attribute so CSS can target Khmer-specific styling
+document.documentElement.setAttribute('lang', initialLocale)
+
 const i18n = createI18n({
   legacy: false,
-  locale: localStorage.getItem('language') || 'en',
+  locale: initialLocale,
   fallbackLocale: 'en',
   messages: {
     en,

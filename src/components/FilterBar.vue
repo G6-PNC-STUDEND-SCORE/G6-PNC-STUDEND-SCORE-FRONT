@@ -3,31 +3,31 @@
     <div class="card-body py-2 px-3">
       <div class="d-flex flex-wrap align-items-center gap-2">
         <div class="filter-group">
-          <label class="filter-label">Generation</label>
+          <label class="filter-label">{{ t('filter.generation') }}</label>
           <select
             class="form-select form-select-sm"
             :value="store.filters.generation_id ?? ''"
             @change="onFilterChange('generation_id', ($event.target as HTMLSelectElement).value)"
           >
-            <option value="">All Generations</option>
+            <option value="">{{ t('filter.allGenerations') }}</option>
             <option
               v-for="gen in store.filterOptions.generations"
               :key="gen.id"
               :value="gen.id"
             >
-              {{ gen.name || `Generation ${gen.year}` }}
+              {{ gen.name || `${t('filter.generation')} ${gen.year}` }}
             </option>
           </select>
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Term</label>
+          <label class="filter-label">{{ t('filter.term') }}</label>
           <select
             class="form-select form-select-sm"
             :value="store.filters.term_id ?? ''"
             @change="onFilterChange('term_id', ($event.target as HTMLSelectElement).value)"
           >
-            <option value="">All Terms</option>
+            <option value="">{{ t('filter.allTerms') }}</option>
             <option
               v-for="term in store.filterOptions.terms"
               :key="term.id"
@@ -39,13 +39,13 @@
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Class</label>
+          <label class="filter-label">{{ t('filter.class') }}</label>
           <select
             class="form-select form-select-sm"
             :value="store.filters.class_id ?? ''"
             @change="onFilterChange('class_id', ($event.target as HTMLSelectElement).value)"
           >
-            <option value="">All Classes</option>
+            <option value="">{{ t('filter.allClasses') }}</option>
             <option
               v-for="cls in store.filterOptions.classes"
               :key="cls.id"
@@ -57,13 +57,13 @@
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Department</label>
+          <label class="filter-label">{{ t('filter.department') }}</label>
           <select
             class="form-select form-select-sm"
             :value="store.filters.department_id ?? ''"
             @change="onFilterChange('department_id', ($event.target as HTMLSelectElement).value)"
           >
-            <option value="">All Departments</option>
+            <option value="">{{ t('filter.allDepartments') }}</option>
             <option
               v-for="dept in store.filterOptions.departments"
               :key="dept.id"
@@ -75,19 +75,19 @@
         </div>
 
         <div class="filter-group">
-          <label class="filter-label">Teacher</label>
+          <label class="filter-label">{{ t('filter.teacher') }}</label>
           <select
             class="form-select form-select-sm"
             :value="store.filters.teacher_id ?? ''"
             @change="onFilterChange('teacher_id', ($event.target as HTMLSelectElement).value)"
           >
-            <option value="">All Teachers</option>
+            <option value="">{{ t('filter.allTeachers') }}</option>
             <option
               v-for="teacher in store.filterOptions.teachers"
               :key="teacher.id"
               :value="teacher.id"
             >
-              {{ teacher.user?.name || `Teacher #${teacher.id}` }}
+              {{ teacher.user?.name || `${t('filter.teacher')} #${teacher.id}` }}
             </option>
           </select>
         </div>
@@ -98,7 +98,7 @@
           @click="store.clearFilters()"
         >
           <XCircle :size="14" class="me-1" />
-          Clear ({{ store.activeFilterCount }})
+          {{ t('filter.clear') }} ({{ store.activeFilterCount }})
         </button>
       </div>
     </div>
@@ -107,11 +107,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@/stores/theme'
 import { useDashboardStore } from '@/stores/dashboard'
 import type { DashboardFilters } from '@/types/dashboard'
 import { XCircle } from '@lucide/vue'
 
+const { t } = useI18n()
 const themeStore = useThemeStore()
 const store = useDashboardStore()
 const isDark = computed(() => themeStore.isDark)

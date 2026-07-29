@@ -1,6 +1,6 @@
 <template>
   <div class="classes-page">
-    <LoadingState v-if="loading && classes.length === 0" message="Loading classes..." />
+    <LoadingState v-if="loading && classes.length === 0" :message="t('classes.loading')" />
 
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
       <AlertTriangle :size="16" />
@@ -16,26 +16,26 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search by name, generation, or room..."
+              :placeholder="t('classes.searchPlaceholder')"
             />
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <ToggleLeft :size="16" />
-              <span>Status</span>
+              <span>{{ t('common.status') }}</span>
               <select v-model="filters.status" class="filter-select">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+                <option value="">{{ t('app.all') }}</option>
+                <option value="active">{{ t('common.active') }}</option>
+                <option value="inactive">{{ t('common.inactive') }}</option>
               </select>
             </label>
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <CalendarDays :size="16" />
-              <span>Generation</span>
+              <span>{{ t('classes.generation') }}</span>
               <select v-model="filters.generation" class="filter-select">
-                <option value="">All</option>
+                <option value="">{{ t('app.all') }}</option>
                 <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
               </select>
             </label>
@@ -50,28 +50,28 @@
             @click="openCreateModal"
           >
             <Plus :size="15" />
-            Add Class
+            {{ t('classes.addClass') }}
           </button>
 
           <span class="count-badge">
-            {{ totalClasses }} class{{ totalClasses !== 1 ? 'es' : '' }}
+            {{ totalClasses }} {{ totalClasses !== 1 ? t('classes.classesLabel') : t('classes.classLabel') }}
           </span>
         </div>
       </div>
 
       <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <span class="bulk-count">{{ selectedIds.length }} {{ t('app.selected') }}</span>
         <button class="bulk-delete-btn" @click="confirmBulkDelete">
           <Trash :size="16" />
-          Delete Selected
+          {{ t('classes.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="clearSelection">{{ t('classes.clearSelection') }}</button>
       </div>
 
       <div v-if="filteredClasses.length === 0" class="empty-container">
         <EmptyState
-          title="No classes found"
-          :message="searchQuery ? 'Try a different search term.' : 'No classes match the current filter.'"
+          :title="t('classes.noClasses')"
+          :message="searchQuery ? t('app.tryDifferentSearch') : t('app.noMatchFilter')"
         >
           <template #icon><Inbox :size="24" /></template>
         </EmptyState>
@@ -128,15 +128,15 @@
               class="status-badge"
               :class="(row as SchoolClass).is_active ? 'badge-active' : 'badge-inactive'"
             >
-              {{ (row as SchoolClass).is_active ? 'Active' : 'Inactive' }}
+              {{ (row as SchoolClass).is_active ? t('common.active') : t('common.inactive') }}
             </span>
           </template>
           <template #cell-actions="{ row }">
             <div class="actions-cell" @click.stop @dblclick.stop>
-              <button v-if="canUpdate" class="act-btn" @click="openEditModal(row as SchoolClass)" title="Edit">
+              <button v-if="canUpdate" class="act-btn" @click="openEditModal(row as SchoolClass)" :title="t('common.edit')">
                 <Pencil :size="15" />
               </button>
-              <button v-if="canDelete" class="act-btn act-danger" @click="confirmDelete(row as SchoolClass)" title="Delete">
+              <button v-if="canDelete" class="act-btn act-danger" @click="confirmDelete(row as SchoolClass)" :title="t('common.delete')">
                 <Trash2 :size="15" />
               </button>
             </div>
@@ -146,7 +146,7 @@
 
       <div v-if="filteredClasses.length > 0" class="pagination-bar">
         <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+          <span class="rows-label">{{ t('app.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pagination.pageSizeOptions"
@@ -165,7 +165,7 @@
             class="page-nav"
             :disabled="pagination.currentPage.value <= 1"
             @click="pagination.changePage(pagination.currentPage.value - 1)"
-            aria-label="Previous page"
+            :aria-label="t('app.previous')"
           >
             <ChevronLeft :size="16" />
           </button>
@@ -186,14 +186,14 @@
             class="page-nav"
             :disabled="pagination.currentPage.value >= pagination.totalPages.value"
             @click="pagination.changePage(pagination.currentPage.value + 1)"
-            aria-label="Next page"
+            :aria-label="t('app.next')"
           >
             <ChevronRight :size="16" />
           </button>
         </div>
 
         <div class="pagination-total">
-          {{ (pagination.currentPage.value - 1) * pagination.pageSize.value + 1 }}-{{ Math.min(pagination.currentPage.value * pagination.pageSize.value, filteredClasses.length) }} of {{ filteredClasses.length }}
+          {{ (pagination.currentPage.value - 1) * pagination.pageSize.value + 1 }}-{{ Math.min(pagination.currentPage.value * pagination.pageSize.value, filteredClasses.length) }} {{ t('app.of') }} {{ filteredClasses.length }}
         </div>
       </div>
     </div>
@@ -205,8 +205,8 @@
           <Plus v-else :size="18" />
         </div>
         <div>
-          <h3>{{ isEditMode ? 'Edit Class' : 'Add New Class' }}</h3>
-          <p>{{ isEditMode ? 'Update class information' : 'Fill in the new class details' }}</p>
+          <h3>{{ isEditMode ? t('classes.editClass') : t('classes.addNewClass') }}</h3>
+          <p>{{ isEditMode ? t('classes.classInformation') : t('classes.classDetails') }}</p>
         </div>
         <button class="modal-x" @click="closeFormModal">&times;</button>
       </div>
@@ -221,7 +221,7 @@
           <div class="form-group">
             <label class="form-label">
               <Users :size="15" class="field-icon" />
-              Class Name <span class="req">*</span>
+              {{ t('classes.className') }} <span class="req">*</span>
             </label>
             <div class="input-wrap">
               <input
@@ -229,11 +229,11 @@
                 type="text"
                 class="styled-input"
                 :class="{ err: formError && !formData.name.trim() }"
-                placeholder="e.g. Class A"
+                :placeholder="t('classes.namePlaceholder')"
                 required
               />
             </div>
-            <span v-if="formError && !formData.name.trim()" class="field-err">Class name is required</span>
+            <span v-if="formError && !formData.name.trim()" class="field-err">{{ t('classes.nameRequired') }}</span>
           </div>
 
           <div class="section-divider"></div>
@@ -241,15 +241,15 @@
           <div class="form-group">
             <label class="form-label">
               <CalendarDays :size="15" class="field-icon" />
-              Generation <span class="req">*</span>
+              {{ t('classes.generation') }} <span class="req">*</span>
             </label>
             <div class="input-wrap">
               <select v-model.number="formData.generation_id" class="styled-input" required>
-                <option :value="null">— Select generation —</option>
+                <option :value="null">{{ t('classes.selectGeneration') }}</option>
                 <option v-for="y in academicYears" :key="y.id" :value="y.id">{{ y.name }}</option>
               </select>
             </div>
-            <span v-if="formError && !formData.generation_id" class="field-err">Please select a generation</span>
+            <span v-if="formError && !formData.generation_id" class="field-err">{{ t('classes.generationRequired') }}</span>
           </div>
 
           <div class="section-divider"></div>
@@ -258,14 +258,14 @@
             <div class="form-group">
               <label class="form-label">
                 <DoorOpen :size="15" class="field-icon" />
-                Room
+                {{ t('classes.room') }}
               </label>
               <div class="input-wrap">
                 <input
                   v-model="formData.room"
                   type="text"
                   class="styled-input"
-                  placeholder="e.g. B12"
+                  :placeholder="t('classes.roomPlaceholder')"
                 />
               </div>
             </div>
@@ -273,12 +273,12 @@
             <div class="form-group">
               <label class="form-label">
                 <ToggleLeft :size="15" class="field-icon" />
-                Status
+                {{ t('common.status') }}
               </label>
               <div class="input-wrap">
                 <select v-model="formData.is_active" class="styled-input">
-                  <option :value="true">Active</option>
-                  <option :value="false">Inactive</option>
+                  <option :value="true">{{ t('common.active') }}</option>
+                  <option :value="false">{{ t('common.inactive') }}</option>
                 </select>
               </div>
             </div>
@@ -289,13 +289,13 @@
           <div class="form-group">
             <label class="form-label">
               <FileText :size="15" class="field-icon" />
-              Description
+              {{ t('classes.description') }}
             </label>
             <div class="input-wrap">
               <textarea
                 v-model="formData.description"
                 class="styled-input"
-                placeholder="Optional notes..."
+                :placeholder="t('classes.descPlaceholder')"
                 rows="3"
                 style="resize: vertical; min-height: 60px;"
               ></textarea>
@@ -304,11 +304,11 @@
         </div>
 
         <div class="modal-foot">
-          <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
+          <button type="button" class="btn btn-ghost" @click="closeFormModal">{{ t('app.cancel') }}</button>
           <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
             <span v-if="formSubmitting" class="spinner-sm"></span>
             <Check v-else :size="16" />
-            <span>{{ isEditMode ? 'Save Changes' : 'Create Class' }}</span>
+            <span>{{ isEditMode ? t('classes.saveChanges') : t('classes.createClassBtn') }}</span>
           </button>
         </div>
       </form>
@@ -318,6 +318,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import {
   Users, Plus, AlertTriangle, Search, ToggleLeft, Pencil, Trash2, ChevronLeft, ChevronRight, SquarePen,
@@ -336,6 +337,7 @@ import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
 import { usePermission } from '@/composables/usePermission'
 
+const { t } = useI18n()
 const store = useClassStore()
 const { classes, loading, error, totalClasses } = storeToRefs(store)
 
@@ -385,12 +387,11 @@ resetPage = pagination.resetPage
 
 const columns = computed(() => [
   ...(canDelete.value ? [{ key: 'check', label: '', width: '48px' }] : []),
-  { key: 'index', label: '#', width: '64px' },
-  { key: 'name', label: 'Class Name' },
-  { key: 'generation', label: 'Generation' },
-  { key: 'room', label: 'Room' },
-  { key: 'status', label: 'Status' },
-  { key: 'actions', label: 'Actions', width: '90px' },
+  { key: 'index', label: '#', width: '64px' },          { key: 'name', label: t('classes.className') },
+  { key: 'generation', label: t('classes.generation') },
+  { key: 'room', label: t('classes.room') },
+  { key: 'status', label: t('common.status') },
+  { key: 'actions', label: t('classes.actions'), width: '90px' },
 ])
 
 function generationLabel(cls: SchoolClass): string {
@@ -451,11 +452,11 @@ function closeFormModal() {
 
 async function handleSubmit() {
   if (!formData.name.trim()) {
-    formError.value = 'Class name is required'
+    formError.value = t('classes.nameRequired')
     return
   }
   if (!formData.generation_id) {
-    formError.value = 'Please select a generation'
+    formError.value = t('classes.generationRequired')
     return
   }
 
@@ -472,10 +473,10 @@ async function handleSubmit() {
         is_active: formData.is_active,
       })
       if (ok) {
-        toast.success('Class updated successfully')
+        toast.success(t('classes.updatedSuccess'))
         closeFormModal()
       } else {
-        formError.value = store.error || 'Failed to update class'
+        formError.value = store.error || t('messages.operationFailed')
       }
     } else {
       const ok = await store.createClass({
@@ -486,15 +487,15 @@ async function handleSubmit() {
         is_active: formData.is_active,
       } as Partial<SchoolClass>)
       if (ok) {
-        toast.success('Class created successfully')
+        toast.success(t('classes.createdSuccess'))
         closeFormModal()
       } else {
-        formError.value = store.error || 'Failed to create class'
+        formError.value = store.error || t('messages.operationFailed')
       }
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    formError.value = err.response?.data?.message || err.message || 'Operation failed'
+    formError.value = err.response?.data?.message || err.message || t('messages.operationFailed')
   } finally {
     formSubmitting.value = false
   }
@@ -502,9 +503,9 @@ async function handleSubmit() {
 
 async function confirmDelete(cls: SchoolClass) {
   const ok = await confirm({
-    title: 'Delete Class',
-    message: `Are you sure you want to delete "${cls.name}"? The class and all associated data will be permanently removed.`,
-    confirmLabel: 'Delete',
+    title: t('classes.deleteClass'),
+    message: t('classes.deleteConfirmMessage', { name: cls.name }),
+    confirmLabel: t('common.delete'),
     danger: true,
   })
   if (!ok) return
@@ -512,16 +513,16 @@ async function confirmDelete(cls: SchoolClass) {
   try {
     const deleted = await store.deleteClass(cls.id)
     if (deleted) {
-      toast.success('Class deleted successfully')
+      toast.success(t('classes.deletedSuccess'))
       if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
         pagination.changePage(pagination.currentPage.value - 1)
       }
     } else {
-      toast.error(store.error || 'Failed to delete class')
+      toast.error(store.error || t('messages.operationFailed'))
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    toast.error(err.response?.data?.message || err.message || 'Failed to delete class')
+    toast.error(err.response?.data?.message || err.message || t('messages.operationFailed'))
   }
 }
 
@@ -564,9 +565,9 @@ function clearSelection() {
 async function confirmBulkDelete() {
   const count = selectedIds.value.length
   const ok = await confirm({
-    title: 'Delete Classes',
-    message: `Are you sure you want to delete ${count} class(es)? These classes and all associated data will be permanently removed.`,
-    confirmLabel: `Delete ${count} class(es)`,
+    title: t('classes.deleteClasses'),
+    message: t('classes.deleteBulkMessage', { count }),
+    confirmLabel: t('classes.deleteBulkBtn', { count }),
     danger: true,
   })
   if (!ok) return
@@ -576,17 +577,17 @@ async function confirmBulkDelete() {
     const results = await Promise.allSettled(idsToDelete.map(id => store.deleteClass(id)))
     const allOk = results.every(r => r.status === 'fulfilled')
     if (allOk) {
-      toast.success(`${idsToDelete.length} class(es) deleted successfully`)
+      toast.success(t('classes.deletedSuccess'))
       clearSelection()
       if (pagination.paginatedItems.value.length === 0 && pagination.currentPage.value > 1) {
         pagination.changePage(pagination.currentPage.value - 1)
       }
     } else {
-      toast.error('Failed to delete some classes')
+      toast.error(t('messages.operationFailed'))
     }
   } catch (e: unknown) {
     const err = e as { message?: string }
-    toast.error(err.message || 'Failed to delete classes')
+    toast.error(err.message || t('messages.operationFailed'))
   }
 }
 

@@ -2,7 +2,7 @@
   <div class="page-container">
     <div v-if="loading" class="load-state">
       <div class="spinner"></div>
-      <span>Loading subjects…</span>
+      <span>{{ t('scores.loadingSubjects') }}</span>
     </div>
 
     <template v-else>
@@ -10,7 +10,7 @@
         <div class="breadcrumb">
           <button class="breadcrumb-back" @click="goBack">
             <ArrowLeft :size="15" />
-            <span>All Classes</span>
+            <span>{{ t('scores.allClasses') }}</span>
           </button>
           <template v-if="className">
             <ChevronRight :size="12" class="breadcrumb-sep" />
@@ -34,12 +34,12 @@
               :title="showAllClasses ? 'Filter by current class' : 'Show all classes'"
             >
               <School :size="14" />
-              <span>{{ showAllClasses ? 'All Classes' : className || 'All Classes' }}</span>
+              <span>{{ showAllClasses ? t('scores.allClasses') : className || t('scores.allClasses') }}</span>
             </button>
-            <span class="tb-result-count">{{ filteredSubjects.length }} subject{{ filteredSubjects.length !== 1 ? 's' : '' }}</span>
+            <span class="tb-result-count">{{ t('scores.subjectCount', { count: filteredSubjects.length }) }}</span>
           </div>
           <div class="sort-toggle">
-            <span class="sort-label">Sort</span>
+            <span class="sort-label">{{ t('scores.sortBy') }}</span>
             <button
               class="sort-btn"
               :class="{ 'sort-btn-active': subjectSortMode === 'enrollment' }"
@@ -47,7 +47,7 @@
               title="Sort by enrollment count"
             >
               <Users :size="14" />
-              <span>Students</span>
+              <span>{{ t('scores.students') }}</span>
             </button>
             <button
               class="sort-btn"
@@ -56,15 +56,15 @@
               title="Sort alphabetically"
             >
               <ArrowUpDown :size="14" />
-              <span>A–Z</span>
+              <span>{{ t('scores.sortAZ') }}</span>
             </button>
           </div>
         </div>
 
         <div v-if="filteredSubjects.length === 0" class="empty-state">
           <div class="empty-state-icon"><Inbox :size="24" /></div>
-          <h5>No Subjects Found</h5>
-          <p class="text-secondary">No subjects with active offerings for this term.</p>
+          <h5>{{ t('scores.noSubjectsFound') }}</h5>
+          <p class="text-secondary">{{ t('scores.noSubjectsActive') }}</p>
         </div>
 
         <div v-else class="subjects-grid">
@@ -86,7 +86,7 @@
                 <span class="subj-dot">·</span>
                 <span class="subj-enrollment">
                   <Users :size="11" />
-                  {{ getSubjectEnrollmentCount(subject) }} students
+                  {{ t('scores.studentCard', { count: getSubjectEnrollmentCount(subject) }) }}
                 </span>
               </div>
             </div>
@@ -103,6 +103,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { getSpreadsheetSubjects, type SubjectItem } from '@/services/scoreService'
 import { cacheService } from '@/services/cacheService'
 import {
@@ -112,6 +113,7 @@ import {
 
 const CACHE_KEY = 'scores-subjects'
 
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 

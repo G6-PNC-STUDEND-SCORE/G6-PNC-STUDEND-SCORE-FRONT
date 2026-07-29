@@ -28,7 +28,7 @@
                   <i class="bi bi-hash"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Student ID</p>
+                  <p class="detail-label">{{ t('students.idLabel') }}</p>
                   <p class="detail-value">#{{ student.id }}</p>
                 </div>
               </div>
@@ -40,7 +40,7 @@
                   <i class="bi bi-upc-scan"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Student Number</p>
+                  <p class="detail-label">{{ t('students.studentNumber') }}</p>
                   <p
                     class="detail-value"
                     style="font-family: 'JetBrains Mono', 'Courier New', monospace; letter-spacing: 0.03em;"
@@ -57,7 +57,7 @@
                   <i class="bi bi-envelope-fill"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Email</p>
+                  <p class="detail-label">{{ t('students.email') }}</p>
                   <p class="detail-value">{{ student.user?.email || '—' }}</p>
                 </div>
               </div>
@@ -69,7 +69,7 @@
                   <i class="bi bi-calendar-event-fill"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Generation</p>
+                  <p class="detail-label">{{ t('students.generationLabel') }}</p>
                   <p class="detail-value">{{ student.generation?.name || '—' }}</p>
                 </div>
               </div>
@@ -81,7 +81,7 @@
                   <i class="bi bi-mortarboard-fill"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Class</p>
+                  <p class="detail-label">{{ t('students.class') }}</p>
                   <p class="detail-value">{{ student.class?.name || 'Not assigned' }}</p>
                 </div>
               </div>
@@ -93,7 +93,7 @@
                   <i :class="(student.user?.gender || '') === 'Male' ? 'bi bi-gender-male' : 'bi bi-gender-female'" />
                 </div>
                 <div>
-                  <p class="detail-label">Gender</p>
+                  <p class="detail-label">{{ t('students.gender') }}</p>
                   <p class="detail-value">{{ student.user?.gender || '—' }}</p>
                 </div>
               </div>
@@ -105,10 +105,10 @@
                   <i class="bi bi-calendar3"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Status</p>
+                  <p class="detail-label">{{ t('students.statusLabel') }}</p>
                   <span class="status-pill" :class="(student.user?.status || '') === 'active' ? 'stat-active' : 'stat-inactive'">
                     <span class="status-dot-sm" :class="(student.user?.status || '') === 'active' ? 'sdot-active' : 'sdot-inactive'" />
-                    {{ (student.user?.status || '') === 'active' ? 'Active' : 'Inactive' }}
+                    {{ (student.user?.status || '') === 'active' ? t('students.statusActive') : t('students.statusInactive') }}
                   </span>
                 </div>
               </div>
@@ -120,7 +120,7 @@
                   <i class="bi bi-clock-history"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Created</p>
+                  <p class="detail-label">{{ t('students.created') }}</p>
                   <p class="detail-value">{{ formatDate(student.created_at) }}</p>
                 </div>
               </div>
@@ -132,7 +132,7 @@
                   <i class="bi bi-arrow-repeat"></i>
                 </div>
                 <div>
-                  <p class="detail-label">Updated</p>
+                  <p class="detail-label">{{ t('students.updatedDate') }}</p>
                   <p class="detail-value">{{ formatDate(student.updated_at) }}</p>
                 </div>
               </div>
@@ -142,7 +142,7 @@
           <div class="modal-footer-custom">
             <button type="button" class="btn-close-modal" @click="$emit('close')">
               <i class="bi bi-check-lg me-1"></i>
-              Done
+              {{ t('students.done') }}
             </button>
           </div>
         </div>
@@ -153,7 +153,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Student } from '@/services/studentService'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   show: boolean

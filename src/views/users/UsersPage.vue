@@ -2,9 +2,9 @@
   <div class="users-page">
     <div v-if="loading && users.length === 0" class="text-center py-5">
       <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
-        <span class="visually-hidden">Loading...</span>
+        <span class="visually-hidden">{{ t('users.loading') }}</span>
       </div>
-      <p class="mt-2" style="color: #6b7280;">Loading users...</p>
+      <p class="mt-2" style="color: #6b7280;">{{ t('users.loading') }}</p>
     </div>
 
     <div v-else-if="error" class="d-flex align-items-center gap-2 p-4 rounded-3 text-danger-emphasis bg-danger-subtle border border-danger-subtle" style="font-size: 0.875rem;">
@@ -21,27 +21,36 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
-              placeholder="Search by name or email..."
+              :placeholder="t('users.searchPlaceholder')"
               @input="applyFilters"
             />
           </div>
           <div class="filter-group">
             <label class="filter-label">
               <ShieldCheck :size="16" />
-              <span>Role</span>
+              <span>{{ t('users.role') }}</span>
               <select v-model="roleFilter" class="filter-select" @change="applyFilters">
-                <option value="">All Roles</option>
+                <option value="">{{ t('users.allRoles') }}</option>
                 <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
               </select>
             </label>
             <label class="filter-label">
               <ToggleLeft :size="16" />
-              <span>Status</span>
+              <span>{{ t('users.status') }}</span>
               <select v-model="statusFilter" class="filter-select" @change="applyFilters">
-                <option value="">All</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
+                <option value="">{{ t('users.all') }}</option>
+                <option value="active">{{ t('users.active') }}</option>
+                <option value="inactive">{{ t('users.inactive') }}</option>
+                <option value="suspended">{{ t('users.suspended') }}</option>
+              </select>
+            </label>
+            <label class="filter-label">
+              <VenusAndMars :size="16" />
+              <span>{{ t('users.gender') }}</span>
+              <select v-model="genderFilter" class="filter-select" @change="applyFilters">
+                <option value="">{{ t('users.all') }}</option>
+                <option value="Male">{{ t('users.male') }}</option>
+                <option value="Female">{{ t('users.female') }}</option>
               </select>
             </label>
           </div>
@@ -55,29 +64,29 @@
             @click="openCreateModal"
           >
             <Plus :size="15" />
-            Add User
+            {{ t('users.addUser') }}
           </button>
 
           <span class="count-badge">
-            {{ totalUsers }} user{{ totalUsers !== 1 ? 's' : '' }}
+            {{ t('users.userCount', { count: totalUsers }) }}
           </span>
         </div>
       </div>
 
       <div v-if="canDelete && selectedIds.length > 0" class="bulk-bar">
-        <span class="bulk-count">{{ selectedIds.length }} selected</span>
+        <span class="bulk-count">{{ selectedIds.length }} {{ t('users.selected') }}</span>
         <button class="bulk-delete-btn" @click="openBulkDeleteModal">
           <Trash :size="16" />
-          Delete Selected
+          {{ t('users.deleteSelected') }}
         </button>
-        <button class="bulk-clear-btn" @click="clearSelection">Clear Selection</button>
+        <button class="bulk-clear-btn" @click="clearSelection">{{ t('users.clearSelection') }}</button>
       </div>
 
       <div v-if="users.length === 0" class="empty-container">
         <div class="empty-box">
           <Inbox :size="40" />
-          <h5>No users found</h5>
-          <p>{{ searchQuery ? 'Try a different search term.' : 'No users match the current filter.' }}</p>
+          <h5>{{ t('users.noUsersFound') }}</h5>
+          <p>{{ searchQuery ? t('app.tryDifferentSearch') : t('app.noMatchFilter') }}</p>
         </div>
       </div>
 
@@ -95,12 +104,12 @@
                 />
               </th>
               <th class="col-index">#</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Gender</th>
-              <th>Status</th>
-              <th class="col-actions">Actions</th>
+              <th>{{ t('users.name') }}</th>
+              <th>{{ t('users.email') }}</th>
+              <th>{{ t('users.role') }}</th>
+              <th>{{ t('users.gender') }}</th>
+              <th>{{ t('users.status') }}</th>
+              <th class="col-actions">{{ t('users.actions') }}</th>
             </tr>
           </thead>
           <TransitionGroup name="row" tag="tbody">
@@ -133,7 +142,7 @@
               </td>
               <td>
                 <span class="role-badge" :class="getRoleBadgeClass(user.role?.slug || '')">
-                  {{ user.role?.name || '—' }}
+                  {{ translateRole(user.role) }}
                 </span>
               </td>
               <td>
@@ -141,7 +150,7 @@
                   class="gender-badge"
                   :class="getGenderClass(user.gender || '')"
                 >
-                  {{ user.gender || '—' }}
+                  {{ translateGender(user.gender) }}
                 </span>
               </td>
               <td>
@@ -149,14 +158,14 @@
                   class="status-badge"
                   :class="getStatusClass(user.status)"
                 >
-                  {{ user.status }}
+                  {{ translateStatus(user.status) }}
                 </span>
               </td>
               <td class="col-actions" @click.stop>
                 <div class="action-dropdown">
                   <button
                     class="action-trigger"
-                    :title="`Actions for ${user.name}`"
+                    :title="t('users.actionsFor', { name: user.name })"
                     @click="toggleDropdown(user.id)"
                   >
                     <MoreVertical :size="18" />
@@ -165,16 +174,16 @@
                     <div v-if="openDropdownId === user.id" class="action-menu">
                       <button class="action-item view" @click="viewUser(user); openDropdownId = null">
                         <Eye :size="16" />
-                        <span>View Details</span>
+                        <span>{{ t('users.viewDetails') }}</span>
                       </button>
                       <button v-if="canUpdate" class="action-item edit" @click="openEditModal(user); openDropdownId = null">
                         <Pencil :size="16" />
-                        <span>Edit</span>
+                        <span>{{ t('users.edit') }}</span>
                       </button>
                       <div v-if="canUpdate && canDelete" class="dropdown-divider"></div>
                       <button v-if="canDelete" class="action-item delete" @click="openDeleteModal(user); openDropdownId = null">
                         <Trash2 :size="16" />
-                        <span>Delete</span>
+                        <span>{{ t('users.delete') }}</span>
                       </button>
                     </div>
                   </Transition>
@@ -187,7 +196,7 @@
 
       <div v-if="users.length > 0" class="pagination-bar">
         <div class="pagination-info">
-          <span class="rows-label">Rows per page:</span>
+          <span class="rows-label">{{ t('app.rowsPerPage') }}</span>
           <div class="rows-selector">
             <button
               v-for="size in pageSizeOptions"
@@ -206,7 +215,7 @@
             class="page-nav"
             :disabled="currentPage <= 1"
             @click="changePage(currentPage - 1)"
-            aria-label="Previous page"
+            :aria-label="t('app.previous')"
           >
             <ChevronLeft :size="16" />
           </button>
@@ -227,14 +236,14 @@
             class="page-nav"
             :disabled="currentPage >= lastPage"
             @click="changePage(currentPage + 1)"
-            aria-label="Next page"
+            :aria-label="t('app.next')"
           >
             <ChevronRight :size="16" />
           </button>
         </div>
 
         <div class="pagination-total">
-          {{ pagination.from }}-{{ pagination.to }} of {{ totalUsers }}
+          {{ pagination.from }}-{{ pagination.to }} {{ t('app.of') }} {{ totalUsers }}
         </div>
       </div>
     </div>
@@ -249,8 +258,8 @@
                 <UserPlus v-else :size="18" />
               </div>
               <div>
-                <h3>{{ isEditing ? 'Edit User' : 'Add New User' }}</h3>
-                <p>{{ isEditing ? 'Update user information and role' : 'Fill in the new user details' }}</p>
+                <h3>{{ isEditing ? t('users.editUser') : t('users.addNewUser') }}</h3>
+                <p>{{ isEditing ? t('users.editUserDesc') : t('users.addUserDesc') }}</p>
               </div>
               <button class="modal-x" @click="closeFormModal">&times;</button>
             </div>
@@ -265,7 +274,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <UserIcon :size="15" class="field-icon" />
-                    Full Name <span class="req">*</span>
+                    {{ t('users.fullName') }} <span class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <input
@@ -273,11 +282,11 @@
                       type="text"
                       class="styled-input"
                       :class="{ err: formError && !form.name.trim() }"
-                      placeholder="e.g. John Smith"
+                      :placeholder="t('users.namePlaceholder')"
                       required
                     />
                   </div>
-                  <span v-if="formError && !form.name.trim()" class="field-err">Full name is required</span>
+                  <span v-if="formError && !form.name.trim()" class="field-err">{{ t('users.nameRequired') }}</span>
                 </div>
 
                 <div class="section-divider"></div>
@@ -285,7 +294,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <Mail :size="15" class="field-icon" />
-                    Email Address <span class="req">*</span>
+                    {{ t('users.emailAddress') }} <span class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <input
@@ -293,11 +302,11 @@
                       type="email"
                       class="styled-input"
                       :class="{ err: formError && !form.email.trim() }"
-                      placeholder="user@example.com"
+                      :placeholder="t('users.emailPlaceholder')"
                       required
                     />
                   </div>
-                  <span v-if="formError && !form.email.trim()" class="field-err">Email is required</span>
+                  <span v-if="formError && !form.email.trim()" class="field-err">{{ t('users.emailRequired') }}</span>
                 </div>
 
                 <div class="section-divider"></div>
@@ -305,7 +314,7 @@
                 <div class="form-group">
                   <label class="form-label">
                     <Lock :size="15" class="field-icon" />
-                    Password <span v-if="!isEditing" class="req">*</span>
+                    {{ t('users.password') }} <span v-if="!isEditing" class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <input
@@ -313,13 +322,13 @@
                       type="password"
                       class="styled-input"
                       :class="{ err: formError && !isEditing && (!form.password || form.password.length < 8) }"
-                      :placeholder="isEditing ? 'Leave blank to keep current' : 'Min. 8 characters'"
+                      :placeholder="isEditing ? t('users.passwordKeepPlaceholder') : t('users.passwordPlaceholder')"
                       :required="!isEditing"
                       minlength="8"
                     />
                   </div>
-                  <p v-if="isEditing" class="field-hint">Leave blank to keep the current password</p>
-                  <span v-if="formError && !isEditing && (!form.password || form.password.length < 8)" class="field-err">Password must be at least 8 characters</span>
+                  <p v-if="isEditing" class="field-hint">{{ t('users.passwordHint') }}</p>
+                  <span v-if="formError && !isEditing && (!form.password || form.password.length < 8)" class="field-err">{{ t('users.passwordRequired') }}</span>
                 </div>
 
                 <div class="section-divider"></div>
@@ -327,15 +336,15 @@
                 <div class="form-group">
                   <label class="form-label">
                     <ShieldCheck :size="15" class="field-icon" />
-                    Role <span class="req">*</span>
+                    {{ t('users.role') }} <span class="req">*</span>
                   </label>
                   <div class="input-wrap">
                     <select v-model="form.role_id" class="styled-input" required>
-                      <option :value="null" disabled>— Select a role —</option>
+                      <option :value="null" disabled>{{ t('users.selectRole') }}</option>
                       <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
                     </select>
                   </div>
-                  <span v-if="formError && !form.role_id" class="field-err">Please select a role</span>
+                  <span v-if="formError && !form.role_id" class="field-err">{{ t('users.roleRequired') }}</span>
                 </div>
 
                 <div class="section-divider"></div>
@@ -344,14 +353,14 @@
                   <div class="form-group">
                     <label class="form-label">
                       <VenusAndMars :size="15" class="field-icon" />
-                      Gender
+                      {{ t('users.gender') }}
                     </label>
                     <div class="input-wrap">
                       <select v-model="form.gender" class="styled-input">
-                        <option value="">— Select gender —</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
+                        <option value="">{{ t('users.selectGender') }}</option>
+                        <option value="Male">{{ t('users.male') }}</option>
+                        <option value="Female">{{ t('users.female') }}</option>
+                        <option value="Other">{{ t('users.other') }}</option>
                       </select>
                     </div>
                   </div>
@@ -359,13 +368,13 @@
                   <div class="form-group">
                     <label class="form-label">
                       <ToggleLeft :size="15" class="field-icon" />
-                      Status <span class="req">*</span>
+                      {{ t('users.status') }} <span class="req">*</span>
                     </label>
                     <div class="input-wrap">
                       <select v-model="form.status" class="styled-input" required>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="suspended">Suspended</option>
+                        <option value="active">{{ t('users.active') }}</option>
+                        <option value="inactive">{{ t('users.inactive') }}</option>
+                        <option value="suspended">{{ t('users.suspended') }}</option>
                       </select>
                     </div>
                   </div>
@@ -373,11 +382,11 @@
               </div>
 
               <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" @click="closeFormModal">Cancel</button>
+                <button type="button" class="btn btn-ghost" @click="closeFormModal">{{ t('users.cancel') }}</button>
                 <button type="submit" class="btn btn-primary" :disabled="formSubmitting">
                   <span v-if="formSubmitting" class="spinner-sm"></span>
                   <Check v-else :size="16" />
-                  <span>{{ isEditing ? 'Save Changes' : 'Create User' }}</span>
+                  <span>{{ isEditing ? t('users.saveChanges') : t('users.createUser') }}</span>
                 </button>
               </div>
             </form>
@@ -395,26 +404,26 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete User</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('users.deleteUserTitle') }}</h3>
+                <p>{{ t('users.deleteConfirm') }}</p>
               </div>
               <button class="modal-x" @click="closeDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
               <p class="del-text">
-                Are you sure you want to delete <strong>{{ deleteTarget?.name }}</strong>?
+                {{ t('users.deleteUserConfirm', { name: deleteTarget?.name }) }}
               </p>
               <p class="del-warning">
                 <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
-                <span style="vertical-align: middle;">The user, their profile, and all associated data will be permanently removed.</span>
+                <span style="vertical-align: middle;">{{ t('users.deleteUserWarning') }}</span>
               </p>
             </div>
             <div class="modal-foot">
-              <button type="button" class="btn btn-ghost" @click="closeDeleteModal">Cancel</button>
+              <button type="button" class="btn btn-ghost" @click="closeDeleteModal">{{ t('users.cancel') }}</button>
               <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleDelete">
                 <span v-if="formSubmitting" class="spinner-sm"></span>
                 <Trash2 v-else :size="16" />
-                <span>Delete</span>
+                <span>{{ t('users.delete') }}</span>
               </button>
             </div>
           </div>
@@ -431,25 +440,25 @@
                 <AlertTriangle :size="20" />
               </div>
               <div>
-                <h3>Delete Users</h3>
-                <p>This action cannot be undone.</p>
+                <h3>{{ t('users.deleteUsersTitle') }}</h3>
+                <p>{{ t('users.deleteConfirm') }}</p>
               </div>
               <button class="modal-x" @click="closeBulkDeleteModal">&times;</button>
             </div>
             <div class="modal-body">
               <p class="del-text">
-                Are you sure you want to delete <strong>{{ selectedIds.length }} user(s)</strong>?
+                {{ t('users.deleteUsersConfirm', { count: selectedIds.length }) }}
               </p>
               <p class="del-warning">
                 <AlertTriangle :size="14" style="vertical-align: middle; margin-right: 4px;" />
-                <span style="vertical-align: middle;">These users, their profiles, and all associated data will be permanently removed.</span>
+                <span style="vertical-align: middle;">{{ t('users.deleteUsersWarning') }}</span>
               </p>
             </div>              <div class="modal-foot">
-              <button type="button" class="btn btn-ghost" @click="closeBulkDeleteModal">Cancel</button>
+              <button type="button" class="btn btn-ghost" @click="closeBulkDeleteModal">{{ t('users.cancel') }}</button>
               <button type="button" class="btn btn-danger" :disabled="formSubmitting" @click="handleBulkDelete">
                 <span v-if="formSubmitting" class="spinner-sm"></span>
                 <Trash2 v-else :size="16" />
-                <span>Delete {{ selectedIds.length }} user(s)</span>
+                <span>{{ t('users.delete') }} {{ selectedIds.length }} {{ t('users.selected') }}</span>
               </button>
             </div>
           </div>
@@ -466,8 +475,8 @@
                 <IdCard :size="18" />
               </div>
               <div>
-                <h3>User Details</h3>
-                <p>Complete information about this user</p>
+                <h3>{{ t('users.userDetails') }}</h3>
+                <p>{{ t('users.detailSubtitle') }}</p>
               </div>
               <button class="modal-x" @click="closeDetailsModal">&times;</button>
             </div>
@@ -483,61 +492,61 @@
                 <div>
                   <h6 class="mb-1 fw-bold" style="color: #0f172a;">{{ detailUser.name }}</h6>
                   <span class="role-badge" :class="getRoleBadgeClass(detailUser.role?.slug || '')">
-                    {{ detailUser.role?.name || '—' }}
+                    {{ translateRole(detailUser.role) }}
                   </span>
                 </div>
               </div>
 
               <div class="detail-row">
-                <span class="detail-label">User ID</span>
+                <span class="detail-label">{{ t('users.userId') }}</span>
                 <span class="detail-value">
                   <span class="badge bg-light text-dark rounded-pill px-3 py-2">#{{ detailUser.id }}</span>
                 </span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Email</span>
+                <span class="detail-label">{{ t('users.email') }}</span>
                 <span class="detail-value">{{ detailUser.email }}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Gender</span>
+                <span class="detail-label">{{ t('users.gender') }}</span>
                 <span class="detail-value">
                   <component :is="getGenderIconComponent(detailUser.gender || '')" :size="14" class="me-1" />
-                  {{ detailUser.gender || '—' }}
+                  {{ translateGender(detailUser.gender) }}
                 </span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Role</span>
+                <span class="detail-label">{{ t('users.role') }}</span>
                 <span class="detail-value">
                   <span class="role-badge" :class="getRoleBadgeClass(detailUser.role?.slug || '')">
-                    {{ detailUser.role?.name || '—' }}
+                    {{ translateRole(detailUser.role) }}
                   </span>
                 </span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Status</span>
+                <span class="detail-label">{{ t('users.status') }}</span>
                 <span class="detail-value">
                   <span class="status-badge" :class="getStatusClass(detailUser.status)">
-                    {{ detailUser.status }}
+                    {{ translateStatus(detailUser.status) }}
                   </span>
                 </span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Last Login</span>
+                <span class="detail-label">{{ t('users.lastLogin') }}</span>
                 <span class="detail-value">{{ formatDate(detailUser.last_login_at) }}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Created</span>
+                <span class="detail-label">{{ t('users.created') }}</span>
                 <span class="detail-value">{{ formatFullDate(detailUser.created_at) }}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Updated</span>
+                <span class="detail-label">{{ t('users.updated') }}</span>
                 <span class="detail-value">{{ formatFullDate(detailUser.updated_at) }}</span>
               </div>
             </div>
 
             <div class="modal-foot">
               <button type="button" class="btn btn-primary" style="flex: 1;" @click="closeDetailsModal">
-                <CheckCircle :size="16" class="me-1" />Close
+                <CheckCircle :size="16" class="me-1" />{{ t('users.close') }}
               </button>
             </div>
           </div>
@@ -550,12 +559,14 @@
 <script setup lang="ts">
 import { Users, Plus, AlertTriangle, Search, ShieldCheck, ToggleLeft, MoreVertical, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, X, SquarePen, UserPlus, User as UserIcon, Mail, Lock, VenusAndMars, Check, IdCard, CheckCircle, AlertCircle, Trash, Inbox } from '@lucide/vue'
 import { ref, computed, onMounted, onUnmounted, TransitionGroup, type Component } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePermission } from '@/composables/usePermission'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '@/stores/user'
 import { useToast } from '@/composables/useToast'
 import type { User } from '@/services/userService'
 
+const { t } = useI18n()
 const store = useUserStore()
 const { users, roles, loading, error, totalUsers, lastPage } = storeToRefs(store)
 const { success: toastSuccess, error: toastError } = useToast()
@@ -571,6 +582,7 @@ const formError = ref<string | null>(null)
 const searchQuery = ref('')
 const roleFilter = ref<number | ''>('')
 const statusFilter = ref('')
+const genderFilter = ref('')
 
 function applyFilters() {
   currentPage.value = 1
@@ -669,6 +681,7 @@ async function loadUsers() {
   if (searchQuery.value) params.search = searchQuery.value
   if (roleFilter.value) params.role_id = roleFilter.value
   if (statusFilter.value) params.status = statusFilter.value
+  if (genderFilter.value) params.gender = genderFilter.value
 
   await store.fetchUsers(params)
 }
@@ -707,19 +720,19 @@ function closeFormModal() {
 
 async function handleFormSubmit() {
   if (!form.value.name.trim()) {
-    formError.value = 'Name is required'
+    formError.value = t('users.nameRequired')
     return
   }
   if (!form.value.email.trim()) {
-    formError.value = 'Email is required'
+    formError.value = t('users.emailRequired')
     return
   }
   if (!form.value.role_id) {
-    formError.value = 'Please select a role'
+    formError.value = t('users.roleRequired')
     return
   }
   if (!isEditing.value && (!form.value.password || form.value.password.length < 8)) {
-    formError.value = 'Password must be at least 8 characters'
+    formError.value = t('users.passwordRequired')
     return
   }
 
@@ -737,7 +750,7 @@ async function handleFormSubmit() {
         ...(form.value.password ? { password: form.value.password } : {}),
       })
       if (result.success) {
-        showToast(result.message || 'User updated successfully')
+        showToast(result.message || t('users.updatedSuccess'))
         closeFormModal()
       } else {
         formError.value = result.message
@@ -753,7 +766,7 @@ async function handleFormSubmit() {
       }
       const result = await store.createUser(payload)
       if (result.success) {
-        showToast(result.message || 'User created successfully')
+        showToast(result.message || t('users.createdSuccess'))
         closeFormModal()
       } else {
         formError.value = result.message
@@ -761,7 +774,7 @@ async function handleFormSubmit() {
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    formError.value = err.response?.data?.message || err.message || 'Operation failed'
+    formError.value = err.response?.data?.message || err.message || t('users.operationFailed')
   } finally {
     formSubmitting.value = false
   }
@@ -785,18 +798,18 @@ async function handleDelete() {
     const result = await store.deleteUser(targetId)
     if (result.success) {
       lastPage.value = Math.max(1, Math.ceil(totalUsers.value / perPage.value))
-      showToast('User deleted successfully')
+      showToast(t('users.deletedSuccess'))
       closeDeleteModal()
       if (users.value.length === 0 && currentPage.value > 1) {
         currentPage.value--
         loadUsers()
       }
     } else {
-      showToast(result.message || 'Failed to delete user', 'error')
+      showToast(result.message || t('users.deleteFailed'), 'error')
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    showToast(err.response?.data?.message || err.message || 'Failed to delete user', 'error')
+    showToast(err.response?.data?.message || err.message || t('users.deleteFailed'), 'error')
   } finally {
     formSubmitting.value = false
   }
@@ -858,6 +871,29 @@ function formatFullDate(dateStr?: string): string {
 
 function getAvatarClass(): string {
   return ''
+}
+
+function translateRole(role: { slug?: string; name?: string } | null | undefined): string {
+  if (!role) return '—'
+  if (role.slug === 'admin') return t('users.admin')
+  if (role.slug === 'teacher') return t('nav.teachers')
+  if (role.slug === 'student') return t('nav.students')
+  return role.name || '—'
+}
+
+function translateGender(gender: string | null | undefined): string {
+  if (!gender) return '—'
+  if (gender === 'Male') return t('users.male')
+  if (gender === 'Female') return t('users.female')
+  if (gender === 'Other') return t('users.other')
+  return gender
+}
+
+function translateStatus(status: string): string {
+  if (status === 'active') return t('users.active')
+  if (status === 'inactive') return t('users.inactive')
+  if (status === 'suspended') return t('users.suspended')
+  return status
 }
 
 function getRoleBadgeClass(slug: string): string {
@@ -946,7 +982,7 @@ async function handleBulkDelete() {
     const result = await store.bulkDeleteUsers(idsToDelete)
     if (result.success) {
       lastPage.value = Math.max(1, Math.ceil(totalUsers.value / perPage.value))
-      showToast('User deleted successfully')
+      showToast(t('users.deletedSuccess'))
       closeBulkDeleteModal()
       clearSelection()
       if (users.value.length === 0 && currentPage.value > 1) {
@@ -954,11 +990,11 @@ async function handleBulkDelete() {
         loadUsers()
       }
     } else {
-      showToast(result.message || 'Failed to delete users', 'error')
+      showToast(result.message || t('users.deleteFailedPlural'), 'error')
     }
   } catch (e: unknown) {
     const err = e as { response?: { data?: { message?: string } }; message?: string }
-    showToast(err.response?.data?.message || err.message || 'Failed to delete users', 'error')
+    showToast(err.response?.data?.message || err.message || t('users.deleteFailedPlural'), 'error')
   } finally {
     formSubmitting.value = false
   }

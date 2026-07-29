@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   getStudents,
   getStudent,
@@ -20,6 +21,7 @@ const STUDENTS_CACHE_KEY = 'students-data'
 const CLASSES_CACHE_KEY = 'classes-data'
 
 export function useStudents() {
+  const { t } = useI18n()
   const cachedStudents = cacheService.get<Student[]>(STUDENTS_CACHE_KEY)
   const cachedClasses = cacheService.get<SchoolClass[]>(CLASSES_CACHE_KEY)
 
@@ -105,7 +107,7 @@ const selectedBulkIds = ref<number[]>([])
       cacheService.set(STUDENTS_CACHE_KEY, res.students.sort((a, b) => b.id - a.id), 24 * 60 * 60_000)
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      error.value = err.response?.data?.message || err.message || 'Failed to load students'
+      error.value = err.response?.data?.message || err.message || t('messages.operationFailed')
     } finally {
       loading.value = false
     }
@@ -159,15 +161,15 @@ const selectedBulkIds = ref<number[]>([])
 
   async function handleCreate() {
     if (!createForm.value.name.trim()) {
-      formError.value = 'Student name is required'
+      formError.value = t('students.nameRequired')
       return
     }
     if (!createForm.value.email.trim()) {
-      formError.value = 'Email address is required'
+      formError.value = t('students.emailRequired')
       return
     }
     if (!createForm.value.password || createForm.value.password.length < 8) {
-      formError.value = 'Password must be at least 8 characters'
+      formError.value = t('students.passwordRequired')
       return
     }
     formError.value = null
@@ -176,12 +178,12 @@ const selectedBulkIds = ref<number[]>([])
       const res = await createStudent(createForm.value)
       students.value.unshift(res.student)
       invalidateStudentCache()
-      toast.success('Student created successfully')
+      toast.success(t('students.createdSuccess'))
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || 'Failed to create student')
+      toast.error(err.response?.data?.message || err.message || t('messages.operationFailed'))
       showCreateModal.value = true
-      formError.value = err.response?.data?.message || err.message || 'Failed to create student'
+      formError.value = err.response?.data?.message || err.message || t('messages.operationFailed')
     }
   }
 
@@ -216,10 +218,10 @@ const selectedBulkIds = ref<number[]>([])
       if (index !== -1) students.value[index] = res.student
       invalidateStudentCache()
       closeEditModal()
-      toast.success('Student updated successfully')
+      toast.success(t('students.updatedSuccess'))
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      formError.value = err.response?.data?.message || err.message || 'Failed to update student'
+      formError.value = err.response?.data?.message || err.message || t('messages.operationFailed')
     } finally {
       formSubmitting.value = false
     }
@@ -247,7 +249,7 @@ const selectedBulkIds = ref<number[]>([])
       toast.success(res.message || 'Student deleted successfully')
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || 'Failed to delete students')
+      toast.error(err.response?.data?.message || err.message || t('messages.operationFailed'))
     } finally {
       formSubmitting.value = false
     }
@@ -279,9 +281,9 @@ const selectedBulkIds = ref<number[]>([])
         students.value = students.value.filter((s) => s.id !== selectedStudent.value?.id)
         invalidateStudentCache()
         closeDeleteModal()
-        toast.success('Student deleted successfully')
+        toast.success(t('students.deletedSuccess'))
       } else {
-        toast.error(msg || 'Failed to delete student')
+        toast.error(msg || t('messages.operationFailed'))
       }
     } finally {
       formSubmitting.value = false
@@ -308,10 +310,10 @@ const selectedBulkIds = ref<number[]>([])
       if (index !== -1) students.value[index] = res.student
       invalidateStudentCache()
       closeAssignModal()
-      toast.success('Student assigned to class successfully')
+      toast.success(t('students.assignSuccess'))
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } }; message?: string }
-      toast.error(err.response?.data?.message || err.message || 'Failed to assign class')
+      toast.error(err.response?.data?.message || err.message || t('messages.operationFailed'))
     } finally {
       formSubmitting.value = false
     }
